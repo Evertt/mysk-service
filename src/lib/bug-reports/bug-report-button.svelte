@@ -86,9 +86,10 @@
 									{#if recorder.phase === "recording"}
 										<span class="relative flex size-2.5" aria-hidden="true">
 											<span
-												class="absolute inline-flex size-full animate-ping rounded-full bg-red-500 opacity-75"
+												class="absolute inline-flex size-full animate-ping rounded-full bg-destructive opacity-75"
 											></span>
-											<span class="relative inline-flex size-2.5 rounded-full bg-red-600"></span>
+											<span class="relative inline-flex size-2.5 rounded-full bg-destructive"
+											></span>
 										</span>
 										{#if showTime}
 											<span class="font-mono text-xs tabular-nums" aria-hidden="true">{time}</span>
@@ -96,7 +97,7 @@
 									{:else if recorder.phase === "idle"}
 										<BugIcon />
 									{:else}
-										<SendIcon class="text-red-600" />
+										<SendIcon class="text-destructive" />
 									{/if}
 								</Button>
 							{/snippet}

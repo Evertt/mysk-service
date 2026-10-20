@@ -36,4 +36,13 @@ describe("themeStylesheet", () => {
 			"darkVars" in themes[name],
 		);
 	});
+
+	// What a state is coloured with (`text-success`, `bg-warning/10`, …), tuned to each theme.
+	const states = ["success", "warning", "info"].flatMap((s) => [`--${s}`, `--${s}-foreground`]);
+
+	test.each(others)("gives %s its own state colours, light and dark", (name) => {
+		const { vars = {}, darkVars = {} } = themes[name];
+		expect(Object.keys(vars)).toEqual(expect.arrayContaining(states));
+		expect(Object.keys(darkVars)).toEqual(expect.arrayContaining(states));
+	});
 });

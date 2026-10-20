@@ -41,14 +41,14 @@ export function statusMeaning(status: UnitStatus, thresholds: Thresholds): strin
 
 /** The bar's colour by a score's band: below 40 rose, below 70 amber, else emerald (by default). */
 export const bandColours: Record<ScoreBand, string> = {
-	low: "bg-rose-500",
-	fair: "bg-amber-500",
-	good: "bg-emerald-500",
+	low: "bg-destructive",
+	fair: "bg-warning",
+	good: "bg-success",
 };
 
 /** The score's text colour by its band. */
 export const bandText: Record<ScoreBand, string> = {
-	low: "text-rose-700 dark:text-rose-400",
-	fair: "text-amber-700 dark:text-amber-400",
-	good: "text-emerald-700 dark:text-emerald-400",
+	low: "text-destructive",
+	fair: "text-warning",
+	good: "text-success",
 };

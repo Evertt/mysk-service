@@ -9,6 +9,7 @@
 	import type { RouteParams } from "$app/types";
 	import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
 
+	import Callout from "#lib/components/callout.svelte";
 	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { formatCents, formatDateTime, formatNumber } from "#lib/i18n/index.ts";
 	import { getClientShopOrder } from "#modules/parts-shop/client/client-shop.remote.ts";
@@ -28,19 +29,17 @@
 </svelte:head>
 
 {#if placed}
-	<div
-		class="flex items-start gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4"
+	<Callout
+		tone="success"
+		icon={CircleCheckIcon}
+		title={m.shop_placed_title({ number: order.number })}
 		role="status"
 		data-order-placed
 	>
-		<CircleCheckIcon class="mt-0.5 size-5 shrink-0 text-emerald-600" />
-		<div class="flex flex-col gap-0.5">
-			<span class="font-medium">{m.shop_placed_title({ number: order.number })}</span>
-			<span class="text-sm text-muted-foreground">
-				{m.shop_placed_credit({ total: formatCents(order.total) })}
-			</span>
-		</div>
-	</div>
+		<p class="text-muted-foreground">
+			{m.shop_placed_credit({ total: formatCents(order.total) })}
+		</p>
+	</Callout>
 {/if}
 
 <div class="flex flex-wrap items-center justify-between gap-3">

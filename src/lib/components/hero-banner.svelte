@@ -85,13 +85,15 @@
 							<span class="relative flex size-1.5" aria-hidden="true">
 								{#if chip.dot === "live"}
 									<span
-										class="absolute inline-flex size-full rounded-full bg-emerald-300 opacity-75 motion-safe:animate-ping"
+										class="absolute inline-flex size-full rounded-full bg-[color-mix(in_oklch,var(--success),white_40%)] opacity-75 motion-safe:animate-ping"
 									></span>
 								{/if}
 								<span
 									class={[
 										"relative inline-flex size-1.5 rounded-full",
-										chip.dot === "live" ? "bg-emerald-300" : "bg-white/60",
+										chip.dot === "live"
+											? "bg-[color-mix(in_oklch,var(--success),white_40%)]"
+											: "bg-white/60",
 									]}
 								></span>
 							</span>

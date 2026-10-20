@@ -157,10 +157,7 @@
 		</Card.Content>
 		{#if !data.template || !shown}
 			<Card.Content>
-				<p
-					class="rounded-md bg-amber-500/10 p-3 text-sm text-amber-800 dark:text-amber-300"
-					data-asset-notice
-				>
+				<p class="rounded-md bg-warning/10 p-3 text-sm text-warning" data-asset-notice>
 					{#if !data.template}
 						{m.checklists_assets_no_template({ category: data.unit.category })}
 					{:else}

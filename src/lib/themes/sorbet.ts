@@ -32,6 +32,12 @@ export default defineTheme({
 		"--accent": "oklch(0.95 0.1 100)",
 		"--accent-foreground": "oklch(0.42 0.1 75)",
 		"--destructive": "oklch(0.62 0.22 25)",
+		"--success": "oklch(0.56 0.13 165)",
+		"--success-foreground": "oklch(0.99 0.01 15)",
+		"--warning": "oklch(0.6 0.15 60)",
+		"--warning-foreground": "oklch(0.99 0.01 15)",
+		"--info": "oklch(0.55 0.13 235)",
+		"--info-foreground": "oklch(0.99 0.01 15)",
 		"--border": "oklch(0.92 0.03 225)",
 		"--input": "oklch(0.92 0.03 225)",
 		"--ring": "oklch(0.66 0.2 15)",
@@ -66,6 +72,12 @@ export default defineTheme({
 		"--accent": "oklch(0.38 0.07 90)",
 		"--accent-foreground": "oklch(0.95 0.11 100)",
 		"--destructive": "oklch(0.7 0.18 22)",
+		"--success": "oklch(0.82 0.13 165)",
+		"--success-foreground": "oklch(0.2 0.045 285)",
+		"--warning": "oklch(0.86 0.14 85)",
+		"--warning-foreground": "oklch(0.2 0.045 285)",
+		"--info": "oklch(0.8 0.11 225)",
+		"--info-foreground": "oklch(0.2 0.045 285)",
 		"--border": "oklch(1 0 0 / 10%)",
 		"--input": "oklch(1 0 0 / 14%)",
 		"--ring": "oklch(0.74 0.16 15)",
@@ -92,12 +104,14 @@ export default defineTheme({
 				secondary: "bg-secondary text-secondary-foreground",
 				outline: "border-transparent bg-accent text-accent-foreground",
 				ghost: "bg-muted",
-				// Sherbet scoops: pastel fills, deeper in the summer night.
-				success: "bg-emerald-100 text-emerald-700 dark:bg-emerald-400/20 dark:text-emerald-200",
-				warning: "bg-amber-100 text-amber-700 dark:bg-amber-300/20 dark:text-amber-200",
-				info: "bg-sky-100 text-sky-700 dark:bg-sky-400/20 dark:text-sky-200",
-				danger: "bg-rose-100 text-rose-700 dark:bg-rose-400/20 dark:text-rose-200",
-				neutral: "bg-muted text-muted-foreground",
+				// Sherbet scoops: pastel fills of the tone, deeper in the summer night.
+				success:
+					"bg-[oklch(from_var(--success)_0.94_0.06_h)] dark:bg-[oklch(from_var(--success)_0.4_0.07_h)]",
+				warning:
+					"bg-[oklch(from_var(--warning)_0.94_0.07_h)] dark:bg-[oklch(from_var(--warning)_0.42_0.07_h)]",
+				info: "bg-[oklch(from_var(--info)_0.94_0.04_h)] dark:bg-[oklch(from_var(--info)_0.4_0.07_h)]",
+				danger:
+					"bg-[oklch(from_var(--destructive)_0.94_0.05_h)] dark:bg-[oklch(from_var(--destructive)_0.4_0.09_h)]",
 			},
 		},
 		button: {

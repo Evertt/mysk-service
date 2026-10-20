@@ -114,6 +114,15 @@ Before you change the schema, add a migration, or log a new subject or action: r
 Before you add a message file, an enum kind, a plural or a format, or write Dutch copy: read
 `docs/agents/i18n.md`.
 
+## Colours and themes
+
+- Colour a state with the theme's tone tokens: `text-success`, `bg-warning/10`, `border-info/30`,
+  `bg-destructive` (`success`, `warning`, `info`, and `destructive` for `danger`), or a `Badge` /
+  `Callout` tone; never a raw palette (`text-emerald-600`), which every theme shows alike
+  (`state-colours.spec.ts` refuses it).
+- A theme restyles a component part through its `data-slot` in `src/lib/themes/<name>.ts`. Run
+  `pnpm themes:sync` after adding or updating a shadcn-svelte component.
+
 ## Pointers
 
 - **Modules and extension points** (hooks, slots, form slots, bulk actions, list columns, module

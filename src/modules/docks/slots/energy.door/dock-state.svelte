@@ -53,7 +53,7 @@
 			<EnumBadge display={dockStateDisplay} value={state} data-dock-state={state} />
 			<span class="inline-flex items-center gap-1" data-door-dock-locked={dock.locked}>
 				{#if dock.locked}
-					<LockIcon class="size-3.5 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
+					<LockIcon class="size-3.5 text-success" aria-hidden="true" />
 					{m.docks_locked()}
 				{:else}
 					<LockOpenIcon class="size-3.5 text-muted-foreground" aria-hidden="true" />

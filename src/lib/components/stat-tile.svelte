@@ -57,17 +57,10 @@
 	const tones: Record<StatTone, string> = {
 		neutral: "text-foreground",
 		brand: "text-primary",
-		success: "text-emerald-600 dark:text-emerald-400",
-		warning: "text-amber-600 dark:text-amber-400",
-		danger: "text-rose-600 dark:text-rose-400",
-		info: "text-sky-600 dark:text-sky-400",
-	};
-	const trendTones: Record<BadgeTone, string> = {
-		neutral: "text-muted-foreground",
-		success: "text-emerald-700 dark:text-emerald-400",
-		warning: "text-amber-700 dark:text-amber-400",
-		danger: "text-rose-700 dark:text-rose-400",
-		info: "text-sky-700 dark:text-sky-400",
+		success: "text-success",
+		warning: "text-warning",
+		danger: "text-destructive",
+		info: "text-info",
 	};
 	const trendIcons = { up: TrendingUpIcon, down: TrendingDownIcon, flat: MinusIcon };
 	const TrendIcon = $derived(trend && trendIcons[trend.direction]);
@@ -79,7 +72,10 @@
 	{/if}
 	{#if trend && TrendIcon}
 		<div
-			class="flex items-center gap-1 text-[11px] font-medium {trendTones[trend.tone]}"
+			class={[
+				"flex items-center gap-1 text-[11px] font-medium",
+				trend.tone === "neutral" ? "text-muted-foreground" : tones[trend.tone],
+			]}
 			data-stat-trend={trend.direction}
 		>
 			<TrendIcon class="size-3.5 shrink-0" aria-hidden="true" />

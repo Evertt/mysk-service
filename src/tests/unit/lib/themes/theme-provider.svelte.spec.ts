@@ -53,10 +53,8 @@ test("a theme colours a badge's tone its own way", async () => {
 	render(Harness, { name: "lagoon", badgeVariant: "success" });
 
 	const badge = page.getByText("New");
-	await expect
-		.element(badge)
-		.toHaveClass("border-emerald-200", "bg-emerald-50", "text-emerald-700");
-	await expect.element(badge).not.toHaveClass("bg-emerald-500/10");
+	await expect.element(badge).toHaveClass("border-success/25", "bg-success/8", "text-success");
+	await expect.element(badge).not.toHaveClass("bg-success/10");
 });
 
 test("switching themes restyles the components", async () => {

@@ -64,7 +64,7 @@
 						<Icon
 							class={[
 								"mt-0.5 size-4 shrink-0",
-								point.result === "ok" && "text-emerald-600 dark:text-emerald-400",
+								point.result === "ok" && "text-success",
 								point.result === "nok" && "text-destructive",
 								(!point.result || point.result === "na") && "text-muted-foreground",
 							]}

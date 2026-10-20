@@ -19,6 +19,7 @@ import {
 	value,
 } from "#e2e/app.ts";
 import { signedInPage } from "#e2e/portal-helpers.ts";
+import { printedSheet } from "#e2e/print.ts";
 
 import { checklistsOfOrder, engineerOf, resultsOf, sign } from "./helpers.ts";
 
@@ -193,6 +194,7 @@ describe("Lev's inspection order", () => {
 			expect(await office.locator('[data-slot="app-header"]').isVisible()).toBe(false);
 			expect(await office.getByRole("button", { name: "Print" }).isVisible()).toBe(false);
 			expect(await workOrder.isVisible()).toBe(true);
+			expect(await printedSheet(office)).toEqual({ width: 210, height: 297 });
 		} finally {
 			await office.context().close();
 		}

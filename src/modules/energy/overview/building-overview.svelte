@@ -201,7 +201,7 @@
 							<div
 								class={[
 									"h-full rounded-full transition-[width] duration-700 ease-out",
-									peakShare >= 100 ? "bg-rose-600" : "bg-primary",
+									peakShare >= 100 ? "bg-destructive" : "bg-primary",
 									totalKw > 0 && "flowing",
 								]}
 								style:width="{Math.min(100, Math.max(2, peakShare))}%"
@@ -229,7 +229,7 @@
 						data-solar
 					>
 						<p class="font-semibold text-foreground">{m.energy_meter_pv()}</p>
-						<p class="text-emerald-600 tabular-nums dark:text-emerald-400">
+						<p class="text-success tabular-nums">
 							{m.energy_meter_pv_now({ kw: formatKw(solarKw) })}
 						</p>
 						<p>{m.energy_meter_pv_estimate({ kwp: formatNumber(site.pvCapacityKw) })}</p>

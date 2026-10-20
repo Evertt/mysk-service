@@ -13,10 +13,10 @@
 				ghost: "hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50",
 				link: "text-primary underline-offset-4 hover:underline",
 				// Tones: a status coloured by what it means (see `BadgeTone`).
-				success: "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300",
-				warning: "bg-amber-500/15 text-amber-800 dark:bg-amber-400/15 dark:text-amber-300",
-				info: "bg-sky-500/10 text-sky-700 dark:bg-sky-400/15 dark:text-sky-300",
-				danger: "bg-destructive/10 text-destructive dark:bg-destructive/20",
+				success: "bg-success/10 text-success",
+				warning: "bg-warning/15 text-warning",
+				info: "bg-info/10 text-info",
+				danger: "bg-destructive/10 text-destructive",
 				neutral: "bg-muted text-muted-foreground",
 				// Colours: a value named after one, e.g. a partner level (see `BadgeColour`).
 				bronze: "bg-orange-700/15 text-orange-800 dark:bg-orange-400/15 dark:text-orange-300",

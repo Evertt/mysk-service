@@ -21,12 +21,12 @@
 </script>
 
 <section
-	class="rounded-md border border-amber-200 bg-amber-50 p-5 text-amber-800 dark:border-amber-400/25 dark:bg-amber-400/10 dark:text-amber-200"
+	class="rounded-md border border-warning/30 bg-warning/10 p-5 text-warning"
 	aria-labelledby="energy-signals"
 	data-signals
 >
 	<div class="flex items-center gap-2">
-		<TriangleAlertIcon class="size-4 text-amber-600 dark:text-amber-400" aria-hidden="true" />
+		<TriangleAlertIcon class="size-4 text-warning" aria-hidden="true" />
 		<h2 id="energy-signals" class="text-sm font-semibold">{m.energy_signals_title()}</h2>
 	</div>
 	<ul class="mt-3 flex list-disc flex-col gap-2 pl-5 text-sm">

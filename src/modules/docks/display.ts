@@ -12,7 +12,7 @@ export const dockStateDisplay = dockLabels.withLabels("dockState", {
 	free: { tone: "neutral" },
 } satisfies Record<DockState, BadgeDisplay>);
 
-/** The beacon's lamp. */
+/** The beacon's lamp, in its real colour whatever the theme. */
 export const beaconColours: Record<Beacon, string> = {
 	green: "bg-emerald-500",
 	orange: "bg-amber-500",
@@ -23,7 +23,7 @@ export const beaconColours: Record<Beacon, string> = {
 /** The door timer's colour after `seconds` open: amber from 40 minutes, rose from 60. */
 export function timerClass(seconds: number) {
 	const band = doorBand(seconds);
-	if (band === "red") return "text-rose-600 dark:text-rose-400";
-	if (band === "amber") return "text-amber-600 dark:text-amber-400";
+	if (band === "red") return "text-destructive";
+	if (band === "amber") return "text-warning";
 	return "";
 }

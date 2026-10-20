@@ -32,13 +32,18 @@
 	const [me, , viewAs] = $derived(await Promise.all([getPortalMe(), orderTypes, getViewAs()]));
 </script>
 
-<Sidebar.Provider data-customer-portal>
+<!-- On paper only the page (e.g. a work order to print): no navigation, no header, and no flex
+	layout, which would keep a sheet's named @page (`<PrintSheet>`) from applying. -->
+<Sidebar.Provider
+	data-customer-portal
+	class="print:block print:min-h-0 print:[&>[data-slot=sidebar]]:hidden"
+>
 	<PortalSidebar organization={me.organization} />
 	<!-- min-w-0 lets wide tables scroll inside the page instead of widening it. -->
-	<Sidebar.Inset class="min-w-0">
+	<Sidebar.Inset class="min-w-0 print:block">
 		<header
 			data-slot="portal-header"
-			class="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur"
+			class="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur print:hidden"
 		>
 			<Sidebar.Trigger class="-ml-1" />
 			<Separator orientation="vertical" class="mr-1 h-4! self-center" />
@@ -65,7 +70,7 @@
 			</div>
 		</header>
 		<div
-			class="relative mx-auto flex w-full max-w-[1400px] min-w-0 flex-1 flex-col gap-6 p-4 pb-12 md:p-6"
+			class="relative mx-auto flex w-full max-w-[1400px] min-w-0 flex-1 flex-col gap-6 p-4 pb-12 md:p-6 print:block"
 		>
 			{@render children()}
 			<NavigationSkeleton group="/(customer)" class="flex flex-col gap-4 p-4 md:p-6">
@@ -81,13 +86,3 @@
 		</div>
 	</Sidebar.Inset>
 </Sidebar.Provider>
-
-<style>
-	/* On paper only the page: no navigation, no header (e.g. a work order to print). */
-	@media print {
-		:global([data-customer-portal] [data-slot="sidebar"]),
-		:global([data-customer-portal] [data-slot="portal-header"]) {
-			display: none !important;
-		}
-	}
-</style>

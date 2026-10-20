@@ -46,7 +46,7 @@
 	const reject = $derived(rejectReportedOrder.for(String(order.id)));
 </script>
 
-<Card.Root data-acceptance class={awaiting ? "border-amber-500/50" : undefined}>
+<Card.Root data-acceptance class={awaiting ? "border-warning/50" : undefined}>
 	<Card.Header>
 		<Card.Title class="flex items-center gap-2">
 			<InboxIcon class="size-4" />

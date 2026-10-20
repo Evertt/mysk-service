@@ -32,6 +32,7 @@ export type GeneratedSlot =
 	| "breadcrumb-separator"
 	| "bug-report-button"
 	| "bug-report-console"
+	| "bug-report-menu-item"
 	| "bug-report-note"
 	| "bug-report-player"
 	| "bug-report-requests"

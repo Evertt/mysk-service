@@ -70,7 +70,7 @@
 
 <Card.Root
 	size="sm"
-	class={[overdue && "ring-rose-300 dark:ring-rose-400/40"]}
+	class={[overdue && "ring-destructive/40"]}
 	data-door={door.code}
 	data-door-state={state}
 >

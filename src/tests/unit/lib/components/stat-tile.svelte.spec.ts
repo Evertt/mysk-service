@@ -17,8 +17,8 @@ test("inline: the label with its icon above the value, both in the tone's colour
 	const label = page.getByText("Critical").element();
 	const value = page.getByText("4").element();
 	expect(label.compareDocumentPosition(value)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-	await expect.element(page.getByText("4")).toHaveClass("text-rose-600");
-	expect(container.querySelector("svg")?.getAttribute("class")).toContain("text-rose-600");
+	await expect.element(page.getByText("4")).toHaveClass("text-destructive");
+	expect(container.querySelector("svg")?.getAttribute("class")).toContain("text-destructive");
 });
 
 test("stacked: the icon on top, the value, its label, the detail and the trend", async () => {
@@ -39,12 +39,12 @@ test("stacked: the icon on top, the value, its label, the detail and the trend",
 	expect(order[0].compareDocumentPosition(order[1])).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 	expect(order[1].compareDocumentPosition(order[2])).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 	// The icon is first, in the tone's colour; the value isn't.
-	expect(tile.querySelector("svg")?.getAttribute("class")).toContain("text-emerald-600");
-	await expect.element(page.getByText("€12,000.00")).not.toHaveClass("text-emerald-600");
+	expect(tile.querySelector("svg")?.getAttribute("class")).toContain("text-success");
+	await expect.element(page.getByText("€12,000.00")).not.toHaveClass("text-success");
 	const trend = tile.querySelector("[data-stat-trend]")!;
 	expect(trend.getAttribute("data-stat-trend")).toBe("up");
 	expect(trend.textContent?.trim()).toBe("+18% vs the 30 days before");
-	expect(trend.getAttribute("class")).toContain("text-emerald-700");
+	expect(trend.getAttribute("class")).toContain("text-success");
 });
 
 test("stacked: an action at the top right, and no trend line without a trend", async () => {

@@ -24,7 +24,7 @@
 	import type { UnitComponent } from "../api/extensions.ts";
 	import { checklistDraft } from "../detail/checklist-draft.svelte.ts";
 	import ChecklistPoints from "../detail/checklist-points.svelte";
-	import { completerName } from "../display.ts";
+	import { completerName, pickedResultClasses } from "../display.ts";
 	import { checklistLabels } from "../labels.ts";
 	import {
 		checklistScore,
@@ -110,12 +110,6 @@
 	}
 
 	const icons = { ok: CheckIcon, nok: XIcon, na: MinusIcon };
-	// Strong once picked, as the mockup's: green, red, grey.
-	const tones: Record<PointResult, string> = {
-		ok: "aria-pressed:border-emerald-600! aria-pressed:bg-emerald-600! aria-pressed:text-white! dark:aria-pressed:bg-emerald-500!",
-		nok: "aria-pressed:border-destructive! aria-pressed:bg-destructive! aria-pressed:text-white!",
-		na: "aria-pressed:border-muted-foreground! aria-pressed:bg-muted-foreground! aria-pressed:text-background!",
-	};
 </script>
 
 <Card.Root
@@ -260,7 +254,7 @@
 											type="button"
 											variant="outline"
 											size="sm"
-											class={["text-xs font-semibold uppercase", tones[result]]}
+											class={["text-xs font-semibold uppercase", pickedResultClasses[result]]}
 											aria-pressed={point.result === result}
 											onclick={() => draft.setResult(point, result)}
 										>
