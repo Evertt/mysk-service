@@ -3,7 +3,7 @@ import { expect, test } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import PageHeader from "#lib/components/page-header.svelte";
+import PageHeader, { headTitle } from "#lib/components/page-header.svelte";
 
 const html = (markup: string) => createRawSnippet(() => ({ render: () => markup }));
 
@@ -76,4 +76,36 @@ test("renders no breadcrumbs without the prop", async () => {
 	const { container } = await render(PageHeader, { title: "Customers" });
 
 	expect(container.querySelector("nav")).toBeNull();
+});
+
+test("titles the tab with the title and the trail's nearest page it doesn't name", () => {
+	expect(headTitle("Customers")).toBe("Customers");
+	expect(
+		headTitle("WO-2026-0042", [{ label: "Orders", href: "/orders" }, { label: "WO-2026-0042" }]),
+	).toBe("WO-2026-0042 · Orders");
+	expect(
+		headTitle("Edit Acme", [
+			{ label: "Customers", href: "/customers" },
+			{ label: "Acme", href: "/customers/C-1" },
+			{ label: "Edit" },
+		]),
+	).toBe("Edit Acme · Customers");
+	expect(
+		headTitle("Hall 3", [
+			{ label: "Customers", href: "/customers" },
+			{ label: "Acme", href: "/customers/C-1" },
+			{ label: "Hall 3" },
+		]),
+	).toBe("Hall 3 · Acme");
+});
+
+test("sets the document's title, or the one it's given", async () => {
+	const { rerender } = await render(PageHeader, {
+		title: "WO-2026-0042",
+		breadcrumbs: [{ label: "Orders", href: "/orders" }, { label: "WO-2026-0042" }],
+	});
+	await expect.poll(() => document.title).toBe("WO-2026-0042 · Orders");
+
+	await rerender({ title: "WO-2026-0042", documentTitle: "Work order" });
+	await expect.poll(() => document.title).toBe("Work order");
 });

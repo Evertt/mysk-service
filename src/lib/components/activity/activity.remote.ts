@@ -21,6 +21,8 @@ import { live } from "#lib/server/live.ts";
 import { orNotFound } from "#lib/server/records.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
+import { type WatchedType, watchedTypes } from "./watched.ts";
+
 const allModules = appModules.map((module) => module.id);
 
 /** Entries per page of the feed. */
@@ -172,12 +174,11 @@ export const getActivityFilters = forMembers.query(async () => {
 });
 
 /**
- * The records whose pages can say that someone else changed them (`watchRecordChanges`), by their
- * activity subject type, with their table, to check that the record is the tenant's. Add a type
- * here to give its pages `<ChangedElsewhere>`.
+ * The tables of the records whose pages can say that someone else changed them (`watchedTypes`),
+ * to check that the record is the tenant's.
  */
 const watchedRecords = { order, customer, equipment, engineer } satisfies Record<
-	string,
+	WatchedType,
 	TenantTable
 >;
 
@@ -199,7 +200,7 @@ export interface RecordChange {
  */
 export const watchRecordChanges = forMembers.query.live(
 	v.object({
-		type: v.picklist(Object.keys(watchedRecords) as (keyof typeof watchedRecords)[]),
+		type: v.picklist(watchedTypes),
 		id: recordId(),
 	}),
 	({ type, id }) => {

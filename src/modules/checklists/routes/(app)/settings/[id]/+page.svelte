@@ -6,12 +6,11 @@
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import { toast } from "svelte-sonner";
 
-	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
-	import PageHeader from "#lib/components/page-header.svelte";
+	import RecordPage from "#lib/components/record-page.svelte";
 	import CategoriesCard from "#modules/checklists/detail/categories-card.svelte";
 	import PointsCard from "#modules/checklists/detail/points-card.svelte";
 	import TemplateDialog from "#modules/checklists/form/template-dialog.svelte";
@@ -30,21 +29,17 @@
 	const restoreForm = $derived(restore.for(String(template.id)));
 </script>
 
-<svelte:head>
-	<title>{template.name} · {m.checklists_templates_title()}</title>
-</svelte:head>
-
-<PageHeader
+<RecordPage
 	title={template.name}
-	description={template.norm ?? m.checklists_no_norm()}
-	breadcrumbs={[
+	subtitle={template.norm ?? m.checklists_no_norm()}
+	list={[
 		{ label: m.checklists_module_name(), href: resolve("/(app)/(modules)/checklists") },
 		{
 			label: m.checklists_templates_title(),
 			href: resolve("/(app)/(modules)/checklists/settings"),
 		},
-		{ label: template.name },
 	]}
+	subject={{ type: "checklistTemplate", id: template.id }}
 >
 	{#snippet badges()}
 		{#if template.archived}
@@ -74,13 +69,10 @@
 			</form>
 		{/if}
 	{/snippet}
-</PageHeader>
-
-<div class="grid items-start gap-6 lg:grid-cols-3">
-	<div class="flex min-w-0 flex-col gap-6 lg:col-span-2">
+	{#snippet main()}
 		<PointsCard templateId={template.id} points={data.points} {canChange} />
-	</div>
-	<div class="flex min-w-0 flex-col gap-6">
+	{/snippet}
+	{#snippet side()}
 		<Card.Root data-checklist-details>
 			<Card.Content>
 				<dl class="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
@@ -93,9 +85,8 @@
 			</Card.Content>
 		</Card.Root>
 		<CategoriesCard templateId={template.id} categories={data.categories} {canChange} />
-		<ActivityCard type="checklistTemplate" id={template.id} />
-	</div>
-</div>
+	{/snippet}
+</RecordPage>
 
 {#if canChange}
 	<TemplateDialog {template} bind:open={editing} />

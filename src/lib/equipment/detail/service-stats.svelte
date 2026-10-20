@@ -5,7 +5,7 @@
 	included).
 -->
 <script lang="ts">
-	import StatCard from "#lib/components/stat-card.svelte";
+	import StatTile from "#lib/components/stat-tile.svelte";
 	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
 	import { orderTypeDisplay } from "#lib/orders/index.ts";
 
@@ -26,45 +26,50 @@
 </script>
 
 <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-	<Card.Root>
-		<Card.Header>
-			<Card.Description>{m.equipment_stats_orders()}</Card.Description>
-			<Card.Title class="text-3xl tabular-nums">{formatNumber(stats.orders)}</Card.Title>
-			<Card.Action>
-				<Badge variant="outline">
-					{m.equipment_stats_open({ count: formatNumber(stats.openOrders) })}
-				</Badge>
-			</Card.Action>
-		</Card.Header>
-		<Card.Footer>
-			<ul
-				aria-label={m.equipment_stats_orders_by_type()}
-				class="flex flex-wrap gap-x-3 gap-y-1 text-sm"
-			>
-				{#each stats.ordersByType as { type, count } (type)}
-					{@const display = orderTypeDisplay[type]}
-					<li class="inline-flex items-center gap-1 text-muted-foreground">
-						<display.icon class="size-3.5" />
-						{display.label}
-						<span class="font-medium text-foreground tabular-nums">
-							{formatNumber(count)}
-						</span>
-					</li>
-				{/each}
-			</ul>
-		</Card.Footer>
-	</Card.Root>
-	<StatCard
+	<StatTile
+		layout="card"
+		size="large"
+		label={m.equipment_stats_orders()}
+		value={formatNumber(stats.orders)}
+	>
+		{#snippet action()}
+			<Badge variant="outline">
+				{m.equipment_stats_open({ count: formatNumber(stats.openOrders) })}
+			</Badge>
+		{/snippet}
+		<ul
+			aria-label={m.equipment_stats_orders_by_type()}
+			class="flex flex-wrap gap-x-3 gap-y-1 text-sm"
+		>
+			{#each stats.ordersByType as { type, count } (type)}
+				{@const display = orderTypeDisplay[type]}
+				<li class="inline-flex items-center gap-1 text-muted-foreground">
+					<display.icon class="size-3.5" />
+					{display.label}
+					<span class="font-medium text-foreground tabular-nums">
+						{formatNumber(count)}
+					</span>
+				</li>
+			{/each}
+		</ul>
+	</StatTile>
+	<StatTile
+		layout="card"
+		size="large"
 		label={m.equipment_stats_cost()}
 		value={formatCents(stats.cost)}
 		detail={m.equipment_stats_cost_orders({ count: stats.doneOrders })}
 	/>
-	<StatCard
+	<StatTile
+		layout="card"
+		size="large"
 		label={m.equipment_stats_last_service()}
 		value={stats.lastService ? formatDate(stats.lastService) : m.equipment_stats_never()}
 		detail={m.equipment_stats_last_service_description()}
 	/>
-	<StatCard
+	<StatTile
+		layout="card"
+		size="large"
 		label={m.equipment_stats_since_repair()}
 		value={stats.daysSinceLastRepair === null
 			? "—"

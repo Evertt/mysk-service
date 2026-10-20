@@ -9,7 +9,7 @@ import {
 } from "#lib/components/data-table/list-definition.ts";
 import { equipmentStatuses } from "#lib/models.ts";
 
-import { listColumns } from "../extensions.ts";
+import { points } from "../extensions.ts";
 
 /**
  * The equipment list: what it sorts, groups and filters by, and with which values. The page, the
@@ -38,5 +38,5 @@ export const equipmentList = defineList({
 	},
 	defaults: { sort: [{ id: "unit", desc: false }] },
 	// The tenant's modules may add columns, e.g. maintenance's next due date.
-	moduleColumns: listColumns,
+	moduleColumns: points.list.columns,
 });

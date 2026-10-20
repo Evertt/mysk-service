@@ -4,7 +4,7 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { beforeAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { defineList, extendList, oneOf } from "#lib/components/data-table/list-definition.ts";
-import { listColumns } from "#lib/equipment/extensions.ts";
+import { points } from "#lib/equipment/extensions.ts";
 import { inTenant, type Tenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { equipment } from "#lib/server/db/schema.ts";
@@ -75,7 +75,7 @@ const units = defineList({
 		status: { filter: oneOf(["operational", "retired"]) },
 	},
 	defaults: { sort: [{ id: "serial", desc: false }] },
-	moduleColumns: listColumns,
+	moduleColumns: points.list.columns,
 });
 
 /** A unit's score, tenant-scoped. */
@@ -89,7 +89,7 @@ const score = () =>
 const registry: ColumnSqlContribution[] = [
 	{
 		module: "gadgets",
-		point: listColumns,
+		point: points.list.columns,
 		columns: [
 			columnSql(gadgetsRating, () => {
 				const bucket = sql`(case when ${score()} >= 5 then 'high' when ${score()} < 5 then 'low' end)`;
@@ -105,14 +105,14 @@ const registry: ColumnSqlContribution[] = [
 	},
 	{
 		module: "widgets",
-		point: listColumns,
+		point: points.list.columns,
 		columns: [
 			columnSql(widgetsNote, () => ({
 				value: sql<string>`'note ' || ${equipment.serialNumber}`,
 			})),
 		],
 	},
-	{ module: "others", point: { id: "orders.list", kind: "columns" }, columns: [] },
+	{ module: "others", point: { id: "orders.list.columns", kind: "columns" }, columns: [] },
 ];
 
 /** The list's SQL, built per request like a real list's, with the modules' columns. */
@@ -178,7 +178,7 @@ describe("withModuleColumns", () => {
 		const borrowed = [
 			{
 				module: "widgets",
-				point: listColumns,
+				point: points.list.columns,
 				columns: [columnSql(gadgetsRating, () => ({ value: score() }))],
 			},
 		];

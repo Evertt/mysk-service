@@ -7,10 +7,9 @@
 	import PrinterIcon from "@lucide/svelte/icons/printer";
 	import SendIcon from "@lucide/svelte/icons/send";
 
-	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import EnumBadge from "#lib/components/enum-badge.svelte";
-	import PageHeader from "#lib/components/page-header.svelte";
+	import RecordPage from "#lib/components/record-page.svelte";
 	import { formatCents, formatDate, formatDateTime } from "#lib/i18n/index.ts";
 	import { isMadeElsewhere } from "#modules/invoices/credit-note.ts";
 	import { getCreditNote } from "#modules/invoices/credit-notes.remote.ts";
@@ -42,90 +41,82 @@
 	);
 </script>
 
-<svelte:head>
-	<title>{credit.number} · {m.invoices_credit_notes()}</title>
-</svelte:head>
-
-<div class="print:hidden">
-	<PageHeader
-		title={credit.number}
-		description={m.invoices_credit_for({ customer: credit.customer.name })}
-		breadcrumbs={[
-			{ label: m.invoices_title(), href: resolve("/(app)/(modules)/invoices") },
-			{
-				label: m.invoices_credit_notes(),
-				href: resolve("/(app)/(modules)/invoices/credit-notes"),
-			},
-			{ label: credit.number },
-		]}
-	>
-		{#snippet badges()}
-			<EnumBadge display={creditNoteStateDisplay} value={credit.status} />
-		{/snippet}
-		{#snippet actions()}
-			<Button variant="outline" onclick={() => window.print()}>
-				<PrinterIcon data-icon="inline-start" />
-				{m.invoices_print()}
-			</Button>
-			<Button
-				variant="outline"
-				href={resolve("/(app)/(modules)/invoices/credit-notes/[number]/pdf", {
-					number: credit.number,
-				})}
-				download="{credit.number}.pdf"
-				data-sveltekit-reload
-			>
-				<FileDownIcon data-icon="inline-start" />
-				{m.invoices_download_pdf()}
-			</Button>
-			{#if canChange(credit.status, "void")}
-				<ConfirmButton
-					form={voidCreditNote}
-					id={String(credit.id)}
-					label={m.invoices_credit_void()}
-					icon={BanIcon}
-					variant="destructive"
-					title={m.invoices_void_title({ number: credit.number })}
-					description={m.invoices_credit_void_description()}
-					done={m.invoices_credit_voided()}
-				/>
-			{/if}
-			{#if canChange(credit.status, "paid") && !offset}
-				<ConfirmButton
-					form={settleCreditNote}
-					id={String(credit.id)}
-					label={m.invoices_credit_settle()}
-					icon={CircleCheckBigIcon}
-					title={m.invoices_credit_settle_title({ number: credit.number })}
-					description={m.invoices_credit_settle_description({ customer: credit.customer.name })}
-					done={m.invoices_credit_settled_done()}
-				/>
-			{/if}
-			{#if canChange(credit.status, "sent")}
-				<ConfirmButton
-					form={issueCreditNote}
-					id={String(credit.id)}
-					label={m.invoices_issue()}
-					icon={SendIcon}
-					title={m.invoices_issue_title({ number: credit.number })}
-					description={offset
-						? m.invoices_credit_issue_offset_description({ number: credit.invoice!.number })
-						: m.invoices_credit_issue_description()}
-					done={m.invoices_credit_issued()}
-				/>
-			{/if}
-		{/snippet}
-	</PageHeader>
-</div>
-
-<Field.FieldError errors={problems} class="print:hidden" />
-
-<div class="grid items-start gap-6 lg:grid-cols-3">
-	<div class="min-w-0 lg:col-span-2 print:col-span-3">
+<RecordPage
+	title={credit.number}
+	subtitle={m.invoices_credit_for({ customer: credit.customer.name })}
+	list={[
+		{ label: m.invoices_title(), href: resolve("/(app)/(modules)/invoices") },
+		{
+			label: m.invoices_credit_notes(),
+			href: resolve("/(app)/(modules)/invoices/credit-notes"),
+		},
+	]}
+	subject={{ type: "credit_note", id: credit.id }}
+	printMain
+>
+	{#snippet badges()}
+		<EnumBadge display={creditNoteStateDisplay} value={credit.status} />
+	{/snippet}
+	{#snippet actions()}
+		<Button variant="outline" onclick={() => window.print()}>
+			<PrinterIcon data-icon="inline-start" />
+			{m.invoices_print()}
+		</Button>
+		<Button
+			variant="outline"
+			href={resolve("/(app)/(modules)/invoices/credit-notes/[number]/pdf", {
+				number: credit.number,
+			})}
+			download="{credit.number}.pdf"
+			data-sveltekit-reload
+		>
+			<FileDownIcon data-icon="inline-start" />
+			{m.invoices_download_pdf()}
+		</Button>
+		{#if canChange(credit.status, "void")}
+			<ConfirmButton
+				form={voidCreditNote}
+				id={String(credit.id)}
+				label={m.invoices_credit_void()}
+				icon={BanIcon}
+				variant="destructive"
+				title={m.invoices_void_title({ number: credit.number })}
+				description={m.invoices_credit_void_description()}
+				done={m.invoices_credit_voided()}
+			/>
+		{/if}
+		{#if canChange(credit.status, "paid") && !offset}
+			<ConfirmButton
+				form={settleCreditNote}
+				id={String(credit.id)}
+				label={m.invoices_credit_settle()}
+				icon={CircleCheckBigIcon}
+				title={m.invoices_credit_settle_title({ number: credit.number })}
+				description={m.invoices_credit_settle_description({ customer: credit.customer.name })}
+				done={m.invoices_credit_settled_done()}
+			/>
+		{/if}
+		{#if canChange(credit.status, "sent")}
+			<ConfirmButton
+				form={issueCreditNote}
+				id={String(credit.id)}
+				label={m.invoices_issue()}
+				icon={SendIcon}
+				title={m.invoices_issue_title({ number: credit.number })}
+				description={offset
+					? m.invoices_credit_issue_offset_description({ number: credit.invoice!.number })
+					: m.invoices_credit_issue_description()}
+				done={m.invoices_credit_issued()}
+			/>
+		{/if}
+	{/snippet}
+	{#snippet summary()}
+		<Field.FieldError errors={problems} class="print:hidden" />
+	{/snippet}
+	{#snippet main()}
 		<CreditNoteDocument {data} editable={linesEditable} />
-	</div>
-
-	<div class="flex min-w-0 flex-col gap-6 print:hidden">
+	{/snippet}
+	{#snippet side()}
 		{#if credit.invoice && data.remaining !== null}
 			<Card.Root data-credited-invoice>
 				<Card.Header>
@@ -192,6 +183,5 @@
 				</Card.Content>
 			</Card.Root>
 		{/if}
-		<ActivityCard type="credit_note" id={credit.id} />
-	</div>
-</div>
+	{/snippet}
+</RecordPage>

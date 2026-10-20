@@ -1,14 +1,11 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import type { RouteParams } from "$app/types";
-	import PencilIcon from "@lucide/svelte/icons/pencil";
 
-	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import EnumBadge from "#lib/components/enum-badge.svelte";
-	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
-	import PageHeader from "#lib/components/page-header.svelte";
-	import StatCard from "#lib/components/stat-card.svelte";
+	import RecordPage from "#lib/components/record-page.svelte";
+	import StatTile from "#lib/components/stat-tile.svelte";
 	import { CustomerLink } from "#lib/customers/components.ts";
 	import { formatCents, formatDate, formatNumber, label } from "#lib/i18n/index.ts";
 	import { OrderLink } from "#lib/orders/components.ts";
@@ -29,17 +26,19 @@
 	const level = $derived(stockLevel(material.stock, material.unit));
 </script>
 
-<svelte:head>
-	<title>{m.materials_head_title({ title: material.name })}</title>
-</svelte:head>
-
-<PageHeader
+<RecordPage
 	title={material.name}
-	description={material.sku}
-	breadcrumbs={[
-		{ label: m.materials_title(), href: resolve("/(app)/(modules)/materials") },
-		{ label: material.sku },
-	]}
+	subtitle={material.sku}
+	list={{ label: m.materials_title(), href: resolve("/(app)/(modules)/materials") }}
+	crumb={material.sku}
+	edit={resolve("/(app)/(modules)/materials/[sku]/edit", { sku: material.sku })}
+	remove={{
+		form: deleteMaterial,
+		id: String(material.id),
+		title: m.materials_delete_title({ name: material.name }),
+		description: m.materials_delete_description(),
+	}}
+	subject={{ type: "material", id: material.id }}
 >
 	{#snippet badges()}
 		<EnumBadge display={stockLevelDisplay} value={level} />
@@ -47,38 +46,22 @@
 	{#snippet actions()}
 		<ReceiveStockDialog {material} />
 		<CountStockDialog {material} />
-		<Button
-			variant="outline"
-			href={resolve("/(app)/(modules)/materials/[sku]/edit", { sku: material.sku })}
-		>
-			<PencilIcon data-icon="inline-start" />
-			{m.common_edit()}
-		</Button>
-		<DeleteDialog
-			form={deleteMaterial}
-			id={String(material.id)}
-			title={m.materials_delete_title({ name: material.name })}
-			description={m.materials_delete_description()}
-		/>
 	{/snippet}
-</PageHeader>
-
-<div class="grid items-start gap-6 lg:grid-cols-3">
-	<div class="flex min-w-0 flex-col gap-6 lg:col-span-2">
+	{#snippet main()}
 		<div class="grid gap-4 sm:grid-cols-3">
-			<StatCard
-				size="small"
+			<StatTile
+				layout="card"
 				label={m.materials_used_last_year()}
 				value={quantity(stats.usedLastYear)}
 			/>
-			<StatCard
-				size="small"
+			<StatTile
+				layout="card"
 				label={m.materials_open_orders()}
 				value={formatNumber(stats.openOrders)}
 			/>
 			<!-- Order lines take their materials from stock when they're added. -->
-			<StatCard
-				size="small"
+			<StatTile
+				layout="card"
 				label={m.materials_needed()}
 				value={quantity(stats.neededForOpenOrders)}
 				detail={stats.neededForOpenOrders ? m.materials_needed_taken() : undefined}
@@ -155,9 +138,8 @@
 				<StockHistory movements={data.movements} unit={material.unit} />
 			</Card.Content>
 		</Card.Root>
-	</div>
-
-	<div class="flex min-w-0 flex-col gap-6">
+	{/snippet}
+	{#snippet side()}
 		<Card.Root>
 			<Card.Header>
 				<Card.Title>{m.materials_material()}</Card.Title>
@@ -189,7 +171,5 @@
 				</dl>
 			</Card.Content>
 		</Card.Root>
-
-		<ActivityCard type="material" id={material.id} />
-	</div>
-</div>
+	{/snippet}
+</RecordPage>

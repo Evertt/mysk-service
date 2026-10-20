@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
+	import ChangedElsewhere from "#lib/components/activity/changed-elsewhere.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { AccountCard, EngineerForm } from "#lib/engineers/components.ts";
 	import { getEngineer, updateEngineer } from "#lib/engineers/remotes.ts";
@@ -11,11 +12,9 @@
 
 	const { engineer } = $derived(await getEngineer(params.id));
 	const engineerHref = $derived(resolve("/(app)/engineers/[id]", { id: String(engineer.id) }));
+	// Counts the reloads of the latest version, which start the form afresh.
+	let loaded = $state(0);
 </script>
-
-<svelte:head>
-	<title>{m.engineers_edit_title({ name: engineer.name })} · {m.engineers_title()}</title>
-</svelte:head>
 
 <PageHeader
 	title={m.engineers_edit_title({ name: engineer.name })}
@@ -27,6 +26,10 @@
 	]}
 />
 
-<EngineerForm form={updateEngineer} {engineer} cancelHref={engineerHref} />
+<ChangedElsewhere type="engineer" id={engineer.id} onreload={() => loaded++} />
+
+{#key loaded}
+	<EngineerForm form={updateEngineer} {engineer} cancelHref={engineerHref} />
+{/key}
 
 <AccountCard engineerId={engineer.id} />

@@ -6,10 +6,9 @@
 	import { resolve } from "$app/paths";
 	import type { RouteParams } from "$app/types";
 
-	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import EnumBadge from "#lib/components/enum-badge.svelte";
-	import PageHeader from "#lib/components/page-header.svelte";
+	import RecordPage from "#lib/components/record-page.svelte";
 	import { CustomerLink } from "#lib/customers/components.ts";
 	import { formatCents, formatDateTime, formatNumber } from "#lib/i18n/index.ts";
 	import OrderSteps from "#modules/parts-shop/detail/order-steps.svelte";
@@ -22,17 +21,11 @@
 	const order = $derived(await getShopOrder(params.number));
 </script>
 
-<svelte:head>
-	<title>{order.number}</title>
-</svelte:head>
-
-<PageHeader
+<RecordPage
 	title={order.number}
-	description={m.shop_order_description({ customer: order.customer.name })}
-	breadcrumbs={[
-		{ label: m.shop_orders_title(), href: resolve("/(app)/(modules)/parts-shop") },
-		{ label: order.number },
-	]}
+	subtitle={m.shop_order_description({ customer: order.customer.name })}
+	list={{ label: m.shop_orders_title(), href: resolve("/(app)/(modules)/parts-shop") }}
+	subject={{ type: "shop_order", id: order.id }}
 >
 	{#snippet badges()}
 		<EnumBadge
@@ -44,10 +37,7 @@
 	{#snippet actions()}
 		<OrderSteps number={order.number} status={order.status} total={order.total} />
 	{/snippet}
-</PageHeader>
-
-<div class="grid gap-6 lg:grid-cols-3">
-	<div class="flex flex-col gap-6 lg:col-span-2">
+	{#snippet main()}
 		<Card.Root data-shop-order-lines>
 			<Card.Header>
 				<Card.Title>{m.shop_order_lines()}</Card.Title>
@@ -92,8 +82,8 @@
 				</Table.Root>
 			</Card.Content>
 		</Card.Root>
-	</div>
-	<div class="flex flex-col gap-6">
+	{/snippet}
+	{#snippet side()}
 		<Card.Root>
 			<Card.Header>
 				<Card.Title>{m.shop_order_details()}</Card.Title>
@@ -115,6 +105,5 @@
 				</dl>
 			</Card.Content>
 		</Card.Root>
-		<ActivityCard type="shop_order" id={order.id} />
-	</div>
-</div>
+	{/snippet}
+</RecordPage>
