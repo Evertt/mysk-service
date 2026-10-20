@@ -60,8 +60,8 @@ Organizations own all business data.
   the customer portal's queries to the customer (`ofCustomer()`, `customerOrders()`, `atSites()`
   in `src/lib/server/auth/customer.ts`).
 - Every select, update and delete on a tenant table is scoped: `inTenant(table)`,
-  `idInTenant(table, id)`, `idsInTenant(table, ids)`, and joins through `tenantJoin()`. Ids come
-  from the client.
+  `idInTenant(table, id)`, `idsInTenant(table, ids)`, and joins through `tenantJoin()` (or
+  `sameTenant(a, b)`). Ids come from the client.
 - Inserts take `organizationId` from `currentTenant()`. Numbers come from `nextNumber(tx, …)` in the
   same transaction. Orders are created only through `createOrders(tx, drafts)`, and change status
   only through `transitionOrder()` (the order form through `beginOrderChange()`).
@@ -69,6 +69,13 @@ Organizations own all business data.
 - Every section's tests cover isolation: South can't see or change North's records, also by
   tampering with ids. In e2e one page and one tampered form per section; the rest in its server
   spec (`docs/agents/tests.md`).
+
+Server code has one way per recurring problem (`docs/agents/tenancy.md`, "One way";
+`hand-written.spec.ts` refuses the rest): services in `server/` throw a `Refused` to refuse
+(`gated()` turns it into the form's issues or a 400), and remote files hold no transactions; a
+record is looked up with `unitBySerial()`, `customerByCode()` or `orderByNumber()`, deleted with
+`deleteAndLog()` or `defineRemoval()`, ordered with `nextPosition()`/`reorder()`, and its name
+checked with `nameTaken()` (`src/lib/server/records.ts`).
 
 Details and the shared server helpers: `docs/agents/tenancy.md`.
 

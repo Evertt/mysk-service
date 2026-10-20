@@ -40,15 +40,15 @@ true })`, whose contributors answer at once, without awaiting: for an owner that
   (`src/lib/orders/server/pricing.ts`): labour, the costs the modules add (`orders.costs`, e.g.
   materials, with what they're made of when asked for `items`) and their adjustments.
   Every change to an order's status, its form's save and its deletion goes through
-  `saveOrderParts()` (`orders.saving`), which throws an `OrderRefused` with the problems of a module
-  that refuses (e.g. a shortage of stock; its problems are Standard Schema issues, `{ message,
-path? }` from the form's root, which the form passes to `invalid()` as they are); the caller
-  shows them on the form's fields or as a message. An order's units are set only by
+  `saveOrderParts()` (`orders.saving`), which throws a `Refused` with the problems of a module
+  that refuses (e.g. a shortage of stock; its problems are `{ message, path? }`, the path from the
+  form's root, `#lib/server/refused.ts`): the form shows them on its fields, a change without the
+  form (a status, a deletion) as one message (`refusedWhole()`). An order's units are set only by
   `setOrderUnits()` (`src/lib/orders/server/units.ts`, from `createOrders()` and the order form):
   the units it keeps keep their rows, and the modules save their part (`orders.units`,
   `saveUnitParts()`) once the new units are in and before the ones it loses go, so a module's rows
   about an order's unit (a checklist, which refers to `order_unit`) can follow, or refuse a unit's
-  removal (an `OrderRefused`, about the form's units unless its problem says otherwise).
+  removal (a `Refused`, about the form's units unless its problem says otherwise).
 - **Daily jobs** (`jobs.daily`, a `skip` collector in `src/lib/jobs/extensions.ts`): what a
   module does by itself once a day. `runDaily()` (`src/lib/server/jobs/daily.ts`) asks each
   organization's modules that are on, one organization after another, inside one request to

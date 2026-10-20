@@ -51,9 +51,12 @@ helpers are in `src/lib/server/auth/session.ts`:
   the client. Check that submitted references (e.g. a `customerId`) belong to the tenant, for a
   clear message (the foreign keys would refuse them anyway). Write the tenant scope with
   `idInTenant(table, id)` and `idsInTenant(table, ids)` (`session.ts`) instead of spelling out
-  `and(eq(table.id, id), inTenant(table))`, and a join to a tenant table with
-  `.leftJoin(...tenantJoin(engineer, order.engineerId))`: a bare `eq(table.id, id)` then stands out
-  in review. `contract_equipment` has no `organization_id`: reach it through a tenant-checked
+  `and(eq(table.id, id), inTenant(table))`, a join to a tenant table with
+  `.leftJoin(...tenantJoin(engineer, order.engineerId))`, and a join or correlated subquery whose
+  rows share the outer row's tenant with `sameTenant(orderUnit, order)` instead of comparing their
+  `organizationId`s: a bare `eq(table.id, id)` then stands out in review (`hand-written.spec.ts`
+  refuses the spelled-out forms).
+  `contract_equipment` has no `organization_id`: reach it through a tenant-checked
   contract or equipment.
 - Inserts set `organizationId` from `currentTenant()`. Codes and numbers are unique and sequential
   per organization: pick the next one with `nextNumber(tx, "order")` (`src/lib/server/numbering.ts`;
@@ -79,6 +82,47 @@ helpers are in `src/lib/server/auth/session.ts`:
   contract's coverage), the key pairs `customer_id` instead.
 
 - Shared server helpers, so each section doesn't write them again: `bulkChange()` and
-  `refreshRequested()` for bulk commands (`lists/bulk.ts`), `deleteAndLog()` for deleting a record
-  (`records.ts`), `refuse()` for refusing a form with its problems and `refuseOffParts()` for a
-  form slot's parts (`forms.ts`).
+  `refreshRequested()` for bulk commands (`lists/bulk.ts`), the record toolkit (`records.ts`, see
+  "One way" below) and `refuseOffParts()` for a form slot's parts (`forms.ts`).
+
+## One way
+
+Each recurring problem of server code has one way to solve it.
+`src/tests/unit/lib/server/hand-written.spec.ts` refuses the hand-written forms, naming the file
+and line.
+
+**Refusing a change.** Services throw a `Refused` (`src/lib/server/refused.ts`) with what's
+wrong: `throw new Refused(m.x())` for the whole change, `{ path: ["name"], message }` on a form's
+field (nested paths too: `["lines", 2, "quantity"]`), or `Refused.check(problems)` for a check's
+answers. The remote function doesn't catch it: `gated()` (`remote-functions.ts`) turns it into
+the form's issues, each on its field, or for a command or query into a 400 with its messages; a
+bulk action skips the record with them. A refusal that carries more for a caller that handles it
+extends it (`StockShortage`, `OrderStockShortage`, `UnknownDocks`). Services don't return
+`{ problem }`/`{ problems }` unions, take the form's `issue`, or call `invalid()`; `invalid()` is
+only for a remote form handler refusing its own field with `issue.x(...)`, which types the field.
+A check that collects data for its caller (a hook's answer, `checkLines()`) may return problems,
+which the caller throws.
+
+**Remote files hold no transactions.** A `*.remote.ts` file is the gate and the refreshes: it
+reads its input, calls a service in the section's `server/` (`saveContract()`,
+`removeCustomer()`), and refreshes what changed. The files that still run a transaction are listed
+in `hand-written.spec.ts`; move it out when you change one, and take it off the list.
+
+**Records** (`src/lib/server/records.ts`):
+
+- A record looked up by its page's key: `unitBySerial()` (`#lib/equipment/server/index.ts`),
+  `customerByCode()` (`#lib/customers/server/index.ts`) and `orderByNumber()`
+  (`#lib/orders/server/index.ts`), each a 404 with core's message, modules' cards too. Pass the
+  fields (`unitBySerial(serial, { id: equipment.id, name: equipment.name }, tx)`), or a query that
+  joins more:
+  `unitBySerial(serial, (where) => db.select(…).from(equipment).innerJoin(…).where(where))`.
+  `lookupBy()` makes another; `orNotFound(row, message)` is any other row or a 404.
+- Deleting: `deleteAndLog(table, { subject, parent?, tx?, note?, referenced? })` deletes the
+  tenant's record and logs it;
+  `defineRemoval({ table, find, notFound, subject, blockers, referenced })` makes a section's
+  `removeX(id)` (find or 404, refuse while `blockers` name something, delete and log, in one
+  transaction), which its page and the list's bulk delete share.
+- Ordered and named lists: `nextPosition(tx, table, scope?)` for a new record's place,
+  `reorder(tx, table, id, direction, scope?)` for a move (the form is `moveSchema` in
+  `#lib/schema.ts`; `moved()` in `#lib/ordering.ts` is the pure swap), and
+  `nameTaken(tx, table, name, { scope, except })` for a name unique in any case.
