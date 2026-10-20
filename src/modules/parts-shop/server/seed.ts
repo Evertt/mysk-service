@@ -283,7 +283,7 @@ export default defineSeed<ShopSeed>({
 			count("shopProductCheckpoints", links);
 
 			for (const order of tenant.data.orders) {
-				const customerId = tenant.customerIds[order.customerId - 1];
+				const customerId = tenant.customerId(order.customerId);
 				const [spend] = await tx
 					.select({ id: walletEntry.id })
 					.from(walletEntry)

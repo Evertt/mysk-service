@@ -11,7 +11,7 @@ import { formatCode, sequenceStart } from "#lib/numbering.ts";
 import type { Transaction } from "#lib/server/db/index.ts";
 
 import * as schema from "../schema.ts";
-import { addDays, now } from "./clock.ts";
+import { addDays, HOUR, now } from "./clock.ts";
 import { toMoment } from "./temporal.ts";
 
 const { activity, customer, equipment, order, orderRequest, orderUnit, portalContact } = schema;
@@ -90,7 +90,7 @@ export async function linkDemoCustomer(
 		.from(order)
 		.where(eq(order.organizationId, organizationId));
 	for (const [i, report] of link.reports.entries()) {
-		const createdAt = toMoment(new Date(now.getTime() - report.hoursAgo * 60 * 60 * 1000));
+		const createdAt = toMoment(new Date(now.getTime() - report.hoursAgo * HOUR));
 		const decidedAt = report.decision ? createdAt.add({ hours: 2 }) : null;
 		const rejectionReason =
 			report.decision && "rejectionReason" in report.decision

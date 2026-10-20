@@ -1,3 +1,4 @@
+import { insertRows } from "#lib/server/db/parameters.ts";
 import type { SeedOrder } from "#lib/server/db/seed/module-seed.ts";
 import { defineSeed } from "#lib/server/db/seed/module-seed.ts";
 /**
@@ -58,34 +59,32 @@ export default defineSeed<MaterialsSeed>({
 		return [{ label: "Materialen", amount: data.totals.get(order.id) ?? 0 }];
 	},
 
-	async run({ tx, tenants, insertAll, count }) {
-		// Ids are global, so each tenant's materials follow the ones before.
-		let offset = 0;
+	async run({ tx, tenants, ids, count }) {
 		for (const tenant of tenants) {
 			const { data } = tenant;
 			const organizationId = tenant.id;
-			const orderIdOf = (id: number) => tenant.orderIds[id - 1];
-			const materials = data.materials.map((m) => ({ ...m, organizationId, id: m.id + offset }));
+			const orderIdOf = (id: number) => tenant.orderId(id);
+			const materialId = ids.claim(material, data.materials.length);
+			const materials = data.materials.map((m) => ({ ...m, organizationId, id: materialId(m.id) }));
 			const orderLines = data.orderLines.map((l) => ({
 				...l,
 				organizationId,
 				orderId: orderIdOf(l.orderId),
-				materialId: l.materialId + offset,
+				materialId: materialId(l.materialId),
 			}));
 			const stockMovements = generateStockMovements(data, tenant.seed).map((m) => ({
 				...m,
 				organizationId,
-				materialId: m.materialId + offset,
+				materialId: materialId(m.materialId),
 				orderId: m.orderId && orderIdOf(m.orderId),
 				createdAt: toMoment(m.createdAt),
 			}));
-			await insertAll(materials, (chunk) => tx.insert(material).values(chunk));
-			await insertAll(orderLines, (chunk) => tx.insert(orderLine).values(chunk));
-			await insertAll(stockMovements, (chunk) => tx.insert(stockMovement).values(chunk));
+			await insertRows(tx, material, materials);
+			await insertRows(tx, orderLine, orderLines);
+			await insertRows(tx, stockMovement, stockMovements);
 			count("materials", materials);
 			count("orderLines", orderLines);
 			count("stockMovements", stockMovements);
-			offset += materials.length;
 		}
 	},
 });

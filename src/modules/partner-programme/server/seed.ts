@@ -18,7 +18,8 @@ import { en, Faker, nl } from "@faker-js/faker";
 
 import { dayOf } from "#lib/dates.ts";
 import { formatCode } from "#lib/numbering.ts";
-import { DAY, now } from "#lib/server/db/seed/clock.ts";
+import { insertRows } from "#lib/server/db/parameters.ts";
+import { DAY, now, today } from "#lib/server/db/seed/clock.ts";
 import { defineSeed, type TenantDraft } from "#lib/server/db/seed/module-seed.ts";
 import { toDay, toMoment } from "#lib/server/db/seed/temporal.ts";
 import { seedCreditNote } from "#modules/invoices/api/seed.ts";
@@ -78,7 +79,7 @@ const lastYear = thisYear - 1;
 /** A day of a year, but never after today (the demo is relative to when it's seeded). */
 const demoDay = (year: number, month: number, date: number) => {
 	const day = new Date(year, month - 1, date);
-	return day > now ? new Date(now.getFullYear(), now.getMonth(), now.getDate()) : day;
+	return day > now ? new Date(today) : day;
 };
 
 /**
@@ -355,11 +356,11 @@ export default defineSeed<PartnersSeed>({
 		return draft.profile === "shltr" ? shltrPartners(draft, random) : northPartners(draft);
 	},
 
-	async run({ tx, tenants, insertAll, count }) {
+	async run({ tx, tenants, count }) {
 		for (const tenant of tenants) {
 			const organizationId = tenant.id;
 			const { tiers, partners, classifications } = tenant.data;
-			const customerId = (id: number) => tenant.customerIds[id - 1];
+			const customerId = (id: number) => tenant.customerId(id);
 
 			const years = [lastYear, thisYear].map((year) => ({
 				organizationId,
@@ -378,15 +379,15 @@ export default defineSeed<PartnersSeed>({
 				acceptedOn: toDay(partner.acceptedOn),
 				createdAt: toMoment(partner.acceptedOn),
 			}));
-			await insertAll(accounts, (chunk) => tx.insert(partnerAccount).values(chunk));
+			await insertRows(tx, partnerAccount, accounts);
 			count("partnerAccounts", accounts);
 
 			const classified = classifications.map((row) => ({
 				...row,
 				organizationId,
-				orderId: tenant.orderIds[row.orderId - 1],
+				orderId: tenant.orderId(row.orderId),
 			}));
-			await insertAll(classified, (chunk) => tx.insert(orderClassification).values(chunk));
+			await insertRows(tx, orderClassification, classified);
 			count("partnerClassifications", classified);
 
 			// The closed years, and the wallets that follow from their choices.
@@ -520,8 +521,8 @@ export default defineSeed<PartnersSeed>({
 				}
 			}
 			keepCreditLeft(entries);
-			await insertAll(entries, (chunk) => tx.insert(walletEntry).values(chunk));
-			await insertAll(payouts, (chunk) => tx.insert(bonusCreditNote).values(chunk));
+			await insertRows(tx, walletEntry, entries);
+			await insertRows(tx, bonusCreditNote, payouts);
 			count("partnerBonusYears", Array.from({ length: closedYears }));
 			count("walletEntries", entries);
 			count("partnerBonusCreditNotes", payouts);

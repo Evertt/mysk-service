@@ -27,9 +27,11 @@ import { defaultSimulationSpeed } from "#lib/simulation/extensions.ts";
 import { demoOrganizations, demoUsers } from "../demo.ts";
 import { moduleSeeds } from "../module-seeds.gen.ts";
 import * as moduleSchema from "../modules.gen.ts";
+import { insertRows } from "../parameters.ts";
 import * as schema from "../schema.ts";
 import { seedCategories, shltrCategories } from "./categories.ts";
 import { addDays, now } from "./clock.ts";
+import { IdSpace } from "./ids.ts";
 import { generateLocations, seedQrToken } from "./locations.ts";
 import { runOrder, type SeedTenant, seedCollectors } from "./module-seed.ts";
 import { generateShltrTenant, shltrSignoffs } from "./shltr/index.ts";
@@ -50,11 +52,6 @@ const db = drizzle(
 
 /** The generator's randomness, in Dutch; seeded per tenant, so the data is the same every time. */
 const faker = new Faker({ locale: [nl, en] });
-
-/** Inserts in chunks to stay below SQLite's bound-parameter limit. */
-async function insertAll<T>(rows: T[], insert: (chunk: T[]) => Promise<unknown>) {
-	for (let i = 0; i < rows.length; i += 100) await insert(rows.slice(i, i + 100));
-}
 
 // --- Tenants ---------------------------------------------------------------------------------
 
@@ -141,16 +138,7 @@ await db.transaction(async (tx) => {
 	// users are made again after (`createDemoUsers()`).
 	await tx.delete(schema.organization);
 
-	// Ids are global, so each tenant's ids continue where the previous tenant's ended.
-	const offset = {
-		category: 0,
-		customer: 0,
-		site: 0,
-		location: 0,
-		engineer: 0,
-		equipment: 0,
-		order: 0,
-	};
+	const ids = new IdSpace();
 	const seeded: SeedTenant<Record<string, unknown>>[] = [];
 	// What each module's `generate()` made, by module id: for all the tenants so far (a module
 	// continues where the tenants before left off), and for the tenant at hand.
@@ -203,19 +191,28 @@ await db.transaction(async (tx) => {
 		for (const { id, seed } of moduleSeeds) {
 			if (!tenant.modules.includes(id) || !seed.generate) continue;
 			const before = (generatedBefore[id] ??= []);
-			generated[id] = seed.generate({ ...data, faker }, before);
+			generated[id] = seed.generate({ ...data, faker, ids }, before);
 			before.push(generated[id]);
 		}
 		const organizationId = tenant.id;
-		const o = { ...offset };
 		// The places of the units at their sites, as locations.
 		const { locations, locationOf } = generateLocations(placed.units);
+		// Its rows' ids, after the tenants' before.
+		const rowId = {
+			category: ids.claim(schema.equipmentCategory, tenant.categories.length),
+			customer: ids.claim(customer, data.customers.length),
+			site: ids.claim(schema.customerSite, placed.sites.length),
+			location: ids.claim(schema.equipmentLocation, locations.length),
+			engineer: ids.claim(engineer, data.engineers.length),
+			equipment: ids.claim(equipment, data.equipments.length),
+			order: ids.claim(order, data.orders.length),
+		};
 		// The tenant's categories, in their order, and their ids by key.
 		const categoryId = (key: string) =>
-			tenant.categories.findIndex((category) => category.key === key) + 1 + o.category;
+			rowId.category(tenant.categories.findIndex((category) => category.key === key) + 1);
 		const rows = {
 			categories: tenant.categories.map(({ name, specialty }, position) => ({
-				id: position + 1 + o.category,
+				id: rowId.category(position + 1),
 				organizationId,
 				name,
 				specialty,
@@ -224,27 +221,27 @@ await db.transaction(async (tx) => {
 			customers: data.customers.map((c) => ({
 				...c,
 				organizationId,
-				id: c.id + o.customer,
+				id: rowId.customer(c.id),
 				createdAt: toMoment(c.createdAt),
 			})),
 			sites: placed.sites.map((s) => ({
 				...s,
 				organizationId,
-				id: s.id + o.site,
-				customerId: s.customerId + o.customer,
+				id: rowId.site(s.id),
+				customerId: rowId.customer(s.customerId),
 				createdAt: toMoment(s.createdAt),
 			})),
 			locations: locations.map((l) => ({
 				...l,
 				organizationId,
-				id: l.id + o.location,
-				siteId: l.siteId + o.site,
+				id: rowId.location(l.id),
+				siteId: rowId.site(l.siteId),
 				qrToken: seedQrToken(tenant.slug, "location", l.id),
 			})),
 			engineers: data.engineers.map((e) => ({
 				...e,
 				organizationId,
-				id: e.id + o.engineer,
+				id: rowId.engineer(e.id),
 				hiredAt: toDay(e.hiredAt),
 			})),
 			equipments: data.equipments.map(({ category, ...e }) => ({
@@ -253,10 +250,10 @@ await db.transaction(async (tx) => {
 				categoryId: categoryId(category),
 				installedAt: toDay(e.installedAt),
 				warrantyUntil: toDay(e.warrantyUntil),
-				id: e.id + o.equipment,
-				customerId: e.customerId + o.customer,
-				siteId: placed.units.get(e.id)!.siteId + o.site,
-				locationId: locationOf.has(e.id) ? locationOf.get(e.id)! + o.location : null,
+				id: rowId.equipment(e.id),
+				customerId: rowId.customer(e.customerId),
+				siteId: rowId.site(placed.units.get(e.id)!.siteId),
+				locationId: locationOf.has(e.id) ? rowId.location(locationOf.get(e.id)!) : null,
 				qrToken: seedQrToken(tenant.slug, "unit", e.serialNumber),
 			})),
 			orders: data.orders.map(({ equipmentIds: _units, ...r }) => ({
@@ -265,17 +262,17 @@ await db.transaction(async (tx) => {
 				createdAt: toMoment(r.createdAt),
 				scheduledFor: toMomentOrNull(r.scheduledFor),
 				completedAt: toMomentOrNull(r.completedAt),
-				id: r.id + o.order,
-				customerId: r.customerId + o.customer,
-				engineerId: r.engineerId && r.engineerId + o.engineer,
+				id: rowId.order(r.id),
+				customerId: rowId.customer(r.customerId),
+				engineerId: r.engineerId && rowId.engineer(r.engineerId),
 			})),
 			// Each order's units, in their order.
 			orderUnits: data.orders.flatMap((r) =>
 				r.equipmentIds.map((unit, position) => ({
 					organizationId,
-					orderId: r.id + o.order,
-					customerId: r.customerId + o.customer,
-					equipmentId: unit + o.equipment,
+					orderId: rowId.order(r.id),
+					customerId: rowId.customer(r.customerId),
+					equipmentId: rowId.equipment(unit),
 					position,
 				})),
 			),
@@ -283,20 +280,20 @@ await db.transaction(async (tx) => {
 			signoffs: ("signoffs" in tenant ? tenant.signoffs(data) : []).map((s) => ({
 				...s,
 				organizationId,
-				orderId: s.orderId + o.order,
+				orderId: rowId.order(s.orderId),
 				signedAt: toMoment(s.signedAt),
 			})),
 		};
 
-		await tx.insert(schema.equipmentCategory).values(rows.categories);
-		await insertAll(rows.customers, (chunk) => tx.insert(customer).values(chunk));
-		await insertAll(rows.sites, (chunk) => tx.insert(schema.customerSite).values(chunk));
-		await insertAll(rows.locations, (chunk) => tx.insert(schema.equipmentLocation).values(chunk));
-		await insertAll(rows.engineers, (chunk) => tx.insert(engineer).values(chunk));
-		await insertAll(rows.equipments, (chunk) => tx.insert(equipment).values(chunk));
-		await insertAll(rows.orders, (chunk) => tx.insert(order).values(chunk));
-		await insertAll(rows.orderUnits, (chunk) => tx.insert(schema.orderUnit).values(chunk));
-		await insertAll(rows.signoffs, (chunk) => tx.insert(schema.orderSignoff).values(chunk));
+		await insertRows(tx, schema.equipmentCategory, rows.categories);
+		await insertRows(tx, customer, rows.customers);
+		await insertRows(tx, schema.customerSite, rows.sites);
+		await insertRows(tx, schema.equipmentLocation, rows.locations);
+		await insertRows(tx, engineer, rows.engineers);
+		await insertRows(tx, equipment, rows.equipments);
+		await insertRows(tx, order, rows.orders);
+		await insertRows(tx, schema.orderUnit, rows.orderUnits);
+		await insertRows(tx, schema.orderSignoff, rows.signoffs);
 		// Who created the latest orders, so the activity log starts with some history: the office
 		// staff, not the field engineers.
 		const members = demoUsers.filter((u) =>
@@ -324,19 +321,12 @@ await db.transaction(async (tx) => {
 			slug: tenant.slug,
 			modules: tenant.modules,
 			seed: tenant.seed,
-			customerIds: rows.customers.map((row) => row.id),
-			equipmentIds: rows.equipments.map((row) => row.id),
-			orderIds: rows.orders.map((row) => row.id),
+			customerId: rowId.customer,
+			equipmentId: rowId.equipment,
+			orderId: rowId.order,
 			data: generated,
 			collect: seedCollectors(moduleSeeds, tenant, generated),
 		});
-		offset.category += rows.categories.length;
-		offset.customer += rows.customers.length;
-		offset.site += rows.sites.length;
-		offset.location += rows.locations.length;
-		offset.engineer += rows.engineers.length;
-		offset.equipment += rows.equipments.length;
-		offset.order += rows.orders.length;
 		for (const [table, list] of Object.entries(rows)) count(table, list);
 	}
 
@@ -344,7 +334,7 @@ await db.transaction(async (tx) => {
 		const having = seeded
 			.filter((tenant) => tenant.modules.includes(id))
 			.map((tenant) => ({ ...tenant, data: tenant.data[id] }));
-		await seed.run({ tx, faker, tenants: having, insertAll, count });
+		await seed.run({ tx, faker, tenants: having, ids, count });
 	}
 });
 

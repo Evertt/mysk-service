@@ -15,7 +15,7 @@ import type { EngineerSpecialty, OrderPriority, OrderStatus, OrderType } from "#
 import { formatCode } from "#lib/numbering.ts";
 
 import { specialtyOf } from "../categories.ts";
-import { DAY, now } from "../clock.ts";
+import { DAY, HOUR, MINUTE, now, today } from "../clock.ts";
 import type { ShltrCustomer, ShltrSite } from "./customers.ts";
 import { LEFT_DAYS_AGO } from "./engineers.ts";
 import type { generateShltrEngineers } from "./engineers.ts";
@@ -24,11 +24,7 @@ import { describeOrder } from "./texts.ts";
 
 type Engineer = ReturnType<typeof generateShltrEngineers>[number];
 
-const HOUR = 60 * 60 * 1000;
-const MINUTE = 60 * 1000;
-
-/** Today's midnight, and another day's. */
-const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+/** Another day's midnight than today's. */
 const dayAt = (offset: number) =>
 	new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset);
 const isWorkingDay = (offset: number) => ![0, 6].includes(dayAt(offset).getDay());
