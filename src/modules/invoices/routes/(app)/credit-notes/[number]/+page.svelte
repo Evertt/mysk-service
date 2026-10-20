@@ -13,7 +13,7 @@
 	import { formatCents, formatDate, formatDateTime } from "#lib/i18n/index.ts";
 	import { isMadeElsewhere } from "#modules/invoices/credit-note.ts";
 	import { getCreditNote } from "#modules/invoices/credit-notes.remote.ts";
-	import ConfirmDialog from "#modules/invoices/detail/confirm-dialog.svelte";
+	import ConfirmButton from "#modules/invoices/detail/confirm-button.svelte";
 	import CreditNoteDocument from "#modules/invoices/detail/credit-note-document.svelte";
 	import CreditNoteEditor from "#modules/invoices/detail/credit-note-editor.svelte";
 	import {
@@ -78,7 +78,7 @@
 				{m.invoices_download_pdf()}
 			</Button>
 			{#if canChange(credit.status, "void")}
-				<ConfirmDialog
+				<ConfirmButton
 					form={voidCreditNote}
 					id={String(credit.id)}
 					label={m.invoices_credit_void()}
@@ -90,7 +90,7 @@
 				/>
 			{/if}
 			{#if canChange(credit.status, "paid") && !offset}
-				<ConfirmDialog
+				<ConfirmButton
 					form={settleCreditNote}
 					id={String(credit.id)}
 					label={m.invoices_credit_settle()}
@@ -101,7 +101,7 @@
 				/>
 			{/if}
 			{#if canChange(credit.status, "sent")}
-				<ConfirmDialog
+				<ConfirmButton
 					form={issueCreditNote}
 					id={String(credit.id)}
 					label={m.invoices_issue()}

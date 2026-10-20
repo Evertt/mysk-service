@@ -4,56 +4,33 @@
 -->
 <script lang="ts">
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
-	import { toast } from "svelte-sonner";
 
-	import { submitted } from "#lib/components/form/submitted.ts";
+	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
 
 	import { deleteCustomerDock } from "../docks.remote.ts";
 
 	let { customer, dock }: { customer: string; dock: { id: number; code: string } } = $props();
 
-	let open = $state(false);
 	const form = $derived(deleteCustomerDock.for(String(dock.id)));
 </script>
 
-<AlertDialog.Root bind:open>
-	<AlertDialog.Trigger>
-		{#snippet child({ props })}
-			<Button
-				{...props}
-				variant="ghost"
-				size="icon-sm"
-				aria-label={m.docks_delete_title({ code: dock.code })}
-			>
-				<Trash2Icon />
-			</Button>
-		{/snippet}
-	</AlertDialog.Trigger>
-	<AlertDialog.Content>
-		<AlertDialog.Header>
-			<AlertDialog.Title>{m.docks_delete_title({ code: dock.code })}</AlertDialog.Title>
-			<AlertDialog.Description>{m.docks_delete_description()}</AlertDialog.Description>
-		</AlertDialog.Header>
-		<form
-			{...form.enhance(async ({ submit }) => {
-				if (await submitted(submit)) {
-					open = false;
-					toast.success(m.docks_deleted({ code: dock.code }));
-				}
-			})}
+<ConfirmDialog
+	{form}
+	hidden={{ customer, id: String(dock.id) }}
+	title={m.docks_delete_title({ code: dock.code })}
+	description={m.docks_delete_description()}
+	confirmLabel={m.docks_delete()}
+	destructive
+	done={m.docks_deleted({ code: dock.code })}
+>
+	{#snippet trigger(props)}
+		<Button
+			{...props}
+			variant="ghost"
+			size="icon-sm"
+			aria-label={m.docks_delete_title({ code: dock.code })}
 		>
-			<input {...form.fields.customer.as("hidden", customer)} />
-			<input {...form.fields.id.as("hidden", String(dock.id))} />
-			<Field.FieldError errors={form.fields.allIssues()} class="mb-4" />
-			<AlertDialog.Footer>
-				<AlertDialog.Cancel type="button">{m.common_cancel()}</AlertDialog.Cancel>
-				<Button type="submit" variant="destructive" disabled={!!form.pending}>
-					{#if form.pending}
-						<Spinner data-icon="inline-start" />
-					{/if}
-					{m.docks_delete()}
-				</Button>
-			</AlertDialog.Footer>
-		</form>
-	</AlertDialog.Content>
-</AlertDialog.Root>
+			<Trash2Icon />
+		</Button>
+	{/snippet}
+</ConfirmDialog>

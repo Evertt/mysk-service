@@ -11,8 +11,8 @@
 	import GaugeIcon from "@lucide/svelte/icons/gauge";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
-	import { toast } from "svelte-sonner";
 
+	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
 
 	import { moveComponent, removeComponent } from "../components.remote.ts";
@@ -142,32 +142,14 @@
 		<p class="text-sm text-muted-foreground" data-advice>{part.advice}</p>
 	{/if}
 
-	<AlertDialog.Root bind:open={removing}>
-		<AlertDialog.Content>
-			<AlertDialog.Header>
-				<AlertDialog.Title
-					>{m.condition_component_remove_title({ name: part.name })}</AlertDialog.Title
-				>
-				<AlertDialog.Description
-					>{m.condition_component_remove_description()}</AlertDialog.Description
-				>
-			</AlertDialog.Header>
-			<form
-				{...remove.enhance(async ({ submit }) => {
-					if (!(await submitted(submit))) return;
-					removing = false;
-					toast.success(m.condition_component_removed_toast());
-				})}
-			>
-				<input {...remove.fields.id.as("hidden", String(part.id))} />
-				<Field.FieldError errors={remove.fields.allIssues()} class="mb-4" />
-				<AlertDialog.Footer>
-					<AlertDialog.Cancel type="button">{m.common_cancel()}</AlertDialog.Cancel>
-					<Button type="submit" variant="destructive" disabled={!!remove.pending}>
-						{m.condition_component_remove()}
-					</Button>
-				</AlertDialog.Footer>
-			</form>
-		</AlertDialog.Content>
-	</AlertDialog.Root>
+	<ConfirmDialog
+		form={remove}
+		hidden={{ id: String(part.id) }}
+		title={m.condition_component_remove_title({ name: part.name })}
+		description={m.condition_component_remove_description()}
+		confirmLabel={m.condition_component_remove()}
+		destructive
+		done={m.condition_component_removed_toast()}
+		bind:open={removing}
+	/>
 </li>

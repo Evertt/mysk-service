@@ -5,11 +5,8 @@
 	last in the other.
 -->
 <script lang="ts">
-	import { toast } from "svelte-sonner";
-
+	import FormDialog from "#lib/components/form/form-dialog.svelte";
 	import FormField from "#lib/components/form/form-field.svelte";
-	import SubmitButton from "#lib/components/form/submit-button.svelte";
-	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 
 	import { createPoint, savePoint } from "../templates.remote.ts";
@@ -36,68 +33,44 @@
 	const listId = $props.id();
 </script>
 
-<Dialog.Root bind:open>
-	<Dialog.Content class="sm:max-w-lg">
-		<Dialog.Header>
-			<Dialog.Title
-				>{point ? m.checklists_point_edit_title() : m.checklists_point_new_title()}</Dialog.Title
-			>
-			<Dialog.Description>{m.checklists_point_dialog_description()}</Dialog.Description>
-		</Dialog.Header>
-		<form
-			{...form.enhance(async ({ element, submit }) => {
-				if (!(await submitted(submit))) return;
-				open = false;
-				if (!point) element.reset();
-				toast.success(m.checklists_point_saved());
-			})}
-			class="flex flex-col gap-6"
+<FormDialog
+	{form}
+	title={point ? m.checklists_point_edit_title() : m.checklists_point_new_title()}
+	description={m.checklists_point_dialog_description()}
+	submitLabel={m.checklists_save_point()}
+	hidden={point ? { id: String(point.id) } : { templateId: String(templateId) }}
+	reset={!point}
+	done={m.checklists_point_saved()}
+	class="sm:max-w-lg"
+	bind:open
+>
+	<Field.FieldGroup>
+		<FormField
+			label={m.checklists_field_group()}
+			issues={fields.group.issues()}
+			description={m.checklists_field_group_description()}
 		>
-			{#if point}
-				<input {...savePoint.for(String(point.id)).fields.id.as("hidden", String(point.id))} />
-			{:else}
-				<input {...createPoint.fields.templateId.as("hidden", String(templateId))} />
-			{/if}
-			<Field.FieldGroup>
-				<FormField
-					label={m.checklists_field_group()}
-					issues={fields.group.issues()}
-					description={m.checklists_field_group_description()}
-				>
-					{#snippet children({ id })}
-						<Input
-							{id}
-							list={listId}
-							autocomplete="off"
-							placeholder={m.checklists_field_group_placeholder()}
-							{...fields.group.as("text", point?.group ?? group ?? "")}
-						/>
-						<datalist id={listId}>
-							{#each groups.filter(Boolean) as name (name)}
-								<option value={name}></option>
-							{/each}
-						</datalist>
-					{/snippet}
-				</FormField>
-				<TextField
-					field={fields.text}
-					label={m.checklists_field_text()}
-					value={point?.text}
-					multiline
-					placeholder={m.checklists_field_text_placeholder()}
+			{#snippet children({ id })}
+				<Input
+					{id}
+					list={listId}
+					autocomplete="off"
+					placeholder={m.checklists_field_group_placeholder()}
+					{...fields.group.as("text", point?.group ?? group ?? "")}
 				/>
-			</Field.FieldGroup>
-
-			<!-- E.g. when the template was retired in the meantime. -->
-			<Field.FieldError errors={fields.issues()} />
-			<Dialog.Footer>
-				<Dialog.Close type="button">
-					{#snippet child({ props })}
-						<Button {...props} variant="ghost">{m.common_cancel()}</Button>
-					{/snippet}
-				</Dialog.Close>
-				<SubmitButton pending={form.pending}>{m.checklists_save_point()}</SubmitButton>
-			</Dialog.Footer>
-		</form>
-	</Dialog.Content>
-</Dialog.Root>
+				<datalist id={listId}>
+					{#each groups.filter(Boolean) as name (name)}
+						<option value={name}></option>
+					{/each}
+				</datalist>
+			{/snippet}
+		</FormField>
+		<TextField
+			field={fields.text}
+			label={m.checklists_field_text()}
+			value={point?.text}
+			multiline
+			placeholder={m.checklists_field_text_placeholder()}
+		/>
+	</Field.FieldGroup>
+</FormDialog>

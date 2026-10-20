@@ -8,6 +8,7 @@
 
 	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
+	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
@@ -99,26 +100,13 @@
 {#if canChange}
 	<TemplateDialog {template} bind:open={editing} />
 
-	<AlertDialog.Root bind:open={retiring}>
-		<AlertDialog.Content>
-			<AlertDialog.Header>
-				<AlertDialog.Title>{m.checklists_retire_title({ name: template.name })}</AlertDialog.Title>
-				<AlertDialog.Description>{m.checklists_retire_description()}</AlertDialog.Description>
-			</AlertDialog.Header>
-			<form
-				{...retireForm.enhance(async ({ submit }) => {
-					if (!(await submitted(submit))) return;
-					retiring = false;
-					toast.success(m.checklists_retired_toast());
-				})}
-			>
-				<input {...retireForm.fields.id.as("hidden", String(template.id))} />
-				<Field.FieldError errors={retireForm.fields.allIssues()} class="mb-4" />
-				<AlertDialog.Footer>
-					<AlertDialog.Cancel type="button">{m.common_cancel()}</AlertDialog.Cancel>
-					<SubmitButton pending={retireForm.pending}>{m.checklists_retire()}</SubmitButton>
-				</AlertDialog.Footer>
-			</form>
-		</AlertDialog.Content>
-	</AlertDialog.Root>
+	<ConfirmDialog
+		form={retireForm}
+		hidden={{ id: String(template.id) }}
+		title={m.checklists_retire_title({ name: template.name })}
+		description={m.checklists_retire_description()}
+		confirmLabel={m.checklists_retire()}
+		done={m.checklists_retired_toast()}
+		bind:open={retiring}
+	/>
 {/if}

@@ -5,10 +5,7 @@
 	good; credit goes into the wallet, valid until the year's date.
 -->
 <script lang="ts">
-	import { toast } from "svelte-sonner";
-
-	import SubmitButton from "#lib/components/form/submit-button.svelte";
-	import { submitted } from "#lib/components/form/submitted.ts";
+	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 
 	import { partnerLabels } from "../labels.ts";
@@ -69,39 +66,17 @@
 	</Card.Content>
 </Card.Root>
 
-<AlertDialog.Root bind:open={confirming}>
-	<AlertDialog.Content>
-		<AlertDialog.Header>
-			<AlertDialog.Title>
-				{m.partners_choose_title({ form: label, year: String(awaiting.year) })}
-			</AlertDialog.Title>
-			<AlertDialog.Description>
-				{choice === "credit"
-					? m.partners_client_confirm_credit({
-							amount: formatCents(awaiting.creditAmount),
-							date: formatDate(awaiting.creditValidUntil),
-						})
-					: m.partners_client_confirm_cash({ amount: formatCents(awaiting.cashAmount) })}
-			</AlertDialog.Description>
-		</AlertDialog.Header>
-		<form
-			{...form.enhance(async ({ submit }) => {
-				const chosen = label;
-				if (await submitted(submit)) {
-					confirming = false;
-					toast.success(m.partners_chosen({ form: chosen }));
-				}
-			})}
-		>
-			<input {...form.fields.year.as("hidden", String(awaiting.year))} />
-			<input {...form.fields.choice.as("hidden", choice)} />
-			<Field.FieldError errors={form.fields.allIssues()} class="mb-4" />
-			<AlertDialog.Footer>
-				<AlertDialog.Cancel type="button">{m.common_cancel()}</AlertDialog.Cancel>
-				<SubmitButton pending={form.pending}>
-					{m.partners_choose_confirm({ form: label })}
-				</SubmitButton>
-			</AlertDialog.Footer>
-		</form>
-	</AlertDialog.Content>
-</AlertDialog.Root>
+<ConfirmDialog
+	{form}
+	hidden={{ year: String(awaiting.year), choice }}
+	title={m.partners_choose_title({ form: label, year: String(awaiting.year) })}
+	description={choice === "credit"
+		? m.partners_client_confirm_credit({
+				amount: formatCents(awaiting.creditAmount),
+				date: formatDate(awaiting.creditValidUntil),
+			})
+		: m.partners_client_confirm_cash({ amount: formatCents(awaiting.cashAmount) })}
+	confirmLabel={m.partners_choose_confirm({ form: label })}
+	done={m.partners_chosen({ form: label })}
+	bind:open={confirming}
+/>

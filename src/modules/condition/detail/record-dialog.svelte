@@ -5,11 +5,8 @@
 	checklist's.
 -->
 <script lang="ts">
-	import { toast } from "svelte-sonner";
-
+	import FormDialog from "#lib/components/form/form-dialog.svelte";
 	import NumberField from "#lib/components/form/number-field.svelte";
-	import SubmitButton from "#lib/components/form/submit-button.svelte";
-	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 
 	import { recordCondition } from "../condition.remote.ts";
@@ -34,57 +31,41 @@
 	);
 </script>
 
-<Dialog.Root bind:open>
-	<Dialog.Content class="sm:max-w-md">
-		<Dialog.Header>
-			<Dialog.Title>
-				{component
-					? m.condition_record_component_title({
-							component: `${component.number} ${component.name}`,
-						})
-					: m.condition_record_title({ unit: unit.title })}
-			</Dialog.Title>
-			<Dialog.Description>
-				{component ? m.condition_record_component_description() : m.condition_record_description()}
-			</Dialog.Description>
-		</Dialog.Header>
-		<form
-			{...form.enhance(async ({ element, submit }) => {
-				if (!(await submitted(submit))) return;
-				element.reset();
-				open = false;
-				toast.success(m.condition_recorded_toast());
-			})}
-			class="flex flex-col gap-6"
-		>
-			<input {...form.fields.serialNumber.as("hidden", unit.serialNumber)} />
-			<input {...form.fields.componentId.as("hidden", component ? String(component.id) : "")} />
-			<Field.FieldGroup>
-				<NumberField
-					field={form.fields.score}
-					label={m.condition_field_score()}
-					min={scoreLimits.min}
-					max={scoreLimits.max}
-					step={1}
-					value={score}
-				/>
-				<TextField
-					field={form.fields.advice}
-					label={m.condition_field_advice()}
-					multiline
-					placeholder={m.condition_advice_placeholder()}
-					description={m.condition_advice_description()}
-				/>
-			</Field.FieldGroup>
-			<Field.FieldError errors={form.fields.issues()} />
-			<Dialog.Footer>
-				<Dialog.Close type="button">
-					{#snippet child({ props })}
-						<Button {...props} variant="ghost">{m.common_cancel()}</Button>
-					{/snippet}
-				</Dialog.Close>
-				<SubmitButton pending={form.pending}>{m.condition_save()}</SubmitButton>
-			</Dialog.Footer>
-		</form>
-	</Dialog.Content>
-</Dialog.Root>
+<FormDialog
+	{form}
+	title={component
+		? m.condition_record_component_title({
+				component: `${component.number} ${component.name}`,
+			})
+		: m.condition_record_title({ unit: unit.title })}
+	description={component
+		? m.condition_record_component_description()
+		: m.condition_record_description()}
+	submitLabel={m.condition_save()}
+	hidden={{
+		serialNumber: unit.serialNumber,
+		componentId: component ? String(component.id) : "",
+	}}
+	reset
+	done={m.condition_recorded_toast()}
+	class="sm:max-w-md"
+	bind:open
+>
+	<Field.FieldGroup>
+		<NumberField
+			field={form.fields.score}
+			label={m.condition_field_score()}
+			min={scoreLimits.min}
+			max={scoreLimits.max}
+			step={1}
+			value={score}
+		/>
+		<TextField
+			field={form.fields.advice}
+			label={m.condition_field_advice()}
+			multiline
+			placeholder={m.condition_advice_placeholder()}
+			description={m.condition_advice_description()}
+		/>
+	</Field.FieldGroup>
+</FormDialog>

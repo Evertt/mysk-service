@@ -11,7 +11,7 @@
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { formatDate, formatDateTime } from "#lib/i18n/index.ts";
-	import ConfirmDialog from "#modules/invoices/detail/confirm-dialog.svelte";
+	import ConfirmButton from "#modules/invoices/detail/confirm-button.svelte";
 	import DraftEditor from "#modules/invoices/detail/draft-editor.svelte";
 	import { removeLine } from "#modules/invoices/detail/draft.remote.ts";
 	import InvoiceCredits from "#modules/invoices/detail/invoice-credits.svelte";
@@ -62,7 +62,7 @@
 				{m.invoices_download_pdf()}
 			</Button>
 			{#if canChange(invoice.status, "void")}
-				<ConfirmDialog
+				<ConfirmButton
 					form={voidInvoice}
 					id={String(invoice.id)}
 					label={m.invoices_void()}
@@ -76,7 +76,7 @@
 				/>
 			{/if}
 			{#if canChange(invoice.status, "paid")}
-				<ConfirmDialog
+				<ConfirmButton
 					form={markPaid}
 					id={String(invoice.id)}
 					label={m.invoices_mark_paid()}
@@ -87,7 +87,7 @@
 				/>
 			{/if}
 			{#if canChange(invoice.status, "sent")}
-				<ConfirmDialog
+				<ConfirmButton
 					form={issueInvoice}
 					id={String(invoice.id)}
 					label={m.invoices_issue()}

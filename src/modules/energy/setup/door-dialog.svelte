@@ -8,12 +8,10 @@
 <script lang="ts">
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import PlusIcon from "@lucide/svelte/icons/plus";
-	import { toast } from "svelte-sonner";
 
+	import FormDialog from "#lib/components/form/form-dialog.svelte";
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SelectField, { type SelectOption } from "#lib/components/form/select-field.svelte";
-	import SubmitButton from "#lib/components/form/submit-button.svelte";
-	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 
 	import { energyLabels } from "../labels.ts";
@@ -44,119 +42,92 @@
 		};
 	} = $props();
 
-	let open = $state(false);
 	const form = $derived(saveEnergyDoor.for(door ? String(door.id) : "new"));
 	const kinds = $derived(energyLabels.labelOptions("doorKind", doorKinds));
 </script>
 
-<Dialog.Root bind:open>
-	<Dialog.Trigger>
-		{#snippet child({ props })}
-			{#if door}
-				<Button
-					{...props}
-					variant="ghost"
-					size="icon-sm"
-					aria-label={m.energy_setup_door_edit({ code: door.code })}
-				>
-					<PencilIcon />
-				</Button>
-			{:else}
-				<Button {...props} variant="outline" size="sm" disabled={!zones.length}>
-					<PlusIcon data-icon="inline-start" />
-					{m.energy_setup_door_add()}
-				</Button>
-			{/if}
-		{/snippet}
-	</Dialog.Trigger>
-	<Dialog.Content class="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
-		<Dialog.Header>
-			<Dialog.Title>
-				{door ? m.energy_setup_door_edit({ code: door.code }) : m.energy_setup_door_add()}
-			</Dialog.Title>
-			<Dialog.Description>{m.energy_setup_door_description()}</Dialog.Description>
-		</Dialog.Header>
-		<form
-			{...form.enhance(async ({ submit }) => {
-				if (await submitted(submit)) {
-					open = false;
-					toast.success(m.energy_setup_saved({ name: form.result?.code ?? "" }));
-				}
-			})}
-			class="flex flex-col gap-6"
-		>
-			<input {...form.fields.energySiteId.as("hidden", String(siteId))} />
-			{#if door}
-				<input {...form.fields.doorId.as("hidden", String(door.id))} />
-			{/if}
-			<Field.FieldGroup>
-				<div class="grid gap-4 sm:grid-cols-[10rem_1fr]">
-					<TextField
-						field={form.fields.code}
-						label={m.energy_setup_code()}
-						value={door?.code}
-						placeholder="D-05"
-					/>
-					<TextField field={form.fields.name} label={m.energy_setup_name()} value={door?.name} />
-				</div>
-				<div class="grid gap-4 sm:grid-cols-2">
-					<SelectField
-						field={form.fields.zoneId}
-						label={m.energy_setup_zone()}
-						options={zones}
-						value={door ? String(door.zoneId) : zones[0]?.value}
-					/>
-					<SelectField
-						field={form.fields.kind}
-						label={m.energy_setup_kind()}
-						options={kinds}
-						value={door?.kind ?? "sectional"}
-					/>
-					<NumberField
-						field={form.fields.lossKw}
-						label={m.energy_setup_loss()}
-						value={door?.lossKw}
-						min={0}
-						step="any"
-					/>
-					<NumberField
-						field={form.fields.thresholdMinutes}
-						label={m.energy_setup_minutes()}
-						value={door?.thresholdMinutes ?? 10}
-						min={1}
-						step={1}
-					/>
-					<NumberField
-						field={form.fields.insideC}
-						label={m.energy_setup_inside()}
-						value={door?.insideC}
-						step="any"
-					/>
-					<NumberField
-						field={form.fields.outsideC}
-						label={m.energy_setup_outside()}
-						value={door?.outsideC}
-						step="any"
-					/>
-				</div>
-				<SelectField
-					field={form.fields.equipmentId}
-					label={m.energy_setup_unit()}
-					options={units}
-					placeholder={m.energy_setup_no_unit()}
-					value={door?.equipmentId ? String(door.equipmentId) : ""}
-					description={m.energy_setup_door_unit_hint()}
-				/>
-			</Field.FieldGroup>
-			<Field.FieldError errors={form.fields.issues()} />
-			<Dialog.Footer>
-				<Dialog.Close type="button">
-					{#snippet child({ props })}
-						<Button {...props} variant="ghost">{m.common_cancel()}</Button>
-					{/snippet}
-				</Dialog.Close>
-				<SubmitButton pending={form.pending}>{m.common_save()}</SubmitButton>
-			</Dialog.Footer>
-		</form>
-	</Dialog.Content>
-</Dialog.Root>
+<FormDialog
+	{form}
+	title={door ? m.energy_setup_door_edit({ code: door.code }) : m.energy_setup_door_add()}
+	description={m.energy_setup_door_description()}
+	hidden={{ energySiteId: String(siteId), doorId: door && String(door.id) }}
+	done={(result) => m.energy_setup_saved({ name: result?.code ?? "" })}
+	class="max-h-[90dvh] overflow-y-auto sm:max-w-lg"
+>
+	{#snippet trigger(props)}
+		{#if door}
+			<Button
+				{...props}
+				variant="ghost"
+				size="icon-sm"
+				aria-label={m.energy_setup_door_edit({ code: door.code })}
+			>
+				<PencilIcon />
+			</Button>
+		{:else}
+			<Button {...props} variant="outline" size="sm" disabled={!zones.length}>
+				<PlusIcon data-icon="inline-start" />
+				{m.energy_setup_door_add()}
+			</Button>
+		{/if}
+	{/snippet}
+	<Field.FieldGroup>
+		<div class="grid gap-4 sm:grid-cols-[10rem_1fr]">
+			<TextField
+				field={form.fields.code}
+				label={m.energy_setup_code()}
+				value={door?.code}
+				placeholder="D-05"
+			/>
+			<TextField field={form.fields.name} label={m.energy_setup_name()} value={door?.name} />
+		</div>
+		<div class="grid gap-4 sm:grid-cols-2">
+			<SelectField
+				field={form.fields.zoneId}
+				label={m.energy_setup_zone()}
+				options={zones}
+				value={door ? String(door.zoneId) : zones[0]?.value}
+			/>
+			<SelectField
+				field={form.fields.kind}
+				label={m.energy_setup_kind()}
+				options={kinds}
+				value={door?.kind ?? "sectional"}
+			/>
+			<NumberField
+				field={form.fields.lossKw}
+				label={m.energy_setup_loss()}
+				value={door?.lossKw}
+				min={0}
+				step="any"
+			/>
+			<NumberField
+				field={form.fields.thresholdMinutes}
+				label={m.energy_setup_minutes()}
+				value={door?.thresholdMinutes ?? 10}
+				min={1}
+				step={1}
+			/>
+			<NumberField
+				field={form.fields.insideC}
+				label={m.energy_setup_inside()}
+				value={door?.insideC}
+				step="any"
+			/>
+			<NumberField
+				field={form.fields.outsideC}
+				label={m.energy_setup_outside()}
+				value={door?.outsideC}
+				step="any"
+			/>
+		</div>
+		<SelectField
+			field={form.fields.equipmentId}
+			label={m.energy_setup_unit()}
+			options={units}
+			placeholder={m.energy_setup_no_unit()}
+			value={door?.equipmentId ? String(door.equipmentId) : ""}
+			description={m.energy_setup_door_unit_hint()}
+		/>
+	</Field.FieldGroup>
+</FormDialog>
