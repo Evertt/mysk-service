@@ -21,6 +21,7 @@ import { en, Faker, nl } from "@faker-js/faker";
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 
+import { isDoneOrder } from "#lib/models.ts";
 import { moduleIds } from "#lib/modules/ids.ts";
 import { defaultSimulationSpeed } from "#lib/simulation/extensions.ts";
 
@@ -33,7 +34,7 @@ import { seedCategories, shltrCategories } from "./categories.ts";
 import { addDays, now } from "./clock.ts";
 import { IdSpace } from "./ids.ts";
 import { generateLocations, seedQrToken } from "./locations.ts";
-import { runOrder, type SeedTenant, seedCollectors } from "./module-seed.ts";
+import { runOrder, type SeedLogEntry, type SeedTenant, seedCollectors } from "./module-seed.ts";
 import { generateShltrTenant, shltrSignoffs } from "./shltr/index.ts";
 import { generateSites } from "./sites.ts";
 import { toDay, toMoment, toMomentOrNull } from "./temporal.ts";
@@ -139,6 +140,10 @@ await db.transaction(async (tx) => {
 	await tx.delete(schema.organization);
 
 	const ids = new IdSpace();
+	// The log's entries of what happened, the modules' too, inserted at the end (`SeedLogEntry`).
+	const logged: SeedLogEntry[] = [];
+	const log = (entries: SeedLogEntry[]) => logged.push(...entries);
+	const completions: SeedLogEntry[] = [];
 	const seeded: SeedTenant<Record<string, unknown>>[] = [];
 	// What each module's `generate()` made, by module id: for all the tenants so far (a module
 	// continues where the tenants before left off), and for the tenant at hand.
@@ -313,8 +318,28 @@ await db.transaction(async (tx) => {
 				subjectLabel: row.number,
 				createdAt: row.createdAt,
 			}));
-		await tx.insert(schema.activity).values(created);
-		count("activity", created);
+		log(created);
+		// The done orders' completions, by their engineers in the field: logged after the modules'
+		// entries, so one at the same moment (a checklist completed on it) comes first, as in the field.
+		const engineerName = new Map(rows.engineers.map((e) => [e.id, e.name]));
+		completions.push(
+			...rows.orders.flatMap((row): SeedLogEntry[] =>
+				row.completedAt && isDoneOrder(row.status)
+					? [
+							{
+								organizationId,
+								userName: (row.engineerId && engineerName.get(row.engineerId)) || "",
+								action: "completed" as const,
+								subjectType: "order",
+								subjectId: String(row.id),
+								subjectLabel: row.number,
+								changes: { status: ["in_progress", "completed"] },
+								createdAt: row.completedAt,
+							},
+						]
+					: [],
+			),
+		);
 
 		seeded.push({
 			id: tenant.id,
@@ -334,8 +359,12 @@ await db.transaction(async (tx) => {
 		const having = seeded
 			.filter((tenant) => tenant.modules.includes(id))
 			.map((tenant) => ({ ...tenant, data: tenant.data[id] }));
-		await seed.run({ tx, faker, tenants: having, ids, count });
+		await seed.run({ tx, faker, tenants: having, ids, count, log });
 	}
+	log(completions);
+	logged.sort((a, b) => Temporal.Instant.compare(a.createdAt!, b.createdAt!));
+	await insertRows(tx, schema.activity, logged);
+	count("activity", logged);
 });
 
 await db.transaction(createDemoUsers);

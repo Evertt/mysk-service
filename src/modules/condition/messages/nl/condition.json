@@ -41,46 +41,8 @@
 	"condition_feed_title": "Activiteitenlog",
 	"condition_feed_description": "Wat er recent met de apparaten gebeurde: opdrachten, werkbonnen en condities.",
 	"condition_feed_description_customer": "Wat er recent met de apparaten van {name} gebeurde.",
+	"condition_feed_list": "Servicegeschiedenis van de apparaten",
 	"condition_feed_empty": "Er is nog niets met deze apparaten gebeurd.",
-	"condition_feed_order": "{type} afgerond",
-	"condition_feed_checklist": "Werkbon {kind} {year} afgerond",
-	"condition_feed_rejections": [
-		{
-			"declarations": [
-				"input count",
-				"local countPlural = count: plural",
-				"local countText = count: number"
-			],
-			"selectors": ["countPlural"],
-			"match": {
-				"countPlural=one": "1 afkeurpunt",
-				"countPlural=*": "{countText} afkeurpunten"
-			}
-		}
-	],
-	"condition_feed_all_ok": "alles in orde",
-	"condition_feed_condition": "Conditie vastgelegd: {score}",
-	"condition_feed_kind_inspection": "keuring",
-	"condition_feed_kind_maintenance": "onderhoud",
-	"condition_feed_soort_inspection": "Keuring",
-	"condition_feed_soort_maintenance": "Onderhoud",
-	"condition_feed_soort_condition": "Conditie",
-	"condition_feed_soort_advice": "Advies",
-	"condition_feed_by": "door {name}",
-	"condition_feed_more_units": [
-		{
-			"declarations": [
-				"input count",
-				"local countPlural = count: plural",
-				"local countText = count: number"
-			],
-			"selectors": ["countPlural"],
-			"match": {
-				"countPlural=one": "en nog 1 apparaat",
-				"countPlural=*": "en nog {countText} apparaten"
-			}
-		}
-	],
 	"condition_card_title": "Conditie",
 	"condition_card_description": "De laatste conditie van het apparaat, en het verloop.",
 	"condition_card_none": "Nog geen conditie vastgelegd.",

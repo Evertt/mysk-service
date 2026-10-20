@@ -9,4 +9,4 @@
 	let { code }: { code: string } = $props();
 </script>
 
-<FeedCard customer={code} limit={10} showCustomer={false} />
+<FeedCard customer={code} limit={10} />

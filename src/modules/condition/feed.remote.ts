@@ -9,7 +9,7 @@ import { customerCode, wholeIn } from "#lib/schema.ts";
 import { customer } from "#lib/server/db/schema.ts";
 
 import { query } from "./remote-functions.ts";
-import { serviceHistory } from "./server/feed.ts";
+import { serviceHistory } from "./server/history.ts";
 
 export const getServiceHistory = query(
 	v.object({

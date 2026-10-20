@@ -409,11 +409,14 @@ SQL (`server/status-sql.ts`, and `rolledUpStatus()`/`componentStatus()` in `mode
 rules in code; a unit takes its worst component's): look there for a module that owns points other
 modules answer (`api/extensions.ts`: checklists gives the inspection status, maintenance the next
 visit, as SQL over `equipment`, `condition.signals`, for the status; checklists its inspection
-column in the list, `condition.list.columns`; checklists its completed checklists for the
-service history, `condition.history`, and a unit's template points, `condition.checkpoints`;
+column in the list, `condition.list.columns`; checklists a unit's template points,
+`condition.checkpoints`;
 materials the articles, `condition.articles`; the parts shop the points an article's product fixes,
 `condition.articleCheckpoints`), for records that refer to another module's by id without a key (a
-component's article and points, as it only enhances materials and checklists), for SQL repeated in
+component's article and points, as it only enhances materials and checklists), for a view of the
+activity log (the service history, `server/history.ts`: the entries of orders and checklists
+completed and conditions recorded, of a customer's through their subjects' parents, which the seeds
+log too, `SeedLogEntry`), for SQL repeated in
 one statement that binds no parameters (`literal()`, `inLiterals()` in
 `#lib/server/db/parameters.ts`, and subqueries correlated on the unit's own tenant), for a
 server-side list whose rows are a left join (a row per component, and per unit without), and for a

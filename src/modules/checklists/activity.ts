@@ -33,11 +33,14 @@ export const checklistSubjects = {
 	},
 	/**
 	 * A unit's checklist on an order, by its template's name and the unit, logged with its order as
-	 * its parent: when the engineer completes it (with what it found as the entry's note).
+	 * its parent, on whose page it is: when the engineer completes it (with what it found as the
+	 * entry's note, and the remark for the customer).
 	 */
 	checklist: {
 		noun: m.checklists_activity_subject_checklist,
+		onParentPage: true,
 		fields: {
+			remarks: { label: m.checklists_remarks },
 			status: {
 				label: m.checklists_field_status,
 				format: (value) =>

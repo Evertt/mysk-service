@@ -88,7 +88,14 @@ export interface SeedTenant<Data = unknown> {
 	collect: SeedCollectors;
 }
 
-interface SeedContext<Data = unknown> {
+/**
+ * A log entry of what the seed made happen (an order completed, a condition recorded), as
+ * `recordActivity()` would have written it then: the seed inserts them all at the end, oldest
+ * first, so the log reads newest first by id as it does at runtime.
+ */
+export type SeedLogEntry = Omit<typeof schema.activity.$inferInsert, "id">;
+
+export interface SeedContext<Data = unknown> {
 	tx: SeedTransaction;
 	faker: Faker;
 	/** Only the tenants that have the module. */
@@ -97,6 +104,8 @@ interface SeedContext<Data = unknown> {
 	ids: IdSpace;
 	/** Adds to the summary the seed prints at the end. */
 	count: (table: string, rows: unknown[]) => void;
+	/** Logs what the module's data says happened (see `SeedLogEntry`). */
+	log: (entries: SeedLogEntry[]) => void;
 }
 
 // `any`: a seed names the type of the data it generates, the registry holds seeds of all of them.

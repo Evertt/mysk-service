@@ -57,6 +57,7 @@ async function findFieldChecklist(tx: Transaction, by: Filler, id: number) {
 				name: checklist.name,
 				kind: checklist.kind,
 				status: checklist.status,
+				remarks: checklist.remarks,
 				validityMonths: checklist.validityMonths,
 				equipmentId: checklist.equipmentId,
 				order: {
@@ -143,7 +144,8 @@ const rejectionsNote = (count: number) =>
  * Completes a checklist `by` may change, once every point has a result and every rejection says
  * what's wrong: it's on record then, completed now by them (the engineer, or none for the office;
  * the user either way), and an inspection is valid from today (in the user's time zone) for its
- * template's months. Logged against the order, with how many points it rejected; the modules save
+ * template's months. Logged against the order, with how many points it rejected and its remark for
+ * the customer (the condition module's service history reads it there); the modules save
  * their part in the same transaction (`checklists.completed`: the condition module records the
  * unit's score). Returns the order's number.
  */
@@ -179,7 +181,7 @@ export function completeChecklist(by: Filler, id: number) {
 			subject: { type: "checklist", id, label: `${found.name} · ${unitTitle(found.unit)}` },
 			parent: orderSubject(found.order),
 			before: { status: found.status },
-			after: { status: after.status },
+			after: { status: after.status, remarks: found.remarks ?? undefined },
 			// Stored, in the language of whoever completes it.
 			note: rejectionsNote(rejections(answers)),
 		});

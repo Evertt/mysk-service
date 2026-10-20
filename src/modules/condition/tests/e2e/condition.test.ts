@@ -92,8 +92,12 @@ describe("the Connect page", () => {
 		await page.getByRole("button", { name: "Activity log" }).click();
 		const log = page.getByRole("dialog").locator("[data-service-history]");
 		await log.getByText("What happened to Riedel B.V.'s units lately.").waitFor();
-		await log.getByText("Condition recorded: 22%").first().waitFor();
-		expect(await log.locator("[data-feed-entry]").count()).toBeGreaterThan(0);
+		// The log's entry of dock 07's door's latest condition.
+		await log
+			.locator("[data-activity]", { hasText: "recorded the condition" })
+			.filter({ hasText: "· 22%" })
+			.first()
+			.waitFor();
 		await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
 	});
 
@@ -141,12 +145,12 @@ describe("elsewhere", () => {
 		await app.go(`/customers/${riedel.customer}`);
 		const log = app.page.locator("[data-service-history]");
 		await log.getByText("What happened to Riedel B.V.'s units lately.").waitFor();
-		const kinds = await log
-			.locator("[data-feed-entry]")
-			.evaluateAll((entries: HTMLElement[]) => entries.map((entry) => entry.dataset.feedEntry));
-		expect(kinds.length).toBe(10);
-		expect(kinds).toContain("condition");
-		expect(kinds).toContain("order");
+		const entries = await log.locator("[data-activity] > p:first-child").allInnerTexts();
+		expect(entries.length).toBe(10);
+		expect(entries.some((entry) => /recorded the condition .+ on equipment /.test(entry))).toBe(
+			true,
+		);
+		expect(entries.some((entry) => /completed order ORD-/.test(entry))).toBe(true);
 	});
 
 	test("the dashboard's tile counts the units that need attention, and links to them", async () => {

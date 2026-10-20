@@ -14,15 +14,24 @@
  * (`checklistScore()`), and each of the unit's components the same over its own points, on its
  * order, when it was completed, as completing it does at runtime (`checklists.completed`). The
  * conditions above stay the latest, as corrections from the office, where the unit has a newer
- * checklist than they'd be: so the demo keeps its 22%.
+ * checklist than they'd be: so the demo keeps its 22%. Each is logged as recording it is (against
+ * its unit, with its advice), by its engineer or an office member: the service history reads them.
  */
 import { en, Faker, nl } from "@faker-js/faker";
-import { and, desc, eq, ne } from "drizzle-orm";
+import { and, asc, desc, eq, ne } from "drizzle-orm";
 
 import { doneOrderStatuses } from "#lib/models.ts";
 import { withTenantRefs } from "#lib/server/db/columns.ts";
+import { demoUsers } from "#lib/server/db/demo.ts";
 import { inList, insertRows } from "#lib/server/db/parameters.ts";
-import { customer, equipment, equipmentLocation, order, orderUnit } from "#lib/server/db/schema.ts";
+import {
+	customer,
+	engineer,
+	equipment,
+	equipmentLocation,
+	order,
+	orderUnit,
+} from "#lib/server/db/schema.ts";
 import { addDays, DAY, HOUR, now } from "#lib/server/db/seed/clock.ts";
 import {
 	defineSeed,
@@ -426,6 +435,54 @@ async function seedComponents(
 	return made;
 }
 
+/**
+ * The log's entries of the tenants' conditions, as `insertCondition()` makes them: against the
+ * unit, labelled like `conditionLabel()` (its serial number, its component's number, the score),
+ * with the advice as the note, by the engineer, or the office's first member.
+ */
+async function recordedEntries(tx: SeedTransaction, organizationIds: string[]) {
+	const found = await tx
+		.select({
+			id: unitCondition.id,
+			organizationId: unitCondition.organizationId,
+			score: unitCondition.score,
+			advice: unitCondition.advice,
+			recordedAt: unitCondition.recordedAt,
+			unitId: equipment.id,
+			serialNumber: equipment.serialNumber,
+			component: component.number,
+			engineer: engineer.name,
+		})
+		.from(unitCondition)
+		.innerJoin(equipment, eq(equipment.id, unitCondition.equipmentId))
+		.leftJoin(component, eq(component.id, unitCondition.componentId))
+		.leftJoin(engineer, eq(engineer.id, unitCondition.engineerId))
+		.where(inList(unitCondition.organizationId, organizationIds))
+		.orderBy(asc(unitCondition.id));
+	const office = (organizationId: string) =>
+		demoUsers.find((user) =>
+			user.memberships.some(
+				(member) =>
+					member.organizationId === organizationId &&
+					member.role !== "engineer" &&
+					member.role !== "customer",
+			),
+		)?.name ?? "";
+	return found.map((row) => ({
+		organizationId: row.organizationId,
+		userName: row.engineer ?? office(row.organizationId),
+		action: "recorded" as const,
+		subjectType: "unitCondition",
+		subjectId: String(row.id),
+		subjectLabel: [row.serialNumber, row.component, `${row.score}%`].filter(Boolean).join(" · "),
+		parentType: "equipment",
+		parentId: String(row.unitId),
+		parentLabel: row.serialNumber,
+		note: row.advice,
+		createdAt: row.recordedAt,
+	}));
+}
+
 export default defineSeed<TenantDraft["profile"]>({
 	// The components' articles are the materials', which have to be in.
 	after: ["materials"],
@@ -433,7 +490,7 @@ export default defineSeed<TenantDraft["profile"]>({
 	// Whose business the tenant is, which says which conditions it gets.
 	generate: ({ profile }) => profile,
 
-	async run({ tx, tenants, count }) {
+	async run({ tx, tenants, count, log }) {
 		const rows: (typeof unitCondition.$inferInsert)[] = [];
 		for (const tenant of tenants) {
 			const organizationId = tenant.id;
@@ -569,5 +626,11 @@ export default defineSeed<TenantDraft["profile"]>({
 		}
 		await insertRows(tx, unitCondition, rows);
 		count("unitConditions", rows);
+		log(
+			await recordedEntries(
+				tx,
+				tenants.map((tenant) => tenant.id),
+			),
+		);
 	},
 });

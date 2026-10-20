@@ -182,7 +182,7 @@ export default defineSeed<TenantDraft["profile"]>({
 	// Whose business the tenant is, which says which templates it gets.
 	generate: ({ profile }) => profile,
 
-	async run({ tx, tenants, count }) {
+	async run({ tx, tenants, count, log }) {
 		for (const tenant of tenants) {
 			const organizationId = tenant.id;
 			const templates: SeedTemplate<string>[] =
@@ -226,7 +226,7 @@ export default defineSeed<TenantDraft["profile"]>({
 			await insertRows(tx, checklistTemplateCategory, links);
 			count("checklistTemplates", rows);
 			count("checklistTemplateItems", items);
-			await seedChecklists(tx, tenant, tenant.data === "shltr", count);
+			await seedChecklists(tx, tenant, tenant.data === "shltr", { count, log });
 		}
 	},
 });

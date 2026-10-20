@@ -3,17 +3,24 @@
  * of a done inspection or maintenance order completed with the order (most points OK, now and then
  * one rejected with what's wrong, as SHLTR's engineers write it), and for SHLTR, each unit of one
  * still to be done with a draft. North has a few completed ones and no drafts, so the core's tests
- * that complete its orders find none in the way. Like the rest of the seed, in plain Node, and the
- * same every time for a tenant (a faker of its own, seeded per tenant).
+ * that complete its orders find none in the way. Each completed one is logged as its completion
+ * would be (in Dutch, the demo's language), for the condition module's service history. Like the
+ * rest of the seed, in plain Node, and the same every time for a tenant (a faker of its own, seeded
+ * per tenant).
  */
 import { en, Faker, nl } from "@faker-js/faker";
-import { and, asc, desc, eq, or } from "drizzle-orm";
+import { and, asc, desc, eq, or, sql } from "drizzle-orm";
 
 import { isDoneOrder } from "#lib/models.ts";
 import { insertBatches, insertRows } from "#lib/server/db/parameters.ts";
-import { equipment, order, orderUnit } from "#lib/server/db/schema.ts";
+import { engineer, equipment, order, orderUnit } from "#lib/server/db/schema.ts";
 import { now } from "#lib/server/db/seed/clock.ts";
-import type { SeedTenant, SeedTransaction } from "#lib/server/db/seed/module-seed.ts";
+import type {
+	SeedContext,
+	SeedLogEntry,
+	SeedTenant,
+	SeedTransaction,
+} from "#lib/server/db/seed/module-seed.ts";
 import { toDay } from "#lib/server/db/seed/temporal.ts";
 
 import {
@@ -93,12 +100,16 @@ const expiresSoon = (ends: Temporal.PlainDate, today: Temporal.PlainDate) =>
 	Temporal.PlainDate.compare(ends, today) >= 0 &&
 	Temporal.PlainDate.compare(ends, today.add({ days: EXPIRING_DAYS })) <= 0;
 
-/** The tenant's checklists on its orders (see above), in `tx`; counted for the summary. */
+/** How a completion's entry notes its rejected points, as `rejectionsNote()` does in Dutch. */
+const rejectionsNote = (count: number) =>
+	count ? `${count} ${count === 1 ? "afkeurpunt" : "afkeurpunten"}` : "Goedgekeurd";
+
+/** The tenant's checklists on its orders (see above), in `tx`; counted for the summary, and logged. */
 export async function seedChecklists(
 	tx: SeedTransaction,
 	tenant: SeedTenant<unknown>,
 	shltr: boolean,
-	count: (table: string, rows: unknown[]) => void,
+	{ count, log }: Pick<SeedContext, "count" | "log">,
 ) {
 	const organizationId = tenant.id;
 	const random = new Faker({ locale: [nl, en] });
@@ -137,12 +148,15 @@ export async function seedChecklists(
 	const orders = await tx
 		.select({
 			id: order.id,
+			number: order.number,
 			type: order.type,
 			status: order.status,
 			engineerId: order.engineerId,
+			engineer: engineer.name,
 			completedAt: order.completedAt,
 		})
 		.from(order)
+		.leftJoin(engineer, eq(engineer.id, order.engineerId))
 		.where(
 			and(
 				eq(order.organizationId, organizationId),
@@ -160,6 +174,7 @@ export async function seedChecklists(
 			orderId: orderUnit.orderId,
 			equipmentId: orderUnit.equipmentId,
 			categoryId: equipment.categoryId,
+			title: sql<string>`coalesce(${equipment.name}, trim(${equipment.manufacturer} || ' ' || ${equipment.model}))`,
 		})
 		.from(orderUnit)
 		.innerJoin(equipment, eq(equipment.id, orderUnit.equipmentId))
@@ -168,6 +183,8 @@ export async function seedChecklists(
 	const unitsOf = Map.groupBy(units, (unit) => unit.orderId);
 
 	const checklists: (typeof checklist.$inferInsert)[] = [];
+	/** Each completed checklist's entry, but its id (`checklists`' index, until they're in). */
+	const completions = new Map<number, Omit<SeedLogEntry, "subjectId">>();
 	const answers: {
 		templateItemId: number;
 		group: string;
@@ -203,7 +220,24 @@ export async function seedChecklists(
 						? findResult(random, group)
 						: { result: null, remark: null }),
 			}));
-			const rejected = points.some((point) => point.result === "nok");
+			const rejections = points.filter((point) => point.result === "nok").length;
+			const rejected = rejections > 0;
+			const remarks = completed && rejected ? random.helpers.arrayElement(advice) : null;
+			if (completed && row.completedAt) {
+				completions.set(checklists.length, {
+					organizationId,
+					userName: row.engineer ?? "",
+					action: "completed",
+					subjectType: "checklist",
+					subjectLabel: `${template.name} · ${unit.title}`,
+					parentType: "order",
+					parentId: String(row.id),
+					parentLabel: row.number,
+					changes: { status: ["draft", "completed"], ...(remarks && { remarks: [null, remarks] }) },
+					note: rejectionsNote(rejections),
+					createdAt: row.completedAt,
+				});
+			}
 			checklists.push({
 				organizationId,
 				orderId: row.id,
@@ -214,7 +248,7 @@ export async function seedChecklists(
 				validityMonths: template.validityMonths,
 				kind,
 				status: completed ? "completed" : "draft",
-				remarks: completed && rejected ? random.helpers.arrayElement(advice) : null,
+				remarks,
 				completedAt: completed ? row.completedAt : null,
 				completedBy: completed ? row.engineerId : null,
 				validUntil: ends,
@@ -231,6 +265,7 @@ export async function seedChecklists(
 		points.map((point, position) => ({ organizationId, checklistId: ids[i], position, ...point })),
 	);
 	await insertRows(tx, checklistResult, results);
+	log([...completions].map(([index, entry]) => ({ ...entry, subjectId: String(ids[index]) })));
 	count("checklists", checklists);
 	count("checklistResults", results);
 }

@@ -33,6 +33,7 @@ import {
 	data,
 	north,
 	organizationId,
+	rows,
 	shltr,
 	value,
 } from "#unit/lib/server/harness/index.ts";
@@ -215,16 +216,40 @@ describe("the Connect page, in SHLTR", () => {
 		});
 	});
 
-	test("a customer's service history is its units' latest conditions, orders and checklists", async () => {
+	test("a customer's service history is the log's latest conditions, orders and checklists of its units", async () => {
 		const code = await riedel();
 		const history = await as(shltr.member, () =>
-			data(getServiceHistory, { customer: code, limit: 10 }),
+			data(getServiceHistory, { customer: code, limit: 40 }),
 		);
 		expect(history.customer).toBe("Riedel B.V.");
-		expect(history.entries).toHaveLength(10);
-		const kinds = new Set(history.entries.map((entry) => entry.kind));
-		expect(kinds).toContain("condition");
-		expect(kinds).toContain("order");
+		expect(history.entries).toHaveLength(40);
+		// Newest first, as the log has them: the seed logs what it made, oldest first.
+		const ids = history.entries.map((entry) => entry.id);
+		expect(ids).toEqual(ids.toSorted((a, b) => b - a));
+		const kinds = new Set(history.entries.map((entry) => entry.subject.type));
+		expect(kinds).toEqual(new Set(["unitCondition", "order", "checklist"]));
+		// Each about Riedel's: its order, the order its checklist is on, or the unit of its condition.
+		const theirs = await rows<{ type: string; id: string }>(
+			`select 'order' as type, cast(o.id as text) as id from "order" o join customer c on c.id = o.customer_id
+			 where c.organization_id = ? and c.code = ?
+			 union select 'equipment', cast(e.id as text) from equipment e join customer c on c.id = e.customer_id
+			 where c.organization_id = ? and c.code = ?`,
+			[shltrId, code, shltrId, code],
+		);
+		const own = new Set(theirs.map((row) => `${row.type}:${row.id}`));
+		for (const entry of history.entries) {
+			const record =
+				entry.subject.type === "order"
+					? `order:${entry.subject.target?.id}`
+					: `${entry.parent?.type}:${entry.subject.target?.id}`;
+			expect(own, `${entry.subject.type} ${entry.subject.label}`).toContain(record);
+		}
+		// What a checklist found and a condition's advice come with them.
+		const checklist = history.entries.find((entry) => entry.subject.type === "checklist");
+		expect(checklist?.note).toMatch(/^(Goedgekeurd|\d+ afkeurpunten?)$/);
+		expect(
+			history.entries.some((entry) => entry.subject.type === "unitCondition" && entry.note),
+		).toBe(true);
 		expect(
 			await as(shltr.member, () => call(getServiceHistory, { customer: "NOPE", limit: 10 })),
 		).toMatchObject({ status: 404 });
