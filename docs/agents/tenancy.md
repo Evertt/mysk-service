@@ -97,7 +97,7 @@ field (nested paths too: `["lines", 2, "quantity"]`), or `Refused.check(problems
 answers. The remote function doesn't catch it: `gated()` (`remote-functions.ts`) turns it into
 the form's issues, each on its field, or for a command or query into a 400 with its messages; a
 bulk action skips the record with them. A refusal that carries more for a caller that handles it
-extends it (`StockShortage`, `OrderStockShortage`, `UnknownDocks`). Services don't return
+extends it (`StockShortage`, `OrderStockShortage`, an integration feed's `IngestRefused`). Services don't return
 `{ problem }`/`{ problems }` unions, take the form's `issue`, or call `invalid()`; `invalid()` is
 only for a remote form handler refusing its own field with `issue.x(...)`, which types the field.
 A check that collects data for its caller (a hook's answer, `checkLines()`) may return problems,

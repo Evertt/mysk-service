@@ -11,8 +11,9 @@ import {
 } from "#lib/server/auth/integrations.ts";
 import { db } from "#lib/server/db/index.ts";
 import { activity, integrationToken, order } from "#lib/server/db/schema.ts";
+import { UnknownCodes } from "#lib/server/modules/integrations.ts";
 import { parseBatch } from "#modules/docks/server/events.ts";
-import { applyBatch, UnknownDocks } from "#modules/docks/server/ingest.ts";
+import { applyBatch } from "#modules/docks/server/ingest.ts";
 import { checkDoors } from "#modules/docks/server/rules.ts";
 import { dockEscalation, dockEvent, dockSession, dockState } from "#modules/docks/server/schema.ts";
 import { freezeNow } from "#unit/temporal-support.ts";
@@ -209,9 +210,9 @@ describe("applying a batch", () => {
 			t(10),
 		);
 		if ("issues" in parsed) throw new Error("invalid");
-		await expect(north(() => applyBatch(parsed.events, t(10)))).rejects.toEqual(
-			new UnknownDocks(["DOCK 09"]),
-		);
+		const refused = north(() => applyBatch(parsed.events, t(10)));
+		await expect(refused).rejects.toBeInstanceOf(UnknownCodes);
+		await expect(refused).rejects.toMatchObject({ unknown: { docks: ["DOCK 09"] } });
 		// Nothing of it applied, and South's dock untouched.
 		expect(await stateOf(1)).toBeUndefined();
 		expect(await stateOf(3)).toBeUndefined();

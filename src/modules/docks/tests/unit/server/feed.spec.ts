@@ -74,31 +74,41 @@ describe("the feed", () => {
 		const answer = await post({
 			events: [salvoEvent("unlock", "DOCK 06"), salvoEvent("lock", "DOCK 99")],
 		});
-		expect(answer).toEqual({ status: 422, body: { error: "unknown_docks", docks: ["DOCK 99"] } });
+		expect(answer).toEqual({
+			status: 422,
+			body: {
+				error: "unknown_codes",
+				message: expect.any(String),
+				unknown: { docks: ["DOCK 99"] },
+			},
+		});
 		expect(await stateOf("DOCK 06")).toEqual(before);
 	});
 
 	test("refuses a batch that isn't valid with a 422 and its issues", async () => {
 		const answer = await post({ events: [{ ...salvoEvent("lock", "DOCK 06"), extra: true }] });
 		expect(answer.status).toBe(422);
-		expect(answer.body).toMatchObject({ error: "invalid_batch" });
+		expect(answer.body).toMatchObject({ error: "invalid_batch", message: expect.any(String) });
 		expect(answer.body.issues).toEqual(expect.any(Array));
 	});
 
 	test("refuses a body that isn't JSON: 415 for its type, 400 when it doesn't parse", async () => {
 		expect(await post("events", { type: "text/plain" })).toEqual({
 			status: 415,
-			body: { error: "unsupported_media_type" },
+			body: { error: "unsupported_media_type", message: expect.any(String) },
 		});
-		expect(await post("{ events", {})).toEqual({ status: 400, body: { error: "invalid_json" } });
+		expect(await post("{ events", {})).toEqual({
+			status: 400,
+			body: { error: "invalid_json", message: expect.any(String) },
+		});
 	});
 
 	test(`refuses a body larger than ${maxBatch} events take with a 413, reading no more of it`, async () => {
 		const padding = "x".repeat(maxBodyBytes);
-		expect(await post({ events: [{ ...salvoEvent("lock", "DOCK 06"), padding }] })).toEqual({
-			status: 413,
-			body: { error: "too_large" },
-		});
+		const tooLarge = { status: 413, body: { error: "too_large", message: expect.any(String) } };
+		expect(await post({ events: [{ ...salvoEvent("lock", "DOCK 06"), padding }] })).toEqual(
+			tooLarge,
+		);
 		// Sent in chunks, without a length: read no further than the limit.
 		let pulled = 0;
 		const endless = new ReadableStream<Uint8Array>({
@@ -107,7 +117,7 @@ describe("the feed", () => {
 				controller.enqueue(new Uint8Array(64 * 1024).fill(32));
 			},
 		});
-		expect(await post(endless)).toEqual({ status: 413, body: { error: "too_large" } });
+		expect(await post(endless)).toEqual(tooLarge);
 		expect(pulled).toBeLessThanOrEqual(Math.ceil(maxBodyBytes / (64 * 1024)) + 1);
 	});
 

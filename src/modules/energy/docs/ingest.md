@@ -101,6 +101,8 @@ The site's page hears of each batch at once (its live query).
 
 ### Answers
 
+The same shape as every module's feed (`jsonIngest()` in `#lib/server/modules/integrations.ts`):
+
 | Status | Body                                                                                    |
 | ------ | --------------------------------------------------------------------------------------- |
 | 200    | `{ "readings": 672, "doorEvents": 210, "alerts": 3 }`: stored, new, raised              |

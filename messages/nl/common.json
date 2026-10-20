@@ -329,5 +329,9 @@
 	"common_token_column_token": "Token",
 	"common_token_column_created": "Gemaakt",
 	"common_token_column_last_used": "Laatst gebruikt",
-	"common_token_never_used": "Nooit"
+	"common_token_never_used": "Nooit",
+	"common_ingest_json": "De inhoud moet JSON zijn (application/json)",
+	"common_ingest_too_large": "De batch is groter dan {size}",
+	"common_ingest_invalid": "De batch heeft niet het formaat van de feed",
+	"common_ingest_unknown_codes": "De batch noemt codes die er niet zijn"
 }

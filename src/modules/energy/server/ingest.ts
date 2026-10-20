@@ -14,17 +14,12 @@ import { announceChange } from "#lib/server/changes.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList, insertRows } from "#lib/server/db/parameters.ts";
 import { afterCommit } from "#lib/server/db/serialize.ts";
+import { IngestRefused, UnknownCodes } from "#lib/server/modules/integrations.ts";
 
 import type { Batch, IngestResult } from "../ingest/format.ts";
 import { raiseAlerts } from "./evaluate.ts";
 import { energyDoor, energyDoorEvent, energyReading, energySite, energyZone } from "./schema.ts";
 import { setFirstThresholds } from "./thresholds.ts";
-
-/** What storing a batch came to: stored, or why not (an unknown site, or codes it doesn't have). */
-type IngestOutcome =
-	| { stored: IngestResult }
-	| { notFound: true }
-	| { unknown: { zones: string[]; doors: string[] } };
 
 /** The current tenant's site `id`, with its zones' and doors' codes. */
 async function siteWithCodes(id: number) {
@@ -79,18 +74,21 @@ export async function ingestSites() {
 /** A moment as the database keeps it: whole seconds (`moment` in `#lib/server/db/columns.ts`). */
 const seconds = (instant: Temporal.Instant) => Math.floor(instant.epochMilliseconds / 1000);
 
-/** Stores `batch` in the current tenant (see above). */
+/**
+ * Stores `batch` in the current tenant (see above). Refuses (storing nothing) a site the tenant
+ * hasn't, a 404, and codes the site hasn't (`UnknownCodes`).
+ */
 export async function storeBatch(
 	batch: Batch,
 	now = Temporal.Now.instant(),
-): Promise<IngestOutcome> {
+): Promise<IngestResult> {
 	const site = await siteWithCodes(batch.site);
-	if (!site) return { notFound: true };
+	if (!site) throw new IngestRefused("unknown_site", m.energy_site_not_found(), {}, 404);
 	const unknown = {
 		zones: [...new Set(batch.readings.map((r) => r.zone))].filter((c) => !site.zones.has(c)),
 		doors: [...new Set(batch.doorEvents.map((e) => e.door))].filter((c) => !site.doors.has(c)),
 	};
-	if (unknown.zones.length || unknown.doors.length) return { unknown };
+	if (unknown.zones.length || unknown.doors.length) throw new UnknownCodes(unknown);
 
 	const { organizationId } = currentTenant();
 	const readings = batch.readings.map((r) => ({
@@ -164,5 +162,5 @@ export async function storeBatch(
 		afterCommit(() => announceChange(organizationId, "energy_reading", { action: "updated" }));
 		return { readings: readings.length, doorEvents: added.length, alerts };
 	});
-	return { stored };
+	return stored;
 }

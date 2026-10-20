@@ -12,7 +12,7 @@ import { announceChange } from "#lib/server/changes.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { inList, insertRows } from "#lib/server/db/parameters.ts";
 import { afterCommit } from "#lib/server/db/serialize.ts";
-import { Refused } from "#lib/server/refused.ts";
+import { UnknownCodes } from "#lib/server/modules/integrations.ts";
 
 import {
 	applyEvent,
@@ -30,13 +30,6 @@ interface BatchResult {
 	applied: number;
 	duplicates: number;
 	stale: number;
-}
-
-/** A batch refused because it names docks the tenant doesn't have (another tenant's included). */
-export class UnknownDocks extends Refused {
-	constructor(readonly codes: string[]) {
-		super(`Unknown docks: ${codes.join(", ")}`);
-	}
 }
 
 /** The live state of a dock as stored, or a new dock's. */
@@ -85,7 +78,7 @@ async function saveSession(tx: Transaction, dockId: number, session: SessionFact
 
 /**
  * Applies `events` (validated and in time order, see `parseBatch()`) to the tenant's docks, at
- * `received`. Throws `UnknownDocks` (storing nothing) if any names a dock the tenant lacks.
+ * `received`. Throws `UnknownCodes` (storing nothing) if any names a dock the tenant lacks.
  */
 export async function applyBatch(
 	events: IncomingEvent[],
@@ -102,7 +95,7 @@ export async function applyBatch(
 			: [];
 		const idOf = new Map(docks.map((dock) => [dock.code, dock.id]));
 		const unknown = codes.filter((code) => !idOf.has(code));
-		if (unknown.length) throw new UnknownDocks(unknown);
+		if (unknown.length) throw new UnknownCodes({ docks: unknown });
 
 		const ids = [...new Set(events.map((event) => event.id))];
 		const seen = new Set(

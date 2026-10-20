@@ -223,9 +223,7 @@ async function post(siteId: number, { readings, doorEvents }: Posted, now: Tempo
 		};
 		const parsed = parseBatch(body, now);
 		if (parsed.issues) throw new Error(`The simulation's batch: ${parsed.issues.join("; ")}`);
-		const outcome = await storeBatch(parsed.batch, now);
-		if (!("stored" in outcome))
-			throw new Error(`The simulation's batch: ${JSON.stringify(outcome)}`);
+		await storeBatch(parsed.batch, now);
 	}
 }
 

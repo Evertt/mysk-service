@@ -329,5 +329,9 @@
 	"common_token_column_token": "Token",
 	"common_token_column_created": "Created",
 	"common_token_column_last_used": "Last used",
-	"common_token_never_used": "Never"
+	"common_token_never_used": "Never",
+	"common_ingest_json": "The body must be JSON (application/json)",
+	"common_ingest_too_large": "The batch is larger than {size}",
+	"common_ingest_invalid": "The batch isn't in the feed's format",
+	"common_ingest_unknown_codes": "The batch names codes that aren't there"
 }
