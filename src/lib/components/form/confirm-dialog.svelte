@@ -12,15 +12,22 @@
 	Open it with its `trigger`, or from outside with `bind:open`. The open dialog has a history
 	entry of its own (`historyDialog()`), so going back closes it.
 -->
-<script lang="ts" generics="Input extends RemoteFormInput, Output">
-	import type { RemoteForm, RemoteFormInput, RemoteQueryUpdate } from "$app/server";
+<script lang="ts" generics="Form extends DialogForm">
+	import type { RemoteQueryUpdate } from "$app/server";
 	import type { Component, Snippet } from "svelte";
 	import { toast } from "svelte-sonner";
 	import type { HTMLInputAttributes } from "svelte/elements";
 
 	import { errorMessage } from "#lib/utils.ts";
 
-	import { type DialogDone, dialogHistory, finish } from "./dialog-history.svelte.ts";
+	import {
+		type DialogDone,
+		type DialogForm,
+		dialogHistory,
+		finish,
+		type FormResult,
+		type HiddenInputs,
+	} from "./dialogs.svelte.ts";
 	import SubmitButton from "./submit-button.svelte";
 	import { submitted } from "./submitted.ts";
 
@@ -38,7 +45,7 @@
 		onconfirm,
 		children,
 		...finished
-	}: DialogDone<Output> & {
+	}: DialogDone<FormResult<Form>> & {
 		title: string;
 		description?: string;
 		/** The confirm button's label: what it does, e.g. "Delete". */
@@ -54,9 +61,9 @@
 	} & (
 			| {
 					/** The form confirming submits. */
-					form: Omit<RemoteForm<Input, Output>, "for">;
+					form: Form;
 					/** The form's hidden inputs, by field. */
-					hidden?: { [Key in keyof Input & string]?: string };
+					hidden?: HiddenInputs<Form>;
 					/** The queries the submission refreshes, instead of all of the page's. */
 					updates?: () => RemoteQueryUpdate[];
 					onconfirm?: never;
@@ -78,7 +85,11 @@
 
 	type HiddenField = { as(type: "hidden", value: string): HTMLInputAttributes };
 	const fields = $derived(form?.fields as unknown as Record<string, HiddenField> | undefined);
-	const hiddenFields = $derived(Object.entries(hidden).filter(([, value]) => value !== undefined));
+	const hiddenFields = $derived(
+		Object.entries(hidden as Record<string, string | undefined>).filter(
+			(entry): entry is [string, string] => entry[1] !== undefined,
+		),
+	);
 
 	let running = $state(false);
 	async function confirm() {
@@ -115,7 +126,7 @@
 						const { submit } = instance;
 						const send = updates ? () => submit().updates(...updates()) : submit;
 						if (!(await submitted(send))) return;
-						await finish(dialog(), instance.result, finished);
+						await finish(dialog(), instance.result as FormResult<Form>, finished);
 					})
 				: {
 						onsubmit: (event: SubmitEvent) => {
@@ -127,7 +138,7 @@
 		>
 			{#if fields}
 				{#each hiddenFields as [name, value] (name)}
-					<input {...fields[name].as("hidden", value!)} />
+					<input {...fields[name].as("hidden", value)} />
 				{/each}
 			{/if}
 			{@render children?.()}

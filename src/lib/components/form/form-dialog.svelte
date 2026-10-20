@@ -13,13 +13,20 @@
 	entry of its own (`historyDialog()`), so going back closes it; pass `history` when the opener
 	keeps that entry itself (to open it for a record, say).
 -->
-<script lang="ts" generics="Input extends RemoteFormInput, Output">
-	import type { RemoteForm, RemoteFormInput, RemoteQueryUpdate } from "$app/server";
+<script lang="ts" generics="Form extends DialogForm">
+	import type { RemoteQueryUpdate } from "$app/server";
 	import type { Component, Snippet } from "svelte";
 	import type { HTMLInputAttributes } from "svelte/elements";
 
 	import type { HistoryDialog } from "../history-dialog.svelte.ts";
-	import { type DialogDone, dialogHistory, finish } from "./dialog-history.svelte.ts";
+	import {
+		type DialogDone,
+		type DialogForm,
+		dialogHistory,
+		finish,
+		type FormResult,
+		type HiddenInputs,
+	} from "./dialogs.svelte.ts";
 	import SubmitButton from "./submit-button.svelte";
 	import { submitted } from "./submitted.ts";
 
@@ -39,8 +46,8 @@
 		class: className,
 		children,
 		...finished
-	}: DialogDone<Output> & {
-		form: Omit<RemoteForm<Input, Output>, "for">;
+	}: DialogDone<FormResult<Form>> & {
+		form: Form;
 		title: string;
 		description?: string;
 		/** The submit button's label; "Save" if not given. */
@@ -52,7 +59,7 @@
 		/** The button that opens it; spread `props` on it. */
 		trigger?: Snippet<[Record<string, unknown>]>;
 		/** The form's hidden inputs, by field. */
-		hidden?: { [Key in keyof Input & string]?: string };
+		hidden?: HiddenInputs<Form>;
 		/** Whether to empty the fields once it's done, e.g. for the next new record. */
 		reset?: boolean;
 		/** The queries the submission refreshes, instead of all of the page's. */
@@ -61,7 +68,7 @@
 		history?: HistoryDialog;
 		/** The dialog's classes, e.g. its width. */
 		class?: string;
-		/** The fields. */
+		/** The fields, in their `Field.FieldGroup`s. */
 		children: Snippet;
 	} = $props();
 
@@ -76,7 +83,11 @@
 		issues(): { message: string }[] | undefined;
 	};
 	const fields = $derived(form.fields as unknown as Record<string, HiddenField>);
-	const hiddenFields = $derived(Object.entries(hidden).filter(([, value]) => value !== undefined));
+	const hiddenFields = $derived(
+		Object.entries(hidden as Record<string, string | undefined>).filter(
+			(entry): entry is [string, string] => entry[1] !== undefined,
+		),
+	);
 	// The fields show their own; these are the form's and those of its hidden inputs.
 	const issues = $derived([
 		...(form.fields.issues() ?? []),
@@ -105,18 +116,16 @@
 				const send = updates ? () => submit().updates(...updates()) : submit;
 				if (!(await submitted(send))) return;
 				// Before the reset, which may forget it.
-				const result = instance.result;
+				const result = instance.result as FormResult<Form>;
 				if (reset) element.reset();
 				await finish(dialog(), result, finished);
 			})}
 			class="flex flex-col gap-6"
 		>
 			{#each hiddenFields as [name, value] (name)}
-				<input {...fields[name].as("hidden", value!)} />
+				<input {...fields[name].as("hidden", value)} />
 			{/each}
-			<Field.FieldGroup>
-				{@render children()}
-			</Field.FieldGroup>
+			{@render children()}
 			<Field.FieldError errors={issues} />
 			<Dialog.Footer>
 				<Dialog.Close type="button">

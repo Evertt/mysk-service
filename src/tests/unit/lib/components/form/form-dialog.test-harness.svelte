@@ -4,12 +4,15 @@
 	`form-dialog.svelte.spec.ts`. Shows whether the parent sees it open.
 -->
 <script lang="ts">
+	import type { RemoteForm } from "$app/server";
 	import type { ComponentProps } from "svelte";
 
 	import FormDialog from "#lib/components/form/form-dialog.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 
-	type Props = ComponentProps<typeof FormDialog<{ id: string; name: string }, { code: string }>>;
+	type Props = ComponentProps<
+		typeof FormDialog<RemoteForm<{ id: string; name: string }, { code: string }>>
+	>;
 
 	let {
 		withTrigger = true,
@@ -25,7 +28,9 @@
 <p data-testid="open">{open ? "open" : "closed"}</p>
 
 <FormDialog {...props} bind:open trigger={withTrigger ? trigger : undefined}>
-	<TextField field={props.form.fields.name} label="Name" />
+	<Field.FieldGroup>
+		<TextField field={props.form.fields.name} label="Name" />
+	</Field.FieldGroup>
 </FormDialog>
 
 {#snippet trigger(attributes: Record<string, unknown>)}

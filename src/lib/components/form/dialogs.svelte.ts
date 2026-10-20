@@ -1,15 +1,49 @@
 /**
+ * What `FormDialog` and `ConfirmDialog` share: the forms they take, their history entry and what
+ * they do once done.
+ */
+import type { RemoteForm, RemoteFormIssue, RemoteQueryUpdate } from "$app/server";
+import { untrack } from "svelte";
+import { toast } from "svelte-sonner";
+
+import { type HistoryDialog, historyDialog } from "../history-dialog.svelte.ts";
+
+/** What a dialog's `enhance` callback uses of the submission. */
+interface DialogSubmission {
+	readonly element: HTMLFormElement;
+	submit(): Promise<boolean> & { updates(...updates: RemoteQueryUpdate[]): Promise<boolean> };
+	readonly result: unknown;
+}
+
+/**
+ * A remote form or one of its instances (`.for(id)`), as the dialogs take it: any form, or either
+ * of two (e.g. to add a record or edit one).
+ */
+export type DialogForm = Pick<RemoteForm<never, unknown>, "pending"> & {
+	enhance(
+		callback: (submission: DialogSubmission) => Promise<void>,
+	): ReturnType<RemoteForm<never, unknown>["enhance"]>;
+	readonly result: unknown;
+	fields: { issues(): RemoteFormIssue[] | undefined; allIssues(): RemoteFormIssue[] | undefined };
+};
+
+/** The hidden inputs of `Form` (of either form, for two), by field. */
+export type HiddenInputs<Form> = {
+	[
+		Key in Form extends Omit<RemoteForm<infer Input, unknown>, "for"> ? keyof Input & string : never
+	]?: string;
+};
+
+/** What `Form` answers once the server accepted it. */
+export type FormResult<Form> = Form extends { readonly result: infer Result } ? Result : never;
+
+/**
  * The history entry of a dialog component (`FormDialog`, `ConfirmDialog`) with a bindable `open`:
  * its own `historyDialog()`, or the one its opener keeps (`given`, e.g. to open it for a record).
  * The two stay in step: opening the dialog (its trigger, or the parent setting `open`) adds the
  * entry, and the entry going (back, or closing the dialog) sets `open` false. Call it while the
  * component initializes; bind the dialog's `open` to the answer's.
  */
-import { untrack } from "svelte";
-import { toast } from "svelte-sonner";
-
-import { type HistoryDialog, historyDialog } from "../history-dialog.svelte.ts";
-
 export function dialogHistory(
 	key: string,
 	given: () => HistoryDialog | undefined,

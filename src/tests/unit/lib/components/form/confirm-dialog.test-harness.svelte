@@ -4,11 +4,12 @@
 	parent sees it open.
 -->
 <script lang="ts">
+	import type { RemoteForm } from "$app/server";
 	import type { ComponentProps } from "svelte";
 
 	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
 
-	type Props = ComponentProps<typeof ConfirmDialog<{ id: string }, unknown>>;
+	type Props = ComponentProps<typeof ConfirmDialog<RemoteForm<{ id: string }, unknown>>>;
 
 	let props: Props = $props();
 
