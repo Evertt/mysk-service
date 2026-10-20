@@ -8,6 +8,7 @@
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 	import { toast } from "svelte-sonner";
 
+	import { lineItems, withoutValue } from "#lib/components/form/line-items.svelte.ts";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import { label } from "#lib/i18n/index.ts";
@@ -29,20 +30,11 @@
 		new Map(materials.map((material) => [String(material.id), material.unit])),
 	);
 
-	// Kept here so lines can be added and removed; the inputs' names make them part of the form.
-	const initialLines = () =>
-		saved.map((line) => ({
-			key: crypto.randomUUID(),
-			materialId: String(line.materialId),
-			quantity: line.quantity,
-		}));
-	let lines = $state(initialLines());
+	const lines = lineItems(() =>
+		saved.map((line) => ({ materialId: String(line.materialId), quantity: line.quantity })),
+	);
 
 	const fields = $derived(saveMaterials.fields);
-
-	function withoutValue<T extends { value?: unknown }>({ value: _value, ...attributes }: T) {
-		return attributes;
-	}
 </script>
 
 <form
@@ -52,7 +44,7 @@
 	class="flex flex-col gap-4"
 >
 	<input {...saveMaterials.fields.id.as("hidden", String(orderId))} />
-	{#each lines as line, index (line.key)}
+	{#each lines.rows as line, index (line.key)}
 		{@const lineFields = fields.lines[index]}
 		{@const unit = units.get(line.materialId)}
 		<div class="flex flex-col gap-2 rounded-lg border p-3" data-line>
@@ -93,7 +85,7 @@
 					variant="outline"
 					size="icon-lg"
 					aria-label={m.materials_portal_remove()}
-					onclick={() => lines.splice(index, 1)}
+					onclick={() => lines.remove(index)}
 				>
 					<Trash2Icon />
 				</Button>
@@ -109,7 +101,7 @@
 			type="button"
 			variant="outline"
 			size="lg"
-			onclick={() => lines.push({ key: crypto.randomUUID(), materialId: "", quantity: 1 })}
+			onclick={() => lines.add({ materialId: "", quantity: 1 })}
 		>
 			<PlusIcon data-icon="inline-start" />
 			{m.materials_portal_add()}

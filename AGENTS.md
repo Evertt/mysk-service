@@ -53,6 +53,10 @@ its branch after the task, then `git worktreeinclude apply` (`.env`) and `pnpm i
   (`#lib/components/form/submitted.ts`): they toast the error's own message (`errorMessage()`) or
   the fallback, and answer whether it went through. Never its own try/catch toast
   (`src/tests/unit/command-toasts.spec.ts`).
+- A form's rows that can be added and removed are `lineItems(() => initial)`
+  (`#lib/components/form/line-items.svelte.ts`: keyed `rows`, `add`, `remove`); their inputs take
+  the field's attributes with `withoutValue(field.as(…))` and the value from the row
+  (`src/tests/unit/line-items.spec.ts`).
 - A record's page is a `<RecordPage>` (`#lib/components/record-page.svelte`): header, trail,
   Edit/Delete, `<ChangedElsewhere>`, the two columns (`main`, `side`), the modules' slots and the
   activity card; its cards live in the domain's `detail/`. Its form is a `<RecordForm>` with

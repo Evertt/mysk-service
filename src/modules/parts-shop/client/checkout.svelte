@@ -6,6 +6,7 @@
 	possible with something in the cart and enough credit; the server checks it all again.
 -->
 <script lang="ts">
+	import { withoutValue } from "#lib/components/form/line-items.svelte.ts";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { formatCents, formatNumber } from "#lib/i18n/index.ts";
 	import { cn } from "#lib/utils.ts";
@@ -35,10 +36,6 @@
 	);
 	const after = $derived(balanceAfter(available, total));
 	const fields = $derived(placeClientShopOrder.fields);
-
-	function withoutValue<T extends { value?: unknown }>({ value: _value, ...attributes }: T) {
-		return attributes;
-	}
 </script>
 
 <Card.Root id="checkout" data-checkout>

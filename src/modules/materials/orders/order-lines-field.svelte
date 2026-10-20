@@ -9,6 +9,7 @@
 	import PlusIcon from "@lucide/svelte/icons/plus";
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 
+	import { lineItems, withoutValue } from "#lib/components/form/line-items.svelte.ts";
 	import type { FormPartFields } from "#lib/extensions/define.ts";
 	import { formatCents, label } from "#lib/i18n/index.ts";
 
@@ -29,26 +30,20 @@
 		quoted?: Awaited<ReturnType<typeof getOrderLines>>;
 	} = $props();
 
-	// Kept here so rows can be added and removed.
-	const initialLines = () =>
-		quoted?.map((line) => ({
-			key: crypto.randomUUID(),
-			materialId: String(line.materialId),
-			quantity: line.quantity,
-		})) ?? [];
-	let lines = $state(initialLines());
-	// The lines come back with the rest of the form (see `formSnapshot()`), if they were changed.
-	const unchanged = JSON.stringify(
-		initialLines().map(({ materialId, quantity }) => [materialId, quantity]),
+	const lines = lineItems(
+		() =>
+			quoted?.map((line) => ({ materialId: String(line.materialId), quantity: line.quantity })) ??
+			[],
 	);
-	snapshot<typeof lines | null>({
+	// The lines come back with the rest of the form (see `formSnapshot()`), if they were changed.
+	const valuesOf = (rows: typeof lines.rows) =>
+		JSON.stringify(rows.map(({ materialId, quantity }) => [materialId, quantity]));
+	const unchanged = valuesOf(lines.rows);
+	snapshot<typeof lines.rows | null>({
 		id: "materials:order-lines",
-		capture: () => {
-			const now = lines.map(({ materialId, quantity }) => [materialId, quantity]);
-			return JSON.stringify(now) === unchanged ? null : $state.snapshot(lines);
-		},
+		capture: () => (valuesOf(lines.rows) === unchanged ? null : $state.snapshot(lines.rows)),
 		restore: (restored) => {
-			if (restored) lines = restored;
+			if (restored) lines.rows = restored;
 		},
 	});
 	const materialsById = $derived(
@@ -60,18 +55,8 @@
 	const unitPrice = (materialId: string) =>
 		quotedPrices.get(materialId) ?? materialsById.get(materialId)?.unitPrice ?? 0;
 	const materialsTotal = $derived(
-		lines.reduce((sum, line) => sum + lineTotal(line.quantity, unitPrice(line.materialId)), 0),
+		lines.rows.reduce((sum, line) => sum + lineTotal(line.quantity, unitPrice(line.materialId)), 0),
 	);
-
-	// Line inputs take their value from `lines` (rows can be removed, which shifts the indexes), so
-	// only the name and validation attributes come from the form field.
-	function withoutValue<T extends { value?: unknown }>({ value: _value, ...attributes }: T) {
-		return attributes;
-	}
-
-	function addLine() {
-		lines.push({ key: crypto.randomUUID(), materialId: "", quantity: 1 });
-	}
 </script>
 
 <Card.Root>
@@ -81,14 +66,19 @@
 			{quoted ? m.materials_order_quoted() : m.materials_order_list_price()}
 		</Card.Description>
 		<Card.Action>
-			<Button type="button" variant="outline" size="sm" onclick={addLine}>
+			<Button
+				type="button"
+				variant="outline"
+				size="sm"
+				onclick={() => lines.add({ materialId: "", quantity: 1 })}
+			>
 				<PlusIcon data-icon="inline-start" />
 				{m.materials_order_add()}
 			</Button>
 		</Card.Action>
 	</Card.Header>
 	<Card.Content>
-		{#if lines.length}
+		{#if lines.rows.length}
 			<Table.Root>
 				<Table.Header>
 					<Table.Row>
@@ -101,7 +91,7 @@
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{#each lines as line, index (line.key)}
+					{#each lines.rows as line, index (line.key)}
 						{@const lineFields = field[index]}
 						<Table.Row>
 							<Table.Cell>
@@ -153,7 +143,7 @@
 									variant="ghost"
 									size="icon-sm"
 									aria-label={m.materials_order_line_remove_line()}
-									onclick={() => lines.splice(index, 1)}
+									onclick={() => lines.remove(index)}
 								>
 									<Trash2Icon />
 								</Button>
