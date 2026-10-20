@@ -5,11 +5,8 @@
 	give it points and categories.
 -->
 <script lang="ts">
-	import { toast } from "svelte-sonner";
-
+	import FormDialog from "#lib/components/form/form-dialog.svelte";
 	import NumberField from "#lib/components/form/number-field.svelte";
-	import SubmitButton from "#lib/components/form/submit-button.svelte";
-	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 
 	import { defaultValidityMonths, validityLimits } from "../model.ts";
@@ -28,64 +25,41 @@
 	const fields = $derived(form.fields);
 </script>
 
-<Dialog.Root bind:open>
-	<Dialog.Content class="sm:max-w-md">
-		<Dialog.Header>
-			<Dialog.Title>
-				{template ? m.checklists_edit_title({ name: template.name }) : m.checklists_new_title()}
-			</Dialog.Title>
-			<Dialog.Description>{m.checklists_dialog_description()}</Dialog.Description>
-		</Dialog.Header>
-		<form
-			{...form.enhance(async ({ submit }) => {
-				if (!(await submitted(submit))) return;
-				open = false;
-				toast.success(m.checklists_template_saved());
-			})}
-			class="flex flex-col gap-6"
-		>
-			{#if template}
-				<input
-					{...saveTemplate.for(String(template.id)).fields.id.as("hidden", String(template.id))}
-				/>
-			{/if}
-			<Field.FieldGroup>
-				<TextField
-					field={fields.name}
-					label={m.checklists_field_name()}
-					value={template?.name}
-					autocomplete="off"
-					placeholder={m.checklists_field_name_placeholder()}
-				/>
-				<TextField
-					field={fields.norm}
-					label={m.checklists_field_norm()}
-					value={template?.norm}
-					autocomplete="off"
-					placeholder={m.checklists_field_norm_placeholder()}
-					description={m.checklists_field_norm_description()}
-				/>
-				<NumberField
-					field={fields.validityMonths}
-					label={m.checklists_field_validity_months()}
-					value={template?.validityMonths ?? defaultValidityMonths}
-					min={validityLimits.min}
-					max={validityLimits.max}
-					step={1}
-					description={m.checklists_field_validity_description()}
-				/>
-			</Field.FieldGroup>
-
-			<!-- E.g. when the template was retired in the meantime. -->
-			<Field.FieldError errors={fields.issues()} />
-			<Dialog.Footer>
-				<Dialog.Close type="button">
-					{#snippet child({ props })}
-						<Button {...props} variant="ghost">{m.common_cancel()}</Button>
-					{/snippet}
-				</Dialog.Close>
-				<SubmitButton pending={form.pending}>{m.checklists_save_template()}</SubmitButton>
-			</Dialog.Footer>
-		</form>
-	</Dialog.Content>
-</Dialog.Root>
+<!-- A new one opens on its own page (the server redirects). -->
+<FormDialog
+	{form}
+	title={template ? m.checklists_edit_title({ name: template.name }) : m.checklists_new_title()}
+	description={m.checklists_dialog_description()}
+	submitLabel={m.checklists_save_template()}
+	hidden={template ? { id: String(template.id) } : {}}
+	done={m.checklists_template_saved()}
+	class="sm:max-w-md"
+	bind:open
+>
+	<Field.FieldGroup>
+		<TextField
+			field={fields.name}
+			label={m.checklists_field_name()}
+			value={template?.name}
+			autocomplete="off"
+			placeholder={m.checklists_field_name_placeholder()}
+		/>
+		<TextField
+			field={fields.norm}
+			label={m.checklists_field_norm()}
+			value={template?.norm}
+			autocomplete="off"
+			placeholder={m.checklists_field_norm_placeholder()}
+			description={m.checklists_field_norm_description()}
+		/>
+		<NumberField
+			field={fields.validityMonths}
+			label={m.checklists_field_validity_months()}
+			value={template?.validityMonths ?? defaultValidityMonths}
+			min={validityLimits.min}
+			max={validityLimits.max}
+			step={1}
+			description={m.checklists_field_validity_description()}
+		/>
+	</Field.FieldGroup>
+</FormDialog>

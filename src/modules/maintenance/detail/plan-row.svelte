@@ -11,7 +11,7 @@
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 	import { toast } from "svelte-sonner";
 
-	import { submitted } from "#lib/components/form/submitted.ts";
+	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
 	import { label } from "#lib/i18n/index.ts";
 	import { OrderLink } from "#lib/orders/components.ts";
 	import { errorMessage } from "#lib/utils.ts";
@@ -109,30 +109,14 @@
 	</DropdownMenu.Root>
 	<PlanDialog {equipmentId} {plan} bind:open={editing} />
 
-	<AlertDialog.Root bind:open={deleting}>
-		<AlertDialog.Content>
-			<AlertDialog.Header>
-				<AlertDialog.Title
-					>{m.maintenance_delete_title({ plan: plan.description })}</AlertDialog.Title
-				>
-				<AlertDialog.Description>{m.maintenance_delete_description()}</AlertDialog.Description>
-			</AlertDialog.Header>
-			<form
-				{...remove.enhance(async ({ submit }) => {
-					if (!(await submitted(submit))) return;
-					deleting = false;
-					toast.success(m.maintenance_plan_deleted());
-				})}
-			>
-				<input {...remove.fields.id.as("hidden", String(plan.id))} />
-				<Field.FieldError errors={remove.fields.allIssues()} class="mb-4" />
-				<AlertDialog.Footer>
-					<AlertDialog.Cancel type="button">{m.common_cancel()}</AlertDialog.Cancel>
-					<Button type="submit" variant="destructive" disabled={!!remove.pending}>
-						{m.common_delete()}
-					</Button>
-				</AlertDialog.Footer>
-			</form>
-		</AlertDialog.Content>
-	</AlertDialog.Root>
+	<ConfirmDialog
+		form={remove}
+		hidden={{ id: String(plan.id) }}
+		title={m.maintenance_delete_title({ plan: plan.description })}
+		description={m.maintenance_delete_description()}
+		confirmLabel={m.common_delete()}
+		destructive
+		done={m.maintenance_plan_deleted()}
+		bind:open={deleting}
+	/>
 </li>

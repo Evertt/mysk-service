@@ -33,6 +33,7 @@
 	import {
 		applicability,
 		type BulkAction,
+		type BulkResult,
 		type BulkTarget,
 		MAX_BULK_RECORDS,
 		summarizeBulkResult,
@@ -85,8 +86,16 @@
 	const menu = $derived(states.length > inline ? states.slice(inline - 1) : []);
 
 	let busy = $state(false);
-	/** The action whose dialog is open, if any, and the single row it's for, if it is. */
-	let asking = $state.raw<{ action: BulkAction<TData, Where>; applies: number; row?: BulkRow }>();
+	/**
+	 * The action whose dialog is open, if any, how many rows it's for and applies to, and the single
+	 * row it's for, if it is. The count stays as it was asked while the dialog closes.
+	 */
+	let asking = $state.raw<{
+		action: BulkAction<TData, Where>;
+		count: number;
+		applies: number;
+		row?: BulkRow;
+	}>();
 	let dialogOpen = $state(false);
 
 	// The rows' menus offer these actions too.
@@ -115,14 +124,26 @@
 		if (busy) return;
 		if (action.confirm || action.parameter) {
 			// A new object, so the dialog starts anew (see `{#key asking}`).
-			asking = { action, applies, row };
+			asking = { action, count: row ? 1 : count, applies, row };
 			dialogOpen = true;
 		} else {
-			void run(action, undefined, row);
+			void run(action, row);
 		}
 	}
 
-	async function run(action: BulkAction<TData, Where>, value?: string, row?: BulkRow) {
+	/** Runs an action that doesn't ask first (its dialog runs one that does), then opens its page. */
+	async function run(action: BulkAction<TData, Where>, row?: BulkRow) {
+		try {
+			const result = await perform(action, undefined, row);
+			report(action, result, row);
+			if (result.href) await goto(result.href);
+		} catch (error) {
+			toast.error(errorMessage(error, m.common_error_generic()));
+		}
+	}
+
+	/** Runs `action` with `value` on the selection, or on `row` alone. */
+	async function perform(action: BulkAction<TData, Where>, value?: string, row?: BulkRow) {
 		const target = (
 			row
 				? { ids: [Number(row.id)] }
@@ -132,23 +153,23 @@
 		) as BulkTarget<Where>;
 		busy = true;
 		try {
-			const result = await action.run(target, value);
-			dialogOpen = false;
-			const summary = summarizeBulkResult(result, action.done, row?.label);
-			const show = { success: toast.success, warning: toast.warning, error: toast.error };
-			show[summary.tone](summary.title, {
-				description: summary.details.join("\n") || undefined,
-				// Long enough to read the reasons.
-				duration: summary.details.length ? 12_000 : undefined,
-				classes: { description: "whitespace-pre-line" },
-			});
-			if (!row) clear();
-			if (result.href) await goto(result.href);
-		} catch (error) {
-			toast.error(errorMessage(error, m.common_error_generic()));
+			return await action.run(target, value);
 		} finally {
 			busy = false;
 		}
+	}
+
+	/** Says how `action` went, e.g. "7 updated, 2 skipped" with the reasons, and clears the selection. */
+	function report(action: BulkAction<TData, Where>, result: BulkResult, row?: BulkRow) {
+		const summary = summarizeBulkResult(result, action.done, row?.label);
+		const show = { success: toast.success, warning: toast.warning, error: toast.error };
+		show[summary.tone](summary.title, {
+			description: summary.details.join("\n") || undefined,
+			// Long enough to read the reasons.
+			duration: summary.details.length ? 12_000 : undefined,
+			classes: { description: "whitespace-pre-line" },
+		});
+		if (!row) clear();
 	}
 
 	const label = $derived(
@@ -258,11 +279,11 @@
 		<BulkActionDialog
 			action={asking.action}
 			bind:open={dialogOpen}
-			count={asking.row ? 1 : count}
+			count={asking.count}
 			applies={asking.applies}
 			record={asking.row?.label}
-			{busy}
-			onrun={(value) => run(asking!.action, value, asking!.row)}
+			onrun={(value) => perform(asking!.action, value, asking!.row)}
+			ondone={(result) => report(asking!.action, result, asking!.row)}
 		/>
 	{/if}
 {/key}

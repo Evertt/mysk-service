@@ -5,10 +5,7 @@
 	over, the close itself, after asking.
 -->
 <script lang="ts">
-	import { toast } from "svelte-sonner";
-
-	import SubmitButton from "#lib/components/form/submit-button.svelte";
-	import { submitted } from "#lib/components/form/submitted.ts";
+	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
 	import { CustomerLink } from "#lib/customers/components.ts";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 
@@ -18,7 +15,6 @@
 
 	let { preview }: { preview: Awaited<ReturnType<typeof getClosePreview>> } = $props();
 
-	let open = $state(false);
 	const rows = $derived(
 		preview.partners.map((partner) => {
 			const { closed, figures } = partner;
@@ -67,42 +63,18 @@
 			</Card.Description>
 			{#if preview.canManage && preview.closable && preview.rules && waiting.length}
 				<Card.Action>
-					<AlertDialog.Root bind:open>
-						<AlertDialog.Trigger>
-							{#snippet child({ props })}
-								<Button {...props}
-									>{m.partners_close_confirm({ year: String(preview.year) })}</Button
-								>
-							{/snippet}
-						</AlertDialog.Trigger>
-						<AlertDialog.Content>
-							<AlertDialog.Header>
-								<AlertDialog.Title>
-									{m.partners_close_confirm_title({ year: String(preview.year) })}
-								</AlertDialog.Title>
-								<AlertDialog.Description>
-									{m.partners_close_confirm_description({ count: waiting.length })}
-								</AlertDialog.Description>
-							</AlertDialog.Header>
-							<form
-								{...closeProgrammeYear.enhance(async ({ submit }) => {
-									if (await submitted(submit)) {
-										open = false;
-										toast.success(m.partners_closed({ year: String(preview.year) }));
-									}
-								})}
-							>
-								<input {...closeProgrammeYear.fields.year.as("hidden", String(preview.year))} />
-								<Field.FieldError errors={closeProgrammeYear.fields.allIssues()} class="mb-4" />
-								<AlertDialog.Footer>
-									<AlertDialog.Cancel type="button">{m.common_cancel()}</AlertDialog.Cancel>
-									<SubmitButton pending={closeProgrammeYear.pending}>
-										{m.partners_close_confirm({ year: String(preview.year) })}
-									</SubmitButton>
-								</AlertDialog.Footer>
-							</form>
-						</AlertDialog.Content>
-					</AlertDialog.Root>
+					<ConfirmDialog
+						form={closeProgrammeYear}
+						hidden={{ year: String(preview.year) }}
+						title={m.partners_close_confirm_title({ year: String(preview.year) })}
+						description={m.partners_close_confirm_description({ count: waiting.length })}
+						confirmLabel={m.partners_close_confirm({ year: String(preview.year) })}
+						done={m.partners_closed({ year: String(preview.year) })}
+					>
+						{#snippet trigger(props)}
+							<Button {...props}>{m.partners_close_confirm({ year: String(preview.year) })}</Button>
+						{/snippet}
+					</ConfirmDialog>
 				</Card.Action>
 			{/if}
 		</Card.Header>

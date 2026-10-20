@@ -41,6 +41,10 @@ its branch after the task, then `git worktreeinclude apply` (`.env`) and `pnpm i
   `CustomerLink`, `EquipmentLink`, `EngineerLink`; in a table cell with `secondary`), never a
   `resolve()`d anchor: it gives the office the record's hover card (`RecordLink`). Breadcrumbs,
   page headers and buttons stay plain.
+- A dialog is `FormDialog` (a form with fields) or `ConfirmDialog` (a question; `DeleteDialog` is
+  its delete button), from `#lib/components/form/`: they submit, toast, close, show the server's
+  refusal and give the dialog a history entry, so back closes it. Never `Dialog.Root` or
+  `AlertDialog.Root` outside `src/lib/components/` (`src/tests/unit/dialogs.spec.ts`).
 
 Details: `docs/agents/structure.md`.
 

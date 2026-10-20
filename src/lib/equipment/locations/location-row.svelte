@@ -9,9 +9,8 @@
 	import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
-	import { toast } from "svelte-sonner";
 
-	import { submitted } from "#lib/components/form/submitted.ts";
+	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
 
 	import LocationDialog from "./location-dialog.svelte";
 	import { deleteLocation } from "./locations.remote.ts";
@@ -73,33 +72,15 @@
 
 	<LocationDialog siteId={location.siteId} {location} bind:open={editing} />
 
-	<AlertDialog.Root bind:open={deleting}>
-		<AlertDialog.Content>
-			<AlertDialog.Header>
-				<AlertDialog.Title>
-					{m.equipment_location_delete_title({ name: location.name })}
-				</AlertDialog.Title>
-				<AlertDialog.Description
-					>{m.equipment_location_delete_description()}</AlertDialog.Description
-				>
-			</AlertDialog.Header>
-			<form
-				{...remove.enhance(async ({ submit }) => {
-					if (!(await submitted(submit))) return;
-					deleting = false;
-					toast.success(m.equipment_location_deleted());
-				})}
-			>
-				<input {...remove.fields.id.as("hidden", String(location.id))} />
-				<!-- E.g. while units are there. -->
-				<Field.FieldError errors={remove.fields.allIssues()} class="mb-4" />
-				<AlertDialog.Footer>
-					<AlertDialog.Cancel type="button">{m.common_cancel()}</AlertDialog.Cancel>
-					<Button type="submit" variant="destructive" disabled={!!remove.pending}>
-						{m.common_delete()}
-					</Button>
-				</AlertDialog.Footer>
-			</form>
-		</AlertDialog.Content>
-	</AlertDialog.Root>
+	<!-- Refused while units are there. -->
+	<ConfirmDialog
+		form={remove}
+		hidden={{ id: String(location.id) }}
+		title={m.equipment_location_delete_title({ name: location.name })}
+		description={m.equipment_location_delete_description()}
+		confirmLabel={m.common_delete()}
+		destructive
+		done={m.equipment_location_deleted()}
+		bind:open={deleting}
+	/>
 </li>

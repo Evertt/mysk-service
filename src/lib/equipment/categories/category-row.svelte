@@ -9,8 +9,8 @@
 	import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
-	import { toast } from "svelte-sonner";
 
+	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import { label } from "#lib/i18n/index.ts";
 	import type { EngineerSpecialty } from "#lib/models.ts";
@@ -107,34 +107,16 @@
 
 		<CategoryDialog {category} bind:open={editing} />
 
-		<AlertDialog.Root bind:open={deleting}>
-			<AlertDialog.Content>
-				<AlertDialog.Header>
-					<AlertDialog.Title>
-						{m.equipment_category_delete_title({ name: category.name })}
-					</AlertDialog.Title>
-					<AlertDialog.Description>
-						{m.equipment_category_delete_description()}
-					</AlertDialog.Description>
-				</AlertDialog.Header>
-				<form
-					{...remove.enhance(async ({ submit }) => {
-						if (!(await submitted(submit))) return;
-						deleting = false;
-						toast.success(m.equipment_category_deleted());
-					})}
-				>
-					<input {...remove.fields.id.as("hidden", String(category.id))} />
-					<!-- E.g. while equipment has it. -->
-					<Field.FieldError errors={remove.fields.allIssues()} class="mb-4" />
-					<AlertDialog.Footer>
-						<AlertDialog.Cancel type="button">{m.common_cancel()}</AlertDialog.Cancel>
-						<Button type="submit" variant="destructive" disabled={!!remove.pending}>
-							{m.common_delete()}
-						</Button>
-					</AlertDialog.Footer>
-				</form>
-			</AlertDialog.Content>
-		</AlertDialog.Root>
+		<!-- Refused while equipment has it. -->
+		<ConfirmDialog
+			form={remove}
+			hidden={{ id: String(category.id) }}
+			title={m.equipment_category_delete_title({ name: category.name })}
+			description={m.equipment_category_delete_description()}
+			confirmLabel={m.common_delete()}
+			destructive
+			done={m.equipment_category_deleted()}
+			bind:open={deleting}
+		/>
 	</Table.Cell>
 </Table.Row>

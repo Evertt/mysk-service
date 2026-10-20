@@ -1,15 +1,15 @@
 <!--
 	@component
 	Plans an order without dragging: a dialog with its engineer, date and time. Calls `onscheduled`
-	with the chosen day once the server has saved it.
+	with the chosen day once the server has saved it. Open while the board's `history` entry is.
 -->
 <script lang="ts">
 	import { toast } from "svelte-sonner";
 
+	import FormDialog from "#lib/components/form/form-dialog.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
-	import SubmitButton from "#lib/components/form/submit-button.svelte";
-	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
+	import type { HistoryDialog } from "#lib/components/history-dialog.svelte.ts";
 	import { getTimeZone } from "#lib/dates.ts";
 	import { fittingFirst, specialties } from "#lib/engineers/index.ts";
 	import { formatDate } from "#lib/i18n/index.ts";
@@ -24,7 +24,7 @@
 		engineers,
 		week,
 		defaultDay,
-		open = $bindable(false),
+		history,
 		onscheduled,
 	}: {
 		order: Schedule["orders"][number];
@@ -33,7 +33,8 @@
 		week: string;
 		/** The day to suggest for an order without a date. */
 		defaultDay: Temporal.PlainDate;
-		open?: boolean;
+		/** The dialog's history entry, which the board keeps (it's open while that's there). */
+		history: HistoryDialog;
 		onscheduled?: (day: Temporal.PlainDate) => void;
 	} = $props();
 
@@ -52,63 +53,51 @@
 			group: specialties[engineer.specialty].label,
 		})),
 	);
+
+	function saved() {
+		const day = parseDay(form.fields.day.value());
+		toast.success(
+			day
+				? m.schedule_scheduled_for({ number: order.number, date: formatDate(day) })
+				: m.schedule_scheduled({ number: order.number }),
+		);
+		// Before it closes, so it can leave the page from the dialog (see `historyDialog()`).
+		if (day) onscheduled?.(day);
+	}
 </script>
 
-<Dialog.Root bind:open>
-	<Dialog.Content class="sm:max-w-md">
-		<Dialog.Header>
-			<Dialog.Title>{m.schedule_order({ number: order.number })}</Dialog.Title>
-			<Dialog.Description>{order.customer.name}: {order.description}</Dialog.Description>
-		</Dialog.Header>
-		<form
-			{...form.enhance(async ({ submit }) => {
-				if (!(await submitted(() => submit().updates(getSchedule(week))))) return;
-				const day = parseDay(form.fields.day.value());
-				toast.success(
-					day
-						? m.schedule_scheduled_for({ number: order.number, date: formatDate(day) })
-						: m.schedule_scheduled({ number: order.number }),
-				);
-				// First, so it can leave the page from the dialog (see `historyDialog()`).
-				if (day) onscheduled?.(day);
-				open = false;
-			})}
-			class="flex flex-col gap-6"
-		>
-			<input {...form.fields.id.as("hidden", String(order.id))} />
-			<Field.FieldGroup>
-				<SelectField
-					field={form.fields.engineerId}
-					label={m.schedule_field_engineer()}
-					placeholder={m.common_unassigned()}
-					value={order.engineerId ? String(order.engineerId) : ""}
-					options={engineerOptions}
-				/>
-				<div class="grid grid-cols-2 gap-4">
-					<TextField
-						field={form.fields.day}
-						label={m.schedule_field_date()}
-						type="date"
-						value={(scheduled?.toPlainDate() ?? defaultDay).toString()}
-					/>
-					<TextField
-						field={form.fields.time}
-						label={m.schedule_field_time()}
-						type="time"
-						value={scheduled?.toPlainTime().toString({ smallestUnit: "minute" }) ?? DEFAULT_TIME}
-					/>
-				</div>
-			</Field.FieldGroup>
-			<!-- E.g. when the order was completed in the meantime. -->
-			<Field.FieldError errors={form.fields.issues()} />
-			<Dialog.Footer>
-				<Dialog.Close type="button">
-					{#snippet child({ props })}
-						<Button {...props} variant="ghost">{m.common_cancel()}</Button>
-					{/snippet}
-				</Dialog.Close>
-				<SubmitButton pending={form.pending}>{m.schedule_submit()}</SubmitButton>
-			</Dialog.Footer>
-		</form>
-	</Dialog.Content>
-</Dialog.Root>
+<FormDialog
+	{form}
+	title={m.schedule_order({ number: order.number })}
+	description="{order.customer.name}: {order.description}"
+	submitLabel={m.schedule_submit()}
+	hidden={{ id: String(order.id) }}
+	updates={() => [getSchedule(week)]}
+	ondone={saved}
+	{history}
+	class="sm:max-w-md"
+>
+	<Field.FieldGroup>
+		<SelectField
+			field={form.fields.engineerId}
+			label={m.schedule_field_engineer()}
+			placeholder={m.common_unassigned()}
+			value={order.engineerId ? String(order.engineerId) : ""}
+			options={engineerOptions}
+		/>
+		<div class="grid grid-cols-2 gap-4">
+			<TextField
+				field={form.fields.day}
+				label={m.schedule_field_date()}
+				type="date"
+				value={(scheduled?.toPlainDate() ?? defaultDay).toString()}
+			/>
+			<TextField
+				field={form.fields.time}
+				label={m.schedule_field_time()}
+				type="time"
+				value={scheduled?.toPlainTime().toString({ smallestUnit: "minute" }) ?? DEFAULT_TIME}
+			/>
+		</div>
+	</Field.FieldGroup>
+</FormDialog>

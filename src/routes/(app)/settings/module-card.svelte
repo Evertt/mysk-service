@@ -7,6 +7,7 @@
 <script lang="ts">
 	import type { Component } from "svelte";
 
+	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { formatDate } from "#lib/i18n/index.ts";
 	import { dependentsOf, requirementsOf } from "#lib/modules/graph.ts";
@@ -84,33 +85,19 @@
 			{#if module.alwaysOn}
 				<Button variant="outline" size="sm" disabled>{m.settings_modules_always_on()}</Button>
 			{:else if asksFirst}
-				<AlertDialog.Root>
-					<AlertDialog.Trigger>
-						{#snippet child({ props })}
-							<Button {...props} variant="outline" size="sm">{m.settings_disable()}</Button>
-						{/snippet}
-					</AlertDialog.Trigger>
-					<AlertDialog.Content>
-						<AlertDialog.Header>
-							<AlertDialog.Title>
-								{m.settings_modules_disable_title({ module: module.label })}
-							</AlertDialog.Title>
-							<AlertDialog.Description>
-								{m.settings_modules_also_disables({ modules: names(needing) })}
-							</AlertDialog.Description>
-						</AlertDialog.Header>
-						<Field.FieldError errors={form.fields.allIssues()} />
-						<form {...form}>
-							{#each [module.id, ...needing] as id (id)}
-								<input hidden {...form.fields.disable.as("checkbox", id, true)} />
-							{/each}
-							<AlertDialog.Footer>
-								<AlertDialog.Cancel type="button">{m.common_cancel()}</AlertDialog.Cancel>
-								<SubmitButton pending={form.pending}>{m.settings_disable()}</SubmitButton>
-							</AlertDialog.Footer>
-						</form>
-					</AlertDialog.Content>
-				</AlertDialog.Root>
+				<ConfirmDialog
+					{form}
+					title={m.settings_modules_disable_title({ module: module.label })}
+					description={m.settings_modules_also_disables({ modules: names(needing) })}
+					confirmLabel={m.settings_disable()}
+				>
+					{#snippet trigger(props)}
+						<Button {...props} variant="outline" size="sm">{m.settings_disable()}</Button>
+					{/snippet}
+					{#each [module.id, ...needing] as id (id)}
+						<input hidden {...form.fields.disable.as("checkbox", id, true)} />
+					{/each}
+				</ConfirmDialog>
 			{:else}
 				<form {...form}>
 					{#if module.on}

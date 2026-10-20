@@ -5,11 +5,9 @@
 -->
 <script lang="ts">
 	import ClipboardCheckIcon from "@lucide/svelte/icons/clipboard-check";
-	import { toast } from "svelte-sonner";
 
+	import FormDialog from "#lib/components/form/form-dialog.svelte";
 	import NumberField from "#lib/components/form/number-field.svelte";
-	import SubmitButton from "#lib/components/form/submit-button.svelte";
-	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { label } from "#lib/i18n/index.ts";
 
@@ -22,71 +20,46 @@
 	let { material }: { material: { id: number; name: string; unit: MaterialUnit; stock: number } } =
 		$props();
 
-	let open = $state(false);
-
 	const counted = $derived(countStock.fields.counted.value());
 	const difference = $derived(
 		typeof counted === "number" && !Number.isNaN(counted) ? counted - material.stock : 0,
 	);
 </script>
 
-<Dialog.Root bind:open>
-	<Dialog.Trigger>
-		{#snippet child({ props })}
-			<Button {...props} variant="outline">
-				<ClipboardCheckIcon data-icon="inline-start" />
-				{m.materials_count_button()}
-			</Button>
-		{/snippet}
-	</Dialog.Trigger>
-	<Dialog.Content>
-		<Dialog.Header>
-			<Dialog.Title>{m.materials_count_title({ name: material.name })}</Dialog.Title>
-			<Dialog.Description>
-				{m.materials_count_description({
-					quantity: formatQuantity(material.stock, material.unit),
-				})}
-			</Dialog.Description>
-		</Dialog.Header>
-		<form
-			{...countStock.enhance(async ({ element, submit }) => {
-				// Otherwise the fields show what's wrong.
-				if (await submitted(submit)) {
-					element.reset();
-					open = false;
-					toast.success(m.materials_count_done());
-				}
+<FormDialog
+	form={countStock}
+	title={m.materials_count_title({ name: material.name })}
+	description={m.materials_count_description({
+		quantity: formatQuantity(material.stock, material.unit),
+	})}
+	submitLabel={m.materials_count_submit()}
+	hidden={{ id: String(material.id) }}
+	reset
+	done={m.materials_count_done()}
+>
+	{#snippet trigger(props)}
+		<Button {...props} variant="outline">
+			<ClipboardCheckIcon data-icon="inline-start" />
+			{m.materials_count_button()}
+		</Button>
+	{/snippet}
+	<Field.FieldGroup>
+		<NumberField
+			field={countStock.fields.counted}
+			label={m.materials_count_counted({
+				unit: materialLabels.label("materialUnitSymbol", material.unit),
 			})}
-			class="flex flex-col gap-6"
-		>
-			<input {...countStock.fields.id.as("hidden", String(material.id))} />
-			<Field.FieldGroup>
-				<NumberField
-					field={countStock.fields.counted}
-					label={m.materials_count_counted({
-						unit: materialLabels.label("materialUnitSymbol", material.unit),
-					})}
-					value={material.stock}
-					min={0}
-					step={quantityStep(material.unit)}
-					description={difference
-						? m.materials_count_records({ change: formatChange(difference, material.unit) })
-						: m.materials_count_same()}
-				/>
-				<TextField
-					field={countStock.fields.note}
-					label={m.materials_count_reason()}
-					placeholder={m.materials_count_reason_placeholder()}
-				/>
-			</Field.FieldGroup>
-			<Dialog.Footer>
-				<Dialog.Close type="button">
-					{#snippet child({ props })}
-						<Button {...props} variant="outline">{m.common_cancel()}</Button>
-					{/snippet}
-				</Dialog.Close>
-				<SubmitButton pending={countStock.pending}>{m.materials_count_submit()}</SubmitButton>
-			</Dialog.Footer>
-		</form>
-	</Dialog.Content>
-</Dialog.Root>
+			value={material.stock}
+			min={0}
+			step={quantityStep(material.unit)}
+			description={difference
+				? m.materials_count_records({ change: formatChange(difference, material.unit) })
+				: m.materials_count_same()}
+		/>
+		<TextField
+			field={countStock.fields.note}
+			label={m.materials_count_reason()}
+			placeholder={m.materials_count_reason_placeholder()}
+		/>
+	</Field.FieldGroup>
+</FormDialog>

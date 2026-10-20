@@ -161,7 +161,7 @@
 		engineers={schedule.engineers}
 		{week}
 		{defaultDay}
-		bind:open={() => dialog.open, (open) => (dialog.open = open)}
+		history={dialog}
 		onscheduled={showPlanned}
 	/>
 {/if}

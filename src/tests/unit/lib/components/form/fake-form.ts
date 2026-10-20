@@ -40,11 +40,15 @@ interface FakeFormOptions {
 	onsubmit?: (data: FormData) => void;
 	/** Called with what an `enhance` callback passes to its submission's `updates(…)`. */
 	onupdates?: (...updates: unknown[]) => void;
+	/** What the server answers once it accepted the submission (`form.result`). */
+	result?: unknown;
 }
 
 type EnhanceCallback = (submission: {
 	form: HTMLFormElement;
+	element: HTMLFormElement;
 	data: FormData;
+	readonly result: unknown;
 	submit: () => Promise<boolean> & { updates: (...updates: unknown[]) => Promise<boolean> };
 }) => unknown;
 
@@ -55,12 +59,15 @@ type EnhanceCallback = (submission: {
  */
 export function fakeForm<Input extends RemoteFormInput>(
 	fields: (keyof Input & string)[],
-	{ issues = [], pending = 0, onsubmit, onupdates }: FakeFormOptions = {},
+	{ issues = [], pending = 0, onsubmit, onupdates, result }: FakeFormOptions = {},
 ) {
 	let enhanced: EnhanceCallback | undefined;
+	let answered: unknown;
 	const send = (data: FormData) => {
 		onsubmit?.(data);
-		const sent = Promise.resolve(issues.length === 0);
+		const accepted = issues.length === 0;
+		if (accepted) answered = result;
+		const sent = Promise.resolve(accepted);
 		return Object.assign(sent, {
 			updates: (...updates: unknown[]) => {
 				onupdates?.(...updates);
@@ -75,7 +82,16 @@ export function fakeForm<Input extends RemoteFormInput>(
 			event.preventDefault();
 			const element = event.currentTarget as HTMLFormElement;
 			const data = new FormData(element);
-			if (enhanced) void enhanced({ form: element, data, submit: () => send(data) });
+			const submission = {
+				form: element,
+				element,
+				data,
+				submit: () => send(data),
+				get result() {
+					return answered;
+				},
+			};
+			if (enhanced) void enhanced(submission);
 			else void send(data);
 		},
 	};
@@ -85,10 +101,12 @@ export function fakeForm<Input extends RemoteFormInput>(
 		fields: {
 			value: {
 				...Object.fromEntries(fields.map((name) => [name, fakeField(name)])),
+				issues: () => toIssues(first, issues),
 				allIssues: () => toIssues(first, issues),
 			},
 		},
 		pending: { value: pending },
+		result: { get: () => answered },
 		enhance: {
 			value: (callback: EnhanceCallback) => {
 				enhanced = callback;

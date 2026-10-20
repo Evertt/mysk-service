@@ -1,9 +1,10 @@
 import { error } from "@sveltejs/kit";
-import { describe, expect, test, vi } from "vite-plus/test";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
 import type { BulkAction, BulkResult } from "#lib/components/data-table/bulk-actions.ts";
+import { leaves, resetHistoryDialogs } from "#unit/lib/components/fake-history-dialog.svelte.ts";
 
 import Harness, { type Job } from "./bulk-action-bar.test-harness.svelte";
 import { visits } from "./fake-navigation.svelte.ts";
@@ -19,6 +20,13 @@ vi.mock(
 	"#lib/components/data-table/table-memory.remote.ts",
 	() => import("./fake-table-memory.ts"),
 );
+// The dialogs open with a history entry of their own, through SvelteKit's router.
+vi.mock(
+	"#lib/components/history-dialog.svelte.ts",
+	() => import("#unit/lib/components/fake-history-dialog.svelte.ts"),
+);
+
+beforeEach(resetHistoryDialogs);
 
 const jobs: Job[] = [
 	{ id: 1, name: "Boiler service", status: "open" },
@@ -204,6 +212,24 @@ describe("the action bar", () => {
 		await select("Boiler service");
 		await bar().getByRole("button", { name: "Close" }).click();
 		await expect.poll(() => visits.at(-1)?.url).toBe("/invoices/1");
+	});
+
+	test("opens the page a result points to from its dialog, in place of the dialog", async () => {
+		const invoice: BulkAction<Job, any> = {
+			id: "invoice",
+			label: () => "Invoice",
+			confirm: { title: (count) => `Invoice ${count} jobs?`, description: () => "One invoice." },
+			run: async () => done({ href: "/invoices/1" }),
+		};
+		render(Harness, { jobs, actions: [invoice] });
+		await select("Boiler service");
+
+		await bar().getByRole("button", { name: "Invoice" }).click();
+		await page.getByRole("alertdialog").getByRole("button", { name: "Invoice" }).click();
+
+		await expect.poll(() => leaves).toEqual(["/invoices/1"]);
+		await expect.element(page.getByRole("alertdialog")).not.toBeInTheDocument();
+		await expect.element(bar()).not.toBeInTheDocument();
 	});
 
 	test("shows a refusal of the whole action", async () => {

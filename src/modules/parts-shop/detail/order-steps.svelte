@@ -6,6 +6,7 @@
 <script lang="ts">
 	import { toast } from "svelte-sonner";
 
+	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import { formatCents } from "#lib/i18n/index.ts";
@@ -55,31 +56,13 @@
 	{/each}
 {/if}
 
-<AlertDialog.Root bind:open={cancelling}>
-	<AlertDialog.Content>
-		<AlertDialog.Header>
-			<AlertDialog.Title>{m.shop_cancel_title({ number })}</AlertDialog.Title>
-			<AlertDialog.Description>
-				{m.shop_cancel_description({ total: formatCents(total) })}
-			</AlertDialog.Description>
-		</AlertDialog.Header>
-		<form
-			{...cancel.enhance(async ({ submit }) => {
-				if (await submitted(submit)) {
-					cancelling = false;
-					toast.success(m.shop_cancelled({ number }));
-				}
-			})}
-		>
-			<input {...cancel.fields.number.as("hidden", number)} />
-			<input {...cancel.fields.step.as("hidden", "cancel")} />
-			<Field.FieldError errors={cancel.fields.allIssues()} class="mb-4" />
-			<AlertDialog.Footer>
-				<AlertDialog.Cancel type="button">{m.common_cancel()}</AlertDialog.Cancel>
-				<SubmitButton variant="destructive" pending={cancel.pending}>
-					{m.shop_cancel_confirm()}
-				</SubmitButton>
-			</AlertDialog.Footer>
-		</form>
-	</AlertDialog.Content>
-</AlertDialog.Root>
+<ConfirmDialog
+	form={cancel}
+	hidden={{ number, step: "cancel" }}
+	title={m.shop_cancel_title({ number })}
+	description={m.shop_cancel_description({ total: formatCents(total) })}
+	confirmLabel={m.shop_cancel_confirm()}
+	destructive
+	done={m.shop_cancelled({ number })}
+	bind:open={cancelling}
+/>
