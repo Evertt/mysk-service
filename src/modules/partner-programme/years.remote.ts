@@ -11,13 +11,10 @@ import { currentTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 
 import { rulesSchema } from "./form/rules-schema.ts";
-import { yearField } from "./form/wallet-schema.ts";
+import { year, yearField } from "./form/wallet-schema.ts";
 import { defaultCategoryRules, defaultTiers } from "./model.ts";
 import { forManagers, query } from "./remote-functions.ts";
 import { addYear, programmeYears, rulesFor, saveRules, storedRules } from "./server/rules.ts";
-
-/** A year as the client asks for it. */
-const year = v.pipe(v.number(), v.integer(), v.minValue(2000), v.maxValue(2100));
 
 /** The years set up, latest first, and the one to add next. */
 export const getProgrammeYears = query(async () => {

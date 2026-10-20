@@ -33,7 +33,7 @@ import {
 import { figuresOf, partnersOf } from "./partners.ts";
 import { programmeYears, rulesFor } from "./rules.ts";
 import { bonusCreditNote, bonusYear } from "./schema.ts";
-import { addEntry } from "./wallet.ts";
+import { addEntry, walletOf } from "./wallet.ts";
 
 /** The closed years of the tenant's partners in `year`, by customer id. */
 async function closedIn(year: number, tx: Transaction | typeof db = db) {
@@ -156,6 +156,23 @@ export async function closedYearsOf(customerId: number) {
 		colour: row.year.level ? levelColour(row.year.level, tiersOf(row.year.year)) : undefined,
 		creditNote: (row.creditNoteId && notes.get(row.creditNoteId)) || null,
 	}));
+}
+
+/**
+ * A partner's standing on `today`: this year's rules (none if it isn't set up) and figures so far,
+ * where this year's credit would be valid until if it's chosen, its closed years (latest first) and
+ * its wallet. The office's card and the partner's own portal show it.
+ */
+export async function partnerStanding(customerId: number, today: Temporal.PlainDate) {
+	const rules = await rulesFor(today.year);
+	return {
+		year: today.year,
+		rules,
+		figures: rules ? (await figuresOf(rules, [customerId])).get(customerId)! : null,
+		validUntil: rules ? creditValidUntil(today.year, rules.creditValidYears) : null,
+		closed: await closedYearsOf(customerId),
+		wallet: await walletOf(customerId, today),
+	};
 }
 
 /**

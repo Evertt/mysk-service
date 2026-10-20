@@ -3,14 +3,11 @@ import * as v from "valibot";
 
 import { cents, customerCode, optionalDate, text } from "#lib/schema.ts";
 
+/** A year, as a query takes it. */
+export const year = v.pipe(v.number(), v.integer(), v.minValue(2000), v.maxValue(2100));
+
 /** A year, from a hidden field. */
-export const yearField = v.pipe(
-	v.string(),
-	v.transform(Number),
-	v.integer(),
-	v.minValue(2000),
-	v.maxValue(2100),
-);
+export const yearField = v.pipe(v.string(), v.transform(Number), year);
 
 /** What happened: credit spent outside the shop, or credit added by hand. */
 const manualEntryKinds = ["spend", "adjustment"] as const;

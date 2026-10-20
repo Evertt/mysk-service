@@ -12,12 +12,12 @@ import { currentTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 
 import { walletEntrySchema, yearField } from "./form/wallet-schema.ts";
-import { bonusForms, creditValidUntil, isClosable } from "./model.ts";
+import { bonusForms, isClosable } from "./model.ts";
 import { forManagers, query } from "./remote-functions.ts";
-import { chooseBonus, closedYearsOf, closeYear, payBonusByCreditNote } from "./server/close.ts";
-import { acceptPartner as accept, partnerByCode, figuresOf } from "./server/partners.ts";
+import { chooseBonus, closeYear, partnerStanding, payBonusByCreditNote } from "./server/close.ts";
+import { acceptPartner as accept, partnerByCode } from "./server/partners.ts";
 import { rulesFor } from "./server/rules.ts";
-import { addEntry, walletOf } from "./server/wallet.ts";
+import { addEntry } from "./server/wallet.ts";
 
 const code = customerCode();
 
@@ -32,16 +32,12 @@ export const getPartnerCard = query(code, async (customerCode) => {
 	if (!found.partner) return { customer, partner: null, canManage };
 
 	const now = currentDay();
-	const rules = await rulesFor(now.year);
-	const figures = rules ? (await figuresOf(rules, [found.id])).get(found.id)! : null;
-	const closed = await closedYearsOf(found.id);
-	const wallet = await walletOf(found.id, now);
+	const { rules, closed, ...standing } = await partnerStanding(found.id, now);
 	// Last year, while it isn't closed for the partner (it was one by its end).
 	const last = now.year - 1;
-	const lastRules = await rulesFor(last);
 	const closable =
 		isClosable(last, now) &&
-		!!lastRules &&
+		!!(await rulesFor(last)) &&
 		Temporal.PlainDate.compare(found.partner.acceptedOn, new Temporal.PlainDate(last, 12, 31)) <=
 			0 &&
 		!closed.some((each) => each.year === last);
@@ -49,14 +45,10 @@ export const getPartnerCard = query(code, async (customerCode) => {
 		customer,
 		partner: found.partner,
 		canManage,
-		year: now.year,
+		...standing,
 		tiers: rules?.tiers ?? [],
-		figures,
-		/** Where this year's credit would be valid until, if it's chosen. */
-		validUntil: rules ? creditValidUntil(now.year, rules.creditValidYears) : null,
 		closed: closed.slice(0, 3),
 		closable: closable ? last : null,
-		wallet,
 	};
 });
 
