@@ -31,7 +31,7 @@
 	description={m.partners_description({ year: String((await year).year) })}
 >
 	{#snippet actions()}
-		<Button variant="outline" href={resolve("/(app)/(modules)/partner-programme/years")}>
+		<Button variant="outline" href={resolve("/(app)/(modules)/partner-programme/settings")}>
 			<SettingsIcon data-icon="inline-start" />
 			{m.partners_years_title()}
 		</Button>

@@ -1,5 +1,5 @@
 /**
- * The shop's categories (`/parts-shop/categories`, the module's settings): every office member
+ * The shop's categories (`/parts-shop/settings`, the module's settings): every office member
  * reads them, managers add, rename and delete them (one with products stays).
  */
 import { isManager } from "#lib/auth/index.ts";

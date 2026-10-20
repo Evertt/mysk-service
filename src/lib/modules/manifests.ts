@@ -4,17 +4,17 @@
  * (`organization_module`); the set a module makes its remote functions with (`moduleRemote()` in
  * `#lib/server/remote-functions.ts`) refuses them to the others.
  *
- * A module keeps to itself so it can be switched off: its routes live under `route`, and its
- * tables reference the core tables, never the other way round. Core pages and core server code
+ * A module keeps to itself so it can be switched off: its routes live under its own URL, `/<id>`, and
+ * its tables reference the core tables, never the other way round. Core pages and core server code
  * don't import a module's code; they take what the tenant's modules contribute through the
  * registries `scripts/modules.ts` generates. A module is a folder `src/modules/<id>/` whose
  * `module.ts` is a `defineModule()` (see `#lib/modules/define.ts`), which the generator collects in
  * `manifests.gen.ts`. What a module adds to its owners' extension points (see
  * `#lib/extensions/define.ts`) isn't in its manifest: components at slots and bulk actions are
  * files (`slots/`, `bulk-actions/`, listed in `#lib/extensions/contributions.gen.ts`), and hooks
- * are in its `server/index.ts` (see `#lib/server/extensions.ts`).
+ * are in its `server/index.ts` (see `#lib/server/extensions.ts`). Nor are the pages the core links
+ * to: they're where its `routes/` has them (`modulePages`).
  */
-import type { RouteId } from "$app/types";
 import type { Component } from "svelte";
 
 import type { Sentence, SubjectType } from "#lib/activity/index.ts";
@@ -23,16 +23,10 @@ import type { ModuleId } from "#lib/modules/ids.ts";
 import type { CoreNavId } from "#lib/modules/nav.ts";
 
 import { manifests } from "./manifests.gen.ts";
+import { generatedModulePages } from "./pages.gen.ts";
 
 /** What a module contributes besides its name; both its manifest and its registry entry have it. */
 interface ModuleParts {
-	/** The route id of the module's section, for `resolve()`. */
-	route: RouteId;
-	/**
-	 * The route id of the page where the module is set up (e.g. checklists' templates), which the
-	 * settings page links to while the module is on.
-	 */
-	settings?: RouteId;
 	icon: Component;
 	/** How the activity log reads for the module's records, by subject type (`#lib/activity/subjects.ts`). */
 	subjects?: Record<string, SubjectType>;
@@ -62,11 +56,12 @@ interface ModuleParts {
 	 */
 	nav?: { after: CoreNavId | ModuleId };
 	/**
-	 * Its page in the customer portal, if it has one (a route of its `routes/(customer)/`, e.g. the
-	 * partner programme's bonus): an entry in the portal's navigation for the tenants that have it,
-	 * after the portal's own. Its label is a message function, read when shown.
+	 * The entry of its page in the customer portal (`routes/(customer)/portal/+page.svelte`, e.g. the
+	 * partner programme's bonus), which a module with that page has and one without hasn't: in the
+	 * portal's navigation for the tenants that have it, after the portal's own. Its label is a message
+	 * function, read when shown.
 	 */
-	portal?: { route: RouteId; label: () => string; icon: Component };
+	portal?: { label: () => string; icon: Component };
 	/**
 	 * The order types the module makes orders of or works with (e.g. maintenance plans'), which a
 	 * tenant can't hide from the order form while the module is on (`requiredOrderTypes()` in
@@ -99,6 +94,28 @@ export interface ModuleManifest<Id extends string = string> extends ModuleParts 
 export const modules = manifests satisfies readonly AppModule[];
 
 export type { ModuleId };
+
+type Pages = typeof generatedModulePages;
+/** The route ids of all modules' pages of one kind, e.g. every module's settings. */
+type PagesOf<Kind extends string> = {
+	[Id in keyof Pages]: Pages[Id] extends Record<Kind, infer Route> ? Route : never;
+}[keyof Pages];
+
+/**
+ * The pages of a module that the core links to, as route ids for `resolve()`, by where its
+ * `routes/` has them (`modulePages()` in `scripts/modules/routes.ts`): its section
+ * (`routes/(app)/+page.svelte`, the sidebar's entry), its settings (`routes/(app)/settings/`, which
+ * the organization's settings link to while it's on; every member reads it, managers change it) and
+ * its page in the customer portal (`routes/(customer)/portal/`, with `portal` for its entry).
+ */
+export interface ModulePages {
+	home?: PagesOf<"home">;
+	settings?: PagesOf<"settings">;
+	portal?: PagesOf<"portal">;
+}
+
+/** Each module's pages (see `ModulePages`), by its id. */
+export const modulePages: Record<ModuleId, ModulePages> = generatedModulePages;
 
 /** The activity verbs of all modules, e.g. `issued`. */
 export type ModuleAction = ActionsOf<(typeof modules)[number]>;

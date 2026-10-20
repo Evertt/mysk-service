@@ -38,7 +38,7 @@
 <div class="flex flex-col gap-6">
 	<PageBanner title={m.checklists_assets_title()} description={m.checklists_assets_intro()}>
 		{#snippet actions()}
-			<Button variant="secondary" href={resolve("/(app)/(modules)/checklists/templates")}>
+			<Button variant="secondary" href={resolve("/(app)/(modules)/checklists/settings")}>
 				<ClipboardListIcon data-icon="inline-start" />
 				{m.checklists_assets_templates()}
 			</Button>

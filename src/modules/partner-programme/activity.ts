@@ -33,7 +33,7 @@ export const partnerSubjects = {
 	partner_programme_year: {
 		noun: m.partners_activity_subject_year,
 		href: ({ label }) =>
-			resolve("/(app)/(modules)/partner-programme/years/[year]", { year: label }),
+			resolve("/(app)/(modules)/partner-programme/settings/[year]", { year: label }),
 		fields: {
 			tiers: { label: m.partners_field_tiers, format: (value) => formatTier(value as Tier) },
 			categories: {

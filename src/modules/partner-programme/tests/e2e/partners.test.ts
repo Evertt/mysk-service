@@ -108,7 +108,7 @@ describe("in North, which has the module", () => {
 
 	test("edits a year's rules", async () => {
 		const { page } = app;
-		await app.go(`/partner-programme/years/${lastYear}`);
+		await app.go(`/partner-programme/settings/${lastYear}`);
 		const form = page.locator("[data-rules-form]");
 		// The first level from € 100 on, at 2.75 % cash.
 		await form.getByLabel("Partner revenue from", { exact: true }).first().fill("100");
@@ -119,7 +119,7 @@ describe("in North, which has the module", () => {
 		await app.submit(form.getByRole("button", { name: "Save rules" }));
 		await app.toast(`The rules of ${lastYear} are saved`);
 		// Shown as saved: the form's euros and percentages, back from cents and basis points.
-		await app.go(`/partner-programme/years/${lastYear}`);
+		await app.go(`/partner-programme/settings/${lastYear}`);
 		expect(
 			await page
 				.locator("[data-rules-form]")
@@ -134,7 +134,7 @@ describe("in North, which has the module", () => {
 		const partners = (await partnersOf(north.id)).filter(
 			(partner) => partner.accepted_on <= `${lastYear}-12-31`,
 		);
-		await app.go(`/partner-programme/years/${lastYear}/close`);
+		await app.go(`/partner-programme/settings/${lastYear}/close`);
 		const preview = page.locator("[data-close-preview]");
 		await expect.poll(() => preview.locator("tbody tr").count()).toBe(partners.length);
 		const expected = await figuresFromDatabase(north.id, partners[0].id, lastYear);

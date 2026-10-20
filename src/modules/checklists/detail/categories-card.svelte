@@ -85,7 +85,7 @@
 												{m.checklists_category_has_template()}
 												<a
 													class="underline underline-offset-4"
-													href={resolve("/(app)/(modules)/checklists/templates/[id]", {
+													href={resolve("/(app)/(modules)/checklists/settings/[id]", {
 														id: String(category.templateId),
 													})}>{category.templateName}</a
 												>

@@ -1,3 +1,4 @@
+import { modulePages } from "./routes.ts";
 import { GENERATED, type ModuleFolder } from "./shared.ts";
 
 const camel = (id: string) => id.replace(/-(\w)/g, (_, c: string) => c.toUpperCase());
@@ -31,6 +32,30 @@ export function renderRegistries(modules: ModuleFolder[]): Record<string, string
 							.join("\n")}\n} as const`
 					: "{}"
 			};`,
+			"",
+		].join("\n"),
+
+		"src/lib/modules/pages.gen.ts": [
+			registryHeader("src/modules/*/routes"),
+			`import type { RouteId } from "$app/types";`,
+			"",
+			`/**`,
+			` * Each module's pages that the core links to, found where its \`routes/\` has them (see`,
+			` * \`modulePages()\` in \`scripts/modules/routes.ts\`): its section, its settings and its page in`,
+			` * the customer portal.`,
+			` */`,
+			`export const generatedModulePages = ${
+				modules.length
+					? `{\n${modules
+							.map((m) => {
+								const pages = Object.entries(modulePages(m)).map(
+									([key, route]) => `${key}: ${JSON.stringify(route)}`,
+								);
+								return `\t${JSON.stringify(m.id)}: ${pages.length ? `{ ${pages.join(", ")} }` : "{}"},`;
+							})
+							.join("\n")}\n}`
+					: "{}"
+			} as const satisfies Record<string, { home?: RouteId; settings?: RouteId; portal?: RouteId }>;`,
 			"",
 		].join("\n"),
 

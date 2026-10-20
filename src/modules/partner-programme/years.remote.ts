@@ -60,7 +60,7 @@ export const getYearRules = query(year, async (wanted) => {
 export const addProgrammeYear = forManagers.form(v.object({ year: yearField }), async (input) => {
 	await db.transaction((tx) => addYear(tx, input.year));
 	void getProgrammeYears().refresh();
-	redirect(303, `/partner-programme/years/${input.year}`);
+	redirect(303, `/partner-programme/settings/${input.year}`);
 });
 
 /** Changes a year's rules (setting it up first if it isn't). */

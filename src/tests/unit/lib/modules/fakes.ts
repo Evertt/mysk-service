@@ -31,7 +31,6 @@ export const widgets = {
 	id: "widgets" as ModuleId,
 	label: "Widgets",
 	description: "Makes widgets",
-	route: "/(app)/orders",
 	icon: {} as Component,
 	subjects: {
 		widget: {
@@ -52,7 +51,6 @@ export const gadgets = {
 	id: "gadgets" as ModuleId,
 	label: "Gadgets",
 	description: "Makes gadgets",
-	route: "/(app)/orders",
 	icon: {} as Component,
 } satisfies AppModule;
 
@@ -65,7 +63,6 @@ export const gizmos = {
 	id: "gizmos" as ModuleId,
 	label: "Gizmos",
 	description: "Makes gizmos",
-	route: "/(app)/orders",
 	icon: {} as Component,
 } satisfies AppModule;
 
@@ -77,7 +74,6 @@ export const dormant = {
 	id: "dormant" as ModuleId,
 	label: "Dormant",
 	description: "Makes nothing",
-	route: "/(app)/orders",
 	icon: {} as Component,
 } satisfies AppModule;
 

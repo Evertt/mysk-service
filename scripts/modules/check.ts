@@ -7,6 +7,7 @@ import {
 	API_GROUP,
 	isGroup,
 	isIntegrationRoute,
+	MODULE_PAGES,
 	MODULES_GROUP,
 	routeFileKind,
 	routePlace,
@@ -15,9 +16,6 @@ import {
 import { byName, isGenerated, isLegacyStubFolder, type ModuleFolder, walk } from "./shared.ts";
 
 const SECTION = /^[a-z][a-z0-9]*$/;
-
-/** A module's settings page, which its `module.ts` names as `settings`. */
-const SETTINGS_PAGE = "(app)/settings/+page.svelte";
 
 /**
  * What's in `src/routes`, relative to it:
@@ -152,11 +150,23 @@ export function checkModules(
 			}
 		}
 
-		// The settings page links to a module's page of its own only when `module.ts` names it.
-		if (module.routeFiles.includes(SETTINGS_PAGE) && !module.declaresSettings) {
+		// Its pages are where its routes/ has them (`modulePages()`), never named in module.ts.
+		for (const key of module.declaredPages ?? []) {
 			problems.push(
-				`${where}/module.ts: the module has a settings page (routes/${SETTINGS_PAGE}), so it ` +
-					`declares it, for the settings page to link to: settings: "/(app)/(modules)/${module.id}/settings".`,
+				`${where}/module.ts: ${key}: is where routes/ has the page now (routes/${MODULE_PAGES.home}, ` +
+					`routes/${MODULE_PAGES.settings}, routes/${MODULE_PAGES.portal}), so drop it.`,
+			);
+		}
+		const hasPortalPage = module.routeFiles.includes(MODULE_PAGES.portal);
+		if (hasPortalPage && !module.declaresPortal) {
+			problems.push(
+				`${where}/module.ts: the module has a page in the customer portal (routes/${MODULE_PAGES.portal}), ` +
+					`so it declares portal: { label, icon } for the portal's navigation.`,
+			);
+		} else if (module.declaresPortal && !hasPortalPage) {
+			problems.push(
+				`${where}/module.ts: portal: is the entry of the module's page in the customer portal, ` +
+					`which is routes/${MODULE_PAGES.portal}; it has none.`,
 			);
 		}
 

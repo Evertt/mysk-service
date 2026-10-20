@@ -39,7 +39,8 @@ export function discoverModules(root: string, locales: string[]) {
 		modules.push({
 			id,
 			declaredId: /\bid:\s*["'`]([^"'`]+)["'`]/.exec(source)?.[1],
-			declaresSettings: /^\s*settings:/m.test(source),
+			declaresPortal: /^\s*portal:/m.test(source),
+			declaredPages: [...source.matchAll(/^\s*(route|settings):/gm)].map((match) => match[1]),
 			...graph,
 			routeFiles: walk(join(dir, "routes")).filter((file) => posix.basename(file).startsWith("+")),
 			// (The module's specs, test harnesses and end-to-end tests are in its `tests/` folder, which

@@ -10,7 +10,7 @@
 
 	import { getCurrentTenant } from "#lib/auth/session.remote.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
-	import { type AppModule, modules } from "#lib/modules/manifests.ts";
+	import { type AppModule, modulePages, modules } from "#lib/modules/manifests.ts";
 	import { type CoreNavId, type NavItem, placeNav } from "#lib/modules/nav.ts";
 
 	import OrganizationSwitcher from "./organization-switcher.svelte";
@@ -76,16 +76,20 @@
 	const groups = $derived(
 		placeNav(
 			coreGroups,
-			// Only the modules the current organization has.
-			modules
-				.filter((module) => tenant.modules.includes(module.id))
-				.map((module) => ({
-					id: module.id,
-					title: module.label,
-					href: resolve(module.route),
-					icon: module.icon,
-					after: (module as AppModule).nav?.after,
-				})),
+			// Only the modules the current organization has, with a section of their own.
+			modules.flatMap((module) => {
+				const home = modulePages[module.id].home;
+				if (!home || !tenant.modules.includes(module.id)) return [];
+				return [
+					{
+						id: module.id,
+						title: module.label,
+						href: resolve(home),
+						icon: module.icon,
+						after: (module as AppModule).nav?.after,
+					},
+				];
+			}),
 			m.common_nav_modules(),
 		),
 	);

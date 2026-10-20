@@ -8,8 +8,6 @@ export default defineModule({
 	id: "energy",
 	label: m.energy_module_name,
 	description: m.energy_module_description,
-	route: "/(app)/(modules)/energy",
-	settings: "/(app)/(modules)/energy/settings",
 	icon: ZapIcon,
 	subjects: energySubjects,
 	// Announced with each batch of meter readings, for the live pages; never logged.
@@ -19,7 +17,6 @@ export default defineModule({
 	orderTypes: ["repair", "survey"],
 	// The customer's own sites' energy, read-only, in the customer portal.
 	portal: {
-		route: "/(customer)/(modules)/energy/portal",
 		label: m.energy_portal_label,
 		icon: ZapIcon,
 	},

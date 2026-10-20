@@ -6,7 +6,8 @@
 	import { getEquipmentCategories } from "#lib/equipment/remotes.ts";
 	import { label, labelOrValue } from "#lib/i18n/index.ts";
 	import { orderTypes } from "#lib/models.ts";
-	import { modules as moduleRegistry } from "#lib/modules/manifests.ts";
+	import type { ModuleId } from "#lib/modules/ids.ts";
+	import { modulePages, modules as moduleRegistry } from "#lib/modules/manifests.ts";
 	import { getOrderTypes } from "#lib/orders/remotes.ts";
 
 	import ModuleCard from "./module-card.svelte";
@@ -16,10 +17,11 @@
 	const categories = $derived(await getEquipmentCategories());
 	const typeSettings = $derived(await getOrderTypes());
 	const icons = new Map(moduleRegistry.map((m) => [m.id, m.icon]));
-	/** Where each module that has such a page is set up. */
-	const setUp = new Map<string, string>(
-		moduleRegistry.flatMap((m) => ("settings" in m ? [[m.id, resolve(m.settings)]] : [])),
-	);
+	/** Where a module is set up, if it has a settings page (`modulePages`). */
+	const settingsHref = (id: ModuleId) => {
+		const route = modulePages[id].settings;
+		return route && resolve(route);
+	};
 </script>
 
 <svelte:head>
@@ -55,7 +57,7 @@
 					modules={settings.modules}
 					canManage={settings.canManage}
 					icon={icons.get(module.id)}
-					settingsHref={setUp.get(module.id)}
+					settingsHref={settingsHref(module.id)}
 				/>
 			{/each}
 		</Card.Content>

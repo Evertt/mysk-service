@@ -8,8 +8,6 @@ export default defineModule({
 	id: "invoices",
 	label: m.invoices_module_name,
 	description: m.invoices_module_description,
-	route: "/(app)/(modules)/invoices",
-	settings: "/(app)/(modules)/invoices/settings",
 	icon: ReceiptTextIcon,
 	subjects: invoicingSubjects,
 	actions: invoicingActions,

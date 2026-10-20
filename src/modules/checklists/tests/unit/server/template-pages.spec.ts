@@ -163,7 +163,7 @@ describe("North's templates, to its owner", () => {
 		added = await templateNamed(northId, "Compressor");
 		expect(answer).toMatchObject({
 			status: 303,
-			location: `/checklists/templates/${added.id}`,
+			location: `/checklists/settings/${added.id}`,
 			refreshed: ["getTemplates"],
 		});
 		expect(added).toMatchObject({ norm: "NEN-EN 1012", validity_months: 24, archived: 0 });

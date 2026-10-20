@@ -8,9 +8,6 @@ export default defineModule({
 	id: "parts-shop",
 	label: m.shop_module_name,
 	description: m.shop_module_description,
-	route: "/(app)/(modules)/parts-shop",
-	// Managers set up its categories; the products are any office member's.
-	settings: "/(app)/(modules)/parts-shop/categories",
 	icon: ShoppingCartIcon,
 	subjects: shopSubjects,
 	actions: shopActions,
@@ -22,7 +19,6 @@ export default defineModule({
 	nav: { after: "materials" },
 	// The catalogue, the cart and the checkout with Parts Credit, in the customer portal.
 	portal: {
-		route: "/(customer)/(modules)/parts-shop/portal",
 		label: m.shop_portal_label,
 		icon: ShoppingCartIcon,
 	},

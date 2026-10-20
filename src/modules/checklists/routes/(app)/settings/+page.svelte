@@ -9,7 +9,7 @@
 	import { getTemplates } from "#modules/checklists/templates.remote.ts";
 
 	// The props the route passes; this page needs none of them.
-	const _props: { params: RouteParams<"/(app)/(modules)/checklists/templates"> } = $props();
+	const _props: { params: RouteParams<"/(app)/(modules)/checklists/settings"> } = $props();
 
 	const data = $derived(await getTemplates());
 	const active = $derived(data.templates.filter((template) => !template.archived));

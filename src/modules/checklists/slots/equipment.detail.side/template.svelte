@@ -31,7 +31,7 @@
 				<DetailItem
 					label={m.checklists_field_template()}
 					value={data.template.name}
-					href={resolve("/(app)/(modules)/checklists/templates/[id]", {
+					href={resolve("/(app)/(modules)/checklists/settings/[id]", {
 						id: String(data.template.id),
 					})}
 				/>

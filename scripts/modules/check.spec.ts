@@ -84,12 +84,24 @@ describe("checkModules", () => {
 		expect(problems.join("\n")).toMatch(/section "a" is also the a module's/);
 	});
 
-	test("refuses a settings page that module.ts doesn't name, which nothing would link to", () => {
-		const routeFiles = ["(app)/+page.svelte", "(app)/settings/+page.svelte"];
-		expect(check([module("a", { routeFiles })])).toEqual([
-			`src/modules/a/module.ts: the module has a settings page (routes/(app)/settings/+page.svelte), so it declares it, for the settings page to link to: settings: "/(app)/(modules)/a/settings".`,
+	test("refuses a page that module.ts names, which is where routes/ has it", () => {
+		expect(check([module("a", { declaredPages: ["route", "settings"] })])).toEqual([
+			"src/modules/a/module.ts: route: is where routes/ has the page now (routes/(app)/+page.svelte, routes/(app)/settings/+page.svelte, routes/(customer)/portal/+page.svelte), so drop it.",
+			expect.stringMatching(
+				/^src\/modules\/a\/module\.ts: settings: is where routes\/ has the page/,
+			),
 		]);
-		expect(check([module("a", { routeFiles, declaresSettings: true })])).toEqual([]);
+	});
+
+	test("asks a page in the customer portal for its entry in the portal's navigation, and back", () => {
+		const routeFiles = ["(customer)/portal/+page.svelte"];
+		expect(check([module("a", { routeFiles, declaresPortal: true })])).toEqual([]);
+		expect(check([module("a", { routeFiles })])).toEqual([
+			"src/modules/a/module.ts: the module has a page in the customer portal (routes/(customer)/portal/+page.svelte), so it declares portal: { label, icon } for the portal's navigation.",
+		]);
+		expect(check([module("a", { declaresPortal: true })])).toEqual([
+			"src/modules/a/module.ts: portal: is the entry of the module's page in the customer portal, which is routes/(customer)/portal/+page.svelte; it has none.",
+		]);
 	});
 
 	test("refuses a manifest whose id isn't the folder's", () => {

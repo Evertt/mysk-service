@@ -19,7 +19,7 @@
 	} from "#modules/parts-shop/categories.remote.ts";
 
 	// The props the route passes; this page needs none of them.
-	const _props: { params: RouteParams<"/(app)/(modules)/parts-shop/categories"> } = $props();
+	const _props: { params: RouteParams<"/(app)/(modules)/parts-shop/settings"> } = $props();
 
 	const data = $derived(await getShopCategories());
 </script>

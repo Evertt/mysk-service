@@ -16,7 +16,7 @@
 	import TemplateDialog from "#modules/checklists/form/template-dialog.svelte";
 	import { getTemplate, restore, retire } from "#modules/checklists/templates.remote.ts";
 
-	let { params }: { params: RouteParams<"/(app)/(modules)/checklists/templates/[id]"> } = $props();
+	let { params }: { params: RouteParams<"/(app)/(modules)/checklists/settings/[id]"> } = $props();
 
 	const data = $derived(await getTemplate(params.id));
 	const template = $derived(data.template);
@@ -40,7 +40,7 @@
 		{ label: m.checklists_module_name(), href: resolve("/(app)/(modules)/checklists") },
 		{
 			label: m.checklists_templates_title(),
-			href: resolve("/(app)/(modules)/checklists/templates"),
+			href: resolve("/(app)/(modules)/checklists/settings"),
 		},
 		{ label: template.name },
 	]}
