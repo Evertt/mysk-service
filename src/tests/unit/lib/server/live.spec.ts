@@ -215,23 +215,7 @@ describe("when its request ends", () => {
 	});
 });
 
-describe("readAt", () => {
-	beforeEach(() => signIn("org-read"));
-
-	test("is when the types last changed, or a millisecond before in that same millisecond", () => {
-		vi.useFakeTimers({ now: 1_000_000 });
-		expect(readAt(["order"])).toBe(0);
-		announceChange("org-read", "order");
-		expect(readAt(["order", "customer"])).toBe(999_999);
-		vi.setSystemTime(1_000_005);
-		expect(readAt(["order"])).toBe(1_000_000);
-	});
-
-	test("is when one record last changed, by its id", () => {
-		vi.useFakeTimers({ now: 2_000_000 });
-		announceChange("org-read", "order", { id: "9" });
-		vi.setSystemTime(2_000_005);
-		expect(readAt({ type: "order", id: 9 })).toBe(2_000_000);
-		expect(readAt({ type: "order", id: 10 })).toBe(0);
-	});
+test("readAt is a millisecond before now, so a change in the same millisecond counts", () => {
+	vi.useFakeTimers({ now: 1_000_000 });
+	expect(readAt()).toBe(999_999);
 });

@@ -23,11 +23,11 @@ const orderId = async (number: string) => (await orderByNumber(number)).id;
 
 /**
  * The checklists of the tenant's order `number`, one per unit that has one, in the units' order,
- * and when the order last changed as they were read (`readAt()`, for its card).
+ * and when they were read (`readAt()`, for its card).
  */
 export const getOrderChecklists = query(v.string(), async (number) => {
 	const id = await orderId(number);
-	const readTime = readAt({ type: "order", id });
+	const readTime = readAt();
 	return {
 		readAt: readTime,
 		checklists: await withPointArticles(await checklistRecords(eq(checklist.orderId, id))),

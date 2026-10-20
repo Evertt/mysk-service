@@ -39,6 +39,16 @@ export class ChangeFeed {
 	readonly #subscribers = new Map<string, Set<Subscriber>>();
 	/** The feed's latest answer. */
 	#latest: TenantChanges | undefined;
+	/**
+	 * Each record's latest change the feed told, also while no one watched it: a page that comes
+	 * back to it with what it read before (a cached query) hears of it.
+	 */
+	readonly #lastChanges = new Map<string, TenantChange>();
+	/**
+	 * When records last changed before the feed's stream started, as asked (`#changedAt`), by
+	 * record: asked once per stream.
+	 */
+	readonly #changedBefore = new Map<string, Promise<number>>();
 	readonly #changedAt: (subject: Subject) => Promise<number>;
 
 	/** @param changedAt When a record last changed, asked afresh, for what the feed can't tell. */
@@ -58,15 +68,7 @@ export class ChangeFeed {
 		let subscribers = this.#subscribers.get(key);
 		if (!subscribers) this.#subscribers.set(key, (subscribers = new Set()));
 		subscribers.add(subscriber);
-		if (latest && subscriber.known !== undefined) {
-			if (subscriber.known < latest.since) this.#catchUp(subscriber, latest.since);
-			// Told before it subscribed, but after it read the record.
-			this.#tell(
-				subscriber,
-				latest.changes.filter((change) => keyOf(change) === key),
-			);
-			subscriber.known = Math.max(subscriber.known, latest.now);
-		}
+		if (latest) this.#catchUp(subscriber, latest);
 		return () => {
 			subscribers.delete(subscriber);
 			if (!subscribers.size && this.#subscribers.get(key) === subscribers) {
@@ -77,47 +79,43 @@ export class ChangeFeed {
 
 	/** Takes the feed's latest answer (a live query's `current`, so some may have been skipped). */
 	receive(answer: TenantChanges) {
-		const reconnected = answer.since !== this.#latest?.since;
+		if (answer.since !== this.#latest?.since) {
+			// Another stream: what was asked about before the last one is asked again.
+			this.#changedBefore.clear();
+		}
 		this.#latest = answer;
-		const changed = new Map<string, TenantChange[]>();
 		for (const change of answer.changes) {
 			if (change.id === null) continue;
 			const key = keyOf(change);
-			changed.set(key, [...(changed.get(key) ?? []), change]);
+			if (change.at > (this.#lastChanges.get(key)?.at ?? 0)) this.#lastChanges.set(key, change);
 		}
-		for (const [key, subscribers] of this.#subscribers) {
+		for (const subscribers of this.#subscribers.values()) {
 			for (const subscriber of subscribers) {
-				if (subscriber.known === undefined) {
-					// Subscribed before the feed's first answer, without a read time: from now on.
-					subscriber.known = answer.since;
-				} else if (reconnected && subscriber.known < answer.since) {
-					this.#catchUp(subscriber, answer.since);
-				}
-				this.#tell(subscriber, changed.get(key) ?? []);
-				subscriber.known = Math.max(subscriber.known, answer.now);
+				// Subscribed before the feed's first answer, without a read time: from now on.
+				subscriber.known ??= answer.since;
+				this.#catchUp(subscriber, answer);
 			}
 		}
 	}
 
-	/** Tells `subscriber` of those of `changes` it hasn't heard of. */
-	#tell(subscriber: Subscriber, changes: TenantChange[]) {
-		for (const change of changes) {
-			if (change.at > subscriber.known!) subscriber.listener(change);
-		}
-	}
-
-	/** Asks whether `subscriber`'s record changed between what it knows and `since`. */
-	#catchUp(subscriber: Subscriber, since: number) {
+	/** Tells `subscriber` of what it hasn't heard of yet, up to `answer`. */
+	#catchUp(subscriber: Subscriber, answer: TenantChanges) {
 		const from = subscriber.known!;
-		subscriber.known = since;
-		void this.#changedAt(subscriber.subject).then(
-			(at) => {
-				if (at > from && this.#subscribers.get(keyOf(subscriber.subject))?.has(subscriber)) {
-					subscriber.listener(null);
-				}
-			},
-			// The feed's next change tells it anyway.
-			() => {},
-		);
+		subscriber.known = Math.max(from, answer.now);
+		const key = keyOf(subscriber.subject);
+		const last = this.#lastChanges.get(key);
+		if (last && last.at > from) {
+			subscriber.listener(last);
+		} else if (from < answer.since) {
+			// Read before the stream started (the page's first load, or while it reconnected).
+			let asked = this.#changedBefore.get(key);
+			if (!asked) {
+				asked = this.#changedAt(subscriber.subject).catch(() => 0);
+				this.#changedBefore.set(key, asked);
+			}
+			void asked.then((at) => {
+				if (at > from && this.#subscribers.get(key)?.has(subscriber)) subscriber.listener(null);
+			});
+		}
 	}
 }

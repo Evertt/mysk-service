@@ -69,6 +69,12 @@ export const actionVerbs: Record<CoreActivityAction, Sentence> = {
 };
 
 /**
+ * Whether a logged action ends the record in the tenant: deleted, or a member removed from it (the
+ * user goes on, elsewhere). A page that shows the record has nothing left to refresh.
+ */
+export const isGone = (action: string | undefined) => action === "deleted" || action === "removed";
+
+/**
  * The sentence of an action as logged: the core's, or one of an optional module's `actions` (of
  * all modules, not only the tenant's, so the log keeps reading the same after a module is switched
  * off); one this version doesn't know reads as its value.

@@ -86,7 +86,7 @@
 	// itself, and a refresh that started before it could answer from before it, putting the order
 	// back where it came from. So it waits for the moves (`settled`), and asks again if one started
 	// while it asked. The live query's first answer is a change too if it's later than the week's
-	// (`changedAt`): one made after the board asked for the week (the service worker may answer it
+	// read (`readAt`): one made after the board asked for the week (the service worker may answer it
 	// from its cache) and before the live query opened.
 	let outdated = false;
 	refreshOnChange(
@@ -95,7 +95,7 @@
 			outdated = true;
 			if (!drag.busy) void refresh();
 		},
-		() => schedule.changedAt,
+		() => schedule.readAt,
 	);
 
 	async function refresh() {

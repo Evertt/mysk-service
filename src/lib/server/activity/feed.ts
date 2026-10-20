@@ -8,6 +8,7 @@ import { and, desc, eq, or, sql } from "drizzle-orm";
 import {
 	type Change,
 	describeChanges,
+	isGone,
 	type Names,
 	referencedIds,
 	type ReferenceType,
@@ -146,8 +147,7 @@ export async function subjectStates(keys: Map<string, Set<string>>) {
 	for (const row of found) {
 		const key = `${row.type}:${row.id}`;
 		const state = states.get(key) ?? { label: row.label, deleted: false };
-		// A member who was removed is gone too.
-		if (row.action === "deleted" || row.action === "removed") state.deleted = true;
+		if (isGone(row.action)) state.deleted = true;
 		states.set(key, state);
 	}
 	return states;

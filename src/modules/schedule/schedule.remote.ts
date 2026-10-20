@@ -98,10 +98,10 @@ const boardTypes = ["order", "engineer", "customer"] as const;
 /**
  * The week starting on the Monday of `day` (`yyyy-mm-dd`): the tenant's engineers, the orders
  * scheduled in it (except cancelled ones), and the backlog of open orders without a date, and when
- * the board's records had last changed as it was read (`changedAt`).
+ * when it was read (`readAt`).
  */
 export const getSchedule = query(date(m.schedule_week_required), async (day) => {
-	const changed = readAt(boardTypes);
+	const readTime = readAt();
 	const start = mondayOf(day);
 	const week = { from: start.toString(), to: start.add({ days: 6 }).toString() };
 
@@ -122,7 +122,7 @@ export const getSchedule = query(date(m.schedule_week_required), async (day) => 
 		engineers: team,
 		orders,
 		backlog: backlog.sort(byPriorityThenAge),
-		changedAt: changed,
+		readAt: readTime,
 	};
 });
 
@@ -132,10 +132,10 @@ export const getSchedule = query(date(m.schedule_week_required), async (day) => 
  * tenant's engineers. The server sets the range, so no request loads more than six weeks.
  */
 export const getScheduleMonth = query(date(m.schedule_date_required), async (day) => {
-	const changed = readAt(boardTypes);
+	const readTime = readAt();
 	const range = monthRange(day);
 	const [team, orders] = await Promise.all([engineers(), scheduledIn(range).then(withFirstUnit)]);
-	return { month: day.with({ day: 1 }), engineers: team, orders, changedAt: changed };
+	return { month: day.with({ day: 1 }), engineers: team, orders, readAt: readTime };
 });
 
 /**

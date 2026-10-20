@@ -81,6 +81,31 @@ describe("a listener", () => {
 	});
 });
 
+describe("coming back to a record", () => {
+	test("with what it read before, hears of a change made while no one watched it", () => {
+		const { feed, heard, listen } = setUp();
+		feed.receive(answer(100, 100));
+		feed.receive(answer(100, 110, [change(110)]));
+		// Long after the window let it go.
+		feed.receive(answer(100, 200, [change(200, { id: "8" })]));
+		listen(105);
+		listen(115);
+		expect(heard).toEqual([110]);
+	});
+
+	test("read before the feed watched, asks only the first time", async () => {
+		const { feed, heard, listen, asked } = setUp(95);
+		const stop = listen(90);
+		feed.receive(answer(100, 100));
+		await settle();
+		stop();
+		listen(90);
+		await settle();
+		expect(asked).toHaveBeenCalledOnce();
+		expect(heard).toEqual([null, null]);
+	});
+});
+
 describe("what the feed can't tell", () => {
 	test("read before the feed watched (the first load): asks, and hears of a later change", async () => {
 		const { feed, heard, listen, asked } = setUp(95);
@@ -89,6 +114,16 @@ describe("what the feed can't tell", () => {
 		await settle();
 		expect(asked).toHaveBeenCalledWith(order);
 		expect(heard).toEqual([null]);
+	});
+
+	test("asks once for the listeners of one record", async () => {
+		const { feed, heard, listen, asked } = setUp(95);
+		listen(90);
+		listen(92);
+		feed.receive(answer(100, 100));
+		await settle();
+		expect(asked).toHaveBeenCalledOnce();
+		expect(heard).toEqual([null, null]);
 	});
 
 	test("asks, and hears nothing when the record didn't change after it was read", async () => {

@@ -118,7 +118,7 @@ describe("going from record to record", () => {
 		await quiet(page);
 	}
 
-	test("opens no live query's stream after the shell's, so none pile up", async () => {
+	test("opens no live query's stream after the shell's, and asks nothing else", async () => {
 		const { page } = anouk;
 		const walk = await rows<{ number: string; serial: string }>(
 			`select o.number, e.serial_number as serial from "order" o
@@ -129,16 +129,23 @@ describe("going from record to record", () => {
 		expect(walk).toHaveLength(4);
 		/** The live queries' streams the tab asked for, by remote function. */
 		const streams: string[] = [];
+		/** The catch-ups it asked for (`getRecordChangedAt`, a batch): how many records each. */
+		const catchUps: number[] = [];
 		const asked = (request: Request) => {
-			if (request.headers().accept?.includes("text/event-stream")) {
-				streams.push(new URL(request.url()).pathname.split("/").at(-1)!);
+			const name = new URL(request.url()).pathname.split("/").at(-1)!;
+			if (request.headers().accept?.includes("text/event-stream")) streams.push(name);
+			if (name === "getRecordChangedAt") {
+				catchUps.push((request.postDataJSON() as { payloads: unknown[] }).payloads.length);
 			}
 		};
 		page.on("request", asked);
 		try {
 			await anouk.go(`/orders/${walk[0].number}`);
 			expect(streams.sort()).toEqual(["watchShell", "watchTenantChanges"]);
+			// At most one, for the records read before the feed was watching: the first load's.
+			expect(catchUps.length).toBeLessThanOrEqual(1);
 			streams.length = 0;
+			catchUps.length = 0;
 			// (Not to the page it's on: a link to it refreshes everything, the shell's streams too.)
 			for (const [i, { number, serial }] of walk.entries()) {
 				if (i) await follow(page, `/orders/${number}`);
@@ -147,6 +154,7 @@ describe("going from record to record", () => {
 			await follow(page, `/orders/${walk[0].number}`);
 			await follow(page, `/equipment/${walk[0].serial}`);
 			expect(streams).toEqual([]);
+			expect(catchUps).toEqual([]);
 		} finally {
 			page.off("request", asked);
 		}

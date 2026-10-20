@@ -136,12 +136,19 @@ export async function recordActivity(
 		note: note || null,
 	});
 	// Live queries showing records of this type (or its parent's), or this record (or its parent),
-	// look again once it's committed.
+	// look again once it's committed. For the parent, a change to its part is an update of it: a
+	// part deleted leaves the parent there.
 	const name = system ? m.activity_system_user() : user.name;
-	const made = { action, user: { id: user.id, name } };
+	const made = { user: { id: user.id, name } };
 	afterCommit(() => {
-		announceChange(organizationId, subject.type, { ...made, id: String(subject.id) });
-		if (parent) announceChange(organizationId, parent.type, { ...made, id: String(parent.id) });
+		announceChange(organizationId, subject.type, { ...made, action, id: String(subject.id) });
+		if (parent) {
+			announceChange(organizationId, parent.type, {
+				...made,
+				action: "updated",
+				id: String(parent.id),
+			});
+		}
 	});
 	return true;
 }

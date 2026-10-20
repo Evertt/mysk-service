@@ -12,7 +12,7 @@
  */
 import { getRequestEvent } from "$app/server";
 
-import type { ChangeType, LoggedType } from "#lib/activity/index.ts";
+import { type ChangeType, isGone, type LoggedType } from "#lib/activity/index.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
 import {
 	type Change,
@@ -128,23 +128,15 @@ function answerWhen(organizationId: string, watched: Watched) {
 	const record = { type: watched.type, id: String(watched.id) };
 	let at = recordChangedAt(organizationId, record);
 	return (change: Change | null) => {
-		if (change && change.action !== "deleted" && change.action !== "removed") at = change.at;
+		if (change && !isGone(change.action)) at = change.at;
 		return at;
 	};
 }
 
 /**
- * When the tenant's records of `types` (or one record) last changed, for a query's data to carry, so its page can
- * tell whether its live query's first answer is newer than the data (`refreshOnChange()`'s read
- * time). Changes are timed in milliseconds, so one in this millisecond reads a millisecond earlier:
- * another change in the same millisecond, after the read, still counts as newer. That asks once
- * too many when there's none, which takes reading in the millisecond of a change.
+ * When a query's data was read (epoch ms, the server's clock), for the data to carry, so its page
+ * can tell a change made after the read (`refreshOnChange()`'s and `onRecordChange()`'s read time):
+ * one timed later is news. A millisecond earlier, so a change in the same millisecond, after the
+ * read, still counts; that asks once too many for one before the read in that millisecond.
  */
-export function readAt(watched: Watched) {
-	const { organizationId } = currentTenant();
-	const changed =
-		"type" in watched
-			? recordChangedAt(organizationId, { type: watched.type, id: String(watched.id) })
-			: changedAt(organizationId, watched);
-	return changed && changed >= Date.now() ? changed - 1 : changed;
-}
+export const readAt = () => Date.now() - 1;

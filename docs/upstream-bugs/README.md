@@ -360,3 +360,19 @@ Already reported: the `$effect.pending()` leak, https://github.com/sveltejs/svel
   `query.live` whose generator yields once and then waits; a link to another page. Follow the link
   and the stream stays open in the network panel until DevTools' "Collect garbage"; on HTTP/1.1,
   follow links to six differently-keyed copies and the seventh page's data never loads.
+
+## 15. SvelteKit: a batch query asked twice for one argument in a task sends an empty batch too
+
+- **Versions:** @sveltejs/kit 3.0.0 (`runtime/client/remote-functions/query-batch.svelte.js`, the
+  same in 3.1.0).
+- **What happens:** two calls of a `query.batch` with the same argument in one macrotask (two
+  components refreshing the same query, e.g. `getRecordChangedAt(order)` from two cards of one
+  order) send two POSTs: the batch with that argument, and a second with `{"payloads":[]}`.
+- **Cause:** the function schedules the request when `batching.size` is 1 after adding the call
+  (`if (batching.size > 1) return;`). A second call with the same payload leaves the size at 1, so
+  it schedules another `setTimeout`, which finds the map already sent and emptied.
+- **Fix (not patched):** schedule only when the map was empty before the call, e.g. check
+  `batching.size === 0` before `batching.set()`.
+- **Workaround:** `ChangeFeed` (`src/lib/components/activity/change-feed.ts`) asks once per record.
+- **Reproduction:** a component that calls `getThing(1).refresh()` twice in one handler: the network
+  panel shows the empty POST.
