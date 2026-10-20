@@ -24,9 +24,6 @@ export const conditionLabel = (record: {
 export const componentLabel = (record: { serialNumber: string; number: string; name: string }) =>
 	`${record.serialNumber} · ${record.number} · ${record.name}`;
 
-/** The unit's serial number in a condition's label. */
-const serialOf = (label: string) => label.split(" · ")[0];
-
 /** A score in percent. */
 const percent = (value: unknown) => `${formatNumber(Number(value))}%`;
 
@@ -34,7 +31,7 @@ export const conditionSubjects = {
 	/** A unit's condition, logged with its unit as its parent; it's on the unit's page. */
 	unitCondition: {
 		noun: m.condition_activity_subject,
-		href: ({ label }) => resolve("/(app)/equipment/[serial]", { serial: serialOf(label) }),
+		onParentPage: true,
 		fields: {
 			score: { label: m.condition_field_score, format: percent },
 			advice: { label: m.condition_field_advice },
@@ -43,7 +40,7 @@ export const conditionSubjects = {
 	/** A unit's component, logged with its unit as its parent; it's on the unit's page. */
 	component: {
 		noun: m.condition_activity_subject_component,
-		href: ({ label }) => resolve("/(app)/equipment/[serial]", { serial: serialOf(label) }),
+		onParentPage: true,
 		fields: {
 			name: { label: m.condition_field_component_name },
 			article: { label: m.condition_field_article },

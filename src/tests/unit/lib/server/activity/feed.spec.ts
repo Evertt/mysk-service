@@ -248,6 +248,28 @@ describe("present", () => {
 		});
 	});
 
+	test("links a part on its parent's page there, by the parent's latest label", async () => {
+		locals.tenant = tenantOf("north", ["widgets"]);
+		const row = await log({
+			subjectType: "widget_part",
+			subjectId: "8",
+			subjectLabel: "SN-5 · Motor",
+			parentType: "equipment",
+			parentId: "5",
+			parentLabel: "SN-5",
+		});
+		// The unit's serial number changed since.
+		await log({ subjectType: "equipment", subjectId: "5", subjectLabel: "SN-5B" });
+		const [entry] = await present([row]);
+		expect(entry.subject).toEqual({
+			type: "widget_part",
+			noun: "widget part",
+			label: "SN-5 · Motor",
+			target: { id: "5", label: "SN-5B" },
+			page: "equipment",
+		});
+	});
+
 	test("shows the names that changed fields refer to, in the tenant", async () => {
 		const row = await log({
 			subjectType: "order",

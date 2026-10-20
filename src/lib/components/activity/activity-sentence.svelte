@@ -24,7 +24,7 @@
 	} = $props();
 
 	const linkOf = (link: SubjectLink) =>
-		href ? href(link) : link.target && subjectHref(link.type, link.target);
+		href ? href(link) : link.target && subjectHref(link.page ?? link.type, link.target);
 
 	const linkClass = "font-medium underline-offset-4 hover:underline";
 
@@ -48,17 +48,18 @@
 	<!-- A subject without a label of its own (e.g. a module's settings) is its noun. -->
 	{@const [noun, label] = link.label ? [`${link.noun} `, link.label] : ["", link.noun]}
 	{@const target = to && !href ? link.target : null}
-	{noun}{#if target && link.type === "order"}<OrderLink number={target.label} class={linkClass}
+	{@const page = link.page ?? link.type}
+	{noun}{#if target && page === "order"}<OrderLink number={target.label} class={linkClass}
 			>{label}</OrderLink
-		>{:else if target && link.type === "customer"}<CustomerLink
+		>{:else if target && page === "customer"}<CustomerLink
 			code={target.label}
 			name={label}
 			class={linkClass}
-		/>{:else if target && link.type === "equipment"}<EquipmentLink
+		/>{:else if target && page === "equipment"}<EquipmentLink
 			serialNumber={target.label}
 			{label}
 			class={linkClass}
-		/>{:else if target && link.type === "engineer"}<EngineerLink
+		/>{:else if target && page === "engineer"}<EngineerLink
 			id={Number(target.id)}
 			name={label}
 			class={linkClass}
