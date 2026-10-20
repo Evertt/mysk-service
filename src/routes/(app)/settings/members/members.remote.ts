@@ -39,7 +39,7 @@ const isCustomerRole = (role: typeof member.role | typeof invitation.role) =>
  */
 export const getMembers = forMembers.query(async () => {
 	const tenant = currentTenant();
-	const canManage = isManager(tenant.roles);
+	const manager = isManager(tenant.roles);
 	const inviter = alias(user, "inviter");
 	const [members, invitations] = await Promise.all([
 		db
@@ -55,7 +55,7 @@ export const getMembers = forMembers.query(async () => {
 			.innerJoin(user, eq(member.userId, user.id))
 			.where(and(inTenant(member), not(isCustomerRole(member.role))))
 			.orderBy(asc(user.name)),
-		canManage
+		manager
 			? db
 					.select({
 						id: invitation.id,
@@ -83,7 +83,6 @@ export const getMembers = forMembers.query(async () => {
 	const actor = { userId: tenant.user.id, roles: tenant.roles };
 	return {
 		name: tenant.name,
-		canManage,
 		/** The roles the signed-in user can invite people with. */
 		inviteRoles: assignableRoles(tenant.roles),
 		members: members.map((m) => {
@@ -97,8 +96,8 @@ export const getMembers = forMembers.query(async () => {
 				...m,
 				roles,
 				isYou: m.userId === tenant.user.id,
-				roleOptions: canManage && roleOptions.length > 1 ? roleOptions : [],
-				canRemove: canManage && removalRefusal(change) === null,
+				roleOptions: manager && roleOptions.length > 1 ? roleOptions : [],
+				canRemove: manager && removalRefusal(change) === null,
 			};
 		}),
 		invitations: invitations.map((i) => ({

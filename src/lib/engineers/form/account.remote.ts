@@ -26,7 +26,6 @@ export const getEngineerAccount = forMembers.query(recordId(), async (engineerId
 		m.engineers_not_found(),
 	);
 
-	const canManage = isManager(tenant.roles);
 	const [members, taken] = await Promise.all([
 		db
 			.select({ userId: user.id, name: user.name, email: user.email, role: member.role })
@@ -41,9 +40,8 @@ export const getEngineerAccount = forMembers.query(recordId(), async (engineerId
 	]);
 	const linkedElsewhere = new Set(taken.map((row) => row.userId));
 	return {
-		canManage,
 		linked: members.find((m) => m.userId === found.userId) ?? null,
-		members: canManage ? members.filter((m) => !linkedElsewhere.has(m.userId)) : [],
+		members: isManager(tenant.roles) ? members.filter((m) => !linkedElsewhere.has(m.userId)) : [],
 	};
 });
 

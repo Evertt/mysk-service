@@ -139,8 +139,7 @@ describe("inviting a contact to the portal", () => {
 			[riedel.email, shltrId],
 		);
 		await as(shltr.member, async () => {
-			const access = await data(getPortalAccess, code);
-			expect(access.canManage).toBe(false);
+			await data(getPortalAccess, code);
 			expect(
 				await submit(invitePortalContact, {
 					customerId: String(id),

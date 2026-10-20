@@ -7,6 +7,7 @@
 <script lang="ts">
 	import type { Component } from "svelte";
 
+	import { canManage } from "#lib/auth/can-manage.ts";
 	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { formatDate } from "#lib/i18n/index.ts";
@@ -20,19 +21,18 @@
 	let {
 		module,
 		modules,
-		canManage,
 		icon: Icon,
 		settingsHref,
 	}: {
 		module: Module;
 		/** Every module, to see which are on. */
 		modules: Module[];
-		canManage: boolean;
 		icon?: Component<{ class?: string }>;
 		/** The page where the module is set up, linked to while it's on. */
 		settingsHref?: string;
 	} = $props();
 
+	const manager = $derived(await canManage());
 	const form = $derived(setModules.for(module.id));
 	const isOn = (id: ModuleId) => modules.find((other) => other.id === id)?.on ?? false;
 	const names = (ids: ModuleId[]) =>
@@ -42,7 +42,7 @@
 	const needed = $derived(requirementsOf(module.id).filter((id) => !isOn(id)));
 	const needing = $derived(dependentsOf(module.id).filter(isOn));
 	/** Switching this one off asks first, in a dialog, which shows a refusal itself. */
-	const asksFirst = $derived(canManage && !module.alwaysOn && module.on && needing.length > 0);
+	const asksFirst = $derived(manager && !module.alwaysOn && module.on && needing.length > 0);
 </script>
 
 <div class="flex items-start gap-4 rounded-lg border p-4" data-module={module.id}>
@@ -55,7 +55,7 @@
 			<div class="flex flex-wrap items-center gap-2">
 				<span class="font-medium">{module.label}</span>
 				{#if module.alwaysOn}
-					{#if !canManage}
+					{#if !manager}
 						<Badge variant="secondary">{m.settings_modules_always_on()}</Badge>
 					{/if}
 				{:else if module.on && module.enabledAt}
@@ -67,7 +67,7 @@
 				{/if}
 			</div>
 			<p class="text-sm text-muted-foreground">{module.description}</p>
-			{#if canManage && !module.on && needed.length}
+			{#if manager && !module.on && needed.length}
 				<p class="text-sm text-muted-foreground">
 					{m.settings_modules_also_enables({ modules: names(needed) })}
 				</p>
@@ -81,7 +81,7 @@
 				{m.settings_modules_set_up()}
 			</Button>
 		{/if}
-		{#if canManage}
+		{#if manager}
 			{#if module.alwaysOn}
 				<Button variant="outline" size="sm" disabled>{m.settings_modules_always_on()}</Button>
 			{:else if asksFirst}
