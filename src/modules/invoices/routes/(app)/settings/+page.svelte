@@ -19,7 +19,6 @@
 	module="invoices"
 	title={m.invoices_settings_title()}
 	description={m.invoices_settings_description()}
-	canManage={settings.canManage}
 	form={saveSettings}
 >
 	{#snippet fields()}

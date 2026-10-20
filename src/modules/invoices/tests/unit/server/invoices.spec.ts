@@ -612,7 +612,6 @@ describe("in South, which has invoicing but no contracts", () => {
 
 	test("changing the invoicing settings is for managers, and logged", async () => {
 		const before = await as(south.owner, () => data(getInvoicingSettings));
-		expect(before.canManage).toBe(true);
 		const fields = {
 			vatRate: before.vatRate,
 			paymentTermDays: 14,
@@ -621,7 +620,6 @@ describe("in South, which has invoicing but no contracts", () => {
 		expect(await as(south.member, () => submit(saveSettings, fields))).toMatchObject({
 			status: 403,
 		});
-		expect((await as(south.member, () => data(getInvoicingSettings))).canManage).toBe(false);
 		expect(await as(south.owner, () => submit(saveSettings, fields))).toMatchObject({
 			status: 303,
 			location: "/invoices",

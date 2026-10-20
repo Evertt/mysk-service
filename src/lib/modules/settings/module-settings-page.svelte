@@ -12,6 +12,7 @@
 	import type { Snippet } from "svelte";
 	import { toast } from "svelte-sonner";
 
+	import { canManage } from "#lib/auth/can-manage.ts";
 	import type { DialogForm } from "#lib/components/form/dialogs.svelte.ts";
 	import FormActions from "#lib/components/form/form-actions.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
@@ -23,7 +24,6 @@
 		module: moduleId,
 		title,
 		description,
-		canManage = false,
 		form,
 		fields,
 		footer,
@@ -33,9 +33,7 @@
 		module: ModuleId;
 		title: string;
 		description?: string;
-		/** Whether the user may change the settings: they get the form, the others `details`. */
-		canManage?: boolean;
-		/** The settings' form (`saveSettings`), for managers. */
+		/** The settings' form (`saveSettings`), for managers (`canManage()`): the others get `details`. */
 		form?: Form;
 		/** The form's fields, in their `Field.FieldGroup`. */
 		fields?: Snippet;
@@ -58,7 +56,7 @@
 	breadcrumbs={[{ label, href: homeHref }, { label: m.common_settings() }]}
 />
 
-{#if form && fields && canManage}
+{#if form && fields && (await canManage())}
 	<form
 		{...form.enhance(async ({ submit }) => {
 			if (await submitted(submit)) toast.success(m.common_settings_saved());
