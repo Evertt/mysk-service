@@ -344,8 +344,13 @@ Already reported: the `$effect.pending()` leak, https://github.com/sveltejs/svel
 - **Not our code:** the server stops on abort (`src/lib/server/live.ts` listens to the request's
   signal), and `refreshOnChange()` keeps the proxy only in a `$derived` of the component. Two
   components asking for the same record share one stream, as they should.
-- **Workaround:** none in the app yet. The public API has no way to close a live query; the
-  `pagehide`/`offline` listeners close every live query, the page's own too.
+- **Workaround:** the public API has no way to close a live query (the `pagehide`/`offline`
+  listeners close every live query, the page's own too), so the office avoids per-record live
+  queries: one feed of the tenant's changes per tab (`watchTenantChanges`, a key that never
+  changes), and components subscribe to their record in it for as long as they're mounted
+  (`src/lib/components/activity/change-feed.ts`). So far for `<ChangedElsewhere>` and the order's
+  and unit's module cards; the other `watchRecord` users and the portals still have a stream per
+  record. `orders.live.test.ts` checks that going from record to record opens no stream.
 - **Expected / possible fix:** a live query's connection follows the effects that read it: when
   the last one is destroyed, interrupt the connection (after a tick, so a navigation that reads it
   again keeps it), keep the entry and its last value, and connect again on the next read. E.g.

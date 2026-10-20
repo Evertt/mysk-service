@@ -2,8 +2,9 @@
 	@component
 	A notice on a record's page when someone else changes the record while it's open ("Changed by
 	Anouk de Vries · 1 minute ago"), with a button that loads the latest version, so a save doesn't
-	quietly undo their changes. Nothing for the user's own changes. It follows the record with
-	`watchRecordChanges`, for the types in `watchedTypes` (`./watched.ts`). `RecordPage` shows it on
+	quietly undo their changes. Nothing for the user's own changes. It follows the record through the
+	tab's feed of changes (`onRecordChange()`, `change-feed.svelte.ts`), for the types in
+	`watchedTypes` (`./watched.ts`). `RecordPage` shows it on
 	a record's page; an edit page shows it above its form, with `onreload`.
 -->
 <script lang="ts">
@@ -14,7 +15,8 @@
 	import { Clock } from "#lib/hooks/clock.svelte.ts";
 	import { formatTimeAgo } from "#lib/i18n/index.ts";
 
-	import { type RecordChange, watchRecordChanges } from "./activity.remote.ts";
+	import type { TenantChange } from "./activity.remote.ts";
+	import { onRecordChange } from "./change-feed.svelte.ts";
 	import type { WatchedType } from "./watched.ts";
 
 	let {
@@ -32,15 +34,18 @@
 		onreload?: () => void;
 	} = $props();
 
-	const changes = $derived(watchRecordChanges({ type, id }));
 	/** The latest change someone else made, of the record it was made to. */
-	let shown = $state<{ record: string; change: RecordChange }>();
+	let shown = $state<{ record: string; change: TenantChange }>();
 	const record = $derived(`${type}/${id}`);
 	const change = $derived(shown?.record === record ? shown.change : undefined);
-	$effect(() => {
-		const latest = changes.current;
-		if (latest && !latest.mine) shown = { record, change: latest };
-	});
+	const at = $derived(change && Temporal.Instant.fromEpochMilliseconds(change.at));
+	onRecordChange(
+		() => ({ type, id }),
+		// Only what the feed tells: a change it can't tell (`null`) has no one to name.
+		(latest) => {
+			if (latest && !latest.mine) shown = { record: `${latest.type}/${latest.id}`, change: latest };
+		},
+	);
 
 	// "1 minute ago" moves on while it shows.
 	const clock = new Clock(30_000);
@@ -71,7 +76,7 @@
 							? m.activity_deleted_elsewhere({ name: change.name })
 							: m.activity_changed_elsewhere({ name: change.name })}
 						<span class="font-normal text-muted-foreground">
-							· <time datetime={change.at.toString()}>{formatTimeAgo(change.at, clock.now)}</time>
+							· <time datetime={at!.toString()}>{formatTimeAgo(at!, clock.now)}</time>
 						</span>
 					</p>
 					<p class="text-muted-foreground">

@@ -7,21 +7,24 @@ import { error } from "@sveltejs/kit";
 import { and, count, desc, eq, gt, isNotNull, lt, max, or } from "drizzle-orm";
 import * as v from "valibot";
 
-import { everyLoggedType, subjectTypeLabel, subjectTypes } from "#lib/activity/index.ts";
+import {
+	type ChangeType,
+	everyLoggedType,
+	subjectTypeLabel,
+	subjectTypes,
+} from "#lib/activity/index.ts";
 import { isDay } from "#lib/dates.ts";
 import { intlLocale } from "#lib/i18n/index.ts";
 import { modules as appModules } from "#lib/modules/manifests.ts";
 import { recordId } from "#lib/schema.ts";
 import { present } from "#lib/server/activity/index.ts";
-import { currentTenant, idInTenant, inTenant, type TenantTable } from "#lib/server/auth/index.ts";
+import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
+import { recordChangedAt } from "#lib/server/changes.ts";
 import { db } from "#lib/server/db/index.ts";
-import { activity, customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
+import { activity } from "#lib/server/db/schema.ts";
 import { inDays } from "#lib/server/lists/index.ts";
-import { live } from "#lib/server/live.ts";
-import { orNotFound } from "#lib/server/records.ts";
+import { type FeedAnswer, live, liveFeed } from "#lib/server/live.ts";
 import { forAnyRole, forMembers } from "#lib/server/remote-functions.ts";
-
-import { type WatchedType, watchedTypes } from "./watched.ts";
 
 const allModules = appModules.map((module) => module.id);
 
@@ -112,6 +115,12 @@ export const countNewActivity = forMembers.query(
 /** Every subject type the log may name (see `everyLoggedType()`). */
 const loggedTypes = everyLoggedType();
 
+/** A record of the tenant, as the log names it: its subject type and id. */
+const subjectSchema = v.object({
+	type: v.picklist(loggedTypes),
+	id: v.union([v.string(), v.number()]),
+});
+
 /**
  * When the tenant's log last had an entry (epoch ms, 0 if not since the server started), sent again
  * on each change (once per burst), so the feed and the dashboard look again when anyone changes
@@ -126,10 +135,7 @@ export const watchActivity = forMembers.query.live(() => live(loggedTypes));
  * needs no list of what to refresh. For any role: it says only when, and the queries it has the
  * card refresh are gated again.
  */
-export const watchRecord = forAnyRole.query.live(
-	v.object({ type: v.picklist(loggedTypes), id: v.union([v.string(), v.number()]) }),
-	(subject) => live(subject),
-);
+export const watchRecord = forAnyRole.query.live(subjectSchema, (subject) => live(subject));
 
 /** The latest entries about a subject of the tenant and its parts, e.g. an order and its lines. */
 export const getSubjectActivity = forMembers.query(
@@ -185,54 +191,49 @@ export const getActivityFilters = forMembers.query(async () => {
 	};
 });
 
-/**
- * The tables of the records whose pages can say that someone else changed them (`watchedTypes`),
- * to check that the record is the tenant's.
- */
-const watchedRecords = { order, customer, equipment, engineer } satisfies Record<
-	WatchedType,
-	TenantTable
->;
-
-/** A change to a record that a page has open: what was done, by whom, and when. */
-export interface RecordChange {
-	/** E.g. `updated` or `deleted` (an activity action). */
+/** A change to one of the tenant's records, as the office's tab hears of it (`watchTenantChanges`). */
+export interface TenantChange {
+	/** E.g. `order`. */
+	type: ChangeType;
+	/** The record's id, as text; `null` for a change announced for its type only. */
+	id: string | null;
+	/** What was done, e.g. `updated` (an activity action). */
 	action: string;
-	/** Who did it, as the activity log names them. */
+	/** Who did it, `""` for the system. */
 	name: string;
-	/** Whether it was the signed-in user (on this page or another). */
+	/** Whether the signed-in user did it. */
 	mine: boolean;
-	at: Temporal.Instant;
+	/** When (epoch ms, the server's clock). */
+	at: number;
 }
 
+/** One of `watchTenantChanges`'s answers. */
+export type TenantChanges = FeedAnswer<TenantChange>;
+
 /**
- * The changes to a record of the tenant (and to its parts, e.g. an order's lines) as they're
- * made, for a page that has it open (`<ChangedElsewhere>`): `null` at first, then each change
- * (the latest of a burst). A 404 if the record isn't the tenant's.
+ * Every change to the tenant's records, for the one live query an office tab shares
+ * (`provideChangeFeed()`, `change-feed.svelte.ts`), which tells the components that watch a record
+ * (`onRecordChange()`): one stream, whose key never changes, however many records the page shows
+ * and however often it navigates. See `liveFeed()` for its answers.
  */
-export const watchRecordChanges = forMembers.query.live(
-	v.object({
-		type: v.picklist(watchedTypes),
-		id: recordId(),
-	}),
-	({ type, id }) => {
-		const { user } = currentTenant();
-		return live({ type, id }, async (change): Promise<RecordChange | null> => {
-			if (change) {
-				return {
-					action: change.action ?? "updated",
-					name: change.user?.name ?? "",
-					mine: change.user?.id === user.id,
-					at: Temporal.Instant.fromEpochMilliseconds(change.at),
-				};
-			}
-			// Checked once watching, so a change in between isn't missed.
-			const table = watchedRecords[type];
-			orNotFound(
-				await db.select({ id: table.id }).from(table).where(idInTenant(table, id)),
-				m.common_error_not_found(),
-			);
-			return null;
-		});
-	},
-);
+export const watchTenantChanges = forMembers.query.live(() => {
+	const { user } = currentTenant();
+	return liveFeed((change): TenantChange => ({
+		type: change.type,
+		id: change.id ?? null,
+		action: change.action ?? "updated",
+		name: change.user?.name ?? "",
+		mine: change.user?.id === user.id,
+		at: change.at,
+	}));
+});
+
+/**
+ * When a record of the tenant last changed (epoch ms, 0 if not since the server started), for a
+ * component that read it before the tab's feed was watching (`onRecordChange()`): on the page's
+ * first load, and after the feed reconnected.
+ */
+export const getRecordChangedAt = forMembers.query.batch(subjectSchema, () => {
+	const { organizationId } = currentTenant();
+	return ({ type, id }) => recordChangedAt(organizationId, { type, id: String(id) });
+});

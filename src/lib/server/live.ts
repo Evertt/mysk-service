@@ -19,6 +19,7 @@ import {
 	changedAt,
 	recordChangedAt,
 	watchChanges,
+	watchEvery,
 	watchSubject,
 } from "#lib/server/changes.ts";
 import { inThisRequest } from "#lib/server/db/index.ts";
@@ -54,12 +55,62 @@ export function live(
 		"type" in watched
 			? watchSubject(organizationId, { type: watched.type, id: String(watched.id) })
 			: watchChanges(organizationId, watched);
+	return answering(changes, answer ?? answerWhen(organizationId, watched));
+}
+
+/** How long a change stays in `liveFeed()`'s answers (ms). */
+export const FEED_WINDOW = 10_000;
+
+/** One of `liveFeed()`'s answers. */
+export interface FeedAnswer<T> {
+	/** When this stream started watching (epoch ms, the server's clock): it has every change since. */
+	since: number;
+	/** When it answered: the changes up to then are in this answer or an earlier one. */
+	now: number;
+	/** The changes of the last `FEED_WINDOW` ms, the latest of each record, oldest first. */
+	changes: T[];
+}
+
+/**
+ * Every change to the current tenant's records, for the one live query a tab shares
+ * (`watchTenantChanges`), each as `present` makes it: no changes at first, then after each burst.
+ * An answer repeats the changes of the last `FEED_WINDOW` ms, so a client that reads only the
+ * latest answer (a live query's `current`) misses none that came in quick succession; it tells
+ * them apart by when they were made.
+ */
+export function liveFeed<T>(present: (change: Change) => T): AsyncGenerator<FeedAnswer<T>, void> {
+	const { organizationId } = currentTenant();
+	const since = Date.now();
+	/** The changes in the window, by record, oldest first. */
+	const recent = new Map<string, Change>();
+	return answering(watchEvery(organizationId), (batch) => {
+		const now = Date.now();
+		for (const change of batch ?? []) {
+			const key = `${change.type}/${change.id ?? ""}`;
+			recent.delete(key);
+			recent.set(key, change);
+		}
+		for (const [key, change] of recent) {
+			if (change.at >= now - FEED_WINDOW) break;
+			recent.delete(key);
+		}
+		return { since, now, changes: [...recent.values()].map(present) };
+	});
+}
+
+/**
+ * What every live query does with what it watches (`changes`): answers at first, then after each
+ * change, inside the request; stops watching when the request ends.
+ */
+function answering<C, T>(
+	changes: AsyncGenerator<C, void> & { stop: () => void },
+	respond: (change: C | null) => T | Promise<T>,
+): AsyncGenerator<Awaited<T>, void> {
 	const event = getRequestEvent();
 	event.request.signal.addEventListener("abort", changes.stop, { once: true });
 	// How long the stream was open, with `TIMING_LOGS` (`#lib/server/logs/timing.ts`).
 	const closed = timeLiveStream(event);
 	const again = inThisRequest();
-	const respond = answer ?? answerWhen(organizationId, watched);
 	return (async function* () {
 		try {
 			yield await respond(null);

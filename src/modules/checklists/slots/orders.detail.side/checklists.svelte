@@ -9,11 +9,10 @@
 	import { resolve } from "$app/paths";
 	import PrinterIcon from "@lucide/svelte/icons/printer";
 
-	import { watchRecord } from "#lib/components/activity/activity.remote.ts";
+	import { refreshOnRecordChange } from "#lib/components/activity/change-feed.svelte.ts";
 	import { EquipmentLink } from "#lib/equipment/components.ts";
 	import { unitTitle } from "#lib/equipment/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
-	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatDateTime, formatNumber } from "#lib/i18n/index.ts";
 
 	import { orderRejected } from "../../api/extensions.ts";
@@ -28,8 +27,8 @@
 
 	const data = $derived(await getOrderChecklists(number));
 	// The order saved with other units, and its checklists completed in the field.
-	refreshOnChange(
-		() => watchRecord({ type: "order", id }),
+	refreshOnRecordChange(
+		() => ({ type: "order", id }),
 		() => getOrderChecklists(number).refresh(),
 		// Changed since it was read: saved on its edit page, whose redirect brings it back cached.
 		() => data.readAt,

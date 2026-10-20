@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/tes
 
 import { announceChange } from "#lib/server/changes.ts";
 import type { DurableRequest } from "#lib/server/db/durable.ts";
-import { live, readAt } from "#lib/server/live.ts";
+import { FEED_WINDOW, live, liveFeed, readAt } from "#lib/server/live.ts";
 
 const event = vi.hoisted(() => ({
 	locals: {} as Record<string, unknown>,
@@ -143,6 +143,55 @@ describe("live(watched, answer)", () => {
 		expect((await answers.next()).value).toBeUndefined();
 		announceChange("org-answer", "order");
 		expect((await answers.next()).value).toBe(durable);
+	});
+});
+
+describe("liveFeed(present)", () => {
+	beforeEach(() => signIn("org-feed"));
+
+	test("answers no changes at first, then each burst's, as `present` makes them", async () => {
+		vi.useFakeTimers({ now: 3_000_000, toFake: ["Date"] });
+		announceChange("org-feed", "order", { id: "1" });
+		const answers = liveFeed((change) => `${change.type}/${change.id}`);
+		expect((await answers.next()).value).toEqual({ since: 3_000_000, now: 3_000_000, changes: [] });
+
+		vi.setSystemTime(3_000_010);
+		const pending = answers.next();
+		announceChange("org-feed", "order", { id: "2" });
+		announceChange("org-elsewhere", "order", { id: "3" });
+		expect((await pending).value).toEqual({
+			since: 3_000_000,
+			now: 3_000_010,
+			changes: ["order/2"],
+		});
+	});
+
+	test("repeats the changes of its window, the latest of each record, then lets them go", async () => {
+		vi.useFakeTimers({ now: 4_000_000, toFake: ["Date"] });
+		const answers = liveFeed((change) => [`${change.type}/${change.id}`, change.action]);
+		await answers.next();
+		announceChange("org-feed", "order", { id: "1", action: "updated" });
+		expect((await answers.next()).value?.changes).toEqual([["order/1", "updated"]]);
+
+		vi.setSystemTime(4_000_000 + FEED_WINDOW - 1);
+		announceChange("org-feed", "customer", { id: "1", action: "updated" });
+		announceChange("org-feed", "order", { id: "1", action: "scheduled" });
+		expect((await answers.next()).value?.changes).toEqual([
+			["customer/1", "updated"],
+			["order/1", "scheduled"],
+		]);
+
+		vi.setSystemTime(4_000_000 + 2 * FEED_WINDOW);
+		announceChange("org-feed", "engineer", { id: "1", action: "updated" });
+		expect((await answers.next()).value?.changes).toEqual([["engineer/1", "updated"]]);
+	});
+
+	test("stops when its request ends", async () => {
+		const answers = liveFeed((change) => change);
+		await answers.next();
+		const waiting = answers.next();
+		request.abort();
+		expect(await waiting).toEqual({ value: undefined, done: true });
 	});
 });
 

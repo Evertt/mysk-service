@@ -1,10 +1,12 @@
 /**
  * "Changed by someone else": an order's pages say so when another user changes it while it's
- * open (`<ChangedElsewhere>`, `watchRecordChanges`), and not for the user's own changes. That a
+ * open (`<ChangedElsewhere>`, through the tab's feed of changes, `watchTenantChanges`), and not for
+ * the user's own changes; and that feed is the one stream the tab needs, however many records it
+ * goes through. That a
  * customer's save is announced to its pages, and that another tenant's record can't be watched,
  * is `components/activity/server/activity.spec.ts`'s.
  */
-import type { Page } from "playwright";
+import type { Page, Request } from "playwright";
 import { describe, expect, test } from "vite-plus/test";
 
 import { organizations, quiet, rows, userNames, users, useApp, value } from "./app.ts";
@@ -100,5 +102,62 @@ describe("an order", () => {
 		await notice(anouk.page).waitFor();
 		expect(await notice(anouk.page).innerText()).toContain(`Deleted by ${userNames.planner}`);
 		expect(await notice(anouk.page).getByRole("button", { name: "Reload" }).count()).toBe(0);
+	});
+});
+
+describe("going from record to record", () => {
+	/** Follows a link to `path` (without a new document), as one on the page would. */
+	async function follow(page: Page, path: string) {
+		await page.evaluate((href) => {
+			const link = Object.assign(document.createElement("a"), { href });
+			document.body.append(link);
+			link.click();
+			link.remove();
+		}, path);
+		await page.waitForURL((url) => url.pathname === path);
+		await quiet(page);
+	}
+
+	test("opens no live query's stream after the shell's, so none pile up", async () => {
+		const { page } = anouk;
+		const walk = await rows<{ number: string; serial: string }>(
+			`select o.number, e.serial_number as serial from "order" o
+			 join order_unit u on u.order_id = o.id join equipment e on e.id = u.equipment_id
+			 where o.organization_id = ? group by o.id order by o.id limit 4`,
+			[north.id],
+		);
+		expect(walk).toHaveLength(4);
+		/** The live queries' streams the tab asked for, by remote function. */
+		const streams: string[] = [];
+		const asked = (request: Request) => {
+			if (request.headers().accept?.includes("text/event-stream")) {
+				streams.push(new URL(request.url()).pathname.split("/").at(-1)!);
+			}
+		};
+		page.on("request", asked);
+		try {
+			await anouk.go(`/orders/${walk[0].number}`);
+			expect(streams.sort()).toEqual(["watchShell", "watchTenantChanges"]);
+			streams.length = 0;
+			// (Not to the page it's on: a link to it refreshes everything, the shell's streams too.)
+			for (const [i, { number, serial }] of walk.entries()) {
+				if (i) await follow(page, `/orders/${number}`);
+				await follow(page, `/equipment/${serial}`);
+			}
+			await follow(page, `/orders/${walk[0].number}`);
+			await follow(page, `/equipment/${walk[0].serial}`);
+			expect(streams).toEqual([]);
+		} finally {
+			page.off("request", asked);
+		}
+
+		// It still hears of the record it shows.
+		await pieter.go(`/equipment/${walk[0].serial}/edit`);
+		await quiet(pieter.page);
+		await pieter.page.getByLabel("Model").fill("Changed while Anouk had it open");
+		await pieter.page.getByRole("button", { name: "Save equipment" }).click();
+		await pieter.page.waitForURL((url) => url.pathname === `/equipment/${walk[0].serial}`);
+		await notice(page).waitFor();
+		expect(await notice(page).innerText()).toContain(`Changed by ${userNames.planner}`);
 	});
 });

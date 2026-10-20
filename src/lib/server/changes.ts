@@ -72,23 +72,67 @@ export const recordChangedAt = (organizationId: string, record: { type: LoggedTy
  * client goes away, since a consumer waiting for a change can't be stopped otherwise.
  */
 export const watchChanges = (organizationId: string, types: readonly ChangeType[]) =>
-	watch(organizationId, (change) => types.includes(change.type));
+	latest(
+		watch(
+			organizationId,
+			(change) => types.includes(change.type),
+			() => "",
+		),
+	);
 
 /**
  * Like `watchChanges()`, for one record: yields the latest change announced with its `type` and
  * `id`. A change to one of its parts (an order's line) is announced for it too, as the parent.
  */
 export const watchSubject = (organizationId: string, subject: { type: LoggedType; id: string }) =>
-	watch(organizationId, (change) => change.type === subject.type && change.id === subject.id);
+	latest(
+		watch(
+			organizationId,
+			(change) => change.type === subject.type && change.id === subject.id,
+			() => "",
+		),
+	);
 
-/** Watches the organization's changes that `matches` keeps (see `watchChanges()`). */
-function watch(organizationId: string, matches: (change: Change) => boolean) {
-	let pending: Change | undefined;
+/**
+ * Like `watchChanges()`, for all of the organization's changes, losing none of their records:
+ * yields the changes announced since it last yielded, the latest of each record (and of each type,
+ * for those announced without one). For the one live query a tab shares (`liveFeed()`).
+ */
+export const watchEvery = (organizationId: string) =>
+	watch(
+		organizationId,
+		() => true,
+		(change) => `${change.type}/${change.id ?? ""}`,
+	);
+
+/** Each batch's last change, of a watch whose batches hold one (`keyOf` gives them all one key). */
+function latest(batches: ReturnType<typeof watch>) {
+	return Object.assign(
+		(async function* () {
+			for await (const batch of batches) yield batch[batch.length - 1];
+		})(),
+		{ stop: batches.stop },
+	);
+}
+
+/**
+ * Watches the organization's changes that `matches` keeps (see `watchChanges()`), in batches: the
+ * changes announced while the consumer was busy, the latest for each `keyOf`.
+ */
+function watch(
+	organizationId: string,
+	matches: (change: Change) => boolean,
+	keyOf: (change: Change) => string,
+) {
+	const pending = new Map<string, Change>();
 	let stopped = false;
 	let wake: (() => void) | undefined;
 	const listener: Listener = (change) => {
 		if (!matches(change)) return;
-		pending = change;
+		const key = keyOf(change);
+		// Deleted first, so the batch is in the order the changes came.
+		pending.delete(key);
+		pending.set(key, change);
 		wake?.();
 	};
 	let set = listeners.get(organizationId);
@@ -104,15 +148,15 @@ function watch(organizationId: string, matches: (change: Change) => boolean) {
 		if (!own.size && listeners.get(organizationId) === own) listeners.delete(organizationId);
 	}
 
-	async function* changes(): AsyncGenerator<Change, void, undefined> {
+	async function* changes(): AsyncGenerator<Change[], void, undefined> {
 		try {
 			while (!stopped) {
-				if (!pending) await new Promise<void>((resolve) => (wake = resolve));
+				if (!pending.size) await new Promise<void>((resolve) => (wake = resolve));
 				wake = undefined;
-				const change = pending;
-				if (stopped || !change) return;
-				pending = undefined;
-				yield change;
+				if (stopped || !pending.size) return;
+				const batch = [...pending.values()];
+				pending.clear();
+				yield batch;
 			}
 		} finally {
 			stop();

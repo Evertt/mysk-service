@@ -4,10 +4,9 @@
 	the contract that covered the order and its response deadline. Nothing if no contract did.
 -->
 <script lang="ts">
-	import { watchRecord } from "#lib/components/activity/activity.remote.ts";
+	import { refreshOnRecordChange } from "#lib/components/activity/change-feed.svelte.ts";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import EnumBadge from "#lib/components/enum-badge.svelte";
-	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatDateTime } from "#lib/i18n/index.ts";
 
 	import { getOrderCoverage } from "../../coverage.remote.ts";
@@ -19,8 +18,8 @@
 	const data = $derived(await getOrderCoverage(number));
 	const coverage = $derived(data.covered);
 	// The order saved with other units or another type.
-	refreshOnChange(
-		() => watchRecord({ type: "order", id }),
+	refreshOnRecordChange(
+		() => ({ type: "order", id }),
 		() => getOrderCoverage(number).refresh(),
 		// Changed since it was read: saved on its edit page, whose redirect brings it back cached.
 		() => data.readAt,
