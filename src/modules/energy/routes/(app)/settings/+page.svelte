@@ -3,9 +3,9 @@
 	import { page } from "$app/state";
 	import type { RouteParams } from "$app/types";
 
-	import PageHeader from "#lib/components/page-header.svelte";
+	import IntegrationTokensCard from "#lib/modules/settings/integration-tokens-card.svelte";
+	import ModuleSettingsPage from "#lib/modules/settings/module-settings-page.svelte";
 	import { getEnergySettings } from "#modules/energy/settings/settings.remote.ts";
-	import TokensCard from "#modules/energy/settings/tokens-card.svelte";
 
 	// The props the route passes; this page needs none of them.
 	const _props: { params: RouteParams<"/(app)/(modules)/energy/settings"> } = $props();
@@ -15,21 +15,12 @@
 	const ingestUrl = $derived(new URL("/energy/ingest", page.url.origin).toString());
 </script>
 
-<svelte:head>
-	<title>{m.energy_settings_title()} · {m.energy_title()}</title>
-</svelte:head>
-
-<div class="flex max-w-4xl flex-col gap-6">
-	<PageHeader
-		title={m.energy_settings_title()}
-		description={m.energy_settings_description({ url: ingestUrl })}
-		breadcrumbs={[
-			{ label: m.energy_title(), href: resolve("/(app)/(modules)/energy") },
-			{ label: m.energy_settings_title() },
-		]}
-	/>
-
-	<TokensCard tokens={settings.tokens} canManage={settings.canManage} />
+<ModuleSettingsPage
+	module="energy"
+	title={m.energy_settings_title()}
+	description={m.energy_settings_description({ url: ingestUrl })}
+>
+	<IntegrationTokensCard module="energy" placeholder="P1-gateway Ede" />
 
 	<Card.Root>
 		<Card.Header>
@@ -88,4 +79,4 @@
 			{/if}
 		</Card.Content>
 	</Card.Root>
-</div>
+</ModuleSettingsPage>

@@ -1,20 +1,16 @@
 /**
- * The meters' feed endpoint (`/energy/ingest`, its route stub with the token guard) and its tokens
- * on the seeded demo database: what it answers a gateway (the token's sites and codes; a batch
- * stored; another tenant's or an unknown site; codes the site hasn't; a batch that isn't valid, isn't
- * JSON or is too large; a missing, unknown or other module's token), storing nothing of a refused
- * batch; and a manager making and revoking a token, which a planner may only see. What a batch stores
- * and the alerts it raises are `ingest.spec.ts`'s. The server side of `energy.tenancy.test.ts`.
+ * The meters' feed endpoint (`/energy/ingest`, its route stub with the token guard) on the seeded
+ * demo database: what it answers a gateway (the token's sites and codes; a batch stored; another
+ * tenant's or an unknown site; codes the site hasn't; a batch that isn't valid, isn't JSON or is too
+ * large, each as `{ error, message, … }`, `jsonIngest()`; a missing, unknown, revoked or other
+ * module's token), storing nothing of a refused batch. What a batch stores and the alerts it raises
+ * are `ingest.spec.ts`'s; the tokens themselves are the core's (`integration-tokens.spec.ts`). The
+ * server side of `energy.tenancy.test.ts`.
  */
 import { describe, expect, test } from "vite-plus/test";
 
-import { issueIntegrationToken } from "#lib/server/auth/integrations.ts";
-import {
-	createEnergyToken,
-	getEnergySettings,
-	revokeEnergyToken,
-} from "#modules/energy/settings/settings.remote.ts";
-import { as, data, rows, shltr, submit, value } from "#unit/lib/server/harness/index.ts";
+import { issueIntegrationToken, revokeIntegrationToken } from "#lib/server/auth/integrations.ts";
+import { as, rows, shltr, value } from "#unit/lib/server/harness/index.ts";
 
 import { feed, lastQuarter, readingOf, riedel, shltrId } from "./energy.test-support.ts";
 
@@ -109,47 +105,15 @@ describe("the feed", () => {
 			expect((await feed({}, { token, method: "GET" })).status, String(token)).toBe(401);
 		}
 	});
-});
 
-describe("the feed's tokens", () => {
-	test("a manager makes one, which the feed takes until it's revoked", async () => {
-		const made = await as(shltr.owner, () => submit(createEnergyToken, { name: "Spec gateway" }));
-		expect(made.status).toBe(200);
-		const { token } = made.data as { token: string };
-		expect(token).toMatch(/^fwi_[0-9a-f]{40}$/);
-		expect((await feed({}, { token, method: "GET" })).status).toBe(200);
-		const [stored] = await rows<{ id: number; token_hash: string }>(
-			`select id, token_hash from integration_token where organization_id = ? and name = 'Spec gateway'`,
+	test("takes a token until it's revoked", async () => {
+		const made = await as(shltr.owner, () => issueIntegrationToken("energy", "Spec gateway"));
+		expect((await feed({}, { token: made.token, method: "GET" })).status).toBe(200);
+		const [stored] = await rows<{ id: number }>(
+			`select id from integration_token where organization_id = ? and name = 'Spec gateway'`,
 			[shltrId],
 		);
-		expect(stored.token_hash).not.toContain(token.slice(4));
-		const revoked = await as(shltr.owner, () =>
-			submit(revokeEnergyToken, { id: String(stored.id) }),
-		);
-		expect(revoked.status).toBe(200);
-		expect((await feed({}, { token, method: "GET" })).status).toBe(401);
-	});
-
-	test("are a planner's to see, by their first characters, but not to make or revoke", async () => {
-		const [demo] = await rows<{ id: number }>(
-			`select id from integration_token where organization_id = ? and module_id = 'energy'
-			 and revoked_at is null order by id limit 1`,
-			[shltrId],
-		);
-		await as(shltr.member, async () => {
-			const settings = await data(getEnergySettings);
-			expect(settings.canManage).toBe(false);
-			expect(settings.tokens.map((token) => token.id)).toContain(demo.id);
-			expect(Object.keys(settings.tokens[0]).toSorted()).toEqual(
-				["createdAt", "createdBy", "id", "lastUsedAt", "name", "prefix", "revokedAt"].toSorted(),
-			);
-			expect(await submit(createEnergyToken, { name: "Planner's" })).toMatchObject({
-				status: 403,
-			});
-			expect(await submit(revokeEnergyToken, { id: String(demo.id) })).toMatchObject({
-				status: 403,
-			});
-		});
-		expect((await feed({}, { method: "GET" })).status).toBe(200);
+		await as(shltr.owner, () => revokeIntegrationToken("energy", stored.id));
+		expect((await feed({}, { token: made.token, method: "GET" })).status).toBe(401);
 	});
 });

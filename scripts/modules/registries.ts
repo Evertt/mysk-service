@@ -1,4 +1,4 @@
-import { modulePages } from "./routes.ts";
+import { isIntegrationRoute, modulePages } from "./routes.ts";
 import { GENERATED, type ModuleFolder } from "./shared.ts";
 
 const camel = (id: string) => id.replace(/-(\w)/g, (_, c: string) => c.toUpperCase());
@@ -56,6 +56,13 @@ export function renderRegistries(modules: ModuleFolder[]): Record<string, string
 							.join("\n")}\n}`
 					: "{}"
 			} as const satisfies Record<string, { home?: RouteId; settings?: RouteId; portal?: RouteId }>;`,
+			"",
+			`/** The modules with integration endpoints (\`routes/(api)/\`), whose settings keep their tokens. */`,
+			`export const generatedIntegrationModules = ${list(
+				modules
+					.filter((m) => m.routeFiles.some(isIntegrationRoute))
+					.map((m) => JSON.stringify(m.id)),
+			)} as const;`,
 			"",
 		].join("\n"),
 

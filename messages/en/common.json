@@ -313,5 +313,21 @@
 	"common_settings_saved": "Settings saved",
 	"common_settings_managers": "Only owners and admins can change these settings.",
 	"common_on": "On",
-	"common_off": "Off"
+	"common_off": "Off",
+	"common_tokens_title": "Integration tokens",
+	"common_tokens_managers": "Only owners and admins make and revoke tokens.",
+	"common_tokens_empty": "No tokens yet: make one for each system that posts here.",
+	"common_token_name": "Name",
+	"common_token_name_required": "Name the token, after the system that posts with it",
+	"common_token_new": "New token",
+	"common_token_created_title": "Copy the token now",
+	"common_token_created_description": "It isn't shown again. The system sends it as Authorization: Bearer <token>.",
+	"common_token_copy": "Copy",
+	"common_token_copied": "Token copied",
+	"common_token_revoke": "Revoke",
+	"common_token_revoked": "Revoked",
+	"common_token_column_token": "Token",
+	"common_token_column_created": "Created",
+	"common_token_column_last_used": "Last used",
+	"common_token_never_used": "Never"
 }

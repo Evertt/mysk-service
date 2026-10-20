@@ -1,12 +1,11 @@
 <script lang="ts">
-	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import type { RouteParams } from "$app/types";
 
-	import PageHeader from "#lib/components/page-header.svelte";
 	import { CustomerLink } from "#lib/customers/components.ts";
+	import IntegrationTokensCard from "#lib/modules/settings/integration-tokens-card.svelte";
+	import ModuleSettingsPage from "#lib/modules/settings/module-settings-page.svelte";
 	import { getDockSettings } from "#modules/docks/settings/settings.remote.ts";
-	import TokensCard from "#modules/docks/settings/tokens-card.svelte";
 
 	// The props the route passes; this page needs none of them.
 	const _props: { params: RouteParams<"/(app)/(modules)/docks/settings"> } = $props();
@@ -16,21 +15,12 @@
 	const ingestUrl = $derived(new URL("/docks/ingest", page.url.origin).toString());
 </script>
 
-<svelte:head>
-	<title>{m.docks_settings_title()} · {m.docks_title()}</title>
-</svelte:head>
-
-<div class="flex max-w-4xl flex-col gap-6">
-	<PageHeader
-		title={m.docks_settings_title()}
-		description={m.docks_settings_description({ url: ingestUrl })}
-		breadcrumbs={[
-			{ label: m.docks_title(), href: resolve("/(app)/(modules)/docks") },
-			{ label: m.docks_settings_title() },
-		]}
-	/>
-
-	<TokensCard tokens={settings.tokens} canManage={settings.canManage} />
+<ModuleSettingsPage
+	module="docks"
+	title={m.docks_settings_title()}
+	description={m.docks_settings_description({ url: ingestUrl })}
+>
+	<IntegrationTokensCard module="docks" placeholder="Salvo Barneveld" />
 
 	<Card.Root>
 		<Card.Header>
@@ -75,4 +65,4 @@
 			{/if}
 		</Card.Content>
 	</Card.Root>
-</div>
+</ModuleSettingsPage>

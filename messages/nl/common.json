@@ -313,5 +313,21 @@
 	"common_settings_saved": "Instellingen opgeslagen",
 	"common_settings_managers": "Alleen eigenaren en beheerders kunnen deze instellingen wijzigen.",
 	"common_on": "Aan",
-	"common_off": "Uit"
+	"common_off": "Uit",
+	"common_tokens_title": "Koppeltokens",
+	"common_tokens_managers": "Alleen eigenaren en beheerders maken tokens aan en trekken ze in.",
+	"common_tokens_empty": "Nog geen tokens: maak er een voor elk systeem dat hierheen post.",
+	"common_token_name": "Naam",
+	"common_token_name_required": "Geef het token een naam, naar het systeem dat ermee post",
+	"common_token_new": "Nieuw token",
+	"common_token_created_title": "Kopieer het token nu",
+	"common_token_created_description": "Het wordt niet nog eens getoond. Het systeem stuurt het mee als Authorization: Bearer <token>.",
+	"common_token_copy": "Kopiëren",
+	"common_token_copied": "Token gekopieerd",
+	"common_token_revoke": "Intrekken",
+	"common_token_revoked": "Ingetrokken",
+	"common_token_column_token": "Token",
+	"common_token_column_created": "Gemaakt",
+	"common_token_column_last_used": "Laatst gebruikt",
+	"common_token_never_used": "Nooit"
 }
