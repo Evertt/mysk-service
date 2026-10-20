@@ -1,5 +1,5 @@
-import { error, redirect } from "@sveltejs/kit";
-import { and, desc, eq, ne, sql } from "drizzle-orm";
+import { redirect } from "@sveltejs/kit";
+import { and, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { getTimeZone } from "#lib/dates.ts";
@@ -9,8 +9,9 @@ import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, order, user } from "#lib/server/db/schema.ts";
-import { type Problem, refuse } from "#lib/server/forms.ts";
 import { nextNumber } from "#lib/server/numbering.ts";
+import { nameTaken, orNotFound } from "#lib/server/records.ts";
+import { type Problem, Refused } from "#lib/server/refused.ts";
 
 import { materialFields, newMaterialFields } from "./form/material-schema.ts";
 import { materialLabels } from "./labels.ts";
@@ -35,10 +36,12 @@ const historyFits = async (materialId: number, unit: MaterialUnit) => {
  * with the stock after each) and headline numbers.
  */
 export const getMaterial = query(v.string(), async (sku) => {
-	const found = await db.query.material.findFirst({
-		where: and(eq(material.sku, sku), inTenant(material)),
-	});
-	if (!found) error(404, m.materials_not_found_sku({ sku }));
+	const found = orNotFound(
+		await db.query.material.findFirst({
+			where: and(eq(material.sku, sku), inTenant(material)),
+		}),
+		m.materials_not_found_sku({ sku }),
+	);
 
 	// One row per order, in case an order has several lines for the material.
 	const usage = await db
@@ -97,28 +100,19 @@ export const getMaterial = query(v.string(), async (sku) => {
 	};
 });
 
-/** Another material of the current tenant with the same name (ignoring case), if any. */
-const sameName = (name: string, exceptId?: number) =>
-	db.query.material.findFirst({
-		columns: { sku: true },
-		where: and(
-			inTenant(material),
-			sql`lower(${material.name}) = lower(${name})`,
-			exceptId ? ne(material.id, exceptId) : undefined,
-		),
-	});
+/** The problem of a name another of the tenant's materials (than `except`) has, in any case. */
+async function nameProblems(name: string, except?: number): Promise<Problem[]> {
+	const taken = await nameTaken(db, material, name, { except });
+	return taken ? [{ path: ["name"], message: m.materials_name_taken({ sku: taken.sku }) }] : [];
+}
 
-export const createMaterial = form(v.object(newMaterialFields), async (input, issue) => {
+export const createMaterial = form(v.object(newMaterialFields), async (input) => {
 	const { organizationId } = currentTenant();
-	const problems: Problem<"name" | "stock">[] = [];
-	const duplicate = await sameName(input.name);
-	if (duplicate) {
-		problems.push({ field: "name", message: m.materials_name_taken({ sku: duplicate.sku }) });
-	}
+	const problems = await nameProblems(input.name);
 	if (!fitsUnit(input.stock, input.unit)) {
-		problems.push({ field: "stock", message: m.materials_whole_pieces() });
+		problems.push({ path: ["stock"], message: m.materials_whole_pieces() });
 	}
-	refuse(issue, problems);
+	Refused.check(problems);
 
 	const { stock, ...fields } = input;
 	const sku = await db.transaction(async (tx) => {
@@ -142,46 +136,38 @@ export const createMaterial = form(v.object(newMaterialFields), async (input, is
 	redirect(303, `/materials/${sku}`);
 });
 
-export const updateMaterial = form(
-	v.object({ id: id(), ...materialFields }),
-	async (data, issue) => {
-		const { id, ...input } = data;
-		const existing = await findMaterial(id);
-		if (!existing) error(404, m.materials_not_found());
+export const updateMaterial = form(v.object({ id: id(), ...materialFields }), async (data) => {
+	const { id, ...input } = data;
+	const existing = orNotFound(await findMaterial(id), m.materials_not_found());
 
-		const problems: Problem<"name" | "unit">[] = [];
-		const duplicate = await sameName(input.name, id);
-		if (duplicate) {
-			problems.push({ field: "name", message: m.materials_name_taken({ sku: duplicate.sku }) });
+	const problems = await nameProblems(input.name, id);
+	// Order lines are counted in the material's unit, so changing it would change them too.
+	if (input.unit !== existing.unit) {
+		const orders = await ordersUsing(id);
+		if (orders) {
+			problems.push({
+				path: ["unit"],
+				message: m.materials_unit_in_use({
+					count: orders,
+					unit: materialLabels.label("materialUnitSymbol", existing.unit),
+				}),
+			});
+		} else if (!(await historyFits(id, input.unit))) {
+			// Its stock movements are counted in the new unit from now on.
+			problems.push({ path: ["unit"], message: m.materials_unit_history_parts() });
 		}
-		// Order lines are counted in the material's unit, so changing it would change them too.
-		if (input.unit !== existing.unit) {
-			const orders = await ordersUsing(id);
-			if (orders) {
-				problems.push({
-					field: "unit",
-					message: m.materials_unit_in_use({
-						count: orders,
-						unit: materialLabels.label("materialUnitSymbol", existing.unit),
-					}),
-				});
-			} else if (!(await historyFits(id, input.unit))) {
-				// Its stock movements are counted in the new unit from now on.
-				problems.push({ field: "unit", message: m.materials_unit_history_parts() });
-			}
-		}
-		refuse(issue, problems);
+	}
+	Refused.check(problems);
 
-		await db.transaction(async (tx) => {
-			await tx.update(material).set(input).where(idInTenant(material, id));
-			const subject: Subject = { type: "material", id, label: existing.sku };
-			await recordActivity(tx, { action: "updated", subject, before: existing, after: input });
-		});
-		// Send the updated material along, so the page we redirect to doesn't show the old one first.
-		void getMaterial(existing.sku).refresh();
-		redirect(303, `/materials/${existing.sku}`);
-	},
-);
+	await db.transaction(async (tx) => {
+		await tx.update(material).set(input).where(idInTenant(material, id));
+		const subject: Subject = { type: "material", id, label: existing.sku };
+		await recordActivity(tx, { action: "updated", subject, before: existing, after: input });
+	});
+	// Send the updated material along, so the page we redirect to doesn't show the old one first.
+	void getMaterial(existing.sku).refresh();
+	redirect(303, `/materials/${existing.sku}`);
+});
 
 export const deleteMaterial = form(v.object({ id: id() }), async ({ id }) => {
 	await removeMaterial(id);

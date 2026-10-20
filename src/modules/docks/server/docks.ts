@@ -4,14 +4,21 @@
  * page). A dock's door, leveller and location must be at its site; its code is unique in the
  * tenant (the Salvo feed names docks by it).
  */
-import { error } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, gte, isNull, ne, or } from "drizzle-orm";
 
 import { customerSubject } from "#lib/activity/index.ts";
+import { customerByCode } from "#lib/customers/server/index.ts";
 import { getTimeZone } from "#lib/dates.ts";
+import { unitBySerial } from "#lib/equipment/server/index.ts";
 import { openOrderStatuses } from "#lib/models.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
-import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import {
+	currentTenant,
+	idInTenant,
+	inTenant,
+	tenantJoin,
+	sameTenant,
+} from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import {
@@ -22,7 +29,8 @@ import {
 	equipmentLocation,
 	order,
 } from "#lib/server/db/schema.ts";
-import type { Problem } from "#lib/server/forms.ts";
+import { deleteAndLog, orNotFound } from "#lib/server/records.ts";
+import { type Problem, Refused } from "#lib/server/refused.ts";
 
 import type { DockInput } from "../form/dock-schema.ts";
 import { dockEscalation, dockPosition, dockSession, dockState } from "./schema.ts";
@@ -77,22 +85,16 @@ export function allDocks() {
 		.orderBy(asc(customer.name), asc(customerSite.name), asc(dockPosition.code));
 }
 
-/** The tenant's customer by its code, or a 404. */
-async function customerByCode(code: string) {
-	const [found] = await db
-		.select({ id: customer.id, code: customer.code, name: customer.name })
-		.from(customer)
-		.where(and(inTenant(customer), eq(customer.code, code)));
-	if (!found) error(404, m.common_error_not_found());
-	return found;
-}
+/** The tenant's customer `code`, as this module shows it, or a 404. */
+const namedCustomer = (code: string) =>
+	customerByCode(code, { id: customer.id, code: customer.code, name: customer.name });
 
 /**
  * A customer's docks, by site, with their live state, and what a dock can be given there: the
  * customer's sites, their locations and their units.
  */
 export async function customerDocks(code: string) {
-	const found = await customerByCode(code);
+	const found = await namedCustomer(code);
 	const sites = await db
 		.select({ id: customerSite.id, name: customerSite.name, city: customerSite.city })
 		.from(customerSite)
@@ -122,15 +124,12 @@ export async function customerDocks(code: string) {
 			.from(dockPosition)
 			.leftJoin(
 				dockState,
-				and(
-					eq(dockState.organizationId, dockPosition.organizationId),
-					eq(dockState.dockId, dockPosition.id),
-				),
+				and(sameTenant(dockState, dockPosition), eq(dockState.dockId, dockPosition.id)),
 			)
 			.leftJoin(
 				dockSession,
 				and(
-					eq(dockSession.organizationId, dockPosition.organizationId),
+					sameTenant(dockSession, dockPosition),
 					eq(dockSession.dockId, dockPosition.id),
 					isNull(dockSession.checkedOutAt),
 				),
@@ -170,12 +169,12 @@ export async function customerDocks(code: string) {
 
 /** What's wrong with a dock's references and code, by field. */
 async function dockProblems(input: DockInput, customerId: number, id?: number) {
-	const problems: Problem<keyof DockInput>[] = [];
+	const problems: Problem[] = [];
 	const [site] = await db
 		.select({ id: customerSite.id })
 		.from(customerSite)
 		.where(and(idInTenant(customerSite, input.siteId), eq(customerSite.customerId, customerId)));
-	if (!site) return [{ field: "siteId", message: m.docks_unknown_site() }] as typeof problems;
+	if (!site) return [{ path: ["siteId"], message: m.docks_unknown_site() }];
 
 	const unitIds = [input.doorId, input.levellerId].filter((unit) => unit !== null);
 	const [units, location, taken] = await Promise.all([
@@ -215,15 +214,15 @@ async function dockProblems(input: DockInput, customerId: number, id?: number) {
 	]);
 	const here = new Set(units.map((unit) => unit.id));
 	if (input.doorId && !here.has(input.doorId)) {
-		problems.push({ field: "doorId", message: m.docks_unit_elsewhere() });
+		problems.push({ path: ["doorId"], message: m.docks_unit_elsewhere() });
 	}
 	if (input.levellerId && !here.has(input.levellerId)) {
-		problems.push({ field: "levellerId", message: m.docks_unit_elsewhere() });
+		problems.push({ path: ["levellerId"], message: m.docks_unit_elsewhere() });
 	}
 	if (input.locationId && !location.length) {
-		problems.push({ field: "locationId", message: m.docks_location_elsewhere() });
+		problems.push({ path: ["locationId"], message: m.docks_location_elsewhere() });
 	}
-	if (taken.length) problems.push({ field: "code", message: m.docks_code_taken() });
+	if (taken.length) problems.push({ path: ["code"], message: m.docks_code_taken() });
 	return problems;
 }
 
@@ -264,23 +263,25 @@ const logged = (values: Record<(typeof loggedFields)[number], unknown>) =>
 
 /**
  * Adds a dock at a site of the customer `customerCode` (with `input.id`, saves that dock), and logs
- * it. Answers the problems if it can't; a 404 for another tenant's customer or dock.
+ * it. Refuses what's wrong with it, on the form's fields; a 404 for another tenant's customer or
+ * dock.
  */
 export async function saveDock(customerCode: string, input: DockInput & { id?: number }) {
-	const owner = await customerByCode(customerCode);
-	const problems = await dockProblems(input, owner.id, input.id);
-	if (problems.length) return problems;
+	const owner = await namedCustomer(customerCode);
+	Refused.check(await dockProblems(input, owner.id, input.id));
 	const values = dockValues(input);
 	const { organizationId } = currentTenant();
 	const parent = customerSubject(owner);
 	await db.transaction(async (tx) => {
 		if (input.id) {
-			const [before] = await tx
-				.select()
-				.from(dockPosition)
-				.innerJoin(...tenantJoin(customerSite, dockPosition.siteId))
-				.where(and(idInTenant(dockPosition, input.id), eq(customerSite.customerId, owner.id)));
-			if (!before) error(404, m.docks_not_found());
+			const before = orNotFound(
+				await tx
+					.select()
+					.from(dockPosition)
+					.innerJoin(...tenantJoin(customerSite, dockPosition.siteId))
+					.where(and(idInTenant(dockPosition, input.id), eq(customerSite.customerId, owner.id))),
+				m.docks_not_found(),
+			);
 			await tx.update(dockPosition).set(values).where(idInTenant(dockPosition, input.id));
 			await recordActivity(tx, {
 				action: "updated",
@@ -302,22 +303,22 @@ export async function saveDock(customerCode: string, input: DockInput & { id?: n
 			});
 		}
 	});
-	return [];
 }
 
 /** Deletes the customer's dock `id` (its state, sessions and events with it), and logs it. */
 export async function deleteDock(customerCode: string, id: number) {
-	const owner = await customerByCode(customerCode);
+	const owner = await namedCustomer(customerCode);
 	return db.transaction(async (tx) => {
-		const [found] = await tx
-			.select({ code: dockPosition.code })
-			.from(dockPosition)
-			.innerJoin(...tenantJoin(customerSite, dockPosition.siteId))
-			.where(and(idInTenant(dockPosition, id), eq(customerSite.customerId, owner.id)));
-		if (!found) error(404, m.docks_not_found());
-		await tx.delete(dockPosition).where(idInTenant(dockPosition, id));
-		await recordActivity(tx, {
-			action: "deleted",
+		const found = orNotFound(
+			await tx
+				.select({ code: dockPosition.code })
+				.from(dockPosition)
+				.innerJoin(...tenantJoin(customerSite, dockPosition.siteId))
+				.where(and(idInTenant(dockPosition, id), eq(customerSite.customerId, owner.id))),
+			m.docks_not_found(),
+		);
+		await deleteAndLog(dockPosition, {
+			tx,
 			subject: { type: "dock", id, label: found.code },
 			parent: customerSubject(owner),
 		});
@@ -331,11 +332,7 @@ export async function deleteDock(customerCode: string, id: number) {
  * days, and the open breakdown orders the door rules made on it. None if it's no dock's.
  */
 export async function dockUsage(serialNumber: string) {
-	const [unit] = await db
-		.select({ id: equipment.id })
-		.from(equipment)
-		.where(and(inTenant(equipment), eq(equipment.serialNumber, serialNumber)));
-	if (!unit) error(404, m.common_error_not_found());
+	const unit = await unitBySerial(serialNumber);
 	const [dock] = await db
 		.select({
 			id: dockPosition.id,
@@ -416,15 +413,12 @@ export async function doorDock(unitId: number) {
 		.from(dockPosition)
 		.leftJoin(
 			dockState,
-			and(
-				eq(dockState.organizationId, dockPosition.organizationId),
-				eq(dockState.dockId, dockPosition.id),
-			),
+			and(sameTenant(dockState, dockPosition), eq(dockState.dockId, dockPosition.id)),
 		)
 		.leftJoin(
 			dockSession,
 			and(
-				eq(dockSession.organizationId, dockPosition.organizationId),
+				sameTenant(dockSession, dockPosition),
 				eq(dockSession.dockId, dockPosition.id),
 				isNull(dockSession.checkedOutAt),
 			),

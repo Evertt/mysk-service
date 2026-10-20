@@ -6,11 +6,10 @@ import { redirect } from "@sveltejs/kit";
 import * as v from "valibot";
 
 import { isManager } from "#lib/auth/index.ts";
-import { id } from "#lib/schema.ts";
+import { id, moveSchema } from "#lib/schema.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
 
 import {
-	movePointSchema,
 	moveGroupSchema,
 	newPointSchema,
 	newTemplateSchema,
@@ -58,21 +57,21 @@ const refresh = (templateId: number) => {
 	void getTemplate(String(templateId)).refresh();
 };
 
-export const addTemplate = forManagers.form(newTemplateSchema, async (input, issue) => {
-	const templateId = await createTemplate(input, issue.name);
+export const addTemplate = forManagers.form(newTemplateSchema, async (input) => {
+	const templateId = await createTemplate(input);
 	void getTemplates().refresh();
 	redirect(303, `/checklists/templates/${templateId}`);
 });
 
-export const saveTemplate = forManagers.form(templateSchema, async ({ id, ...input }, issue) => {
-	await updateTemplate(id, input, issue.name);
+export const saveTemplate = forManagers.form(templateSchema, async ({ id, ...input }) => {
+	await updateTemplate(id, input);
 	refresh(id);
 });
 
 export const saveTemplateCategories = forManagers.form(
 	templateCategoriesSchema,
-	async ({ id, categoryIds }, issue) => {
-		await setTemplateCategories(id, categoryIds, issue.categoryIds);
+	async ({ id, categoryIds }) => {
+		await setTemplateCategories(id, categoryIds);
 		refresh(id);
 	},
 );
@@ -95,7 +94,7 @@ export const savePoint = forManagers.form(pointSchema, async ({ id, ...input }) 
 	refresh(await updatePoint(id, input));
 });
 
-export const shiftPoint = forManagers.form(movePointSchema, async ({ id, direction }) => {
+export const shiftPoint = forManagers.form(moveSchema, async ({ id, direction }) => {
 	refresh(await movePoint(id, direction));
 });
 

@@ -5,7 +5,7 @@
  */
 import { and, asc, eq, type SQL, sql } from "drizzle-orm";
 
-import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import { inTenant, tenantJoin, sameTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import {
@@ -62,7 +62,7 @@ export async function checklistRecords(where: SQL | undefined, tx: Transaction |
 		.innerJoin(
 			orderUnit,
 			and(
-				eq(orderUnit.organizationId, checklist.organizationId),
+				sameTenant(orderUnit, checklist),
 				eq(orderUnit.orderId, checklist.orderId),
 				eq(orderUnit.equipmentId, checklist.equipmentId),
 			),

@@ -1,9 +1,9 @@
-import { error } from "@sveltejs/kit";
 import { desc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { db } from "#lib/server/db/index.ts";
 import { bugReport } from "#lib/server/db/schema.ts";
+import { orNotFound } from "#lib/server/records.ts";
 import { forDevelopers } from "#lib/server/remote-functions.ts";
 
 /** How many of the newest reports the list shows (deleting old ones is a follow-up). */
@@ -44,19 +44,20 @@ export const getBugReports = forDevelopers.query(async () => {
 
 /** One bug report, for its replay page; a 404 if there's none. */
 export const getBugReport = forDevelopers.query(v.string(), async (id) => {
-	const [row] = await db
-		.select({
-			id: bugReport.id,
-			userName: bugReport.userName,
-			note: bugReport.note,
-			context: bugReport.context,
-			startedAt: bugReport.startedAt,
-			durationMs: bugReport.durationMs,
-			size: bugReport.size,
-			createdAt: bugReport.createdAt,
-		})
-		.from(bugReport)
-		.where(eq(bugReport.id, id));
-	if (!row) error(404, m.common_error_not_found());
-	return row;
+	return orNotFound(
+		await db
+			.select({
+				id: bugReport.id,
+				userName: bugReport.userName,
+				note: bugReport.note,
+				context: bugReport.context,
+				startedAt: bugReport.startedAt,
+				durationMs: bugReport.durationMs,
+				size: bugReport.size,
+				createdAt: bugReport.createdAt,
+			})
+			.from(bugReport)
+			.where(eq(bugReport.id, id)),
+		m.common_error_not_found(),
+	);
 });

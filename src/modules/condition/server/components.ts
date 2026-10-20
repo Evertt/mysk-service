@@ -7,17 +7,20 @@
  * unit. Another tenant's unit or component is a 404, also by a tampered id; an article or a point
  * that isn't the tenant's (or the unit's) is refused.
  */
-import { error, invalid } from "@sveltejs/kit";
 import { and, asc, eq, sql } from "drizzle-orm";
 
 import { equipmentSubject } from "#lib/activity/index.ts";
+import { unitBySerial } from "#lib/equipment/server/index.ts";
+import { type MoveDirection } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
-import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
-import { db, type Transaction } from "#lib/server/db/index.ts";
+import { currentTenant, idInTenant, inTenant, sameTenant } from "#lib/server/auth/index.ts";
+import { db, type Transaction, type Runner } from "#lib/server/db/index.ts";
 import { inList, insertRows } from "#lib/server/db/parameters.ts";
 import { equipment } from "#lib/server/db/schema.ts";
 import { collect } from "#lib/server/extensions.ts";
 import { type NumberTarget, nextNumber } from "#lib/server/numbering.ts";
+import { deleteAndLog, nextPosition, reorder, orNotFound } from "#lib/server/records.ts";
+import { Refused } from "#lib/server/refused.ts";
 import type { PointArticle, UnitPoint } from "#modules/checklists/api/extensions.ts";
 
 import { componentLabel } from "../activity.ts";
@@ -76,36 +79,29 @@ export async function checkpointsOf(
 }
 
 /** The tenant's unit `serialNumber`, in `tx`, or a 404. */
-async function unitOf(tx: Transaction | typeof db, serialNumber: string) {
-	const [unit] = await tx
-		.select({ id: equipment.id, serialNumber: equipment.serialNumber })
-		.from(equipment)
-		.where(and(eq(equipment.serialNumber, serialNumber), inTenant(equipment)));
-	if (!unit) error(404, m.condition_unit_not_found({ serial: serialNumber }));
-	return unit;
-}
+const unitOf = (tx: Runner, serialNumber: string) =>
+	unitBySerial(serialNumber, { id: equipment.id, serialNumber: equipment.serialNumber }, tx);
 
 /** The tenant's component `id` with its unit and its points, in `tx`, or a 404. */
 async function componentOf(tx: Transaction, id: number) {
-	const [found] = await tx
-		.select({
-			id: component.id,
-			number: component.number,
-			name: component.name,
-			materialId: component.materialId,
-			position: component.position,
-			unit: { id: equipment.id, serialNumber: equipment.serialNumber },
-		})
-		.from(component)
-		.innerJoin(
-			equipment,
-			and(
-				eq(equipment.organizationId, component.organizationId),
-				eq(equipment.id, component.equipmentId),
-			),
-		)
-		.where(idInTenant(component, id));
-	if (!found) error(404, m.condition_component_not_found());
+	const found = orNotFound(
+		await tx
+			.select({
+				id: component.id,
+				number: component.number,
+				name: component.name,
+				materialId: component.materialId,
+				position: component.position,
+				unit: { id: equipment.id, serialNumber: equipment.serialNumber },
+			})
+			.from(component)
+			.innerJoin(
+				equipment,
+				and(sameTenant(equipment, component), eq(equipment.id, component.equipmentId)),
+			)
+			.where(idInTenant(component, id)),
+		m.condition_component_not_found(),
+	);
 	const points = (await checkpointsOf([id], tx)).get(id) ?? [];
 	return { ...found, checkpointIds: points.toSorted((a, b) => a - b) };
 }
@@ -126,7 +122,7 @@ async function checked(
 		input.materialId === null
 			? null
 			: (await articlesById([input.materialId])).get(input.materialId);
-	if (article === undefined) invalid(m.condition_component_article_not_found());
+	if (article === undefined) throw new Refused(m.condition_component_article_not_found());
 	if (!currentTenant().modules.includes("checklists")) {
 		return { article, checkpointIds: [...kept].sort((a, b) => a - b) };
 	}
@@ -134,7 +130,7 @@ async function checked(
 	const allowed = new Set(offered.map((point) => point.id));
 	let checkpointIds = [...new Set(input.checkpointIds)];
 	if (checkpointIds.some((id) => !allowed.has(id))) {
-		invalid(m.condition_component_checkpoint_not_found());
+		throw new Refused(m.condition_component_checkpoint_not_found());
 	}
 	if (fresh && !checkpointIds.length && article) {
 		const shop = (await collect(articleCheckpoints, { materialIds: [article.id] })).flat();
@@ -172,14 +168,14 @@ async function setCheckpoints(tx: Transaction, id: number, checkpointIds: readon
 export function addComponent(serialNumber: string, input: ComponentInput) {
 	return db.transaction(async (tx) => {
 		const unit = await unitOf(tx, serialNumber);
-		const [{ count, last }] = await tx
-			.select({
-				count: sql<number>`count(*)`.mapWith(Number),
-				last: sql<number | null>`max(${component.position})`,
-			})
+		const ofUnit = eq(component.equipmentId, unit.id);
+		const [{ count }] = await tx
+			.select({ count: sql<number>`count(*)`.mapWith(Number) })
 			.from(component)
-			.where(and(eq(component.equipmentId, unit.id), inTenant(component)));
-		if (count >= COMPONENTS_MAX) invalid(m.condition_components_max({ max: COMPONENTS_MAX }));
+			.where(and(ofUnit, inTenant(component)));
+		if (count >= COMPONENTS_MAX) {
+			throw new Refused(m.condition_components_max({ max: COMPONENTS_MAX }));
+		}
 		const { article, checkpointIds } = await checked(unit.id, input, { fresh: true });
 		const number = await nextNumber(tx, componentNumbers);
 		const [made] = await tx
@@ -190,7 +186,7 @@ export function addComponent(serialNumber: string, input: ComponentInput) {
 				number,
 				name: input.name,
 				materialId: article?.id ?? null,
-				position: last === null ? 0 : Number(last) + 1,
+				position: await nextPosition(tx, component, ofUnit),
 			})
 			.returning({ id: component.id });
 		await setCheckpoints(tx, made.id, checkpointIds);
@@ -247,9 +243,8 @@ export function changeComponent(id: number, input: ComponentInput) {
 export function removeComponent(id: number) {
 	return db.transaction(async (tx) => {
 		const found = await componentOf(tx, id);
-		await tx.delete(component).where(idInTenant(component, id));
-		await recordActivity(tx, {
-			action: "deleted",
+		await deleteAndLog(component, {
+			tx,
 			subject: {
 				type: "component",
 				id,
@@ -269,23 +264,13 @@ export function removeComponent(id: number) {
  * Moves the tenant's component `id` one place up or down among its unit's components; nothing at
  * the edge. Their places are renumbered from 0.
  */
-export function moveComponent(id: number, direction: "up" | "down") {
+export function moveComponent(id: number, direction: MoveDirection) {
 	return db.transaction(async (tx) => {
 		const found = await componentOf(tx, id);
-		const siblings = await tx
-			.select({ id: component.id, position: component.position })
-			.from(component)
-			.where(and(eq(component.equipmentId, found.unit.id), inTenant(component)))
-			.orderBy(asc(component.position), asc(component.id));
-		const at = siblings.findIndex((each) => each.id === id);
-		const to = direction === "up" ? at - 1 : at + 1;
-		if (to < 0 || to >= siblings.length) return { serialNumber: found.unit.serialNumber };
-		[siblings[at], siblings[to]] = [siblings[to], siblings[at]];
-		for (const [position, each] of siblings.entries()) {
-			if (each.position !== position) {
-				await tx.update(component).set({ position }).where(idInTenant(component, each.id));
-			}
-		}
+		const ofUnit = eq(component.equipmentId, found.unit.id);
+		const changed = await reorder(tx, component, id, direction, ofUnit);
+		const moved = changed.find((each) => each.id === id);
+		if (!moved) return { serialNumber: found.unit.serialNumber };
 		await recordActivity(tx, {
 			action: "updated",
 			subject: {
@@ -298,8 +283,9 @@ export function moveComponent(id: number, direction: "up" | "down") {
 				}),
 			},
 			parent: equipmentSubject(found.unit),
+			// Their place as the card counts them, from 1.
 			before: { position: found.position + 1 },
-			after: { position: to + 1 },
+			after: { position: moved.to + 1 },
 		});
 		return { serialNumber: found.unit.serialNumber };
 	});
@@ -325,7 +311,7 @@ export async function componentArticles({
 		.innerJoin(
 			component,
 			and(
-				eq(component.organizationId, componentCheckpoint.organizationId),
+				sameTenant(component, componentCheckpoint),
 				eq(component.id, componentCheckpoint.componentId),
 			),
 		)

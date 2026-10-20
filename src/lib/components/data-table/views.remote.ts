@@ -8,15 +8,16 @@
  * sharing and unsharing one, changing and deleting one are logged.
  */
 import { error, invalid } from "@sveltejs/kit";
-import { and, asc, eq, ne, or, sql } from "drizzle-orm";
+import { and, asc, eq, or, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { id, recordId, text, textMax } from "#lib/schema.ts";
 import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
-import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
+import { currentTenant, inTenant, idInTenant } from "#lib/server/auth/index.ts";
 import { user } from "#lib/server/db/auth.schema.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { savedView } from "#lib/server/db/schema.ts";
+import { nameTaken, orNotFound } from "#lib/server/records.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import {
@@ -89,43 +90,35 @@ export const getTableViews = forMembers.query(tableKey, async (key) => {
  */
 async function findView(viewId: number, { edit = false } = {}) {
 	const tenant = currentTenant();
-	const [found] = await db
-		.select()
-		.from(savedView)
-		.where(
-			and(
-				eq(savedView.id, viewId),
-				inTenant(savedView),
-				or(eq(savedView.userId, tenant.user.id), eq(savedView.shared, true)),
+	const found = orNotFound(
+		await db
+			.select()
+			.from(savedView)
+			.where(
+				and(
+					eq(savedView.id, viewId),
+					inTenant(savedView),
+					or(eq(savedView.userId, tenant.user.id), eq(savedView.shared, true)),
+				),
 			),
-		);
-	if (!found) error(404, m.common_views_not_found());
+		m.common_views_not_found(),
+	);
 	if (edit && found.userId !== tenant.user.id && !canShareViews(tenant.roles)) {
 		error(403, m.common_error_no_permission());
 	}
 	return found;
 }
 
-/** Whether the owner of a table's views already has one called `name` (ignoring case). */
-async function nameTaken(
+/** The view of a table's owner already called `name` (ignoring case), if there is one. */
+const viewNamed = (
 	tx: Transaction,
 	view: { userId: string; tableKey: string; name: string },
 	except?: number,
-) {
-	const [taken] = await tx
-		.select({ id: savedView.id })
-		.from(savedView)
-		.where(
-			and(
-				inTenant(savedView),
-				eq(savedView.userId, view.userId),
-				eq(savedView.tableKey, view.tableKey),
-				sql`lower(${savedView.name}) = lower(${view.name})`,
-				except === undefined ? undefined : ne(savedView.id, except),
-			),
-		);
-	return !!taken;
-}
+) =>
+	nameTaken(tx, savedView, view.name, {
+		scope: and(eq(savedView.userId, view.userId), eq(savedView.tableKey, view.tableKey)),
+		except,
+	});
 
 const subjectOf = (view: { id: number; name: string }): Subject => ({
 	type: "saved_view",
@@ -147,7 +140,7 @@ export const createView = forMembers.form(
 		if (input.shared && !canShareViews(tenant.roles)) error(403, m.common_error_no_permission());
 		const created = await db.transaction(async (tx) => {
 			const view = { ...input, userId: tenant.user.id };
-			if (await nameTaken(tx, view)) {
+			if (await viewNamed(tx, view)) {
 				invalid(issue.name(m.common_views_name_taken({ name: input.name })));
 			}
 			const [row] = await tx
@@ -168,13 +161,13 @@ export const renameView = forMembers.form(
 	async (input, issue) => {
 		const existing = await findView(input.id, { edit: true });
 		await db.transaction(async (tx) => {
-			if (await nameTaken(tx, { ...existing, name: input.name }, existing.id)) {
+			if (await viewNamed(tx, { ...existing, name: input.name }, existing.id)) {
 				invalid(issue.name(m.common_views_name_taken({ name: input.name })));
 			}
 			await tx
 				.update(savedView)
 				.set({ name: input.name })
-				.where(and(eq(savedView.id, existing.id), inTenant(savedView)));
+				.where(idInTenant(savedView, existing.id));
 			if (existing.shared) {
 				await recordActivity(tx, {
 					action: "updated",
@@ -199,10 +192,7 @@ export const updateView = forMembers.command(
 		const existing = await findView(input.id, { edit: true });
 		const after = { query: input.query, columns: input.columns };
 		await db.transaction(async (tx) => {
-			await tx
-				.update(savedView)
-				.set(after)
-				.where(and(eq(savedView.id, existing.id), inTenant(savedView)));
+			await tx.update(savedView).set(after).where(idInTenant(savedView, existing.id));
 			if (existing.shared) {
 				await recordActivity(tx, {
 					action: "updated",
@@ -228,7 +218,7 @@ export const shareView = forMembers.command(
 			await tx
 				.update(savedView)
 				.set({ shared: input.shared })
-				.where(and(eq(savedView.id, existing.id), inTenant(savedView)));
+				.where(idInTenant(savedView, existing.id));
 			await recordActivity(tx, {
 				action: input.shared ? "shared" : "unshared",
 				subject: subjectOf(existing),
@@ -242,7 +232,7 @@ export const shareView = forMembers.command(
 export const deleteView = forMembers.command(recordId(), async (viewId) => {
 	const existing = await findView(viewId, { edit: true });
 	await db.transaction(async (tx) => {
-		await tx.delete(savedView).where(and(eq(savedView.id, existing.id), inTenant(savedView)));
+		await tx.delete(savedView).where(idInTenant(savedView, existing.id));
 		if (existing.shared) {
 			await recordActivity(tx, { action: "deleted", subject: subjectOf(existing) });
 		}

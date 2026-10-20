@@ -155,7 +155,6 @@
 	"condition_component_article_not_found": "Dat artikel is niet een van je materialen.",
 	"condition_component_checkpoint_not_found": "Die keuringspunten horen niet bij het apparaat.",
 	"condition_components_max": "Een apparaat heeft hoogstens {max} onderdelen.",
-	"condition_unit_not_found": "Apparaat {serial} niet gevonden.",
 	"condition_not_in_progress": "Opdracht {number} is niet in behandeling: condities leg je vast terwijl het werk loopt.",
 	"condition_unit_not_on_order": "Dat apparaat staat niet op opdracht {number}.",
 	"condition_portal_title": "Conditie van het apparaat",

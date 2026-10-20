@@ -15,7 +15,7 @@ import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 import { inList } from "#lib/server/db/parameters.ts";
 import { equipment, order, orderUnit } from "#lib/server/db/schema.ts";
 
-import { type CustomerAccess, inTenant } from "./session.ts";
+import { type CustomerAccess, inTenant, tenantJoin } from "./session.ts";
 
 /** A tenant table of a customer's records: with the customer's id and the tenant's. */
 interface CustomerTable {
@@ -45,12 +45,10 @@ export const seesSite = (access: CustomerAccess, siteId: number) =>
 export function customerOrders(access: CustomerAccess): SQL {
 	const own = ofCustomer(access, order);
 	if (access.siteIds === null) return own;
+	const [, unitOfLink] = tenantJoin(equipment, orderUnit.equipmentId);
 	return and(
 		own,
-		sql`exists (select 1 from ${orderUnit} inner join ${equipment} on ${and(
-			eq(equipment.id, orderUnit.equipmentId),
-			inTenant(equipment),
-		)} where ${and(
+		sql`exists (select 1 from ${orderUnit} inner join ${equipment} on ${unitOfLink} where ${and(
 			eq(orderUnit.orderId, order.id),
 			inTenant(orderUnit),
 			inList(equipment.siteId, access.siteIds),

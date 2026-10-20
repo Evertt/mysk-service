@@ -2,13 +2,14 @@
  * The stock ledger (`stock_movement`): `material.stock` is the cached balance of a material's
  * movements, and `moveStock` is the only thing that changes it.
  */
-import { error } from "@sveltejs/kit";
 import { and, eq, sql, type SQLWrapper } from "drizzle-orm";
 
 import { formatNumber } from "#lib/i18n/index.ts";
 import { type OrderStatus } from "#lib/models.ts";
 import { idInTenant, inTenant, requireTenant } from "#lib/server/auth/index.ts";
 import type { Transaction } from "#lib/server/db/index.ts";
+import { orNotFound } from "#lib/server/records.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 import { materialLabels } from "../labels.ts";
 import {
@@ -35,12 +36,25 @@ export function stockLevelSql(stock: SQLWrapper, unit: SQLWrapper) {
 	return sql<StockLevel>`(case when ${stock} <= 0 then ${out} when ${stock} < ${threshold} then ${low} else ${inStock} end)`;
 }
 
-/** A material whose stock is too low for a movement, with the stock it does have. */
-export class StockShortage extends Error {
+/**
+ * The message of a shortage of `material`: only `quantity` in stock.
+ */
+const shortage = (quantity: number, material: { name: string; unit: MaterialUnit }) =>
+	m.materials_stock_shortage({
+		quantity: formatNumber(quantity),
+		unit: materialLabels.label("materialUnitSymbol", material.unit),
+		material: material.name,
+	});
+
+/**
+ * A material whose stock is too low for a movement, with the stock it does have: a refusal, which
+ * a caller that knows more (the order's line, the shop's product) may say better.
+ */
+export class StockShortage extends Refused {
 	constructor(
 		readonly material: { id: number; sku: string; name: string; unit: MaterialUnit; stock: number },
 	) {
-		super(`Only ${formatNumber(material.stock)} ${material.unit} of ${material.name} in stock`);
+		super(shortage(material.stock, material));
 	}
 }
 
@@ -64,11 +78,13 @@ export interface Movement {
  */
 export async function moveStock(tx: Transaction, movement: Movement) {
 	const { organizationId, user } = requireTenant();
-	const found = await tx.query.material.findFirst({
-		columns: { id: true, sku: true, name: true, unit: true, stock: true },
-		where: idInTenant(material, movement.materialId),
-	});
-	if (!found) error(404, m.materials_not_found());
+	const found = orNotFound(
+		await tx.query.material.findFirst({
+			columns: { id: true, sku: true, name: true, unit: true, stock: true },
+			where: idInTenant(material, movement.materialId),
+		}),
+		m.materials_not_found(),
+	);
 
 	const quantity = roundQuantity(movement.quantity);
 	if (quantity === 0) return found;
@@ -119,21 +135,15 @@ export interface OrderStock {
 export const heldLines = (order: OrderStock) =>
 	order.status && holdsStock(order.status) ? order.lines : [];
 
-/** An order that needs more of a material than is in stock, with what it can have. */
-export class OrderStockShortage extends Error {
+/** An order that needs more of a material than is in stock, with what it can have: a refusal. */
+export class OrderStockShortage extends Refused {
 	constructor(
 		readonly materialId: number,
 		/** The stock, plus what the order already held of it. */
 		readonly available: number,
 		material: { name: string; unit: MaterialUnit },
 	) {
-		super(
-			m.materials_stock_shortage({
-				quantity: formatNumber(available),
-				unit: materialLabels.label("materialUnitSymbol", material.unit),
-				material: material.name,
-			}),
-		);
+		super(shortage(available, material));
 	}
 }
 

@@ -12,7 +12,7 @@
 import { and, asc, eq, gte, lte } from "drizzle-orm";
 
 import { recordActivity } from "#lib/server/activity/index.ts";
-import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
+import { currentTenant, inTenant, idInTenant } from "#lib/server/auth/index.ts";
 import type { Transaction } from "#lib/server/db/index.ts";
 import { inList, insertBatches } from "#lib/server/db/parameters.ts";
 
@@ -207,7 +207,7 @@ export async function raiseAlerts(
 				threshold: breach.threshold,
 				at: breach.at,
 			})
-			.where(and(eq(energyAlert.id, alert.id), inTenant(energyAlert)));
+			.where(idInTenant(energyAlert, alert.id));
 	}
 
 	const fresh = breaches.filter((breach) => !byKey.has(breach.key));

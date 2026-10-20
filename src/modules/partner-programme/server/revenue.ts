@@ -10,7 +10,7 @@
  */
 import { and, eq, isNull, ne, notLike, or, sql, type SQLWrapper } from "drizzle-orm";
 
-import { idsInTenant, inTenant } from "#lib/server/auth/index.ts";
+import { idsInTenant, inTenant, tenantJoin, sameTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { order } from "#lib/server/db/schema.ts";
@@ -50,10 +50,7 @@ export async function revenueLines(
 				.from(order)
 				.leftJoin(
 					orderClassification,
-					and(
-						eq(orderClassification.orderId, order.id),
-						eq(orderClassification.organizationId, order.organizationId),
-					),
+					and(eq(orderClassification.orderId, order.id), sameTenant(orderClassification, order)),
 				)
 				.where(idsInTenant(order, orderIds))
 		: [];
@@ -109,7 +106,7 @@ export function partnerRevenueSql(rules: ProgrammeRules) {
 				),
 		})
 		.from(lines)
-		.leftJoin(order, and(eq(order.id, lines.orderId), inTenant(order)))
+		.leftJoin(...tenantJoin(order, lines.orderId))
 		.leftJoin(
 			orderClassification,
 			and(eq(orderClassification.orderId, lines.orderId), inTenant(orderClassification)),

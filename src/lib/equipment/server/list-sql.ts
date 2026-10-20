@@ -7,7 +7,7 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import type { SQLiteSelect } from "drizzle-orm/sqlite-core";
 
 import { openOrderStatuses } from "#lib/models.ts";
-import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import { inTenant, tenantJoin, sameTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import {
@@ -87,7 +87,7 @@ export const equipmentSql = (): ListSql<typeof equipmentList.columns> => {
 	// The unit's open orders, whether it's their only unit or one of several.
 	const openOrders = sql`(select count(*) from ${orderUnit} inner join ${order} on ${and(
 		eq(order.id, orderUnit.orderId),
-		eq(order.organizationId, orderUnit.organizationId),
+		sameTenant(order, orderUnit),
 	)} where ${and(
 		inTenant(orderUnit),
 		eq(orderUnit.equipmentId, equipment.id),

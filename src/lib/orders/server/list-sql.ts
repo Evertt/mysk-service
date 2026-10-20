@@ -52,7 +52,7 @@ const anyUnit = alias(equipment, "any_unit");
  */
 const unitsOfOrder = <T extends SQLiteSelect>(query: T, condition?: SQL) =>
 	query
-		.innerJoin(anyUnit, and(eq(anyUnit.id, anyLink.equipmentId), inTenant(anyUnit)))
+		.innerJoin(...tenantJoin(anyUnit, anyLink.equipmentId))
 		.where(and(eq(anyLink.orderId, order.id), inTenant(anyLink), condition));
 
 /**
@@ -101,7 +101,7 @@ export const unitCounts = (where: SQL | undefined) =>
 			.$dynamic(),
 	)
 		.leftJoin(anyLink, and(eq(anyLink.orderId, order.id), inTenant(anyLink)))
-		.leftJoin(anyUnit, and(eq(anyUnit.id, anyLink.equipmentId), inTenant(anyUnit)))
+		.leftJoin(...tenantJoin(anyUnit, anyLink.equipmentId))
 		.where(where)
 		.groupBy(anyUnit.serialNumber);
 

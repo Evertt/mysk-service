@@ -5,20 +5,18 @@
  * customer's activity card. Names are unique at a site, whatever their case; a location with units
  * can't be deleted.
  */
-import { error, invalid } from "@sveltejs/kit";
-import { and, count, eq, ne, sql } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 
 import { customerSubject } from "#lib/activity/index.ts";
 import { recordActivity, type LoggedSubjects } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customer, customerSite, equipment, equipmentLocation } from "#lib/server/db/schema.ts";
+import { deleteAndLog, nameTaken, nextPosition, orNotFound } from "#lib/server/records.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 import type { LocationInput } from "../locations/location-schema.ts";
 import { newQrToken } from "./qr.ts";
-
-/** Refuses a form with a message on its name field (e.g. `issue.name` of a remote form). */
-type NameIssue = (message: string) => Parameters<typeof invalid>[number];
 
 /** A site's customer, as the activity log and the pages know it. */
 interface Owner {
@@ -34,44 +32,44 @@ const subjects = (location: { id: number; name: string }, owner: Owner): LoggedS
 
 /** The tenant's site `id` with its customer, or a 404. */
 async function findSite(tx: Transaction, id: number) {
-	const [found] = await tx
-		.select({ id: customerSite.id, owner: { id: customer.id, code: customer.code } })
-		.from(customerSite)
-		.innerJoin(...tenantJoin(customer, customerSite.customerId))
-		.where(idInTenant(customerSite, id));
-	if (!found) error(404, m.customers_site_not_found());
-	return found;
+	return orNotFound(
+		await tx
+			.select({ id: customerSite.id, owner: { id: customer.id, code: customer.code } })
+			.from(customerSite)
+			.innerJoin(...tenantJoin(customer, customerSite.customerId))
+			.where(idInTenant(customerSite, id)),
+		m.customers_site_not_found(),
+	);
 }
 
 /** The tenant's location `id`, with its site's customer, or a 404. */
 async function findLocation(tx: Transaction, id: number) {
-	const [found] = await tx
-		.select({ location: equipmentLocation, owner: { id: customer.id, code: customer.code } })
-		.from(equipmentLocation)
-		.innerJoin(...tenantJoin(customerSite, equipmentLocation.siteId))
-		.innerJoin(...tenantJoin(customer, customerSite.customerId))
-		.where(idInTenant(equipmentLocation, id));
-	if (!found) error(404, m.equipment_location_not_found());
-	return found;
+	return orNotFound(
+		await tx
+			.select({ location: equipmentLocation, owner: { id: customer.id, code: customer.code } })
+			.from(equipmentLocation)
+			.innerJoin(...tenantJoin(customerSite, equipmentLocation.siteId))
+			.innerJoin(...tenantJoin(customer, customerSite.customerId))
+			.where(idInTenant(equipmentLocation, id)),
+		m.equipment_location_not_found(),
+	);
 }
 
+/** The location at site `siteId` named `name`, in any case (but `except`), if there is one. */
+const locationNamed = (tx: Transaction, siteId: number, name: string, except?: number) =>
+	nameTaken(tx, equipmentLocation, name, { scope: eq(equipmentLocation.siteId, siteId), except });
+
 /**
- * The location at site `siteId` named `name`, in any case (but `except`), if there is one. Compared
- * with SQLite's `lower()`, as the unique index compares them: it lowers ASCII letters only.
+ * Refuses `name`, on the form's name, if the site `siteId` has a location (but `except`) named so.
  */
-async function locationNamed(tx: Transaction, siteId: number, name: string, except?: number) {
-	const [found] = await tx
-		.select({ id: equipmentLocation.id, name: equipmentLocation.name })
-		.from(equipmentLocation)
-		.where(
-			and(
-				inTenant(equipmentLocation),
-				eq(equipmentLocation.siteId, siteId),
-				eq(sql`lower(${equipmentLocation.name})`, sql`lower(${name})`),
-				except === undefined ? undefined : ne(equipmentLocation.id, except),
-			),
-		);
-	return found;
+async function refuseTakenName(tx: Transaction, siteId: number, name: string, except?: number) {
+	const taken = await locationNamed(tx, siteId, name, except);
+	if (taken) {
+		throw new Refused({
+			path: ["name"],
+			message: m.equipment_location_name_taken({ name: taken.name }),
+		});
+	}
 }
 
 /** Adds a location to site `site`, last of the site's, in `tx`, and logs it; returns its id. */
@@ -81,17 +79,14 @@ async function insertLocation(
 	input: LocationInput,
 ) {
 	const { organizationId } = currentTenant();
-	const [{ last }] = await tx
-		.select({ last: sql<number | null>`max(${equipmentLocation.position})` })
-		.from(equipmentLocation)
-		.where(and(inTenant(equipmentLocation), eq(equipmentLocation.siteId, site.id)));
+	const position = await nextPosition(tx, equipmentLocation, eq(equipmentLocation.siteId, site.id));
 	const [created] = await tx
 		.insert(equipmentLocation)
 		.values({
 			...input,
 			organizationId,
 			siteId: site.id,
-			position: (last ?? -1) + 1,
+			position,
 			qrToken: newQrToken(),
 		})
 		.returning({ id: equipmentLocation.id });
@@ -106,11 +101,10 @@ async function insertLocation(
  * Adds a location to the tenant's site `siteId`; refuses a name the site has already. Returns its
  * id and its site's customer's code.
  */
-export function createLocation(siteId: number, input: LocationInput, issue: NameIssue) {
+export function createLocation(siteId: number, input: LocationInput) {
 	return db.transaction(async (tx) => {
 		const site = await findSite(tx, siteId);
-		const taken = await locationNamed(tx, site.id, input.name);
-		if (taken) invalid(issue(m.equipment_location_name_taken({ name: taken.name })));
+		await refuseTakenName(tx, site.id, input.name);
 		const id = await insertLocation(tx, site, input);
 		return { id, customerCode: site.owner.code };
 	});
@@ -127,11 +121,10 @@ export async function locationAt(tx: Transaction, siteId: number, name: string) 
 }
 
 /** Renames the tenant's location `id`, or describes it; returns its site's customer's code. */
-export function updateLocation(id: number, input: LocationInput, issue: NameIssue) {
+export function updateLocation(id: number, input: LocationInput) {
 	return db.transaction(async (tx) => {
 		const { location, owner } = await findLocation(tx, id);
-		const taken = await locationNamed(tx, location.siteId, input.name, id);
-		if (taken) invalid(issue(m.equipment_location_name_taken({ name: taken.name })));
+		await refuseTakenName(tx, location.siteId, input.name, id);
 		await tx.update(equipmentLocation).set(input).where(idInTenant(equipmentLocation, id));
 		await recordActivity(tx, {
 			action: "updated",
@@ -151,9 +144,8 @@ export function removeLocation(id: number) {
 			.select({ n: count() })
 			.from(equipment)
 			.where(and(eq(equipment.locationId, id), inTenant(equipment)));
-		if (units.n) invalid(m.equipment_location_delete_refused({ count: units.n }));
-		await tx.delete(equipmentLocation).where(idInTenant(equipmentLocation, id));
-		await recordActivity(tx, { action: "deleted", ...subjects(location, owner) });
+		if (units.n) throw new Refused(m.equipment_location_delete_refused({ count: units.n }));
+		await deleteAndLog(equipmentLocation, { tx, ...subjects(location, owner) });
 		return owner.code;
 	});
 }

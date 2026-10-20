@@ -53,7 +53,6 @@
 	"materials_usage": "Gebruik",
 	"materials_movement_kind_reservation": "Gereserveerd voor bestelling",
 	"materials_movement_kind_release": "Vrijgegeven van bestelling",
-	"materials_order_not_found": "Opdracht {number} niet gevonden",
 	"materials_order_unchangeable": "De materialen van {number} kunnen nu niet worden gewijzigd.",
 	"materials_usage_description": [
 		{
@@ -211,7 +210,6 @@
 	"materials_activity_field_quantity": "aantal",
 	"materials_order_line_amount": "Bedrag",
 	"materials_order_line_quantity": "Aantal",
-	"materials_equipment_not_found": "Apparaat {serial} niet gevonden",
 	"materials_parts_title": "Onderdelen",
 	"materials_parts_description": "De materialen op de afgeronde opdrachten van dit apparaat.",
 	"materials_parts_empty": "Nog geen materialen gebruikt op dit apparaat.",

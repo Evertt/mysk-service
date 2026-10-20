@@ -32,8 +32,3 @@ export const newCategorySchema = v.object(categoryFields);
 export const categorySchema = v.object({ id: id(), ...categoryFields });
 
 export type CategoryInput = v.InferOutput<typeof newCategorySchema>;
-
-/** Moving a category one place up or down the tenant's list. */
-export const moveCategorySchema = v.object({ id: id(), direction: v.picklist(["up", "down"]) });
-
-export type MoveDirection = v.InferOutput<typeof moveCategorySchema>["direction"];

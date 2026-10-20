@@ -120,9 +120,10 @@ on the demo data, and calls remote functions without HTTP. A spec that imports i
 - **Remote functions**: `call(getOrder, number)` (a query, batch query, live query or command) and
   `submit(updateOrder, fields)` (a form, its fields as the browser sends them: ids as strings) run
   SvelteKit's own: the schema, the set's gate, then the handler, each call a request of its own.
-  They answer what the client gets: `{ status: 200, data }`; a form refused, by its schema or
-  `invalid()`, as `{ status: 400, issues: [{ name, path, message }] }`; an `error()` as
-  `{ status, message }` (also the 400 for an argument the schema refuses); a `redirect()` as
+  They answer what the client gets: `{ status: 200, data }`; a form refused, by its schema, a
+  `Refused` or `invalid()`, as `{ status: 400, issues: [{ name, path, message }] }`; an `error()`
+  as `{ status, message }` (also the 400 for an argument the schema refuses, and a command's or
+  query's `Refused`, with its messages); a `redirect()` as
   `{ status, location }`. A command's or form's answer lists the queries it refreshed
   (`refreshed: ["getOrder"]`); a live query's is its first value. `data(getOrders, query)` is the
   data of a call that must succeed.

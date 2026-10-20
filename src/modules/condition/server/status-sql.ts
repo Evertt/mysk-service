@@ -16,6 +16,7 @@
 import { and, desc, eq, isNull, type SQL, sql, type SQLWrapper } from "drizzle-orm";
 
 import { doneOrderStatuses } from "#lib/models.ts";
+import { sameTenant } from "#lib/server/auth/index.ts";
 import { inLiterals, literal } from "#lib/server/db/parameters.ts";
 import { equipment, order, orderUnit } from "#lib/server/db/schema.ts";
 import { collectNow } from "#lib/server/extensions.ts";
@@ -26,10 +27,6 @@ import { component, conditionSettings, unitCondition } from "./schema.ts";
 
 /** The order statuses that make a unit's work planned: scheduled, or under way. */
 const plannedStatuses = ["scheduled", "in_progress"] as const;
-
-/** A row of `organizationId`'s table is in the tenant of the unit it's correlated with. */
-const sameTenant = (organizationId: SQLWrapper) =>
-	eq(organizationId as typeof equipment.organizationId, equipment.organizationId);
 
 /** A status's place, worst first (`unitStatuses`), in SQL. */
 const rankOf = (status: SQL) =>
@@ -98,15 +95,16 @@ export function conditionSql() {
 
 	const setting = (column: SQLWrapper, fallback: number) =>
 		sql<number>`coalesce((select ${column} from ${conditionSettings} where ${sameTenant(
-			conditionSettings.organizationId,
+			conditionSettings,
+			equipment,
 		)}), ${literal(fallback)})`;
 	const critical = setting(conditionSettings.criticalBelow, defaultThresholds.critical);
 	const attention = setting(conditionSettings.attentionBelow, defaultThresholds.attention);
 
 	const onUnit = and(
 		eq(orderUnit.equipmentId, equipment.id),
-		sameTenant(orderUnit.organizationId),
-		eq(order.organizationId, orderUnit.organizationId),
+		sameTenant(orderUnit, equipment),
+		sameTenant(order, orderUnit),
 		eq(order.id, orderUnit.orderId),
 	);
 	const planned = sql<boolean>`exists (select 1 from ${orderUnit}, ${order} where ${and(
@@ -144,7 +142,7 @@ export function conditionSql() {
 		false,
 	)}) from ${component} where ${and(
 		eq(component.equipmentId, equipment.id),
-		sameTenant(component.organizationId),
+		sameTenant(component, equipment),
 	)})`;
 
 	/** What its state and its components' ask for, the worst (`rolledUpStatus()`). */

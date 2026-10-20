@@ -4,14 +4,13 @@
  * by `forEngineers` and scoped to the tenant, so another tenant's is a 404; other engineers'
  * orders aren't in it.
  */
-import { error } from "@sveltejs/kit";
 import { and, asc, eq, type SQL } from "drizzle-orm";
 import * as v from "valibot";
 
 import { openOrderStatuses } from "#lib/models.ts";
 import { onAnyUnit } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
-import { engineerOrders, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import { engineerOrders, inTenant, tenantJoin, idInTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import {
@@ -22,6 +21,7 @@ import {
 	equipmentLocation,
 	order,
 } from "#lib/server/db/schema.ts";
+import { orNotFound } from "#lib/server/records.ts";
 import { forEngineers } from "#lib/server/remote-functions.ts";
 
 /** A unit as the portal shows it: what it is, and where at its site. */
@@ -60,7 +60,7 @@ const siteOf = (siteId: number) =>
 		})
 		.from(customerSite)
 		.innerJoin(...tenantJoin(customer, customerSite.customerId))
-		.where(and(eq(customerSite.id, siteId), inTenant(customerSite)))
+		.where(idInTenant(customerSite, siteId))
 		.then(([site]) => site);
 
 /** The signed-in engineer's open orders on any of the units `ids`, the next first. */
@@ -84,24 +84,28 @@ async function myOpenOrders(ids: number[]) {
 
 /** One of the tenant's units by its serial number, its site, and the engineer's open orders on it. */
 export const getMyUnit = forEngineers.query(v.string(), async (serialNumber) => {
-	const [unit] = await unitsWhere(eq(equipment.serialNumber, serialNumber));
-	if (!unit) error(404, m.equipment_serial_not_found({ serial: serialNumber }));
+	const unit = orNotFound(
+		await unitsWhere(eq(equipment.serialNumber, serialNumber)),
+		m.equipment_serial_not_found({ serial: serialNumber }),
+	);
 	const [site, orders] = await Promise.all([siteOf(unit.siteId), myOpenOrders([unit.id])]);
 	return { unit, site, orders };
 });
 
 /** One of the tenant's locations, its site and units, and the engineer's open orders on them. */
 export const getMyLocation = forEngineers.query(id(), async (locationId) => {
-	const [location] = await db
-		.select({
-			id: equipmentLocation.id,
-			name: equipmentLocation.name,
-			description: equipmentLocation.description,
-			siteId: equipmentLocation.siteId,
-		})
-		.from(equipmentLocation)
-		.where(and(eq(equipmentLocation.id, locationId), inTenant(equipmentLocation)));
-	if (!location) error(404, m.equipment_location_not_found());
+	const location = orNotFound(
+		await db
+			.select({
+				id: equipmentLocation.id,
+				name: equipmentLocation.name,
+				description: equipmentLocation.description,
+				siteId: equipmentLocation.siteId,
+			})
+			.from(equipmentLocation)
+			.where(idInTenant(equipmentLocation, locationId)),
+		m.equipment_location_not_found(),
+	);
 	const units = await unitsWhere(eq(equipment.locationId, location.id));
 	const [site, orders] = await Promise.all([
 		siteOf(location.siteId),

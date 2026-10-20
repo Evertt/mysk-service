@@ -5,7 +5,7 @@
  */
 import { and, asc, eq } from "drizzle-orm";
 
-import { inTenant } from "#lib/server/auth/index.ts";
+import { inTenant, sameTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import type { ArticleCheckpoints } from "#modules/condition/api/extensions.ts";
@@ -28,7 +28,7 @@ export async function articleCheckpointsOf({
 		.innerJoin(
 			shopProductCheckpoint,
 			and(
-				eq(shopProductCheckpoint.organizationId, shopProduct.organizationId),
+				sameTenant(shopProductCheckpoint, shopProduct),
 				eq(shopProductCheckpoint.productId, shopProduct.id),
 			),
 		)

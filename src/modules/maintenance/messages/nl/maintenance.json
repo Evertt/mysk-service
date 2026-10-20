@@ -85,7 +85,6 @@
 	"maintenance_interval_range": "Tussen {min} en {max} maanden",
 	"maintenance_due_required": "Kies de dag waarop het volgende bezoek gepland staat",
 	"maintenance_plan_not_found": "Plan niet gevonden",
-	"maintenance_equipment_not_found": "Apparaat {serial} niet gevonden",
 	"maintenance_unknown_equipment": "Onbekend apparaat",
 	"maintenance_dashboard_description": "De bezoeken die de plannen van je apparaten gepland hebben.",
 	"maintenance_dashboard_overdue": "Te laat",

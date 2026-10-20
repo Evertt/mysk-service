@@ -1,4 +1,4 @@
-import { error, invalid } from "@sveltejs/kit";
+import { invalid } from "@sveltejs/kit";
 import { and, asc, eq, ne } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -9,6 +9,7 @@ import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { engineer, member, user } from "#lib/server/db/schema.ts";
+import { orNotFound } from "#lib/server/records.ts";
 import { forManagers, forMembers } from "#lib/server/remote-functions.ts";
 
 /**
@@ -17,11 +18,13 @@ import { forManagers, forMembers } from "#lib/server/remote-functions.ts";
  */
 export const getEngineerAccount = forMembers.query(recordId(), async (engineerId) => {
 	const tenant = currentTenant();
-	const found = await db.query.engineer.findFirst({
-		columns: { id: true, userId: true },
-		where: idInTenant(engineer, engineerId),
-	});
-	if (!found) error(404, m.engineers_not_found());
+	const found = orNotFound(
+		await db.query.engineer.findFirst({
+			columns: { id: true, userId: true },
+			where: idInTenant(engineer, engineerId),
+		}),
+		m.engineers_not_found(),
+	);
 
 	const canManage = isManager(tenant.roles);
 	const [members, taken] = await Promise.all([
@@ -49,11 +52,13 @@ export const linkEngineerAccount = forManagers.form(
 	v.object({ id: id(), userId: v.string() }),
 	async (input, issue) => {
 		const { organizationId } = currentTenant();
-		const found = await db.query.engineer.findFirst({
-			columns: { id: true, name: true, userId: true },
-			where: idInTenant(engineer, input.id),
-		});
-		if (!found) error(404, m.engineers_not_found());
+		const found = orNotFound(
+			await db.query.engineer.findFirst({
+				columns: { id: true, name: true, userId: true },
+				where: idInTenant(engineer, input.id),
+			}),
+			m.engineers_not_found(),
+		);
 
 		const userId = input.userId || null;
 		if (userId) {

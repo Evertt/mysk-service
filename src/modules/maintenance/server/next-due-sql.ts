@@ -7,6 +7,7 @@
  */
 import { and, eq, sql } from "drizzle-orm";
 
+import { sameTenant } from "#lib/server/auth/index.ts";
 import { equipment } from "#lib/server/db/schema.ts";
 import type { UnitSignals } from "#modules/condition/api/extensions.ts";
 
@@ -15,7 +16,7 @@ import { maintenancePlan } from "./schema.ts";
 export const nextDueSql = () =>
 	sql<string | null>`(select min(${maintenancePlan.nextDueOn}) from ${maintenancePlan} where ${and(
 		eq(maintenancePlan.equipmentId, equipment.id),
-		eq(maintenancePlan.organizationId, equipment.organizationId),
+		sameTenant(maintenancePlan, equipment),
 		sql`${maintenancePlan.paused} = 0`,
 	)})`;
 

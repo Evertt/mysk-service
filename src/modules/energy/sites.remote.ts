@@ -9,7 +9,6 @@ import { redirect } from "@sveltejs/kit";
 import { isManager } from "#lib/auth/index.ts";
 import { customerCode } from "#lib/schema.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
-import { refuse } from "#lib/server/forms.ts";
 
 import { forManagers, query } from "./remote-functions.ts";
 import { createEnergySite as create, customerEnergy, siteChoices } from "./server/setup.ts";
@@ -25,11 +24,7 @@ export const getCustomerEnergy = query(customerCode(), async (code) => ({
 export const getEnergySiteChoices = forManagers.query(() => siteChoices());
 
 /** Adds an energy site for one of the tenant's customer sites, and opens its setup page. */
-export const createEnergySite = forManagers.form(newEnergySiteSchema, async (input, issue) => {
+export const createEnergySite = forManagers.form(newEnergySiteSchema, async (input) => {
 	const created = await create(input);
-	if ("problems" in created) {
-		refuse(issue, created.problems);
-		return;
-	}
 	redirect(303, resolve("/(app)/(modules)/energy/[site]/setup", { site: String(created.id) }));
 });

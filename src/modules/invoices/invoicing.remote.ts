@@ -2,14 +2,14 @@
  * Data for what the invoicing module adds to core pages (see `slots` in `#lib/modules/manifests.ts`): the
  * invoice an order is on, and the receivables on the dashboard.
  */
-import { error } from "@sveltejs/kit";
 import { and, count, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { currentDay } from "#lib/dates.ts";
+import { orderByNumber } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { customer, order } from "#lib/server/db/schema.ts";
+import { customer } from "#lib/server/db/schema.ts";
 
 import { invoiceState, invoiceTotals, isOverdue } from "./invoice.ts";
 import { query } from "./remote-functions.ts";
@@ -24,12 +24,13 @@ const OVERDUE_LISTED = 6;
  * it if it isn't on one: whether it's completed, and its customer.
  */
 export const getOrderInvoice = query(v.string(), async (number) => {
-	const found = await db.query.order.findFirst({
-		columns: { id: true, status: true },
-		where: and(eq(order.number, number), inTenant(order)),
-		with: { customer: { columns: { code: true } } },
-	});
-	if (!found) error(404, m.invoices_order_not_found({ number }));
+	const found = await orderByNumber(number, (where) =>
+		db.query.order.findMany({
+			columns: { id: true, status: true },
+			where,
+			with: { customer: { columns: { code: true } } },
+		}),
+	);
 
 	const invoices = await db
 		.selectDistinct({

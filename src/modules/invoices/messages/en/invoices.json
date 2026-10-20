@@ -53,7 +53,6 @@
 	"invoices_not_editable": "{number} has been issued and can't be changed",
 	"invoices_not_found": "Invoice not found",
 	"invoices_number_not_found": "Invoice {number} not found",
-	"invoices_order_not_found": "Order {number} not found",
 	"invoices_line_not_found": "Line not found",
 	"invoices_is_draft": "a draft",
 	"invoices_is_sent": "sent",

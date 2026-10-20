@@ -4,11 +4,11 @@
  * quote that gets an engineer is scheduled and takes its materials, one without stays a quote; a
  * module's refusal stores nothing; logged. Its rules and refusals are `lifecycle.spec.ts`'s.
  */
-import { isValidationError } from "@sveltejs/kit";
 import { describe, expect, test } from "vite-plus/test";
 
 import { type OrderPlan, transitionOrder } from "#lib/orders/server/index.ts";
 import { db } from "#lib/server/db/index.ts";
+import { Refused } from "#lib/server/refused.ts";
 import type { Actor } from "#unit/lib/server/harness/actors.ts";
 import { as, north, organizationId, rows, value } from "#unit/lib/server/harness/index.ts";
 
@@ -138,8 +138,8 @@ describe("planning an order", () => {
 				day: "2026-11-03",
 				time: "09:00",
 			}).catch((error: unknown) => error);
-			expect(isValidationError(thrown)).toBe(true);
-			expect(isValidationError(thrown) && thrown.issues[0].message).toMatch(/in stock/);
+			expect(thrown instanceof Refused).toBe(true);
+			expect(thrown instanceof Refused && thrown.problems[0].message).toMatch(/in stock/);
 			expect(await snapshot(quote.id)).toEqual(before);
 			expect(await consumed(quote.id)).toEqual([]);
 		} finally {

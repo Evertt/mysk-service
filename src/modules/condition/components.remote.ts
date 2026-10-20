@@ -3,23 +3,20 @@
  * check it, its latest condition and its status; and adding, changing, removing and ordering them.
  * Every office member may, as they may record conditions.
  */
-import { error } from "@sveltejs/kit";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { unitTitle } from "#lib/equipment/index.ts";
-import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
+import { unitBySerial } from "#lib/equipment/server/index.ts";
+import { moveSchema } from "#lib/schema.ts";
+import { currentTenant, inTenant, sameTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { equipment } from "#lib/server/db/schema.ts";
 import { collect } from "#lib/server/extensions.ts";
 
 import { articleCheckpoints, articles, checkpoints } from "./api/extensions.ts";
 import { getUnitCondition } from "./condition.remote.ts";
-import {
-	componentIdSchema,
-	componentSchema,
-	moveComponentSchema,
-} from "./form/component-schema.ts";
+import { componentIdSchema, componentSchema } from "./form/component-schema.ts";
 import { form, query } from "./remote-functions.ts";
 import {
 	addComponent,
@@ -40,17 +37,13 @@ import { componentSql, conditionSql } from "./server/status-sql.ts";
  * offer those the tenant has.
  */
 export const getUnitComponents = query(v.string(), async (serialNumber) => {
-	const [unit] = await db
-		.select({
-			id: equipment.id,
-			serialNumber: equipment.serialNumber,
-			name: equipment.name,
-			manufacturer: equipment.manufacturer,
-			model: equipment.model,
-		})
-		.from(equipment)
-		.where(and(eq(equipment.serialNumber, serialNumber), inTenant(equipment)));
-	if (!unit) error(404, m.condition_unit_not_found({ serial: serialNumber }));
+	const unit = await unitBySerial(serialNumber, {
+		id: equipment.id,
+		serialNumber: equipment.serialNumber,
+		name: equipment.name,
+		manufacturer: equipment.manufacturer,
+		model: equipment.model,
+	});
 	const part = componentSql(conditionSql());
 	const rows = await db
 		.select({
@@ -68,10 +61,7 @@ export const getUnitComponents = query(v.string(), async (serialNumber) => {
 		.from(component)
 		.innerJoin(
 			equipment,
-			and(
-				eq(equipment.organizationId, component.organizationId),
-				eq(equipment.id, component.equipmentId),
-			),
+			and(sameTenant(equipment, component), eq(equipment.id, component.equipmentId)),
 		)
 		.where(and(eq(component.equipmentId, unit.id), inTenant(component)))
 		.orderBy(asc(component.position), asc(component.id));
@@ -147,7 +137,7 @@ export const removeComponent = form(componentIdSchema, async ({ id }) => {
 });
 
 /** Moves a component one place up or down among its unit's. */
-export const moveComponent = form(moveComponentSchema, async ({ id, direction }) => {
+export const moveComponent = form(moveSchema, async ({ id, direction }) => {
 	const { serialNumber } = await moveOne(id, direction);
 	void getUnitComponents(serialNumber).refresh();
 });

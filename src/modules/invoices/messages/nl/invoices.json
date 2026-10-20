@@ -53,7 +53,6 @@
 	"invoices_not_editable": "{number} is al verstuurd en kan niet meer worden gewijzigd",
 	"invoices_not_found": "Factuur niet gevonden",
 	"invoices_number_not_found": "Factuur {number} niet gevonden",
-	"invoices_order_not_found": "Opdracht {number} niet gevonden",
 	"invoices_line_not_found": "Regel niet gevonden",
 	"invoices_is_draft": "een concept",
 	"invoices_is_sent": "verstuurd",

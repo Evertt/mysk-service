@@ -9,6 +9,7 @@ import { error } from "@sveltejs/kit";
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
 
 import { equipmentSubject } from "#lib/activity/index.ts";
+import { unitBySerial } from "#lib/equipment/server/index.ts";
 import { fieldActions } from "#lib/orders/index.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import {
@@ -19,9 +20,11 @@ import {
 	inTenant,
 	isSystemUser,
 	tenantJoin,
+	sameTenant,
 } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { engineer, equipment, order, orderUnit, user } from "#lib/server/db/schema.ts";
+import { orNotFound } from "#lib/server/records.ts";
 import { type ChecklistCompleting, checklistScore } from "#modules/checklists/api/extensions.ts";
 
 import { conditionLabel } from "../activity.ts";
@@ -108,18 +111,20 @@ export function recordOfficeCondition(
 	componentId: number | null = null,
 ) {
 	return db.transaction(async (tx) => {
-		const [unit] = await tx
-			.select({ id: equipment.id, serialNumber: equipment.serialNumber })
-			.from(equipment)
-			.where(and(eq(equipment.serialNumber, serialNumber), inTenant(equipment)));
-		if (!unit) error(404, m.condition_unit_not_found({ serial: serialNumber }));
+		const unit = await unitBySerial(
+			serialNumber,
+			{ id: equipment.id, serialNumber: equipment.serialNumber },
+			tx,
+		);
 		let part: Part | undefined;
 		if (componentId !== null) {
-			[part] = await tx
-				.select({ id: component.id, number: component.number })
-				.from(component)
-				.where(and(idInTenant(component, componentId), eq(component.equipmentId, unit.id)));
-			if (!part) error(404, m.condition_component_not_found());
+			part = orNotFound(
+				await tx
+					.select({ id: component.id, number: component.number })
+					.from(component)
+					.where(and(idInTenant(component, componentId), eq(component.equipmentId, unit.id))),
+				m.condition_component_not_found(),
+			);
 		}
 		await insertCondition(tx, unit, input, { source: "office", component: part });
 		return unit;
@@ -150,7 +155,7 @@ export async function findFieldUnit(
 		.innerJoin(
 			orderUnit,
 			and(
-				eq(orderUnit.organizationId, order.organizationId),
+				sameTenant(orderUnit, order),
 				eq(orderUnit.orderId, order.id),
 				eq(orderUnit.equipmentId, equipmentId),
 			),
@@ -243,10 +248,7 @@ export function checklistComponentConditions(equipmentId: number, orderId: numbe
 		.from(unitCondition)
 		.innerJoin(
 			component,
-			and(
-				eq(component.organizationId, unitCondition.organizationId),
-				eq(component.id, unitCondition.componentId),
-			),
+			and(sameTenant(component, unitCondition), eq(component.id, unitCondition.componentId)),
 		)
 		.where(
 			and(
@@ -308,7 +310,7 @@ export async function conditionsOf(equipmentId: number, componentId: number | nu
 		.from(unitCondition)
 		.leftJoin(...tenantJoin(engineer, unitCondition.engineerId))
 		.leftJoin(user, eq(user.id, unitCondition.userId))
-		.leftJoin(order, and(eq(order.id, unitCondition.orderId), inTenant(order)))
+		.leftJoin(...tenantJoin(order, unitCondition.orderId))
 		.where(
 			and(
 				eq(unitCondition.equipmentId, equipmentId),

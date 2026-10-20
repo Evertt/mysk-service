@@ -26,6 +26,3 @@ export const componentSchema = v.object({
 
 /** A component that's removed. */
 export const componentIdSchema = v.object({ id: id() });
-
-/** A component moved one place up or down among its unit's. */
-export const moveComponentSchema = v.object({ id: id(), direction: v.picklist(["up", "down"]) });

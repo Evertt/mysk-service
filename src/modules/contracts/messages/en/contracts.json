@@ -168,8 +168,6 @@
 	"contracts_fee_detail": "Monthly fee, {from} – {until}",
 	"contracts_not_found": "Contract not found",
 	"contracts_not_found_number": "Contract {number} not found",
-	"contracts_order_not_found": "Order {number} not found",
-	"contracts_equipment_not_found": "Equipment {serial} not found",
 	"contracts_unknown_customer": "Unknown customer",
 	"contracts_ends_before_start": "Must be after the start date",
 	"contracts_units_of_customer": "A contract can only cover equipment of its own customer",

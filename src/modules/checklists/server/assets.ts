@@ -4,14 +4,14 @@
  * the page shows it: its unit, template and components, its checklists (the history the unit's page
  * shows too, `unitInspection()`), from which the page picks the one of this year.
  */
-import { error } from "@sveltejs/kit";
 import { and, eq, ne, type SQL, sql } from "drizzle-orm";
 import type { SQLiteSelect } from "drizzle-orm/sqlite-core";
 
 import { currentDay, getTimeZone } from "#lib/dates.ts";
 import { unitTitle } from "#lib/equipment/index.ts";
+import { unitBySerial } from "#lib/equipment/server/index.ts";
 import { openOrderStatuses } from "#lib/models.ts";
-import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import { inTenant, tenantJoin, sameTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList, inLiterals, literal } from "#lib/server/db/parameters.ts";
 import {
@@ -45,10 +45,7 @@ const seconds = (instant: Temporal.Instant) => Math.floor(instant.epochMilliseco
  */
 export function yearStateSql(year = currentYear()): SQL<YearState> {
 	const { start, end } = yearBounds(year, getTimeZone());
-	const ofUnit = and(
-		eq(checklist.organizationId, equipment.organizationId),
-		eq(checklist.equipmentId, equipment.id),
-	);
+	const ofUnit = and(sameTenant(checklist, equipment), eq(checklist.equipmentId, equipment.id));
 	const completed = sql`exists (select 1 from ${checklist} where ${and(
 		ofUnit,
 		sql`${checklist.status} = 'completed'`,
@@ -56,7 +53,7 @@ export function yearStateSql(year = currentYear()): SQL<YearState> {
 		sql`${checklist.completedAt} < ${literal(seconds(end))}`,
 	)})`;
 	const draft = sql`exists (select 1 from ${checklist} inner join ${order} on ${and(
-		eq(order.organizationId, checklist.organizationId),
+		sameTenant(order, checklist),
 		eq(order.id, checklist.orderId),
 	)} where ${and(
 		ofUnit,
@@ -153,27 +150,28 @@ export async function componentsByUnit(equipmentIds: readonly number[]) {
  * components, and its checklists newest first with its inspection status (`unitInspection()`).
  */
 export async function assetView(serialNumber: string) {
-	const [unit] = await db
-		.select({
-			id: equipment.id,
-			serialNumber: equipment.serialNumber,
-			name: equipment.name,
-			manufacturer: equipment.manufacturer,
-			model: equipment.model,
-			status: equipment.status,
-			categoryId: equipment.categoryId,
-			category: equipmentCategory.name,
-			customer: { code: customer.code, name: customer.name },
-			site: { name: customerSite.name, city: customerSite.city },
-			location: equipmentLocation.name,
-		})
-		.from(equipment)
-		.innerJoin(...tenantJoin(equipmentCategory, equipment.categoryId))
-		.innerJoin(...tenantJoin(customer, equipment.customerId))
-		.innerJoin(...tenantJoin(customerSite, equipment.siteId))
-		.leftJoin(...tenantJoin(equipmentLocation, equipment.locationId))
-		.where(and(eq(equipment.serialNumber, serialNumber), inTenant(equipment)));
-	if (!unit) error(404, m.checklists_equipment_not_found({ serial: serialNumber }));
+	const unit = await unitBySerial(serialNumber, (where) =>
+		db
+			.select({
+				id: equipment.id,
+				serialNumber: equipment.serialNumber,
+				name: equipment.name,
+				manufacturer: equipment.manufacturer,
+				model: equipment.model,
+				status: equipment.status,
+				categoryId: equipment.categoryId,
+				category: equipmentCategory.name,
+				customer: { code: customer.code, name: customer.name },
+				site: { name: customerSite.name, city: customerSite.city },
+				location: equipmentLocation.name,
+			})
+			.from(equipment)
+			.innerJoin(...tenantJoin(equipmentCategory, equipment.categoryId))
+			.innerJoin(...tenantJoin(customer, equipment.customerId))
+			.innerJoin(...tenantJoin(customerSite, equipment.siteId))
+			.leftJoin(...tenantJoin(equipmentLocation, equipment.locationId))
+			.where(where),
+	);
 	const [template, inspection, components] = await Promise.all([
 		unit.status === "decommissioned" ? null : offeredTemplate(db, unit.categoryId),
 		unitInspection(unit.id),

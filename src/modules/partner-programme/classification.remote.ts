@@ -1,10 +1,10 @@
 /** An order's classification for the programme, for its part of the order form. */
-import { error } from "@sveltejs/kit";
 
 import { recordId } from "#lib/schema.ts";
 import { idInTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { order } from "#lib/server/db/schema.ts";
+import { orNotFound } from "#lib/server/records.ts";
 
 import { defaultCategories } from "./model.ts";
 import { query } from "./remote-functions.ts";
@@ -15,11 +15,10 @@ import { classificationOf } from "./server/classification.ts";
  * it by default.
  */
 export const getOrderClassification = query(recordId(), async (orderId) => {
-	const [found] = await db
-		.select({ type: order.type })
-		.from(order)
-		.where(idInTenant(order, orderId));
-	if (!found) error(404, m.partners_order_not_found());
+	const found = orNotFound(
+		await db.select({ type: order.type }).from(order).where(idInTenant(order, orderId)),
+		m.partners_order_not_found(),
+	);
 	return {
 		...(await classificationOf(orderId)),
 		defaultCategory: defaultCategories[found.type],

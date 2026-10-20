@@ -22,7 +22,6 @@
 // Its module-scope durations need Temporal as the module loads, which SvelteKit's build does (analysing
 // the routes) without the hooks that install the polyfill, and Node before 26 has none of its own.
 import "temporal-polyfill/global";
-import { error } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
 import { effectiveModules } from "#lib/modules/graph.ts";
@@ -33,6 +32,7 @@ import { asSystem, currentTenant, inTenant, type Tenant } from "#lib/server/auth
 import { db } from "#lib/server/db/index.ts";
 import { organization, organizationModule, simulation } from "#lib/server/db/schema.ts";
 import { collect } from "#lib/server/extensions.ts";
+import { orNotFound } from "#lib/server/records.ts";
 import {
 	defaultSimulationSpeed,
 	type SimulationSpeed,
@@ -156,8 +156,7 @@ export async function simulationOf(moduleId: string): Promise<SimulationRow | nu
 /** The current tenant's simulation of `moduleId`; a 404 if the tenant lacks it or the module. */
 export async function requireSimulation(moduleId: ModuleId) {
 	const row = currentTenant().modules.includes(moduleId) ? await simulationOf(moduleId) : null;
-	if (!row) error(404, m.common_error_not_found());
-	return row;
+	return orNotFound(row, m.common_error_not_found());
 }
 
 /** A module's name, as the log keeps it. */

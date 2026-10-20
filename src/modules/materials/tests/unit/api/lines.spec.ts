@@ -4,11 +4,12 @@
  * tenant's, in whole pieces), and its order's change refreshes the modules' cards on it
  * (`orders.committed`), as the order form's does. Which orders take lines is `canTakeLines()`.
  */
-import { isHttpError, isValidationError } from "@sveltejs/kit";
+import { isHttpError } from "@sveltejs/kit";
 import { describe, expect, test } from "vite-plus/test";
 
 import { orderStatuses } from "#lib/models.ts";
 import { db } from "#lib/server/db/index.ts";
+import { Refused } from "#lib/server/refused.ts";
 import { addOrderLine, canTakeLines } from "#modules/materials/api/lines.server.ts";
 import { as, north, organizationId, rows, value } from "#unit/lib/server/harness/index.ts";
 
@@ -53,10 +54,8 @@ describe("addOrderLine", () => {
 		const quote = await northOrder("quote");
 		const before = await linesOf(quote.id);
 		const thrown = await adding(quote.number, await materialIn(northId, "pcs"), 0.5);
-		expect(isValidationError(thrown), String(thrown)).toBe(true);
-		expect((thrown as { issues: { message: string }[] }).issues).toMatchObject([
-			{ message: "Whole pieces only" },
-		]);
+		expect(thrown instanceof Refused, String(thrown)).toBe(true);
+		expect((thrown as Refused).problems).toMatchObject([{ message: "Whole pieces only" }]);
 		expect(await linesOf(quote.id)).toEqual(before);
 	});
 

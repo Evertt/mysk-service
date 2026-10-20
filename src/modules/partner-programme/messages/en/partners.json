@@ -44,7 +44,6 @@
 	"partners_tier_summary": "{level} from {threshold} ({cash} / {credit})",
 	"partners_category_summary": "{category}: level {level}, cash {cash}, credit {credit}",
 	"partners_already_partner": "This customer is a partner already.",
-	"partners_customer_not_found": "Customer not found",
 	"partners_order_not_found": "Order not found",
 	"partners_award_note": "Parts credit for {year}",
 	"partners_choice_made": "The choice for this year has been made already: it can't be changed.",

@@ -15,7 +15,7 @@ import { walletEntrySchema, yearField } from "./form/wallet-schema.ts";
 import { bonusForms, creditValidUntil, isClosable } from "./model.ts";
 import { forManagers, query } from "./remote-functions.ts";
 import { chooseBonus, closedYearsOf, closeYear, payBonusByCreditNote } from "./server/close.ts";
-import { acceptPartner as accept, customerByCode, figuresOf } from "./server/partners.ts";
+import { acceptPartner as accept, partnerByCode, figuresOf } from "./server/partners.ts";
 import { rulesFor } from "./server/rules.ts";
 import { addEntry, walletOf } from "./server/wallet.ts";
 
@@ -26,7 +26,7 @@ const code = customerCode();
  * figures so far, its closed years and its wallet. For a customer that isn't a partner, only that.
  */
 export const getPartnerCard = query(code, async (customerCode) => {
-	const found = await customerByCode(customerCode);
+	const found = await partnerByCode(customerCode);
 	const canManage = isManager(currentTenant().roles);
 	const customer = { id: found.id, code: found.code, name: found.name };
 	if (!found.partner) return { customer, partner: null, canManage };
@@ -70,7 +70,7 @@ export const acceptPartner = forManagers.form(v.object({ code }), async (input) 
 export const closePartnerYear = forManagers.form(
 	v.object({ code, year: yearField }),
 	async (input) => {
-		const found = await customerByCode(input.code);
+		const found = await partnerByCode(input.code);
 		await closeYear(input.year, found.id);
 		void getPartnerCard(input.code).refresh();
 	},
@@ -80,7 +80,7 @@ export const closePartnerYear = forManagers.form(
 export const choosePartnerBonus = forManagers.form(
 	v.object({ code, year: yearField, choice: v.picklist(bonusForms) }),
 	async (input) => {
-		const found = await customerByCode(input.code);
+		const found = await partnerByCode(input.code);
 		await chooseBonus(found.id, input.year, input.choice);
 		void getPartnerCard(input.code).refresh();
 	},
@@ -93,7 +93,7 @@ export const choosePartnerBonus = forManagers.form(
 export const createBonusCreditNote = forManagers.form(
 	v.object({ code, year: yearField }),
 	async (input) => {
-		const found = await customerByCode(input.code);
+		const found = await partnerByCode(input.code);
 		const made = await payBonusByCreditNote(found.id, input.year);
 		void getPartnerCard(input.code).refresh();
 		return { number: made.number };
@@ -105,7 +105,7 @@ export const createBonusCreditNote = forManagers.form(
  * available), or credit added, valid until the day given.
  */
 export const addWalletEntry = forManagers.form(walletEntrySchema, async (input) => {
-	const found = await customerByCode(input.code);
+	const found = await partnerByCode(input.code);
 	const spend = input.kind === "spend";
 	await db.transaction((tx) =>
 		addEntry(

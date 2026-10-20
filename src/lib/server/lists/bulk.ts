@@ -7,7 +7,7 @@
  *    search and filters, with the list's own tenant-scoped query,
  * 3. loads those records with `inTenant()`, so another tenant's ids are simply not found,
  * 4. changes each with the same code as the single-record path (`forEachRecord`), which refuses
- *    with `invalid()` as it would there,
+ *    with a `Refused` as it would there,
  * 5. refreshes the queries that show them, and returns what it did.
  *
  * `bulkChange()` does 2 to 4, and `refreshRequested()` is 5 for a server-side table, which asks
@@ -22,7 +22,7 @@
  * with the reason, which the action bar shows.
  */
 import { requested, type RemoteQueryFunction } from "$app/server";
-import { error, isHttpError, isValidationError } from "@sveltejs/kit";
+import { error, isHttpError } from "@sveltejs/kit";
 import type { GetColumnData } from "drizzle-orm";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
@@ -33,6 +33,7 @@ import { formatNumber } from "#lib/i18n/index.ts";
 import { recordId } from "#lib/schema.ts";
 import { idsInTenant, type TenantTable } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 import { type ListSql, planList } from "./plan.ts";
 
@@ -72,7 +73,7 @@ export async function targetIds<C>(target: ListTarget<C>, list?: () => ListSql<C
 /**
  * Changes each of `records` (the tenant's, of the `requested` ids) with `change`, the
  * single-record path's code, which makes its change in a transaction of its own. What it refuses
- * with `invalid()` is skipped, with the reason; a record it can't find (a 404, e.g. deleted
+ * (a `Refused`) is skipped, with the reason; a record it can't find (a 404, e.g. deleted
  * meanwhile) counts as missing, as do the ids that weren't found to begin with. Anything else is
  * a bug: it's logged, and the record is skipped with a generic reason, so the result still says
  * what was done to the others.
@@ -89,9 +90,8 @@ async function forEachRecord<T>(
 			await change(record);
 			result.done++;
 		} catch (thrown) {
-			if (isValidationError(thrown)) {
-				const reason = thrown.issues.map((issue) => issue.message).join("; ");
-				result.skipped.push({ label: label(record), reason });
+			if (thrown instanceof Refused) {
+				result.skipped.push({ label: label(record), reason: thrown.message });
 			} else if (isHttpError(thrown) && thrown.status === 404) {
 				result.missing++;
 			} else {

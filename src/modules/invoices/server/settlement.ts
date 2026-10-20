@@ -4,13 +4,13 @@
  * issuing the credit note that leaves nothing of a sent invoice to pay settles the invoice with
  * them.
  */
-import { invalid } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
 import { currentDay } from "#lib/dates.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 import {
 	changingCredit,
@@ -72,7 +72,7 @@ export async function issueCredit(id: number) {
 	return db.transaction(async (tx) => {
 		const found = await changingCredit(tx, id, "sent");
 		if (found.lines.reduce((sum, line) => sum + line.amount, 0) >= 0) {
-			invalid(m.invoices_credit_nothing());
+			throw new Refused(m.invoices_credit_nothing());
 		}
 		const issuedOn = currentDay();
 		const issued = {

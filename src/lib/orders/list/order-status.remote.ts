@@ -4,7 +4,6 @@ import * as v from "valibot";
 import { manualOrderStatuses } from "#lib/models.ts";
 import { recordId } from "#lib/schema.ts";
 import { db } from "#lib/server/db/index.ts";
-import { refusedAsBadRequest } from "#lib/server/forms.ts";
 import { refreshRequested } from "#lib/server/lists/index.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
@@ -24,9 +23,7 @@ export const setOrderStatus = forMembers.command(
 		status: v.picklist(manualOrderStatuses),
 	}),
 	async ({ id, status }) => {
-		await refusedAsBadRequest(() =>
-			db.transaction((tx) => transitionOrder(tx, { verb: "set", id, to: status })),
-		);
+		await db.transaction((tx) => transitionOrder(tx, { verb: "set", id, to: status }));
 		await refreshRequested(getOrders, getOrderFacets);
 	},
 );

@@ -5,7 +5,6 @@
  * as its last one. "Create orders" on the due list and the daily run (`automatic.ts`) both do it
  * here, so their orders are made, numbered and logged alike.
  */
-import { error, invalid } from "@sveltejs/kit";
 
 import { equipmentSubject } from "#lib/activity/index.ts";
 import { createOrders } from "#lib/orders/server/index.ts";
@@ -13,6 +12,8 @@ import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { equipment, order } from "#lib/server/db/schema.ts";
+import { orNotFound } from "#lib/server/records.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 import { planLabel } from "../activity.ts";
 import { advanceDueDate, dueForAutomaticOrder } from "../model.ts";
@@ -28,7 +29,7 @@ export interface PlanOrder {
 /**
  * Makes the order for the tenant's plan `id` and moves the plan on, in one transaction: a quote of
  * normal priority for the plan's unit and its customer, with the plan's type and description, as a
- * new order from the order form without a date. Refuses a paused plan (`invalid()`); a plan that
+ * new order from the order form without a date. Refuses a paused plan (`Refused`); a plan that
  * isn't the tenant's is a 404.
  *
  * With `automatic` (the daily run), it first checks again, in the transaction, that the plan is
@@ -41,28 +42,30 @@ export function orderPlan(
 ): Promise<PlanOrder | null> {
 	const { organizationId } = currentTenant();
 	return db.transaction(async (tx) => {
-		const [found] = await tx
-			.select({
-				plan: maintenancePlan,
-				unit: {
-					id: equipment.id,
-					serialNumber: equipment.serialNumber,
-					customerId: equipment.customerId,
-				},
-				lastOrder: order.number,
-				lastOrderStatus: order.status,
-			})
-			.from(maintenancePlan)
-			.innerJoin(...tenantJoin(equipment, maintenancePlan.equipmentId))
-			.leftJoin(...tenantJoin(order, maintenancePlan.lastOrderId))
-			.where(idInTenant(maintenancePlan, id));
-		if (!found) error(404, m.maintenance_plan_not_found());
+		const found = orNotFound(
+			await tx
+				.select({
+					plan: maintenancePlan,
+					unit: {
+						id: equipment.id,
+						serialNumber: equipment.serialNumber,
+						customerId: equipment.customerId,
+					},
+					lastOrder: order.number,
+					lastOrderStatus: order.status,
+				})
+				.from(maintenancePlan)
+				.innerJoin(...tenantJoin(equipment, maintenancePlan.equipmentId))
+				.leftJoin(...tenantJoin(order, maintenancePlan.lastOrderId))
+				.where(idInTenant(maintenancePlan, id)),
+			m.maintenance_plan_not_found(),
+		);
 		const { plan, unit } = found;
 		if (automatic && !dueForAutomaticOrder(plan, found.lastOrderStatus, automatic.horizon)) {
 			return null;
 		}
 		const label = planLabel({ serialNumber: unit.serialNumber, description: plan.description });
-		if (plan.paused) invalid(m.maintenance_plan_paused({ label }));
+		if (plan.paused) throw new Refused(m.maintenance_plan_paused({ label }));
 
 		const [created] = await createOrders(tx, [
 			{

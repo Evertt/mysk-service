@@ -7,6 +7,7 @@
 import { and, eq, sql } from "drizzle-orm";
 
 import type { NotificationRule } from "#lib/notifications/extensions.ts";
+import { sameTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { literal } from "#lib/server/db/parameters.ts";
 import { activity } from "#lib/server/db/schema.ts";
@@ -22,7 +23,7 @@ const rejectedPoint = () =>
 		.where(
 			and(
 				eq(checklistResult.checklistId, subjectNumber),
-				eq(checklistResult.organizationId, activity.organizationId),
+				sameTenant(checklistResult, activity),
 				eq(checklistResult.result, literal("nok")),
 			),
 		);

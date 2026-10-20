@@ -16,8 +16,9 @@ import {
 } from "#lib/extensions/define.ts";
 import type { FormPartsOutput } from "#lib/extensions/form-parts.ts";
 import type { OrderStatus, OrderType } from "#lib/models.ts";
-// Only the type: this file is isomorphic.
+// Only the types: this file is isomorphic.
 import type { Transaction } from "#lib/server/db/index.ts";
+import type { Problem } from "#lib/server/refused.ts";
 
 /** An order as a module's bulk action sees a selected row of the orders list. */
 export interface OrderBulkRow {
@@ -165,24 +166,11 @@ export interface OrderSaving {
 export type OrderFormParts = FormPartsOutput<"orders.form">;
 
 /**
- * Why a module can't save its part of an order, as a Standard Schema issue, which the order form
- * passes to `invalid()` as it is: what its schema can't check, e.g. a stock shortage.
- */
-export interface OrderProblem {
-	message: string;
-	/**
-	 * The order form's field it's about (from the form's root, e.g.
-	 * `["modules", "materials", "lines", 2, "quantity"]`), or none for the whole change.
-	 */
-	path?: (string | number)[];
-}
-
-/**
  * A module saves its part of an order that core is changing (`OrderSaving`), in core's transaction,
  * e.g. the materials the order form submitted and the stock that follows the order's status; or
  * answers why it can't, and the change is refused (the transaction stores nothing of it).
  */
-export const saving = defineSaveHook<OrderSaving, OrderProblem>("orders.saving");
+export const saving = defineSaveHook<OrderSaving, Problem>("orders.saving");
 
 /**
  * Core is setting one of the tenant's orders' units (`setOrderUnits()`), in `tx`: when it's created
@@ -205,7 +193,7 @@ export interface OrderUnitsSaving {
  * checklist for each unit; or answers why a unit can't be taken off it, and the change is refused.
  * Its problems are about the order form's `equipmentIds`, unless they say otherwise.
  */
-export const units = defineSaveHook<OrderUnitsSaving, OrderProblem>("orders.units");
+export const units = defineSaveHook<OrderUnitsSaving, Problem>("orders.units");
 
 /**
  * Parts of the order form, after the order's own card: a module's inputs, named with the `fields` of

@@ -98,7 +98,7 @@ export async function withFirstUnit<T extends { id: number }>(
  *
  * The units it keeps keep their rows (only their places change), so what the modules keep about
  * an order's unit stays. The modules save their part of it (`orders.units`, `saveUnitParts()`)
- * once the new units are in and before the ones it loses go; throws an `OrderRefused` when one
+ * once the new units are in and before the ones it loses go; throws a `Refused` when one
  * can't let go of a unit, which rolls the transaction back.
  */
 export async function setOrderUnits(

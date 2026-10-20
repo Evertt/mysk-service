@@ -44,7 +44,6 @@
 	"partners_tier_summary": "{level} vanaf {threshold} ({cash} / {credit})",
 	"partners_category_summary": "{category}: level {level}, cash {cash}, credit {credit}",
 	"partners_already_partner": "Deze klant is al partner.",
-	"partners_customer_not_found": "Klant niet gevonden",
 	"partners_order_not_found": "Opdracht niet gevonden",
 	"partners_award_note": "Parts Credit over {year}",
 	"partners_choice_made": "De keuze voor dit jaar is al gemaakt: die is onherroepelijk.",

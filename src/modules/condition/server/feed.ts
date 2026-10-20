@@ -110,7 +110,7 @@ async function recordedConditions(
 		.innerJoin(...tenantJoin(customer, equipment.customerId))
 		.leftJoin(...tenantJoin(engineer, unitCondition.engineerId))
 		.leftJoin(user, eq(user.id, unitCondition.userId))
-		.leftJoin(order, and(eq(order.id, unitCondition.orderId), inTenant(order)))
+		.leftJoin(...tenantJoin(order, unitCondition.orderId))
 		.where(
 			and(
 				inTenant(unitCondition),

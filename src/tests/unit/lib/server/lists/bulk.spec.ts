@@ -1,4 +1,3 @@
-import { invalid } from "@sveltejs/kit";
 import { inArray, sql } from "drizzle-orm";
 import * as v from "valibot";
 import { beforeAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
@@ -15,6 +14,7 @@ import {
 	refreshRequested,
 } from "#lib/server/lists/bulk.ts";
 import type { ListSql } from "#lib/server/lists/plan.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 const refreshAll = vi.fn();
@@ -112,7 +112,7 @@ describe("bulkChange", () => {
 				table: equipment,
 				label: equipment.serialNumber,
 				change: async (unit) => {
-					if (unit.id === 1) invalid("Still in use");
+					if (unit.id === 1) throw new Refused("Still in use");
 				},
 			},
 		);

@@ -1,7 +1,7 @@
 /** The forms of the checklist templates: a template's details, its categories, and its points. */
 import * as v from "valibot";
 
-import { id, text, textMax } from "#lib/schema.ts";
+import { id, text, textMax, moveDirection } from "#lib/schema.ts";
 
 import { textLimits, validityLimits } from "../model.ts";
 
@@ -53,16 +53,11 @@ export const pointSchema = v.object({ id: id(), ...pointFields });
 
 export type PointInput = v.InferOutput<typeof newPointSchema>;
 
-const direction = v.picklist(["up", "down"]);
-
-/** Moving a point one place up or down its template. */
-export const movePointSchema = v.object({ id: id(), direction });
-
 /** Moving a group of a template's points one place up or down, past the group next to it. */
 export const moveGroupSchema = v.object({
 	templateId: id(),
 	group: v.pipe(v.optional(v.string(), ""), v.maxLength(textLimits.group)),
-	direction,
+	direction: moveDirection(),
 });
 
 /** Just the point, e.g. to delete it. */

@@ -5,14 +5,15 @@
  * checked, priced, logged against the order, taking stock as its status says), and refreshing the
  * modules' cards on the order as its save does (`orders.committed`).
  */
-import { error, invalid } from "@sveltejs/kit";
+import { error } from "@sveltejs/kit";
 import { and, asc, eq } from "drizzle-orm";
 
 import { isAwaitingAcceptance, isEditableOrder, type OrderStatus } from "#lib/models.ts";
-import { orderCommitted } from "#lib/orders/server/index.ts";
+import { orderCommitted, orderByNumber } from "#lib/orders/server/index.ts";
 import { inTenant } from "#lib/server/auth/index.ts";
 import type { Transaction } from "#lib/server/db/index.ts";
 import { order } from "#lib/server/db/schema.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 import { checkLines, saveLines } from "../server/lines.ts";
 import { orderLine } from "../server/schema.ts";
@@ -28,7 +29,7 @@ export const canTakeLines = (status: OrderStatus) =>
 /**
  * Adds `quantity` of the tenant's material `materialId` to the tenant's order `number` in `tx`
  * (to the line it has of it already, if any). A 404 for an order or a material of another tenant;
- * refused (`invalid()`) for an order that can't be changed (invoiced, cancelled or not accepted
+ * refused (`Refused`) for an order that can't be changed (invoiced, cancelled or not accepted
  * yet), for part of a piece, and when its status takes stock that isn't there. Once `tx` has
  * committed, the modules refresh their cards on the order (`orderCommitted()`); the caller
  * refreshes core's (`getOrder`), as the order form does.
@@ -39,15 +40,15 @@ export async function addOrderLine(
 	materialId: number,
 	quantity: number,
 ) {
-	const [found] = await tx
-		.select({ id: order.id, number: order.number, status: order.status })
-		.from(order)
-		.where(and(eq(order.number, number), inTenant(order)));
-	if (!found) error(404, m.materials_order_not_found({ number }));
-	if (!canTakeLines(found.status)) invalid(m.materials_order_unchangeable({ number }));
+	const found = await orderByNumber(
+		number,
+		{ id: order.id, number: order.number, status: order.status },
+		tx,
+	);
+	if (!canTakeLines(found.status)) throw new Refused(m.materials_order_unchangeable({ number }));
 	const [problem] = await checkLines([{ materialId, quantity }], tx);
 	if (problem?.field === "materialId") error(404, problem.message);
-	if (problem) invalid(problem.message);
+	if (problem) throw new Refused(problem.message);
 	const lines = await tx
 		.select({ materialId: orderLine.materialId, quantity: orderLine.quantity })
 		.from(orderLine)
@@ -63,7 +64,7 @@ export async function addOrderLine(
 		await saveLines(tx, found, found.status, after);
 	} catch (shortage) {
 		if (!(shortage instanceof OrderStockShortage)) throw shortage;
-		invalid(shortage.message);
+		throw new Refused(shortage.message);
 	}
 	orderCommitted({ number: found.number });
 }

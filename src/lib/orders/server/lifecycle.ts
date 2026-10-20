@@ -3,7 +3,7 @@
  * (`orderTransitions` in `../lifecycle.ts`): the check, the change, the modules' parts and the
  * activity entry, always in the caller's transaction.
  */
-import { error, invalid } from "@sveltejs/kit";
+import { error } from "@sveltejs/kit";
 import { and, eq, isNull } from "drizzle-orm";
 
 import { orderSubject } from "#lib/activity/index.ts";
@@ -21,10 +21,11 @@ import {
 } from "#lib/server/auth/index.ts";
 import type { Transaction } from "#lib/server/db/index.ts";
 import { order, orderRequest, orderSignoff } from "#lib/server/db/schema.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 import type { OrderFormParts } from "../extensions.ts";
 import { can, orderTransitions, type TransitionRule } from "../lifecycle.ts";
-import { OrderRefused, refuseParts, refuseRefused, saveOrderParts } from "./hooks.ts";
+import { refusedWhole, saveOrderParts } from "./hooks.ts";
 import { assigneeProblem } from "./order-changes.ts";
 
 /** A move of an order, by its verb, with what that verb needs. */
@@ -85,7 +86,7 @@ export async function transitionOrder(
 		error(404, m.orders_not_found_plain());
 	}
 	if (!can(transition.verb, found.status)) {
-		invalid(orderTransitions[transition.verb].refusal(found));
+		throw new Refused(orderTransitions[transition.verb].refusal(found));
 	}
 	const moved = { id: found.id, number: found.number };
 
@@ -95,7 +96,7 @@ export async function transitionOrder(
 	const completedAt = completion(rule.completedAt ?? "follows", status, found.completedAt, at);
 	const values = { ...columns, status, ...(completedAt !== undefined && { completedAt }) };
 	await tx.update(order).set(values).where(idInTenant(order, found.id));
-	await saveOrderParts({ tx, order: found, from: found.status, status }).catch(refuseRefused);
+	await saveOrderParts({ tx, order: found, from: found.status, status }).catch(refusedWhole);
 	if (transition.verb === "accept") await decide(tx, found.id, null);
 	if (transition.verb === "reject") await decide(tx, found.id, transition.reason);
 	if (transition.verb === "complete") await signOff(tx, found.id, transition.signoff, at);
@@ -137,7 +138,7 @@ async function target(tx: Transaction, transition: SingleTransition, from: Order
 			const { engineerId, day, time } = transition;
 			if (engineerId !== null) {
 				const problem = await assigneeProblem(engineerId, tx);
-				if (problem) invalid({ message: problem, path: ["engineerId"] });
+				if (problem) throw new Refused({ message: problem, path: ["engineerId"] });
 			}
 			const scheduledFor = day
 				.toZonedDateTime({ timeZone: getTimeZone(), plainTime: time })
@@ -180,7 +181,7 @@ export async function beginOrderChange(
 	const before =
 		id === null ? undefined : await tx.query.order.findFirst({ where: idInTenant(order, id) });
 	if (id !== null && !before) error(404, m.orders_not_found_plain());
-	if (before && !can("set", before.status)) invalid(orderTransitions.set.refusal(before));
+	if (before && !can("set", before.status)) throw new Refused(orderTransitions.set.refusal(before));
 	const columns = {
 		status: to,
 		completedAt: completion("follows", to, before?.completedAt ?? null, Temporal.Now.instant())!,
@@ -190,7 +191,7 @@ export async function beginOrderChange(
 		columns,
 		async finish(saved, { form, before: beforeExtra, after }) {
 			const from = before?.status ?? null;
-			await saveOrderParts({ tx, order: saved, from, status: to, form }).catch(refuseParts);
+			await saveOrderParts({ tx, order: saved, from, status: to, form });
 			if (!before) return;
 			await recordActivity(tx, {
 				action: "updated",
@@ -226,8 +227,10 @@ async function moveInvoiced(tx: Transaction, transition: InvoicingTransition) {
 		// One of several orders: the refusal says which.
 		await saveOrderParts({ tx, order: moved, from: moved.status, status }).catch(
 			(thrown: unknown) => {
-				if (thrown instanceof OrderRefused) {
-					invalid(m.orders_move_refused_for({ number: moved.number, reason: thrown.message }));
+				if (thrown instanceof Refused) {
+					throw new Refused(
+						m.orders_move_refused_for({ number: moved.number, reason: thrown.message }),
+					);
 				}
 				throw thrown;
 			},

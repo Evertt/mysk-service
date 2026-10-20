@@ -12,7 +12,7 @@ import { formatDate, formatNumber } from "#lib/i18n/index.ts";
 import type { DailyReport, DailyRun } from "#lib/jobs/extensions.ts";
 import { openOrderStatuses } from "#lib/models.ts";
 import { createOrders } from "#lib/orders/server/index.ts";
-import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
+import { currentTenant, idInTenant, inTenant, sameTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { equipment, order, orderUnit } from "#lib/server/db/schema.ts";
@@ -27,7 +27,7 @@ import { componentSql, conditionSql } from "./status-sql.ts";
 const hasOpenOrder = () =>
 	sql<boolean>`exists (select 1 from ${orderUnit}, ${order} where ${and(
 		eq(orderUnit.equipmentId, equipment.id),
-		eq(order.organizationId, orderUnit.organizationId),
+		sameTenant(order, orderUnit),
 		eq(order.id, orderUnit.orderId),
 		inTenant(orderUnit),
 		inList(order.status, [...openOrderStatuses]),
@@ -53,7 +53,7 @@ async function criticalUnits(tx: Transaction | typeof db, id?: number) {
 	}, 'score', ${part.score}, 'advice', ${part.advice}) from ${component} where ${eq(
 		component.equipmentId,
 		equipment.id,
-	)} and ${eq(component.organizationId, equipment.organizationId)} and ${part.score} < ${
+	)} and ${sameTenant(component, equipment)} and ${part.score} < ${
 		unit.parts.critical
 	} order by ${part.score}, ${component.position} limit 1)`.mapWith(
 		(text: string | null): CriticalComponent | null => (text ? JSON.parse(text) : null),

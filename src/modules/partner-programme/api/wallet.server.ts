@@ -36,7 +36,7 @@ export const walletToday = (customerId: number, tx: Transaction | typeof db = db
 /**
  * Takes `amount` (cents, more than zero) of the holder's credit in `tx`, as a `spend` with `note`
  * (stored in the language of whoever spends it), the credit that expires first first. Refused
- * (`invalid()`) beyond what's available today, checked in the same transaction. Answers the entry's
+ * (`Refused`) beyond what's available today, checked in the same transaction. Answers the entry's
  * id, to give it back by.
  */
 export const spendCredit = (tx: Transaction, holder: WalletHolder, amount: number, note: string) =>

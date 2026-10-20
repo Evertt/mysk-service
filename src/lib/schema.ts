@@ -43,6 +43,14 @@ export const optionalId = (message: Message = m.validation_choose_one) =>
  */
 export const recordId = () => v.pipe(v.number(), v.integer(), v.minValue(1));
 
+/** Which way a record moves in the tenant's order of them: one place up or down. */
+export const moveDirection = () => v.picklist(["up", "down"]);
+
+export type MoveDirection = v.InferOutput<ReturnType<typeof moveDirection>>;
+
+/** Moving a record (`id`) one place up or down its list (`reorder()` on the server). */
+export const moveSchema = v.object({ id: id(), direction: moveDirection() });
+
 /** A customer's code, as a query or command takes it (e.g. from the customer page's URL). */
 export const customerCode = () => v.pipe(v.string(), v.nonEmpty(), v.maxLength(64));
 

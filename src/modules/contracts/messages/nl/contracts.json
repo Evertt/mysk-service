@@ -168,8 +168,6 @@
 	"contracts_fee_detail": "Maandbedrag, {from} – {until}",
 	"contracts_not_found": "Contract niet gevonden",
 	"contracts_not_found_number": "Contract {number} niet gevonden",
-	"contracts_order_not_found": "Opdracht {number} niet gevonden",
-	"contracts_equipment_not_found": "Apparaat {serial} niet gevonden",
 	"contracts_unknown_customer": "Onbekende klant",
 	"contracts_ends_before_start": "Moet na de begindatum liggen",
 	"contracts_units_of_customer": "Een contract kan alleen apparatuur van de eigen klant dekken",

@@ -2,13 +2,10 @@
  * A unit's condition, for its card on the unit's page: its latest condition as a whole, its history
  * and its status (with its components'), and recording a new one in the office.
  */
-import { error } from "@sveltejs/kit";
-import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { unitTitle } from "#lib/equipment/index.ts";
-import { inTenant } from "#lib/server/auth/index.ts";
-import { db } from "#lib/server/db/index.ts";
+import { unitBySerial } from "#lib/equipment/server/index.ts";
 import { equipment } from "#lib/server/db/schema.ts";
 
 import { getUnitComponents } from "./components.remote.ts";
@@ -21,19 +18,15 @@ import { conditionSql } from "./server/status-sql.ts";
 /** A unit's condition (by serial number): its history, newest first, and its status now. */
 export const getUnitCondition = query(v.string(), async (serialNumber) => {
 	const unit = conditionSql();
-	const [found] = await db
-		.select({
-			id: equipment.id,
-			serialNumber: equipment.serialNumber,
-			name: equipment.name,
-			manufacturer: equipment.manufacturer,
-			model: equipment.model,
-			status: unit.status,
-			concern: unit.concern,
-		})
-		.from(equipment)
-		.where(and(eq(equipment.serialNumber, serialNumber), inTenant(equipment)));
-	if (!found) error(404, m.condition_unit_not_found({ serial: serialNumber }));
+	const found = await unitBySerial(serialNumber, {
+		id: equipment.id,
+		serialNumber: equipment.serialNumber,
+		name: equipment.name,
+		manufacturer: equipment.manufacturer,
+		model: equipment.model,
+		status: unit.status,
+		concern: unit.concern,
+	});
 	const [history, thresholds] = await Promise.all([conditionsOf(found.id), thresholdsOf()]);
 	return {
 		unit: { id: found.id, serialNumber: found.serialNumber, title: unitTitle(found) },

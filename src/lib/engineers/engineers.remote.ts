@@ -1,4 +1,4 @@
-import { error, invalid, redirect } from "@sveltejs/kit";
+import { error, redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, gte, isNotNull, lt, ne, sql } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -17,12 +17,13 @@ import {
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customer, engineer, order } from "#lib/server/db/schema.ts";
-import { type Problem, refuse } from "#lib/server/forms.ts";
 import { bulkChange, idsTarget } from "#lib/server/lists/index.ts";
-import { deleteAndLog } from "#lib/server/records.ts";
+import { orNotFound, byKey } from "#lib/server/records.ts";
+import { Refused } from "#lib/server/refused.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { engineerFields } from "./form/engineer-schema.ts";
+import { removeEngineer } from "./server/engineers.ts";
 
 /** The tenant's engineers with the number of open orders assigned to them, by name. */
 export const getEngineers = forMembers.query(async () => {
@@ -103,12 +104,15 @@ export const getEngineer = forMembers.query.batch(v.string(), async (params) => 
 				)
 				.groupBy(order.engineerId)
 		: [];
-	const byId = new Map(found.map((one) => [one.id, one]));
+	const find = byKey(
+		found,
+		(one) => one.id,
+		(id) => m.engineers_id_not_found({ id }),
+	);
 	const countsOf = new Map(counts.map((row) => [row.engineerId, row]));
 
 	return (param: string) => {
-		const one = byId.get(Number(param));
-		if (!one) error(404, m.engineers_id_not_found({ id: param }));
+		const one = find(Number(param), param);
 		const counted = countsOf.get(one.id);
 		return {
 			engineer: one,
@@ -123,11 +127,13 @@ export const getEngineer = forMembers.query.batch(v.string(), async (params) => 
 /** One of the tenant's engineers' open and recent orders and last month's numbers, for their page. */
 export const getEngineerWork = forMembers.query(v.string(), async (param) => {
 	const engineerId = parseId(param);
-	const found = await db.query.engineer.findFirst({
-		where: idInTenant(engineer, engineerId),
-		columns: { hourlyRate: true },
-	});
-	if (!found) error(404, m.engineers_id_not_found({ id: param }));
+	const found = orNotFound(
+		await db.query.engineer.findFirst({
+			where: idInTenant(engineer, engineerId),
+			columns: { hourlyRate: true },
+		}),
+		m.engineers_id_not_found({ id: param }),
+	);
 
 	const columns = {
 		id: order.id,
@@ -194,15 +200,16 @@ async function emailTaken(email: string, exceptId?: number) {
 	return !!other;
 }
 
-/** The form problem of an email address another engineer uses, if there is one. */
-async function emailProblems(email: string, exceptId?: number): Promise<Problem<"email">[]> {
-	if (!(await emailTaken(email, exceptId))) return [];
-	return [{ field: "email", message: m.engineers_email_taken() }];
+/** Refuses an email address another engineer uses, on the form's `email` field. */
+async function refuseTakenEmail(email: string, exceptId?: number) {
+	if (await emailTaken(email, exceptId)) {
+		throw new Refused({ path: ["email"], message: m.engineers_email_taken() });
+	}
 }
 
-export const createEngineer = forMembers.form(v.object(engineerFields), async (input, issue) => {
+export const createEngineer = forMembers.form(v.object(engineerFields), async (input) => {
 	const { organizationId } = currentTenant();
-	refuse(issue, await emailProblems(input.email));
+	await refuseTakenEmail(input.email);
 	const created = await db.transaction(async (tx) => {
 		const [created] = await tx
 			.insert(engineer)
@@ -218,11 +225,13 @@ export const createEngineer = forMembers.form(v.object(engineerFields), async (i
 
 export const updateEngineer = forMembers.form(
 	v.object({ id: id(), ...engineerFields }),
-	async (data, issue) => {
+	async (data) => {
 		const { id, ...input } = data;
-		const found = await db.query.engineer.findFirst({ where: idInTenant(engineer, id) });
-		if (!found) error(404, m.engineers_not_found());
-		refuse(issue, await emailProblems(input.email, id));
+		const found = orNotFound(
+			await db.query.engineer.findFirst({ where: idInTenant(engineer, id) }),
+			m.engineers_not_found(),
+		);
+		await refuseTakenEmail(input.email, id);
 		await db.transaction(async (tx) => {
 			await tx.update(engineer).set(input).where(idInTenant(engineer, id));
 			const subject: Subject = { type: "engineer", id, label: input.name };
@@ -271,41 +280,17 @@ async function setActive(found: { id: number; label: string; active: boolean }, 
 export const setEngineerActive = forMembers.command(
 	v.object({ id: recordId(), active: v.boolean() }),
 	async ({ id, active }) => {
-		const found = await db.query.engineer.findFirst({
-			columns: { id: true, name: true, active: true },
-			where: idInTenant(engineer, id),
-		});
-		if (!found) error(404, m.engineers_not_found());
+		const found = orNotFound(
+			await db.query.engineer.findFirst({
+				columns: { id: true, name: true, active: true },
+				where: idInTenant(engineer, id),
+			}),
+			m.engineers_not_found(),
+		);
 		await setActive({ id: found.id, label: found.name, active: found.active }, active);
 		void getEngineers().refresh();
 	},
 );
-
-/**
- * Deletes one of the tenant's engineers; refuses one with orders assigned (or other records
- * referring to it). A 404 if there's no such engineer.
- */
-async function removeEngineer(id: number) {
-	const found = await db.query.engineer.findFirst({
-		columns: { id: true, name: true },
-		where: idInTenant(engineer, id),
-	});
-	if (!found) error(404, m.engineers_not_found());
-
-	const [{ assigned }] = await db
-		.select({ assigned: count() })
-		.from(order)
-		.where(and(inTenant(order), eq(order.engineerId, id)));
-	if (assigned > 0) {
-		invalid(m.engineers_delete_refused({ name: found.name, count: assigned }));
-	}
-
-	await deleteAndLog(
-		engineer,
-		{ type: "engineer", id, label: found.name },
-		m.engineers_delete_referenced(),
-	);
-}
 
 export const deleteEngineer = forMembers.form(v.object({ id: id() }), async ({ id }) => {
 	await removeEngineer(id);

@@ -13,11 +13,12 @@ import { and, asc, eq, isNotNull, or, sql } from "drizzle-orm";
 
 import { unitTitle } from "#lib/equipment/index.ts";
 import { isDoneOrder } from "#lib/models.ts";
-import type { OrderProblem, OrderSaving, OrderUnitsSaving } from "#lib/orders/extensions.ts";
-import { idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import type { OrderSaving, OrderUnitsSaving } from "#lib/orders/extensions.ts";
+import { idInTenant, inTenant, tenantJoin, sameTenant } from "#lib/server/auth/index.ts";
 import type { Transaction } from "#lib/server/db/index.ts";
 import { inList, literal } from "#lib/server/db/parameters.ts";
 import { equipment, order, orderUnit } from "#lib/server/db/schema.ts";
+import { type Problem } from "#lib/server/refused.ts";
 
 import { checklistKind, getsChecklists, orderPoints } from "../model.ts";
 import {
@@ -171,7 +172,7 @@ async function createChecklists(
 			.innerJoin(
 				checklistTemplateItem,
 				and(
-					eq(checklistTemplateItem.organizationId, checklist.organizationId),
+					sameTenant(checklistTemplateItem, checklist),
 					eq(checklistTemplateItem.templateId, checklist.templateId),
 				),
 			)
@@ -202,7 +203,7 @@ export async function syncChecklists(
 	tx: Transaction,
 	orderId: number,
 	leaving: readonly number[] = [],
-): Promise<OrderProblem[] | undefined> {
+): Promise<Problem[] | undefined> {
 	const [target] = await tx
 		.select({
 			id: order.id,
@@ -281,7 +282,7 @@ export async function saveOrderChecklists({
 	order: target,
 	from,
 	status,
-}: OrderSaving): Promise<OrderProblem[] | undefined> {
+}: OrderSaving): Promise<Problem[] | undefined> {
 	if (status === null) {
 		const [units, existing] = await Promise.all([
 			unitsOf(tx, target.id),
@@ -310,7 +311,7 @@ export async function saveOrderChecklists({
 		.innerJoin(
 			orderUnit,
 			and(
-				eq(orderUnit.organizationId, checklist.organizationId),
+				sameTenant(orderUnit, checklist),
 				eq(orderUnit.orderId, checklist.orderId),
 				eq(orderUnit.equipmentId, checklist.equipmentId),
 			),

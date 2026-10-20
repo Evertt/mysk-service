@@ -4,17 +4,17 @@
  * logged against its template (`parent`), so it shows on the template's activity too; the points
  * that only make room for it aren't logged. A retired template's points aren't changed.
  */
-import { error } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
+import type { MoveDirection } from "#lib/schema.ts";
 import { recordActivity, type LoggedSubjects } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
+import { deleteAndLog, orNotFound } from "#lib/server/records.ts";
 
 import type { PointInput } from "../form/template-schema.ts";
 import {
 	changedPlaces,
-	type MoveDirection,
 	moveGroup as movedGroup,
 	movePoint as movedPoint,
 	orderPoints,
@@ -58,12 +58,14 @@ async function applyPlaces(tx: Transaction, places: PointPlace[]) {
 
 /** The tenant's point `id` with its template (or a 404), which mustn't be retired. */
 async function findPoint(tx: Transaction, id: number) {
-	const [found] = await tx
-		.select({ point: checklistTemplateItem, templateId: checklistTemplate.id })
-		.from(checklistTemplateItem)
-		.innerJoin(...tenantJoin(checklistTemplate, checklistTemplateItem.templateId))
-		.where(idInTenant(checklistTemplateItem, id));
-	if (!found) error(404, m.checklists_point_not_found());
+	const found = orNotFound(
+		await tx
+			.select({ point: checklistTemplateItem, templateId: checklistTemplate.id })
+			.from(checklistTemplateItem)
+			.innerJoin(...tenantJoin(checklistTemplate, checklistTemplateItem.templateId))
+			.where(idInTenant(checklistTemplateItem, id)),
+		m.checklists_point_not_found(),
+	);
 	return { point: found.point, template: await findActiveTemplate(tx, found.templateId) };
 }
 
@@ -167,8 +169,7 @@ export function moveGroup(templateId: number, group: string, direction: MoveDire
 export function deletePoint(id: number) {
 	return db.transaction(async (tx) => {
 		const { point, template } = await findPoint(tx, id);
-		await tx.delete(checklistTemplateItem).where(idInTenant(checklistTemplateItem, id));
-		await recordActivity(tx, { action: "deleted", ...subjects(point, template) });
+		await deleteAndLog(checklistTemplateItem, { tx, ...subjects(point, template) });
 		return template.id;
 	});
 }

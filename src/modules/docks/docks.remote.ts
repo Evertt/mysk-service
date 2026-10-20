@@ -9,7 +9,6 @@ import * as v from "valibot";
 import { isManager } from "#lib/auth/index.ts";
 import { customerCode, recordId } from "#lib/schema.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
-import { refuse } from "#lib/server/forms.ts";
 import { live } from "#lib/server/live.ts";
 
 import { dockSchema } from "./form/dock-schema.ts";
@@ -27,8 +26,8 @@ export const getCustomerDocks = query(code, async (customerCode) => ({
 /** Adds or saves a dock at one of the customer's sites. */
 export const saveCustomerDock = forManagers.form(
 	dockSchema,
-	async ({ customer, dockId, ...input }, issue) => {
-		refuse(issue, await saveDock(customer, { ...input, id: dockId ?? undefined }));
+	async ({ customer, dockId, ...input }) => {
+		await saveDock(customer, { ...input, id: dockId ?? undefined });
 		void getCustomerDocks(customer).refresh();
 		return { code: input.code };
 	},

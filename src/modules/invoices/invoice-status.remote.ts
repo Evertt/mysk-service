@@ -1,5 +1,4 @@
 /** Issuing, paying and voiding invoices. */
-import { invalid } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -12,6 +11,7 @@ import { currentTenant, idInTenant, idsInTenant } from "#lib/server/auth/index.t
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { order } from "#lib/server/db/schema.ts";
 import { bulkChange, idsTarget } from "#lib/server/lists/index.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 import { holdsCredit } from "./credit-note.ts";
 import { getCreditNotes } from "./credit-notes.remote.ts";
@@ -46,7 +46,7 @@ const changeLabel: Record<InvoiceStatus, () => string> = {
 async function changing(tx: Transaction, id: number, to: InvoiceStatus) {
 	const found = await invoiceById(tx, id);
 	if (!canChange(found.status, to)) {
-		invalid(
+		throw new Refused(
 			m.invoices_cannot_change({
 				number: found.number,
 				status: statusLabel[found.status](),
@@ -74,7 +74,7 @@ export const issueInvoice = form(v.object({ id: id() }), async ({ id }) => {
 	const settings = await settingsOf(organizationId);
 	const found = await db.transaction(async (tx) => {
 		const found = await changing(tx, id, "sent");
-		if (!found.lines.length) invalid(m.invoices_add_before_issuing());
+		if (!found.lines.length) throw new Refused(m.invoices_add_before_issuing());
 
 		const orderIds = orderIdsOf(found);
 		if (orderIds.length) {
@@ -84,7 +84,7 @@ export const issueInvoice = form(v.object({ id: id() }), async ({ id }) => {
 				.where(idsInTenant(order, orderIds));
 			const undone = orders.filter((o) => !can("invoice", o.status)).map((o) => o.number);
 			if (undone.length) {
-				invalid(
+				throw new Refused(
 					m.invoices_orders_not_completed({ count: undone.length, orders: undone.join(", ") }),
 				);
 			}
@@ -149,7 +149,7 @@ export const voidInvoice = form(v.object({ id: id() }), async ({ id }) => {
 		const found = await changing(tx, id, "void");
 		const credits = (await creditsOf(tx, [found.id])).filter((each) => holdsCredit(each.status));
 		if (credits.length) {
-			invalid(
+			throw new Refused(
 				m.invoices_void_has_credit_notes({
 					number: found.number,
 					credits: credits.map((each) => each.number).join(", "),

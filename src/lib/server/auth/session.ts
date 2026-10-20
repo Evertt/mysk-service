@@ -217,7 +217,7 @@ export interface TenantTable {
  * `table.id = id` in the current tenant: the way to look a record up by an id from the client
  * (ids are global). An `eq(table.id, id)` without `inTenant()` stands out in review.
  */
-export const idInTenant = (table: TenantTable, id: number): SQL =>
+export const idInTenant = (table: TenantTable, id: number | string): SQL =>
 	and(eq(table.id, id), inTenant(table))!;
 
 /** `table.id in ids` in the current tenant: the way to load the records of ids from the client. */
@@ -230,6 +230,16 @@ export const idsInTenant = (table: TenantTable, ids: number[]): SQL =>
  */
 export const tenantJoin = <T extends TenantTable>(table: T, foreignKey: SQLiteColumn) =>
 	[table, and(eq(foreignKey, table.id), inTenant(table))!] as const;
+
+/**
+ * `a` and `b` are of the same tenant: for a join or a correlated subquery whose outer row holds the
+ * tenant (`organization_id`), e.g. a unit's latest condition. Instead of spelling out
+ * `eq(a.organizationId, b.organizationId)`.
+ */
+export const sameTenant = (
+	a: { organizationId: SQLiteColumn },
+	b: { organizationId: SQLiteColumn },
+) => eq(a.organizationId, b.organizationId);
 
 /**
  * The current tenant, if it has `moduleId`; otherwise a 404, as if the module's pages and data

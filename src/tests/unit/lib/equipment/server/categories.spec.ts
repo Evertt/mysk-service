@@ -1,6 +1,6 @@
 import { rmSync } from "node:fs";
 
-import { isHttpError, isValidationError } from "@sveltejs/kit";
+import { isHttpError } from "@sveltejs/kit";
 import { asc, sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
@@ -15,6 +15,7 @@ import {
 import type { Tenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { equipmentCategory } from "#lib/server/db/schema.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 const logged = vi.fn();
@@ -70,9 +71,6 @@ const tenant = (organizationId: string): Tenant => ({
 	modules: [],
 });
 
-/** The name field's issue, as a remote form's `issue.name` makes it: here, the message. */
-const nameIssue = (message: string) => message;
-
 const input = (fields: Partial<CategoryInput> = {}): CategoryInput => ({
 	name: "Sectionaaldeur",
 	specialty: "mechanical",
@@ -116,7 +114,7 @@ async function failure(change: () => Promise<unknown>) {
 		return null;
 	} catch (error) {
 		if (isHttpError(error)) return error.status;
-		if (isValidationError(error)) return error.issues.map((issue) => issue.message);
+		if (error instanceof Refused) return error.problems.map((problem) => problem.message);
 		throw error;
 	}
 }
@@ -133,7 +131,7 @@ describe("categoriesWithUnits", () => {
 
 describe("createCategory", () => {
 	test("adds one last in the tenant's order, and logs it", async () => {
-		const id = await createCategory(input(), nameIssue);
+		const id = await createCategory(input());
 		expect((await categoriesOf("north")).at(-1)).toEqual({
 			id,
 			name: "Sectionaaldeur",
@@ -150,29 +148,29 @@ describe("createCategory", () => {
 		locals.tenant = tenant("west");
 		await db.run(sql`insert into organization (id, name, slug, created_at)
 			values ('west', 'West', 'west', 0) on conflict do nothing`);
-		const id = await createCategory(input({ specialty: null }), nameIssue);
+		const id = await createCategory(input({ specialty: null }));
 		expect(await categoriesOf("west")).toEqual([
 			{ id, name: "Sectionaaldeur", specialty: null, position: 0 },
 		]);
 	});
 
 	test("refuses a name the tenant has, in any case; another tenant's is fine", async () => {
-		expect(await failure(() => createCategory(input({ name: "koelMACHINE" }), nameIssue))).toEqual([
+		expect(await failure(() => createCategory(input({ name: "koelMACHINE" })))).toEqual([
 			"There's a category Koelmachine already",
 		]);
 		expect(await categoriesOf("north")).toHaveLength(3);
 		expect(logged).not.toHaveBeenCalled();
-		await createCategory(input({ name: "Ketel" }), nameIssue);
+		await createCategory(input({ name: "Ketel" }));
 		expect((await categoriesOf("north")).map((c) => c.name)).toContain("Ketel");
 	});
 
 	test("takes a name with a letter beyond ASCII as the unique index takes it", async () => {
 		// SQLite's `lower()`, which the index uses, leaves "É" as it is: the check must too.
-		await createCategory(input({ name: "Één" }), nameIssue);
-		expect(await failure(() => createCategory(input({ name: "ÉéN" }), nameIssue))).toEqual([
+		await createCategory(input({ name: "Één" }));
+		expect(await failure(() => createCategory(input({ name: "ÉéN" })))).toEqual([
 			"There's a category Één already",
 		]);
-		expect(await failure(() => updateCategory(11, input({ name: "ÉéN" }), nameIssue))).toEqual([
+		expect(await failure(() => updateCategory(11, input({ name: "ÉéN" })))).toEqual([
 			"There's a category Één already",
 		]);
 	});
@@ -180,7 +178,7 @@ describe("createCategory", () => {
 
 describe("updateCategory", () => {
 	test("renames it and changes its specialty, and logs what changed", async () => {
-		await updateCategory(11, input({ name: "Pompen", specialty: null }), nameIssue);
+		await updateCategory(11, input({ name: "Pompen", specialty: null }));
 		expect((await categoriesOf("north"))[1]).toEqual({
 			id: 11,
 			name: "Pompen",
@@ -197,15 +195,15 @@ describe("updateCategory", () => {
 	});
 
 	test("may change the case of its own name, not take another's", async () => {
-		await updateCategory(12, input({ name: "LIFT" }), nameIssue);
+		await updateCategory(12, input({ name: "LIFT" }));
 		expect((await categoriesOf("north"))[2].name).toBe("LIFT");
-		expect(await failure(() => updateCategory(12, input({ name: "pomp" }), nameIssue))).toEqual([
+		expect(await failure(() => updateCategory(12, input({ name: "pomp" })))).toEqual([
 			"There's a category Pomp already",
 		]);
 	});
 
 	test("another tenant's is a 404, and stays as it was", async () => {
-		expect(await failure(() => updateCategory(20, input(), nameIssue))).toBe(404);
+		expect(await failure(() => updateCategory(20, input()))).toBe(404);
 		expect(await categoriesOf("south")).toEqual([
 			{ id: 20, name: "Ketel", specialty: "plumbing", position: 0 },
 		]);

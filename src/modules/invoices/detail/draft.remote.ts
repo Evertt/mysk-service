@@ -1,5 +1,5 @@
 /** Changing a draft invoice: its lines and its terms. */
-import { error, invalid } from "@sveltejs/kit";
+import { invalid } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -8,6 +8,8 @@ import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { insertBatches } from "#lib/server/db/parameters.ts";
+import { orNotFound } from "#lib/server/records.ts";
+import { Refused } from "#lib/server/refused.ts";
 
 import { lineNote } from "../activity.ts";
 import { billingFields, lineFields, termsFields } from "../form/invoice-schema.ts";
@@ -46,7 +48,8 @@ const loggedLine = {
 /** The tenant's draft by id, inside a transaction; refuses anything else. */
 async function draftById(tx: Transaction, id: number) {
 	const found = await invoiceById(tx, id);
-	if (!isEditable(found.status)) invalid(m.invoices_not_editable({ number: found.number }));
+	if (!isEditable(found.status))
+		throw new Refused(m.invoices_not_editable({ number: found.number }));
 	return found;
 }
 
@@ -55,11 +58,13 @@ export const addToInvoice = form(
 	v.object({ id: id(), ...billingFields }),
 	async ({ id, orderIds, items }, issue) => {
 		const { organizationId } = currentTenant();
-		const found = await db.query.invoice.findFirst({
-			columns: { customerId: true },
-			where: idInTenant(invoice, id),
-		});
-		if (!found) error(404, m.invoices_not_found());
+		const found = orNotFound(
+			await db.query.invoice.findFirst({
+				columns: { customerId: true },
+				where: idInTenant(invoice, id),
+			}),
+			m.invoices_not_found(),
+		);
 
 		const { lines, unknownOrders, unknownItems } = await linesFor(
 			found.customerId,
@@ -68,11 +73,11 @@ export const addToInvoice = form(
 		);
 		if (unknownOrders.length) invalid(issue.orderIds(m.invoices_only_billable_orders()));
 		if (unknownItems.length) invalid(issue.items(m.invoices_only_billable_items()));
-		if (!lines.length) invalid(m.invoices_choose_to_add());
+		if (!lines.length) throw new Refused(m.invoices_choose_to_add());
 
 		const draft = await db.transaction(async (tx) => {
 			const draft = await draftById(tx, id);
-			if ((await alreadyBilled(tx, lines)).length) invalid(m.invoices_billed_meanwhile());
+			if ((await alreadyBilled(tx, lines)).length) throw new Refused(m.invoices_billed_meanwhile());
 			const rows = lines.map((line) => ({ ...line, organizationId, invoiceId: draft.id }));
 			const added = [];
 			for (const batch of insertBatches(invoiceLine, rows)) {
@@ -110,11 +115,13 @@ export const addLine = form(v.object({ id: id(), ...lineFields }), async (input)
 /** Removes a line from a draft; an order's lines (its price and adjustments) go together. */
 export const removeLine = form(v.object({ id: id() }), async ({ id }) => {
 	const draft = await db.transaction(async (tx) => {
-		const line = await tx.query.invoiceLine.findFirst({
-			columns: { id: true, invoiceId: true, orderId: true },
-			where: idInTenant(invoiceLine, id),
-		});
-		if (!line) error(404, m.invoices_line_not_found());
+		const line = orNotFound(
+			await tx.query.invoiceLine.findFirst({
+				columns: { id: true, invoiceId: true, orderId: true },
+				where: idInTenant(invoiceLine, id),
+			}),
+			m.invoices_line_not_found(),
+		);
 		const draft = await draftById(tx, line.invoiceId);
 		const removed = await tx
 			.delete(invoiceLine)

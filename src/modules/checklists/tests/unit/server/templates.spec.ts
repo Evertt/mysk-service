@@ -6,6 +6,7 @@ import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test
 import type { Tenant } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
 import { activity } from "#lib/server/db/schema.ts";
+import { Refused } from "#lib/server/refused.ts";
 import {
 	addPoint,
 	deletePoint,
@@ -94,16 +95,13 @@ const tenantOf = (organizationId: string): Tenant => ({
 	modules: ["checklists"],
 });
 
-/** Refuses on a form field, as a remote form's `issue.name` does. */
-const issue = (message: string) => ({ message, path: ["field"] });
-
-/** What `invalid()` refused with, or the error's status. */
+/** What it was refused with (`Refused`), or the error's status. */
 async function refusal(work: Promise<unknown>) {
 	try {
 		await work;
 	} catch (error) {
-		const { issues, status } = error as { issues?: { message: string }[]; status?: number };
-		return issues ? issues.map((i) => i.message) : status;
+		if (error instanceof Refused) return error.problems.map((problem) => problem.message);
+		return (error as { status?: number }).status;
 	}
 	throw new Error("Not refused");
 }
@@ -150,8 +148,8 @@ beforeEach(async () => {
 
 describe("templates", () => {
 	test("a new one goes last, without points, and is logged", async () => {
-		const first = await createTemplate(sectional, issue);
-		const second = await createTemplate({ ...sectional, name: "Trap", norm: null }, issue);
+		const first = await createTemplate(sectional);
+		const second = await createTemplate({ ...sectional, name: "Trap", norm: null });
 		const { templates } = await templateList();
 		expect(templates.map((t) => [t.id, t.name, t.pointCount])).toEqual([
 			[first, "Sectionaaldeur", 0],
@@ -164,24 +162,24 @@ describe("templates", () => {
 	});
 
 	test("names are unique within the tenant, whatever their case, but not across tenants", async () => {
-		const id = await createTemplate(sectional, issue);
-		expect(await refusal(createTemplate({ ...sectional, name: "sectionaaldeur" }, issue))).toEqual([
+		const id = await createTemplate(sectional);
+		expect(await refusal(createTemplate({ ...sectional, name: "sectionaaldeur" }))).toEqual([
 			"There's a template Sectionaaldeur already",
 		]);
-		const other = await createTemplate({ ...sectional, name: "Trap" }, issue);
-		expect(
-			await refusal(updateTemplate(other, { ...sectional, name: "SECTIONAALDEUR" }, issue)),
-		).toEqual(["There's a template Sectionaaldeur already"]);
+		const other = await createTemplate({ ...sectional, name: "Trap" });
+		expect(await refusal(updateTemplate(other, { ...sectional, name: "SECTIONAALDEUR" }))).toEqual([
+			"There's a template Sectionaaldeur already",
+		]);
 		// Its own name, in another case, is fine.
-		await updateTemplate(id, { ...sectional, name: "SectionaalDeur" }, issue);
+		await updateTemplate(id, { ...sectional, name: "SectionaalDeur" });
 		locals.tenant = tenantOf("south");
-		await createTemplate(sectional, issue);
+		await createTemplate(sectional);
 	});
 
 	test("an update logs what changed, and nothing when nothing did", async () => {
-		const id = await createTemplate(sectional, issue);
-		await updateTemplate(id, { ...sectional, validityMonths: 24 }, issue);
-		await updateTemplate(id, { ...sectional, validityMonths: 24 }, issue);
+		const id = await createTemplate(sectional);
+		await updateTemplate(id, { ...sectional, validityMonths: 24 });
+		await updateTemplate(id, { ...sectional, validityMonths: 24 });
 		const entries = await logged();
 		expect(entries).toHaveLength(2);
 		expect(entries[1]).toMatchObject({
@@ -191,11 +189,11 @@ describe("templates", () => {
 	});
 
 	test("another tenant's template is a 404, to read or change", async () => {
-		const id = await createTemplate(sectional, issue);
+		const id = await createTemplate(sectional);
 		locals.tenant = tenantOf("south");
 		expect(await refusal(templateDetail(id))).toBe(404);
-		expect(await refusal(updateTemplate(id, { ...sectional, name: "Taken" }, issue))).toBe(404);
-		expect(await refusal(setTemplateCategories(id, [], issue))).toBe(404);
+		expect(await refusal(updateTemplate(id, { ...sectional, name: "Taken" }))).toBe(404);
+		expect(await refusal(setTemplateCategories(id, []))).toBe(404);
 		expect(await refusal(retireTemplate(id))).toBe(404);
 		expect(await refusal(addPoint({ templateId: id, group: "", text: "Mine" }))).toBe(404);
 		expect((await templateList()).templates).toEqual([]);
@@ -206,8 +204,8 @@ describe("templates", () => {
 
 describe("categories", () => {
 	test("a template is for the categories it's given, and the list shows the others as gaps", async () => {
-		const id = await createTemplate(sectional, issue);
-		await setTemplateCategories(id, [2, 1, 1], issue);
+		const id = await createTemplate(sectional);
+		await setTemplateCategories(id, [2, 1, 1]);
 		const { templates, uncovered } = await templateList();
 		expect(templates[0].categories).toEqual([
 			{ id: 1, name: "Sectionaaldeuren" },
@@ -218,15 +216,15 @@ describe("categories", () => {
 			action: "updated",
 			changes: { categoryIds: [[], [1, 2]] },
 		});
-		await setTemplateCategories(id, [1], issue);
+		await setTemplateCategories(id, [1]);
 		expect((await logged()).at(-1)).toMatchObject({ changes: { categoryIds: [[1, 2], [1]] } });
 	});
 
 	test("a category has one template: another's is refused, naming both", async () => {
-		const first = await createTemplate(sectional, issue);
-		const second = await createTemplate({ ...sectional, name: "Snelroldeur" }, issue);
-		await setTemplateCategories(first, [1, 2], issue);
-		expect(await refusal(setTemplateCategories(second, [2, 3], issue))).toEqual([
+		const first = await createTemplate(sectional);
+		const second = await createTemplate({ ...sectional, name: "Snelroldeur" });
+		await setTemplateCategories(first, [1, 2]);
+		expect(await refusal(setTemplateCategories(second, [2, 3]))).toEqual([
 			"Snelroldeuren has the template Sectionaaldeur already. Take it off there first.",
 		]);
 		// Nothing changed, and the database holds it too.
@@ -239,8 +237,8 @@ describe("categories", () => {
 				.values({ organizationId: "north", templateId: second, categoryId: 2 }),
 		).rejects.toThrow();
 		// Once the first gives it up, the second may have it.
-		await setTemplateCategories(first, [1], issue);
-		await setTemplateCategories(second, [2, 3], issue);
+		await setTemplateCategories(first, [1]);
+		await setTemplateCategories(second, [2, 3]);
 		expect((await templateList()).uncovered).toEqual([]);
 	});
 
@@ -252,8 +250,8 @@ describe("categories", () => {
 				.join(", ")}`,
 		);
 		try {
-			const id = await createTemplate(sectional, issue);
-			await setTemplateCategories(id, many, issue);
+			const id = await createTemplate(sectional);
+			await setTemplateCategories(id, many);
 			expect(
 				(await templateDetail(id)).categories.filter((c) => c.templateId === id).map((c) => c.id),
 			).toEqual(many);
@@ -263,15 +261,15 @@ describe("categories", () => {
 	});
 
 	test("another tenant's category is a 404", async () => {
-		const id = await createTemplate(sectional, issue);
-		expect(await refusal(setTemplateCategories(id, [9], issue))).toBe(404);
+		const id = await createTemplate(sectional);
+		expect(await refusal(setTemplateCategories(id, [9]))).toBe(404);
 		expect(await db.select().from(checklistTemplateCategory)).toEqual([]);
 	});
 
 	test("a unit is offered its category's template, if it has one", async () => {
-		const id = await createTemplate(sectional, issue);
+		const id = await createTemplate(sectional);
 		expect(await unitTemplate("SN-10")).toEqual({ category: "Sectionaaldeuren", template: null });
-		await setTemplateCategories(id, [1], issue);
+		await setTemplateCategories(id, [1]);
 		expect(await unitTemplate("SN-10")).toEqual({
 			category: "Sectionaaldeuren",
 			template: { id, name: "Sectionaaldeur", norm: "NEN-EN 12604/12453", validityMonths: 12 },
@@ -286,9 +284,9 @@ describe("categories", () => {
 
 describe("retiring", () => {
 	test("a retired template is kept with its points, offered no longer, and frees its categories", async () => {
-		const id = await createTemplate(sectional, issue);
+		const id = await createTemplate(sectional);
 		await addPoint({ templateId: id, group: "Mechanisch", text: "Veren" });
-		await setTemplateCategories(id, [1, 2], issue);
+		await setTemplateCategories(id, [1, 2]);
 		await retireTemplate(id);
 
 		const { templates, uncovered } = await templateList();
@@ -306,15 +304,13 @@ describe("retiring", () => {
 	});
 
 	test("a retired template isn't changed until it's restored, without its categories", async () => {
-		const id = await createTemplate(sectional, issue);
+		const id = await createTemplate(sectional);
 		await addPoint({ templateId: id, group: "", text: "Veren" });
 		const [{ id: pointId }] = await pointsOf(id);
 		await retireTemplate(id);
 		const refused = ["Sectionaaldeur is retired. Restore it to change it."];
-		expect(await refusal(updateTemplate(id, { ...sectional, validityMonths: 6 }, issue))).toEqual(
-			refused,
-		);
-		expect(await refusal(setTemplateCategories(id, [1], issue))).toEqual(refused);
+		expect(await refusal(updateTemplate(id, { ...sectional, validityMonths: 6 }))).toEqual(refused);
+		expect(await refusal(setTemplateCategories(id, [1]))).toEqual(refused);
 		expect(await refusal(addPoint({ templateId: id, group: "", text: "Kabels" }))).toEqual(refused);
 		expect(await refusal(updatePoint(pointId, { group: "", text: "Kabels" }))).toEqual(refused);
 		expect(await refusal(movePoint(pointId, "down"))).toEqual(refused);
@@ -325,7 +321,7 @@ describe("retiring", () => {
 		expect(template.archived).toBe(false);
 		expect(categories.every((category) => category.templateId === null)).toBe(true);
 		expect((await logged()).at(-1)).toMatchObject({ action: "restored" });
-		await setTemplateCategories(id, [1], issue);
+		await setTemplateCategories(id, [1]);
 		expect((await unitTemplate("SN-10")).template?.id).toBe(id);
 	});
 });
@@ -333,7 +329,7 @@ describe("retiring", () => {
 describe("points", () => {
 	/** A template with points in groups M, E and V. */
 	async function withPoints() {
-		const id = await createTemplate(sectional, issue);
+		const id = await createTemplate(sectional);
 		for (const [group, text] of [
 			["M", "m1"],
 			["M", "m2"],

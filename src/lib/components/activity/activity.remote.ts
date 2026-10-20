@@ -18,6 +18,7 @@ import { db } from "#lib/server/db/index.ts";
 import { activity, customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
 import { inDays } from "#lib/server/lists/index.ts";
 import { live } from "#lib/server/live.ts";
+import { orNotFound } from "#lib/server/records.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 const allModules = appModules.map((module) => module.id);
@@ -214,8 +215,10 @@ export const watchRecordChanges = forMembers.query.live(
 			}
 			// Checked once watching, so a change in between isn't missed.
 			const table = watchedRecords[type];
-			const [found] = await db.select({ id: table.id }).from(table).where(idInTenant(table, id));
-			if (!found) error(404, m.common_error_not_found());
+			orNotFound(
+				await db.select({ id: table.id }).from(table).where(idInTenant(table, id)),
+				m.common_error_not_found(),
+			);
 			return null;
 		});
 	},
