@@ -2,6 +2,7 @@
 	import { resolve } from "$app/paths";
 	import type { RouteParams } from "$app/types";
 
+	import { canManage } from "#lib/auth/can-manage.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import RulesView from "#modules/partner-programme/detail/rules-view.svelte";
 	import RulesForm from "#modules/partner-programme/form/rules-form.svelte";
@@ -43,7 +44,7 @@
 	{/snippet}
 </PageHeader>
 
-{#if data.canManage}
+{#if await canManage()}
 	{#key year}
 		<RulesForm {year} rules={data.rules} />
 	{/key}

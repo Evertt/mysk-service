@@ -3,6 +3,7 @@
 	import { page } from "$app/state";
 	import type { RouteParams } from "$app/types";
 
+	import { canManage } from "#lib/auth/can-manage.ts";
 	import IntegrationTokensCard from "#lib/modules/settings/integration-tokens-card.svelte";
 	import ModuleSettingsPage from "#lib/modules/settings/module-settings-page.svelte";
 	import { getEnergySettings } from "#modules/energy/settings/settings.remote.ts";
@@ -11,6 +12,7 @@
 	const _props: { params: RouteParams<"/(app)/(modules)/energy/settings"> } = $props();
 
 	const settings = $derived(await getEnergySettings());
+	const manager = $derived(await canManage());
 	// Where the gateways post their readings (`routes/(api)/ingest/+server.ts`).
 	const ingestUrl = $derived(new URL("/energy/ingest", page.url.origin).toString());
 </script>
@@ -37,7 +39,7 @@
 								<Table.Head>{m.energy_column_site()}</Table.Head>
 								<Table.Head>{m.energy_column_zones()}</Table.Head>
 								<Table.Head>{m.energy_column_doors()}</Table.Head>
-								{#if settings.canManage}
+								{#if manager}
 									<Table.Head class="w-0"
 										><span class="sr-only">{m.energy_setup_actions()}</span></Table.Head
 									>
@@ -58,7 +60,7 @@
 									<Table.Cell class="font-mono text-xs">{site.zones.join(", ")}</Table.Cell>
 									<Table.Cell class="font-mono text-xs">{site.doors.join(", ") || "—"}</Table.Cell>
 									<!-- A site's setup is the managers'. -->
-									{#if settings.canManage}
+									{#if manager}
 										<Table.Cell>
 											<Button
 												variant="outline"

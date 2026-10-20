@@ -4,9 +4,6 @@
  * putting a material in the shop, changing it, or taking it out. The categories themselves are
  * set up by managers (`categories.remote.ts`).
  */
-import { isManager } from "#lib/auth/index.ts";
-import { currentTenant } from "#lib/server/auth/index.ts";
-
 import { productSchema } from "./form/schemas.ts";
 import { form, query } from "./remote-functions.ts";
 import { checkpointTexts } from "./server/catalogue.ts";
@@ -23,7 +20,6 @@ export const getShopProducts = query(async () => {
 		materials,
 		categories: categories.map(({ id, name }) => ({ id, name })),
 		checkpoints: [...points.values()],
-		canManage: isManager(currentTenant().roles),
 	};
 });
 

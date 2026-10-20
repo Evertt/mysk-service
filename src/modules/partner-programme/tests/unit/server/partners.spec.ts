@@ -97,7 +97,6 @@ describe("a customer's card", () => {
 		expect(card).toMatchObject({
 			customer: { id: customer.id, code: customer.code },
 			partner: null,
-			canManage: false,
 		});
 	});
 });

@@ -117,7 +117,7 @@ describe("a planner", () => {
 	test("reads the sites, but can't set one up", async () => {
 		const { siteId } = await riedel();
 		await as(shltr.member, async () => {
-			expect((await data(getEnergySites)).canManage).toBe(false);
+			expect((await data(getEnergySites)).sites.length).toBeGreaterThan(0);
 			expect(await call(getEnergySetup, siteId)).toMatchObject({ status: 403 });
 			expect(await call(getEnergySiteChoices)).toMatchObject({ status: 403 });
 			expect(

@@ -6,19 +6,14 @@
 import { resolve } from "$app/paths";
 import { redirect } from "@sveltejs/kit";
 
-import { isManager } from "#lib/auth/index.ts";
 import { customerCode } from "#lib/schema.ts";
-import { currentTenant } from "#lib/server/auth/index.ts";
 
 import { forManagers, query } from "./remote-functions.ts";
 import { createEnergySite as create, customerEnergy, siteChoices } from "./server/setup.ts";
 import { newEnergySiteSchema } from "./setup/setup-schema.ts";
 
-/** The customer's sites with their energy sites, and whether the user may add one. */
-export const getCustomerEnergy = query(customerCode(), async (code) => ({
-	...(await customerEnergy(code)),
-	canManage: isManager(currentTenant().roles),
-}));
+/** The customer's sites with their energy sites. */
+export const getCustomerEnergy = query(customerCode(), (code) => customerEnergy(code));
 
 /** The tenant's customer sites without energy monitoring, to add it to one. */
 export const getEnergySiteChoices = forManagers.query(() => siteChoices());

@@ -7,6 +7,7 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
+	import { canManage } from "#lib/auth/can-manage.ts";
 	import EnumBadge from "#lib/components/enum-badge.svelte";
 
 	import { dockStateDisplay } from "../../display.ts";
@@ -18,6 +19,7 @@
 	let { code }: { code: string } = $props();
 
 	const data = $derived(await getCustomerDocks(code));
+	const manager = $derived(await canManage());
 	const bySite = $derived(
 		data.sites
 			.map((site) => ({ site, docks: data.docks.filter((dock) => dock.siteId === site.id) }))
@@ -26,12 +28,12 @@
 	const boardHref = (siteId: number) => `${resolve("/(app)/(modules)/docks")}?site=${siteId}`;
 </script>
 
-{#if data.docks.length || (data.canManage && data.sites.length)}
+{#if data.docks.length || (manager && data.sites.length)}
 	<Card.Root data-docks-card>
 		<Card.Header>
 			<Card.Title>{m.docks_card_title()}</Card.Title>
 			<Card.Description>{m.docks_card_description()}</Card.Description>
-			{#if data.canManage}
+			{#if manager}
 				<Card.Action><DockDialog {data} /></Card.Action>
 			{/if}
 		</Card.Header>
@@ -62,7 +64,7 @@
 										)}
 										<EnumBadge display={dockStateDisplay} value={state} data-dock-state={state} />
 									{/if}
-									{#if data.canManage}
+									{#if manager}
 										<DockDialog {data} {dock} />
 										<DeleteDock customer={data.customer.code} {dock} />
 									{/if}

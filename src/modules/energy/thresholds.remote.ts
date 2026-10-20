@@ -4,7 +4,6 @@
  */
 import { and, eq } from "drizzle-orm";
 
-import { isManager } from "#lib/auth/index.ts";
 import { recordId } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
@@ -16,12 +15,12 @@ import { forManagers, query } from "./remote-functions.ts";
 import { loadSite, periodRanges, siteFigures } from "./server/figures.ts";
 import { energySite, energyThreshold, energyZone } from "./server/schema.ts";
 
-/** The site's zones with their thresholds and state now, and whether the user may change them. */
+/** The site's zones with their thresholds and state now. */
 export const getEnergyThresholds = query(recordId(), async (id) => {
 	const site = await loadSite(id);
 	const now = Temporal.Now.instant();
 	const { zones } = await siteFigures(site, periodRanges("day", site.timeZone, now), now);
-	return { site, zones, canManage: isManager(currentTenant().roles) };
+	return { site, zones };
 });
 
 /** Saves a zone's thresholds (made with them if it had none). */
