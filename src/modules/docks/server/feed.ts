@@ -11,7 +11,7 @@ import { checkDoors } from "./rules.ts";
 /**
  * Receives a batch as posted (`{ events: [...] }`) at `now`: its issues if it isn't valid (nothing
  * applied), else what came of each event and the breakdown orders the rules made. Throws
- * `UnknownDocks` for a batch naming a dock the tenant lacks.
+ * `UnknownCodes` for a batch naming a dock the tenant lacks.
  */
 export async function receiveBatch(body: unknown, now = Temporal.Now.instant()) {
 	const parsed = parseBatch(body, now);

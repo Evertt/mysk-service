@@ -20,6 +20,7 @@ import {
 } from "#lib/server/auth/integrations.ts";
 import { db } from "#lib/server/db/index.ts";
 import { activity } from "#lib/server/db/schema.ts";
+import { UnknownCodes } from "#lib/server/modules/integrations.ts";
 import { parseBatch } from "#modules/energy/ingest/format.ts";
 import { storeBatch } from "#modules/energy/server/ingest.ts";
 import {
@@ -139,7 +140,7 @@ describe("storing a batch", () => {
 			readings: [reading("Z-A", 0, 80), reading("Z-A", 15, 120), reading("Z-B", 0, 500)],
 			doorEvents: [door(0, "open"), door(4, "closed")],
 		});
-		expect(outcome).toEqual({ stored: { readings: 3, doorEvents: 2, alerts: 1 } });
+		expect(outcome).toEqual({ readings: 3, doorEvents: 2, alerts: 1 });
 		const [alert] = await alerts();
 		expect(alert).toMatchObject({
 			organizationId: "north",
@@ -171,7 +172,7 @@ describe("storing a batch", () => {
 			doorEvents: [door(0, "open"), door(4, "closed")],
 		};
 		await ingest(batch);
-		expect(await ingest(batch)).toEqual({ stored: { readings: 2, doorEvents: 0, alerts: 0 } });
+		expect(await ingest(batch)).toEqual({ readings: 2, doorEvents: 0, alerts: 0 });
 		expect(await db.select().from(energyReading)).toHaveLength(2);
 		expect(await db.select().from(energyDoorEvent)).toHaveLength(2);
 		expect(await alerts()).toHaveLength(1);
@@ -182,7 +183,9 @@ describe("storing a batch", () => {
 		const event = { door: "D-1", at: t(3).add({ milliseconds: 500 }).toString(), state: "open" };
 		await ingest({ doorEvents: [event] });
 		expect(await ingest({ doorEvents: [event] })).toEqual({
-			stored: { readings: 0, doorEvents: 0, alerts: 0 },
+			readings: 0,
+			doorEvents: 0,
+			alerts: 0,
 		});
 		expect(await db.select().from(energyDoorEvent)).toHaveLength(1);
 	});
@@ -199,7 +202,7 @@ describe("storing a batch", () => {
 			},
 			now,
 		);
-		expect(parsed.issues).toEqual([expect.stringMatching(/^doorEvents\[1\]: /)]);
+		expect(parsed.issues).toEqual([{ path: "doorEvents.1", message: expect.any(String) }]);
 	});
 
 	test("a resent interval replaces the one in", async () => {
@@ -301,7 +304,7 @@ describe("storing a batch", () => {
 		await maxKwh(100);
 		// 120 kW, 30 kWh a quarter: over its max kW from 10:00, and its day's kWh from 10:45.
 		const readings = [0, 15, 30, 45, 60, 75].map((minutes) => reading("Z-A", minutes, 120));
-		expect(await ingest({ readings })).toMatchObject({ stored: { alerts: 3 } });
+		expect(await ingest({ readings })).toMatchObject({ alerts: 3 });
 		expect((await alerts()).map((a) => [a.key, a.metric, a.severity, a.measured])).toEqual([
 			["zone:1:2026-10-17T10", "power", "active", 120],
 			["zone:1:2026-10-17", "energy", "active", 180],
@@ -311,7 +314,7 @@ describe("storing a batch", () => {
 
 	test("a zone with its thresholds off raises nothing", async () => {
 		expect(await ingest({ readings: [reading("Z-B", 0, 9999)] })).toMatchObject({
-			stored: { alerts: 0 },
+			alerts: 0,
 		});
 	});
 
@@ -360,22 +363,26 @@ describe("storing a batch", () => {
 			{ readings: [reading("Z-A", 0, 500)], doorEvents: [door(0, "open"), door(30, "closed")] },
 			t(25 * 60),
 		);
-		expect(outcome).toMatchObject({ stored: { readings: 1, doorEvents: 2, alerts: 0 } });
+		expect(outcome).toMatchObject({ readings: 1, doorEvents: 2, alerts: 0 });
 	});
 });
 
 describe("tenancy", () => {
 	test("another tenant's site is not found", async () => {
 		const parsed = parseBatch({ site: 2, readings: [reading("Z-S", 0, 1)] }, now);
-		expect(await north(() => storeBatch(parsed.batch!, now))).toEqual({ notFound: true });
+		await expect(north(() => storeBatch(parsed.batch!, now))).rejects.toMatchObject({
+			error: "unknown_site",
+			status: 404,
+		});
 	});
 
 	test("codes the site doesn't have, another tenant's included, refuse the whole batch", async () => {
-		const outcome = await ingest({
+		const outcome = ingest({
 			readings: [reading("Z-A", 0, 1), reading("Z-S", 0, 1)],
 			doorEvents: [{ ...door(0, "open"), door: "D-9" }],
 		});
-		expect(outcome).toEqual({ unknown: { zones: ["Z-S"], doors: ["D-9"] } });
+		await expect(outcome).rejects.toBeInstanceOf(UnknownCodes);
+		await expect(outcome).rejects.toMatchObject({ unknown: { zones: ["Z-S"], doors: ["D-9"] } });
 		expect(await db.select().from(energyReading)).toEqual([]);
 	});
 

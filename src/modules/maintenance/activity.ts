@@ -3,14 +3,11 @@ import { resolve } from "$app/paths";
 
 // Only types from `#lib/activity/subjects.ts`: it imports the modules, and so this file, in turn.
 import type { SubjectType } from "#lib/activity/index.ts";
-import { formatStoredDay, labelOrValue } from "#lib/i18n/index.ts";
+import { formatOnOff, formatStoredDay, labelOrValue } from "#lib/i18n/index.ts";
 
 /** A plan's label in the log: its unit's serial number and its description. */
 export const planLabel = (plan: { serialNumber: string; description: string }) =>
 	`${plan.serialNumber} · ${plan.description}`;
-
-/** A setting that's on or off. */
-const onOff = (value: unknown) => (value ? m.maintenance_on() : m.maintenance_off());
 
 /** The unit's serial number in a plan's label. */
 const serialOf = (label: string) => label.split(" · ")[0];
@@ -45,12 +42,12 @@ export const maintenanceSubjects = {
 		noun: m.maintenance_activity_subject_settings,
 		href: () => resolve("/(app)/(modules)/maintenance/settings"),
 		fields: {
-			autoCreate: { label: m.maintenance_auto_create, format: onOff },
+			autoCreate: { label: m.maintenance_auto_create, format: formatOnOff },
 			leadDays: {
 				label: m.maintenance_lead_days,
 				format: (value) => m.maintenance_days({ count: Number(value) }),
 			},
-			remindCustomers: { label: m.maintenance_remind_customers, format: onOff },
+			remindCustomers: { label: m.maintenance_remind_customers, format: formatOnOff },
 		},
 	},
 } satisfies Record<string, SubjectType>;

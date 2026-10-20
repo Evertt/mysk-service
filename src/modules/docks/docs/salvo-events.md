@@ -15,8 +15,8 @@ the board's simulation bar and the minute cron) hands batches of these events, w
 - `Authorization: Bearer <token>`: an integration token of the tenant's, made by a manager on
   `/docks/settings` (shown once; only its SHA-256 is stored). The token says whose docks the events
   are about. A missing, unknown or revoked token is a `401`; a tenant without the docks module a `404`.
-- `Content-Type: application/json` (else `415`), and a body of at most 800 kB (else `413`,
-  `{ "error": "too_large" }`; room enough for a full batch):
+- `Content-Type: application/json` (else `415`), and a body of at most 800 kB (else `413`; room
+  enough for a full batch). Every refusal answers `{ "error", "message", … }` (see "Answers"):
 
 ```json
 {
@@ -81,10 +81,9 @@ Bezet while a session is open, else Vrij; the beacon follows the state (red, gre
 
 ## How a batch is applied
 
-- At most 100 events per batch; the whole batch is validated first, and refused with a `422` and
-  `{ "error": "invalid_batch", "issues": [{ "path": "events.3.at", "message": "…" }] }` if anything
-  is wrong, or `{ "error": "unknown_docks", "docks": ["DOCK 99"] }` if it names a dock the token's
-  tenant doesn't have (another tenant's included). Nothing of a refused batch is applied.
+- At most 100 events per batch; the whole batch is validated first, and refused with a `422` if
+  anything is wrong (`invalid_batch`), or if it names a dock the token's tenant doesn't have
+  (`unknown_codes`, another tenant's included). Nothing of a refused batch is applied.
 - The events are applied in the order of their `at` (in the order sent for the same time), in one
   transaction: all or nothing.
 - Idempotent per event `id`: a batch sent twice applies once (the second time, every event is a
@@ -95,6 +94,20 @@ Bezet while a session is open, else Vrij; the beacon follows the state (red, gre
 "duplicates": 0, "stale": 0, "orders": ["2026-00412"] }`, the results in the order sent; `orders`
   are breakdown orders the door rules made.
 - The live board (`/docks`) updates as soon as the batch is in.
+
+### Answers
+
+The same shape as every module's feed (`jsonIngest()` in `#lib/server/modules/integrations.ts`):
+
+| Status | Body                                                                                                  |
+| ------ | ----------------------------------------------------------------------------------------------------- |
+| 200    | `{ "results": […], "applied", "duplicates", "stale", "orders" }` (above)                              |
+| 400    | `{ "error": "invalid_json", "message" }`: the body isn't JSON                                         |
+| 401    | no valid token                                                                                        |
+| 413    | `{ "error": "too_large", "message" }`: over 800 kB                                                    |
+| 415    | `{ "error": "unsupported_media_type", "message" }`: not `application/json`                            |
+| 422    | `{ "error": "invalid_batch", "message", "issues": [{ "path": "events.3.at", "message": "…" }] }`      |
+| 422    | `{ "error": "unknown_codes", "message", "unknown": { "docks": ["DOCK 99"] } }`: docks it doesn't have |
 
 ## The door rules
 

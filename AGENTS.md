@@ -117,7 +117,11 @@ Before you add a message file, an enum kind, a plural or a format, or write Dutc
 ## Pointers
 
 - **Modules and extension points** (hooks, slots, form slots, bulk actions, list columns, module
-  routes, seeds): `docs/agents/modules.md`.
+  routes, seeds): `docs/agents/modules.md`. A module's settings row is `defineTenantSettings()`
+  (`#lib/server/modules/settings.ts`; its daily automatic orders `dailyOrderRun()`), its settings
+  page `<ModuleSettingsPage>`, its integration tokens `<IntegrationTokensCard>` and its feed's
+  endpoint `jsonIngest()` (`#lib/server/modules/integrations.ts`), never its own copy
+  (`hand-written.spec.ts`).
 - **Orders** (the transition table, `transitionOrder()`, orders awaiting acceptance, the work
   record each portal reads with `readWorkRecord()`): `docs/agents/orders.md`.
 - **Server-side lists** (filtering, sorting, range filters, module columns):

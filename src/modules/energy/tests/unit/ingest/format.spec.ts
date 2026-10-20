@@ -24,7 +24,11 @@ const valid = {
 	],
 };
 
-const issuesOf = (body: unknown) => parseBatch(body, now).issues ?? [];
+/** The batch's issues as `path: message` (or the message, for the whole batch). */
+const issuesOf = (body: unknown) =>
+	(parseBatch(body, now).issues ?? []).map(({ path, message }) =>
+		path ? `${path}: ${message}` : message,
+	);
 
 describe("a batch", () => {
 	test("as documented is taken, with its moments as moments", () => {
@@ -40,23 +44,32 @@ describe("a batch", () => {
 		expect(issuesOf({ site: 1.5, readings: valid.readings })[0]).toMatch(/^site:/);
 	});
 
+	test("names each issue's place with a dotted path, as every feed does", () => {
+		expect(
+			parseBatch({ site: 1, readings: [{ ...valid.readings[0], voltage: 230 }] }, now).issues,
+		).toEqual([{ path: "readings.0.voltage", message: "Unknown field" }]);
+		expect(parseBatch({ site: 1 }, now).issues).toEqual([
+			{ path: "", message: "A batch has at least one reading or door event" },
+		]);
+	});
+
 	test("refuses fields it doesn't know, at the batch and in its readings", () => {
 		expect(issuesOf({ ...valid, meter: "x" })).toEqual(["meter: Unknown field"]);
 		expect(issuesOf({ site: 1, readings: [{ ...valid.readings[0], voltage: 230 }] })).toEqual([
-			"readings[0].voltage: Unknown field",
+			"readings.0.voltage: Unknown field",
 		]);
 	});
 
 	test("takes intervals on a quarter hour only, that have ended, at most 90 days ago", () => {
 		const at = (start: string) => ({ site: 1, readings: [{ ...valid.readings[0], start }] });
-		expect(issuesOf(at("2026-10-17T08:05:00Z"))[0]).toMatch(/^readings\[0\]\.start: An interval/);
+		expect(issuesOf(at("2026-10-17T08:05:00Z"))[0]).toMatch(/^readings\.0\.start: An interval/);
 		expect(issuesOf(at("2026-10-17T08:00:30Z"))).toHaveLength(1);
 		expect(issuesOf(at("2026-10-17T12:00:00Z"))).toEqual([
-			"readings[0].start: The interval hasn't ended yet",
+			"readings.0.start: The interval hasn't ended yet",
 		]);
 		expect(issuesOf(at("2026-10-17T11:45:00Z"))).toEqual([]);
 		expect(issuesOf(at("2026-07-01T08:00:00Z"))).toEqual([
-			"readings[0].start: More than 90 days ago",
+			"readings.0.start: More than 90 days ago",
 		]);
 		expect(issuesOf(at("2026-10-17 08:00"))[0]).toMatch(/ISO 8601/);
 	});
@@ -68,10 +81,8 @@ describe("a batch", () => {
 		});
 		expect(issuesOf(with_({ kwh: 46.6 * 1.019 }))).toEqual([]);
 		expect(issuesOf(with_({ kwh: 50 }))[0]).toMatch(/kWh doesn't match/);
-		expect(issuesOf(with_({ peakKw: 180 }))).toEqual([
-			"readings[0]: The peak is below the average",
-		]);
-		expect(issuesOf(with_({ avgKw: -1, kwh: 0 }))[0]).toMatch(/^readings\[0\]\.avgKw: Power/);
+		expect(issuesOf(with_({ peakKw: 180 }))).toEqual(["readings.0: The peak is below the average"]);
+		expect(issuesOf(with_({ avgKw: -1, kwh: 0 }))[0]).toMatch(/^readings\.0\.avgKw: Power/);
 		expect(issuesOf(with_({ avgKw: Number.NaN }))[0]).toMatch(/avgKw/);
 	});
 
@@ -82,17 +93,17 @@ describe("a batch", () => {
 		});
 		expect(issuesOf(event({ at: "2026-10-17T12:07:50Z" }))).toEqual([]);
 		expect(issuesOf(event({ at: "2026-10-17T12:09:00Z" }))).toEqual([
-			"doorEvents[0].at: In the future",
+			"doorEvents.0.at: In the future",
 		]);
-		expect(issuesOf(event({ state: "ajar" }))[0]).toMatch(/^doorEvents\[0\]\.state/);
+		expect(issuesOf(event({ state: "ajar" }))[0]).toMatch(/^doorEvents\.0\.state/);
 	});
 
 	test("refuses the same interval or event twice", () => {
 		expect(
 			issuesOf({ site: 1, readings: [valid.readings[0], { ...valid.readings[0], avgKw: 186.4 }] }),
-		).toEqual(["readings[1]: In the batch twice"]);
+		).toEqual(["readings.1: In the batch twice"]);
 		expect(issuesOf({ site: 1, doorEvents: [valid.doorEvents[0], valid.doorEvents[0]] })).toEqual([
-			"doorEvents[1]: In the batch twice",
+			"doorEvents.1: In the batch twice",
 		]);
 	});
 

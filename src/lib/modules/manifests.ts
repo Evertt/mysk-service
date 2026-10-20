@@ -23,7 +23,7 @@ import type { ModuleId } from "#lib/modules/ids.ts";
 import type { CoreNavId } from "#lib/modules/nav.ts";
 
 import { manifests } from "./manifests.gen.ts";
-import { generatedModulePages } from "./pages.gen.ts";
+import { generatedIntegrationModules, generatedModulePages } from "./pages.gen.ts";
 
 /** What a module contributes besides its name; both its manifest and its registry entry have it. */
 interface ModuleParts {
@@ -116,6 +116,14 @@ export interface ModulePages {
 
 /** Each module's pages (see `ModulePages`), by its id. */
 export const modulePages: Record<ModuleId, ModulePages> = generatedModulePages;
+
+/**
+ * The modules with integration endpoints (`routes/(api)/`, for systems outside the app): their
+ * settings pages keep the tokens those post with (`<IntegrationTokensCard>`).
+ */
+export const integrationModules = generatedIntegrationModules;
+
+export type IntegrationModuleId = (typeof integrationModules)[number];
 
 /** The activity verbs of all modules, e.g. `issued`. */
 export type ModuleAction = ActionsOf<(typeof modules)[number]>;

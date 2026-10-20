@@ -3,7 +3,7 @@ import { resolve } from "$app/paths";
 
 // Only types from `#lib/activity/subjects.ts`: it imports the modules, and so this file, in turn.
 import type { Sentence, SubjectType } from "#lib/activity/index.ts";
-import { formatNumber } from "#lib/i18n/index.ts";
+import { formatNumber, formatOnOff } from "#lib/i18n/index.ts";
 
 /** Recording a unit's condition, as a sentence. */
 export const conditionActions = {
@@ -26,9 +26,6 @@ export const componentLabel = (record: { serialNumber: string; number: string; n
 
 /** The unit's serial number in a condition's label. */
 const serialOf = (label: string) => label.split(" · ")[0];
-
-/** A setting that's on or off. */
-const onOff = (value: unknown) => (value ? m.condition_on() : m.condition_off());
 
 /** A score in percent. */
 const percent = (value: unknown) => `${formatNumber(Number(value))}%`;
@@ -61,7 +58,7 @@ export const conditionSubjects = {
 		fields: {
 			criticalBelow: { label: m.condition_critical_below, format: percent },
 			attentionBelow: { label: m.condition_attention_below, format: percent },
-			autoPlan: { label: m.condition_auto_plan, format: onOff },
+			autoPlan: { label: m.condition_auto_plan, format: formatOnOff },
 		},
 	},
 } satisfies Record<string, SubjectType>;

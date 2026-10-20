@@ -112,9 +112,6 @@
 	"maintenance_settings": "Instellingen",
 	"maintenance_settings_title": "Onderhoudsinstellingen",
 	"maintenance_settings_description": "Of de geplande onderhoudsbeurten vanzelf opdrachten worden.",
-	"maintenance_settings_managers": "Alleen eigenaren en beheerders kunnen deze instellingen wijzigen.",
-	"maintenance_settings_saved": "Instellingen opgeslagen",
-	"maintenance_save_settings": "Instellingen opslaan",
 	"maintenance_activity_subject_settings": "onderhoudsinstellingen",
 	"maintenance_auto_create": "Opdrachten automatisch aanmaken",
 	"maintenance_auto_create_description": "Elke dag krijgen de geplande onderhoudsplannen vanzelf hun opdracht, zoals met “Opdrachten aanmaken”. Een plan krijgt geen nieuwe opdracht zolang de vorige nog openstaat.",
@@ -137,8 +134,6 @@
 			}
 		}
 	],
-	"maintenance_on": "Aan",
-	"maintenance_off": "Uit",
 	"maintenance_last_run": "Laatste automatische run",
 	"maintenance_last_run_never": "Nog niet",
 	"maintenance_last_run_result": "{when}: {orders} aangemaakt",

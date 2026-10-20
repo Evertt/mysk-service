@@ -3,7 +3,7 @@ import { resolve } from "$app/paths";
 
 // Only types from `#lib/activity/subjects.ts`: it imports the modules, and so this file, in turn.
 import type { Sentence, SubjectType } from "#lib/activity/index.ts";
-import { formatNumber } from "#lib/i18n/index.ts";
+import { formatNumber, formatOnOff } from "#lib/i18n/index.ts";
 
 import { energyLabels } from "./labels.ts";
 
@@ -12,9 +12,6 @@ export const energyActions = {
 	alert_ordered: m.energy_activity_action_ordered,
 	alert_resolved: m.energy_activity_action_resolved,
 } satisfies Record<string, Sentence>;
-
-/** A setting that's on or off. */
-const onOff = (value: unknown) => (value ? m.energy_on() : m.energy_off());
 
 /** A number: kW, kWh, €/kWh, minutes. */
 const amount = (value: unknown) => formatNumber(Number(value));
@@ -79,7 +76,7 @@ export const energySubjects = {
 	energy_threshold: {
 		noun: m.energy_activity_subject_threshold,
 		fields: {
-			enabled: { label: m.energy_threshold_enabled, format: onOff },
+			enabled: { label: m.energy_threshold_enabled, format: formatOnOff },
 			maxKw: { label: m.energy_threshold_max_kw, format: amount },
 			maxKwh: { label: m.energy_threshold_max_kwh, format: amount },
 		},

@@ -282,12 +282,23 @@ const moduleOf = (path: string) => /^src\/modules\/([^/]+)\//.exec(path)?.[1];
 const moduleSets = (id: string) => `src/modules/${id}/remote-functions.ts`;
 
 /**
+ * The core's factories that make a module's remote functions for it, with the id the module
+ * passes (`defineTenantSettings("condition", …)`): a set of the module's own all the same.
+ */
+const KITS = ["src/lib/server/modules/settings.ts"];
+
+/**
  * `moduleRemote()` called with another id than the module's own, or anywhere but a module's
- * `remote-functions.ts`.
+ * `remote-functions.ts` (and the core's factories, with the id they're given, never a literal).
  */
 export function misnamedModuleSets(files: SourceFile[]): string[] {
 	return files.flatMap((file) => {
 		if (file.path === SETS || file.path.endsWith(".spec.ts")) return [];
+		if (KITS.includes(file.path)) {
+			return /\bmoduleRemote\(\s*["'`]/.test(withoutComments(file.source))
+				? [`${file.path} uses moduleRemote() with a literal id`]
+				: [];
+		}
 		const own = moduleOf(file.path);
 		const code = withoutComments(file.source);
 		const ids = [...code.matchAll(/\bmoduleRemote\(\s*["']([^"']*)["']/g)].map(([, id]) => id);
@@ -358,6 +369,7 @@ describe("the checks", () => {
 			source: `import { query } from "./remote-functions.ts";`,
 		},
 		{ path: "src/lib/sneaky.ts", source: `export const s = moduleRemote("a");` },
+		{ path: KITS[0], source: `const a = moduleRemote(moduleId);\nconst b = moduleRemote("a");` },
 	];
 
 	test("find SvelteKit's remote functions taken from $app/server outside the gated sets", () => {
@@ -373,6 +385,7 @@ describe("the checks", () => {
 			`src/modules/a/remote-functions.ts uses moduleRemote("b")`,
 			`src/modules/b/remote-functions.ts doesn't make a set with moduleRemote("b")`,
 			"src/lib/sneaky.ts uses moduleRemote() outside a module's remote-functions.ts",
+			`${KITS[0]} uses moduleRemote() with a literal id`,
 		]);
 	});
 

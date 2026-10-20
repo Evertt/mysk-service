@@ -4,6 +4,7 @@
  * locale on every call, so they're safe to create at module scope; pass `locale` to override it.
  */
 import { getTimeZone, isDay } from "#lib/dates.ts";
+import { m } from "#lib/paraglide/messages.js";
 import { getLocale, type Locale } from "#lib/paraglide/runtime.js";
 
 /**
@@ -141,3 +142,6 @@ export function formatStopwatch(milliseconds: number) {
  * or `1.250`.
  */
 export const formatNumber = numberFormatter({ maximumFractionDigits: 2 });
+
+/** A setting that's on or off: "On" or "Off" (a stored value in the log, too). */
+export const formatOnOff = (value: unknown) => (value ? m.common_on() : m.common_off());

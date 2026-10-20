@@ -68,7 +68,7 @@ export async function createDraft(input: {
 	}
 	if (!lines.length) throw new Refused(m.invoices_choose_something());
 
-	const settings = await settingsOf(organizationId);
+	const settings = await settingsOf();
 	return db.transaction(async (tx) => {
 		if ((await alreadyBilled(tx, lines)).length) throw new Refused(m.invoices_billed_meanwhile());
 		const number = await nextNumber(tx, invoiceNumbers);
