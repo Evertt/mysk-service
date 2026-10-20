@@ -1,7 +1,7 @@
 import type { Component } from "svelte";
 import { expect, test } from "vite-plus/test";
 
-import { type NavGroup, type NavItem, placeNav } from "#lib/modules/nav.ts";
+import { isCurrentAt, type NavGroup, type NavItem, placeNav } from "#lib/modules/nav.ts";
 
 const item = (id: string): NavItem => ({
 	id,
@@ -68,4 +68,21 @@ test("without modules there's no modules group, and the core groups are left as 
 
 test("an empty group is left out", () => {
 	expect(placeNav([{ label: "Empty", items: [] }], [], "Modules")).toEqual([]);
+});
+
+test("an entry is current on its page and those under it, a home's on its own only", () => {
+	const orders = item("orders");
+	expect(isCurrentAt("/orders", orders)).toBe(true);
+	expect(isCurrentAt("/orders/ORD-1", orders)).toBe(true);
+	expect(isCurrentAt("/orders-archive", orders)).toBe(false);
+	const home = { ...item("portal"), exact: true };
+	expect(isCurrentAt("/portal", home)).toBe(true);
+	expect(isCurrentAt("/portal/orders", home)).toBe(false);
+});
+
+test("an entry is current on its other paths too", () => {
+	const equipment = { ...item("equipment"), also: ["/locations"] };
+	expect(isCurrentAt("/locations", equipment)).toBe(true);
+	expect(isCurrentAt("/locations/12", equipment)).toBe(true);
+	expect(isCurrentAt("/orders", equipment)).toBe(false);
 });

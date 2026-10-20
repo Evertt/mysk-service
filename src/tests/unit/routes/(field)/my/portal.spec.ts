@@ -7,6 +7,7 @@
  */
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
+import { getCurrentUser } from "#lib/auth/session.remote.ts";
 import {
 	addNote,
 	completeWork,
@@ -76,6 +77,23 @@ describe("an engineer's work", () => {
 		for (const order of [...open, ...recent])
 			expect(theirs.has(order.number), order.number).toBe(true);
 		expect(open.map((order) => order.number)).toContain(own.number);
+	});
+
+	test("is theirs by the name the tenant knows them by, their record's", async () => {
+		// The account's name made to differ from the record's, as when the office renames the record.
+		const [user] = await rows<{ id: string; name: string }>(
+			`select id, name from user where email = ?`,
+			[erik.email],
+		);
+		await rows(`update user set name = ? where id = ?`, ["Erik's account", user.id]);
+		try {
+			const me = await as(erik, () => data(getCurrentUser));
+			const name = await value<string>(`select name from engineer where id = ?`, [mine]);
+			expect(me).toMatchObject({ name, organization: expect.any(String), customer: null });
+			expect(me.name).not.toBe("Erik's account");
+		} finally {
+			await rows(`update user set name = ? where id = ?`, [user.name, user.id]);
+		}
 	});
 
 	test("is completed with the customer's and their own signature", async () => {

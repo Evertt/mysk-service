@@ -1,6 +1,11 @@
+<!--
+	@component
+	The office's navigation (`NavSidebar`): the organization at the top, the core's sections and the
+	tenant's modules' among them (`placeNav()`), Orders with the count of reports awaiting acceptance,
+	and the user's menu at the bottom.
+-->
 <script lang="ts">
 	import { resolve } from "$app/paths";
-	import { page } from "$app/state";
 	import Building2Icon from "@lucide/svelte/icons/building-2";
 	import ClipboardListIcon from "@lucide/svelte/icons/clipboard-list";
 	import CogIcon from "@lucide/svelte/icons/cog";
@@ -13,6 +18,7 @@
 	import { type AppModule, modulePages, modules } from "#lib/modules/manifests.ts";
 	import { type CoreNavId, type NavItem, placeNav } from "#lib/modules/nav.ts";
 
+	import NavSidebar from "../nav-sidebar.svelte";
 	import OrganizationSwitcher from "./organization-switcher.svelte";
 	import { watchShell } from "./shell.remote.ts";
 	import UserMenu from "./user-menu.svelte";
@@ -33,6 +39,7 @@
 					title: m.common_nav_dashboard(),
 					href: resolve("/(app)/(dashboard)"),
 					icon: LayoutDashboardIcon,
+					exact: true,
 				},
 				{
 					id: "orders",
@@ -93,51 +100,24 @@
 			m.common_nav_modules(),
 		),
 	);
-
-	// Sections stay highlighted on their sub-pages, e.g. Orders on an order's detail page.
-	const isActive = (href: string) =>
-		href === resolve("/(app)/(dashboard)")
-			? page.url.pathname === href
-			: page.url.pathname === href || page.url.pathname.startsWith(`${href}/`);
 </script>
 
-<Sidebar.Root collapsible="icon">
-	<Sidebar.Header>
+<!-- Sections stay current on their sub-pages, e.g. Orders on an order's detail page. -->
+<NavSidebar {groups}>
+	{#snippet header()}
 		<OrganizationSwitcher />
-	</Sidebar.Header>
-	<Sidebar.Content>
-		{#each groups as group (group.label)}
-			<Sidebar.Group>
-				<Sidebar.GroupLabel>{group.label}</Sidebar.GroupLabel>
-				<Sidebar.GroupContent>
-					<Sidebar.Menu>
-						{#each group.items as item (item.href)}
-							<Sidebar.MenuItem>
-								<Sidebar.MenuButton isActive={isActive(item.href)} tooltipContent={item.title}>
-									{#snippet child({ props })}
-										<a href={item.href} {...props}>
-											<item.icon />
-											<span>{item.title}</span>
-										</a>
-									{/snippet}
-								</Sidebar.MenuButton>
-								{#if item.id === "orders" && awaiting}
-									<Sidebar.MenuBadge
-										data-awaiting-acceptance
-										title={m.orders_awaiting_badge({ count: formatNumber(awaiting) })}
-									>
-										{formatNumber(awaiting)}
-									</Sidebar.MenuBadge>
-								{/if}
-							</Sidebar.MenuItem>
-						{/each}
-					</Sidebar.Menu>
-				</Sidebar.GroupContent>
-			</Sidebar.Group>
-		{/each}
-	</Sidebar.Content>
-	<Sidebar.Footer>
+	{/snippet}
+	{#snippet badge(item)}
+		{#if item.id === "orders" && awaiting}
+			<Sidebar.MenuBadge
+				data-awaiting-acceptance
+				title={m.orders_awaiting_badge({ count: formatNumber(awaiting) })}
+			>
+				{formatNumber(awaiting)}
+			</Sidebar.MenuBadge>
+		{/if}
+	{/snippet}
+	{#snippet footer()}
 		<UserMenu />
-	</Sidebar.Footer>
-	<Sidebar.Rail />
-</Sidebar.Root>
+	{/snippet}
+</NavSidebar>

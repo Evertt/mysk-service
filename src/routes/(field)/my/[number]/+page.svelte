@@ -6,6 +6,7 @@
 	import PlayIcon from "@lucide/svelte/icons/play";
 	import { toast } from "svelte-sonner";
 
+	import { getCurrentUser } from "#lib/auth/session.remote.ts";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
@@ -19,7 +20,7 @@
 	import { fieldActions, orderPriorityDisplay, orderStatusDisplay } from "#lib/orders/index.ts";
 	import { order as orderParts } from "#lib/portal/extensions.ts";
 
-	import { getMe, getMyOrder, startWork, watchMyWork } from "../portal.remote.ts";
+	import { getMyOrder, startWork, watchMyWork } from "../portal.remote.ts";
 	import { dayLabel } from "../work.ts";
 	import type { PageProps } from "./$types";
 	import CompleteForm from "./complete-form.svelte";
@@ -32,7 +33,7 @@
 	const order = $derived(data.order);
 	const { customer } = $derived(data.order);
 	const actions = $derived(fieldActions(order.status));
-	const me = $derived(await getMe());
+	const me = $derived(await getCurrentUser());
 
 	// How often the modules' cards changed what the order may do (`changed()` of `portal.order`).
 	let partsChanged = $state(0);

@@ -3,8 +3,7 @@
  * `forEngineers`, and every order lookup is scoped to the tenant and to their engineer id, so
  * another engineer's order (or another tenant's) is a 404, also by a tampered id.
  */
-import { getRequestEvent } from "$app/server";
-import { invalid, redirect } from "@sveltejs/kit";
+import { invalid } from "@sveltejs/kit";
 import { and, asc, desc, isNotNull } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -21,8 +20,6 @@ import {
 import { id, laborHours, text } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import {
-	auth,
-	currentEngineer,
 	currentTenant,
 	engineerOrderNotFound,
 	engineerOrders,
@@ -33,15 +30,9 @@ import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customer, order, orderNote } from "#lib/server/db/schema.ts";
 import { live } from "#lib/server/live.ts";
-import { forAnyone, forEngineers } from "#lib/server/remote-functions.ts";
+import { forEngineers } from "#lib/server/remote-functions.ts";
 
 import { signature } from "./work.ts";
-
-/** Who is signed in, for the portal's header. */
-export const getMe = forEngineers.query(async () => {
-	const engineer = await currentEngineer();
-	return { name: engineer.name, organization: currentTenant().name };
-});
 
 /** The columns of an order in the lists. */
 const listColumns = {
@@ -200,9 +191,3 @@ export const completeWork = forEngineers.form(
 		refreshMyOrder(number);
 	},
 );
-
-/** Signs out, back to the login page. */
-export const signOut = forAnyone.form(async () => {
-	await auth.api.signOut({ headers: getRequestEvent().request.headers });
-	redirect(303, "/login");
-});

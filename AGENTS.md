@@ -49,6 +49,11 @@ its branch after the task, then `git worktreeinclude apply` (`.env`) and `pnpm i
   is kept in the URL) or `SegmentedNav` (a page's views), from `#lib/components/`, never a
   hand-made row of buttons or links (`src/tests/unit/choice-controls.spec.ts` refuses
   `aria-pressed` and tabs).
+- A shell's chrome is shared, never copied (`src/routes/`): `<BrandMark>` for the icon tile before
+  its name, `<AppearanceSwitchers>` for the language, theme and mode, `<SignOutButton>` (the one
+  `signOut`, in `#lib/auth/session.remote.ts`), `<NavSidebar>` for a sidebar's navigation, and in
+  `#lib/auth/session.remote.ts` `getCurrentUser` for who's signed in; a layout names the order
+  types with `useTenantOrderTypes()` (`src/tests/unit/shell-chrome.spec.ts`).
 
 Details: `docs/agents/structure.md`.
 
