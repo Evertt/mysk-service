@@ -35,7 +35,8 @@ its branch after the task, then `git worktreeinclude apply` (`.env`) and `pnpm i
   hand-built `/login?redirectTo` (`src/tests/unit/lib/auth/shells.spec.ts`).
 - **Generic code**: `src/lib/components/`, `activity/`, `auth/`, `i18n/`, `modules/`, `extensions/`,
   `themes/`, `errors/`; server infrastructure in `src/lib/server/`. Any `server/` folder or `*.server.ts` is
-  server-only: database code and secrets go there.
+  server-only: database code and secrets go there. A kebab-case or dotted name in camelCase is
+  `camelCase()` (`#lib/camel-case.ts`, shared with `scripts/`; `src/tests/unit/camel-case.spec.ts`).
 - A file sits in the nearest folder that holds all its users; move it when its users move.
 - Outside a domain, import it through its **barrels** (`#lib/orders/index.ts`, `components.ts`,
   `remotes.ts`, `server/index.ts`); inside, import siblings relatively.

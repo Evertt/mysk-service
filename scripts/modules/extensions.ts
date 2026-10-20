@@ -9,6 +9,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { camelCase } from "#lib/camel-case.ts";
 import { formPartKey } from "#lib/extensions/form-part-key.ts";
 
 import {
@@ -333,15 +334,12 @@ export function extensionProblems(points: ExtensionPoint[], modules: ModuleFolde
 	return problems;
 }
 
-/** `orders.detail.side` → `ordersDetailSide`. */
-const localName = (id: string) => id.replace(/[.-](\w)/g, (_, c: string) => c.toUpperCase());
-
 /**
  * The name a point's export is imported as: the point's own name (`ordersForm`), or for a record's
  * points the export's, with its owner (`ordersPoints`).
  */
 const bindingName = (point: ExtensionPoint) =>
-	localName(point.member ? `${point.owner}.${point.exportName}` : point.id);
+	camelCase(point.member ? `${point.owner}.${point.exportName}` : point.id);
 
 /** How the generated code names a point: `ordersForm`, `ordersPoints.detail.side`. */
 const pointRef = (point: ExtensionPoint) =>
@@ -349,7 +347,7 @@ const pointRef = (point: ExtensionPoint) =>
 
 /** `materials` and `orders.form` → `materialsOrdersFormPart`: the name a part's schema is imported as. */
 const partName = (module: ModuleFolder, point: string) =>
-	`${module.id.replace(/-(\w)/g, (_, c: string) => c.toUpperCase())}${localName(`.${point}`)}Part`;
+	`${camelCase(`${module.id}.${point}`)}Part`;
 
 /** `src/lib/orders/extensions.ts` → `#lib/orders/extensions.ts`. */
 const specifier = (file: string) =>
@@ -469,8 +467,7 @@ export function renderContributions(points: ExtensionPoint[], modules: ModuleFol
  */
 export function renderColumnSql(points: ExtensionPoint[], modules: ModuleFolder[]): string {
 	const columns = allContributions(points, modules, "columns");
-	const sqlName = (module: ModuleFolder, point: string) =>
-		`${module.id.replace(/-(\w)/g, (_, c: string) => c.toUpperCase())}${localName(`.${point}`)}`;
+	const sqlName = (module: ModuleFolder, point: string) => camelCase(`${module.id}.${point}`);
 	return [
 		`// ${GENERATED} from src/modules/*/${contributionKinds.sql.folder}. Don't edit.`,
 		`import type { ColumnSqlContribution } from "./column-sql.ts";`,
