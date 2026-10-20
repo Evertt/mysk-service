@@ -9,13 +9,13 @@
 	import CreditCardIcon from "@lucide/svelte/icons/credit-card";
 	import WalletCardsIcon from "@lucide/svelte/icons/wallet-cards";
 
-	import DarkPanel, { type DarkPanelLine } from "#lib/components/dark-panel.svelte";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 
 	import { clientWallet } from "../api/extensions.ts";
 	import { partnerLabels } from "../labels.ts";
 	import type { WalletEntryKind } from "../model.ts";
+	import DarkPanel, { type DarkPanelLine } from "../ui/dark-panel.svelte";
 
 	interface Wallet {
 		awarded: number;
