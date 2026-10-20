@@ -2,7 +2,6 @@
  * A site's zone thresholds ("Energie-alerts per zone"): every member sees them, with each zone's
  * state now; only managers change them, a zone at a time.
  */
-import { error } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
 import { isManager } from "#lib/auth/index.ts";
@@ -10,6 +9,7 @@ import { recordId } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
+import { orNotFound } from "#lib/server/records.ts";
 
 import { thresholdSchema } from "./form/threshold-schema.ts";
 import { forManagers, query } from "./remote-functions.ts";
@@ -27,17 +27,19 @@ export const getEnergyThresholds = query(recordId(), async (id) => {
 /** Saves a zone's thresholds (made with them if it had none). */
 export const saveEnergyThreshold = forManagers.form(thresholdSchema, async (input) => {
 	const { organizationId } = currentTenant();
-	const [zone] = await db
-		.select({
-			id: energyZone.id,
-			code: energyZone.code,
-			siteId: energySite.id,
-			siteName: energySite.name,
-		})
-		.from(energyZone)
-		.innerJoin(...tenantJoin(energySite, energyZone.energySiteId))
-		.where(idInTenant(energyZone, input.zoneId));
-	if (!zone) error(404, m.energy_zone_not_found());
+	const zone = orNotFound(
+		await db
+			.select({
+				id: energyZone.id,
+				code: energyZone.code,
+				siteId: energySite.id,
+				siteName: energySite.name,
+			})
+			.from(energyZone)
+			.innerJoin(...tenantJoin(energySite, energyZone.energySiteId))
+			.where(idInTenant(energyZone, input.zoneId)),
+		m.energy_zone_not_found(),
+	);
 	const [before] = await db
 		.select()
 		.from(energyThreshold)

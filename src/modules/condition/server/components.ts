@@ -7,7 +7,6 @@
  * unit. Another tenant's unit or component is a 404, also by a tampered id; an article or a point
  * that isn't the tenant's (or the unit's) is refused.
  */
-import { error } from "@sveltejs/kit";
 import { and, asc, eq, sql } from "drizzle-orm";
 
 import { equipmentSubject } from "#lib/activity/index.ts";
@@ -20,7 +19,7 @@ import { inList, insertRows } from "#lib/server/db/parameters.ts";
 import { equipment } from "#lib/server/db/schema.ts";
 import { collect } from "#lib/server/extensions.ts";
 import { type NumberTarget, nextNumber } from "#lib/server/numbering.ts";
-import { deleteAndLog, nextPosition, reorder } from "#lib/server/records.ts";
+import { deleteAndLog, nextPosition, reorder, orNotFound } from "#lib/server/records.ts";
 import { Refused } from "#lib/server/refused.ts";
 import type { PointArticle, UnitPoint } from "#modules/checklists/api/extensions.ts";
 
@@ -85,22 +84,24 @@ const unitOf = (tx: Runner, serialNumber: string) =>
 
 /** The tenant's component `id` with its unit and its points, in `tx`, or a 404. */
 async function componentOf(tx: Transaction, id: number) {
-	const [found] = await tx
-		.select({
-			id: component.id,
-			number: component.number,
-			name: component.name,
-			materialId: component.materialId,
-			position: component.position,
-			unit: { id: equipment.id, serialNumber: equipment.serialNumber },
-		})
-		.from(component)
-		.innerJoin(
-			equipment,
-			and(sameTenant(equipment, component), eq(equipment.id, component.equipmentId)),
-		)
-		.where(idInTenant(component, id));
-	if (!found) error(404, m.condition_component_not_found());
+	const found = orNotFound(
+		await tx
+			.select({
+				id: component.id,
+				number: component.number,
+				name: component.name,
+				materialId: component.materialId,
+				position: component.position,
+				unit: { id: equipment.id, serialNumber: equipment.serialNumber },
+			})
+			.from(component)
+			.innerJoin(
+				equipment,
+				and(sameTenant(equipment, component), eq(equipment.id, component.equipmentId)),
+			)
+			.where(idInTenant(component, id)),
+		m.condition_component_not_found(),
+	);
 	const points = (await checkpointsOf([id], tx)).get(id) ?? [];
 	return { ...found, checkpointIds: points.toSorted((a, b) => a - b) };
 }

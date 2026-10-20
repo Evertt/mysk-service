@@ -2,13 +2,13 @@
  * The stock ledger (`stock_movement`): `material.stock` is the cached balance of a material's
  * movements, and `moveStock` is the only thing that changes it.
  */
-import { error } from "@sveltejs/kit";
 import { and, eq, sql, type SQLWrapper } from "drizzle-orm";
 
 import { formatNumber } from "#lib/i18n/index.ts";
 import { type OrderStatus } from "#lib/models.ts";
 import { idInTenant, inTenant, requireTenant } from "#lib/server/auth/index.ts";
 import type { Transaction } from "#lib/server/db/index.ts";
+import { orNotFound } from "#lib/server/records.ts";
 import { Refused } from "#lib/server/refused.ts";
 
 import { materialLabels } from "../labels.ts";
@@ -78,11 +78,13 @@ export interface Movement {
  */
 export async function moveStock(tx: Transaction, movement: Movement) {
 	const { organizationId, user } = requireTenant();
-	const found = await tx.query.material.findFirst({
-		columns: { id: true, sku: true, name: true, unit: true, stock: true },
-		where: idInTenant(material, movement.materialId),
-	});
-	if (!found) error(404, m.materials_not_found());
+	const found = orNotFound(
+		await tx.query.material.findFirst({
+			columns: { id: true, sku: true, name: true, unit: true, stock: true },
+			where: idInTenant(material, movement.materialId),
+		}),
+		m.materials_not_found(),
+	);
 
 	const quantity = roundQuantity(movement.quantity);
 	if (quantity === 0) return found;

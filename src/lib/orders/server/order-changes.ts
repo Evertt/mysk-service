@@ -2,7 +2,6 @@
  * Changes to a single order that the order's own pages and the list's bulk actions share, so
  * changing, assigning or deleting many orders refuses what doing it to one refuses.
  */
-import { error } from "@sveltejs/kit";
 
 import { orderSubject } from "#lib/activity/index.ts";
 import { isAwaitingAcceptance, isEditableOrder } from "#lib/models.ts";
@@ -11,6 +10,7 @@ import { idInTenant } from "#lib/server/auth/index.ts";
 import { refuseIfReferenced } from "#lib/server/db/errors.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { engineer, order } from "#lib/server/db/schema.ts";
+import { orNotFound } from "#lib/server/records.ts";
 import { Refused } from "#lib/server/refused.ts";
 
 import { acceptFirst, notEditable } from "../lifecycle.ts";
@@ -24,11 +24,13 @@ import { refusedWhole, saveOrderParts } from "./hooks.ts";
  */
 export async function removeOrder(id: number) {
 	const deleting = db.transaction(async (tx) => {
-		const found = await tx.query.order.findFirst({
-			columns: { id: true, number: true, status: true, engineerId: true },
-			where: idInTenant(order, id),
-		});
-		if (!found) error(404, m.orders_not_found_plain());
+		const found = orNotFound(
+			await tx.query.order.findFirst({
+				columns: { id: true, number: true, status: true, engineerId: true },
+				where: idInTenant(order, id),
+			}),
+			m.orders_not_found_plain(),
+		);
 		if (!isEditableOrder(found.status)) throw new Refused(notEditable(found.number, "deleted"));
 		await saveOrderParts({ tx, order: found, from: found.status, status: null }).catch(
 			refusedWhole,
@@ -69,11 +71,13 @@ export async function assigneeProblem(
 /** Assigns one of the tenant's orders to an engineer (checked already), or to nobody. */
 export async function assignOrder(id: number, engineerId: number | null) {
 	await db.transaction(async (tx) => {
-		const found = await tx.query.order.findFirst({
-			columns: { id: true, number: true, status: true, engineerId: true },
-			where: idInTenant(order, id),
-		});
-		if (!found) error(404, m.orders_not_found_plain());
+		const found = orNotFound(
+			await tx.query.order.findFirst({
+				columns: { id: true, number: true, status: true, engineerId: true },
+				where: idInTenant(order, id),
+			}),
+			m.orders_not_found_plain(),
+		);
 		if (!isEditableOrder(found.status)) throw new Refused(notEditable(found.number, "changed"));
 		if (found.engineerId === engineerId) return;
 		if (isAwaitingAcceptance(found.status)) throw new Refused(acceptFirst(found.number));

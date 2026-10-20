@@ -4,7 +4,6 @@
  * customer's activity card. A customer always keeps one site: its equipment has to be somewhere.
  * The modules have a say in a site's removal (`removingSite`, `#lib/customers/extensions.ts`).
  */
-import { error } from "@sveltejs/kit";
 import { and, count, eq } from "drizzle-orm";
 
 import { customerSubject } from "#lib/activity/index.ts";
@@ -13,7 +12,7 @@ import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/aut
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customer, customerSite, equipment } from "#lib/server/db/schema.ts";
 import { vote } from "#lib/server/extensions.ts";
-import { deleteAndLog } from "#lib/server/records.ts";
+import { deleteAndLog, orNotFound } from "#lib/server/records.ts";
 import { Refused } from "#lib/server/refused.ts";
 
 import { removingSite } from "../extensions.ts";
@@ -33,23 +32,25 @@ const subjects = (site: { id: number; name: string }, owner: Owner): LoggedSubje
 
 /** The tenant's customer with `id`, or a 404. */
 async function findCustomer(tx: Transaction, id: number): Promise<Owner> {
-	const [found] = await tx
-		.select({ id: customer.id, code: customer.code })
-		.from(customer)
-		.where(idInTenant(customer, id));
-	if (!found) error(404, m.customers_not_found());
-	return found;
+	return orNotFound(
+		await tx
+			.select({ id: customer.id, code: customer.code })
+			.from(customer)
+			.where(idInTenant(customer, id)),
+		m.customers_not_found(),
+	);
 }
 
 /** The tenant's site with `id`, with its customer, or a 404. */
 async function findSite(tx: Transaction, id: number) {
-	const [found] = await tx
-		.select({ site: customerSite, owner: { id: customer.id, code: customer.code } })
-		.from(customerSite)
-		.innerJoin(...tenantJoin(customer, customerSite.customerId))
-		.where(idInTenant(customerSite, id));
-	if (!found) error(404, m.customers_site_not_found());
-	return found;
+	return orNotFound(
+		await tx
+			.select({ site: customerSite, owner: { id: customer.id, code: customer.code } })
+			.from(customerSite)
+			.innerJoin(...tenantJoin(customer, customerSite.customerId))
+			.where(idInTenant(customerSite, id)),
+		m.customers_site_not_found(),
+	);
 }
 
 /**

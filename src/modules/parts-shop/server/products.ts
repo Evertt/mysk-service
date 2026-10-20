@@ -3,7 +3,6 @@
  * are in the shop, with their category, description, unit, flags and the checklist points they fix;
  * and the categories, in their order. Every change is logged.
  */
-import { error } from "@sveltejs/kit";
 import { and, asc, count, eq, sql } from "drizzle-orm";
 import type * as v from "valibot";
 
@@ -11,7 +10,13 @@ import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, sameTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { insertRows } from "#lib/server/db/parameters.ts";
-import { deleteAndLog, defineRemoval, nameTaken, nextPosition } from "#lib/server/records.ts";
+import {
+	deleteAndLog,
+	defineRemoval,
+	nameTaken,
+	nextPosition,
+	orNotFound,
+} from "#lib/server/records.ts";
 import { Refused } from "#lib/server/refused.ts";
 import { material } from "#modules/materials/api/tables.server.ts";
 
@@ -67,8 +72,10 @@ export async function addCategory(name: string) {
 /** Renames one of the tenant's categories, logged; a 404 for another tenant's. */
 export async function renameCategory(id: number, name: string) {
 	await db.transaction(async (tx) => {
-		const [found] = await tx.select().from(shopCategory).where(idInTenant(shopCategory, id));
-		if (!found) error(404, m.shop_category_not_found());
+		const found = orNotFound(
+			await tx.select().from(shopCategory).where(idInTenant(shopCategory, id)),
+			m.shop_category_not_found(),
+		);
 		await refuseTaken(tx, name, id);
 		await tx.update(shopCategory).set({ name }).where(idInTenant(shopCategory, id));
 		await recordActivity(tx, {
@@ -155,11 +162,13 @@ export async function saveProduct(input: ProductInput) {
 	// Only points the checklists module knows, as the shop can't check them itself.
 	const known = input.inShop ? await checkpointTexts([...new Set(input.checkpointIds)]) : new Map();
 	await db.transaction(async (tx) => {
-		const [found] = await tx
-			.select({ id: material.id, sku: material.sku })
-			.from(material)
-			.where(idInTenant(material, input.materialId));
-		if (!found) error(404, m.shop_material_not_found());
+		const found = orNotFound(
+			await tx
+				.select({ id: material.id, sku: material.sku })
+				.from(material)
+				.where(idInTenant(material, input.materialId)),
+			m.shop_material_not_found(),
+		);
 		const [existing] = await tx
 			.select()
 			.from(shopProduct)
@@ -172,11 +181,13 @@ export async function saveProduct(input: ProductInput) {
 			return;
 		}
 
-		const [category] = await tx
-			.select({ id: shopCategory.id })
-			.from(shopCategory)
-			.where(idInTenant(shopCategory, input.categoryId!));
-		if (!category) error(404, m.shop_category_not_found());
+		const category = orNotFound(
+			await tx
+				.select({ id: shopCategory.id })
+				.from(shopCategory)
+				.where(idInTenant(shopCategory, input.categoryId!)),
+			m.shop_category_not_found(),
+		);
 		const fields = {
 			categoryId: category.id,
 			description: input.description || null,

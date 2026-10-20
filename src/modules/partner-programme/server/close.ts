@@ -1,4 +1,3 @@
-import { error } from "@sveltejs/kit";
 import { and, desc, eq, isNull } from "drizzle-orm";
 
 import { customerSubject } from "#lib/activity/index.ts";
@@ -17,6 +16,7 @@ import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customer } from "#lib/server/db/schema.ts";
+import { orNotFound } from "#lib/server/records.ts";
 import { Refused } from "#lib/server/refused.ts";
 import { createCreditNote, creditNotesOf } from "#modules/invoices/api/credit-notes.server.ts";
 import { creditNote } from "#modules/invoices/api/schema.server.ts";
@@ -155,22 +155,24 @@ export async function closedYearsOf(customerId: number) {
  */
 export async function payBonusByCreditNote(customerId: number, year: number) {
 	return db.transaction(async (tx) => {
-		const [row] = await tx
-			.select({
-				closed: bonusYear,
-				code: customer.code,
-				linked: bonusCreditNote.creditNoteId,
-			})
-			.from(bonusYear)
-			.innerJoin(...tenantJoin(customer, bonusYear.customerId))
-			.leftJoin(
-				bonusCreditNote,
-				and(eq(bonusCreditNote.bonusYearId, bonusYear.id), inTenant(bonusCreditNote)),
-			)
-			.where(
-				and(inTenant(bonusYear), eq(bonusYear.customerId, customerId), eq(bonusYear.year, year)),
-			);
-		if (!row) error(404, m.partners_year_not_closed({ year: String(year) }));
+		const row = orNotFound(
+			await tx
+				.select({
+					closed: bonusYear,
+					code: customer.code,
+					linked: bonusCreditNote.creditNoteId,
+				})
+				.from(bonusYear)
+				.innerJoin(...tenantJoin(customer, bonusYear.customerId))
+				.leftJoin(
+					bonusCreditNote,
+					and(eq(bonusCreditNote.bonusYearId, bonusYear.id), inTenant(bonusCreditNote)),
+				)
+				.where(
+					and(inTenant(bonusYear), eq(bonusYear.customerId, customerId), eq(bonusYear.year, year)),
+				),
+			m.partners_year_not_closed({ year: String(year) }),
+		);
 		const { closed, code } = row;
 		if (closed.choice !== "cash" || !closed.cashAmount)
 			throw new Refused(m.partners_credit_note_no_cash());
@@ -233,14 +235,16 @@ export async function payBonusByCreditNote(customerId: number, year: number) {
  */
 export async function chooseBonus(customerId: number, year: number, choice: BonusForm) {
 	await db.transaction(async (tx) => {
-		const [row] = await tx
-			.select({ closed: bonusYear, code: customer.code })
-			.from(bonusYear)
-			.innerJoin(...tenantJoin(customer, bonusYear.customerId))
-			.where(
-				and(inTenant(bonusYear), eq(bonusYear.customerId, customerId), eq(bonusYear.year, year)),
-			);
-		if (!row) error(404, m.partners_year_not_closed({ year: String(year) }));
+		const row = orNotFound(
+			await tx
+				.select({ closed: bonusYear, code: customer.code })
+				.from(bonusYear)
+				.innerJoin(...tenantJoin(customer, bonusYear.customerId))
+				.where(
+					and(inTenant(bonusYear), eq(bonusYear.customerId, customerId), eq(bonusYear.year, year)),
+				),
+			m.partners_year_not_closed({ year: String(year) }),
+		);
 		const { closed, code } = row;
 		if (closed.choice) throw new Refused(m.partners_choice_made());
 		const amount = choice === "cash" ? closed.cashAmount : closed.creditAmount;

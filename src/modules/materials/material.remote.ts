@@ -1,4 +1,4 @@
-import { error, redirect } from "@sveltejs/kit";
+import { redirect } from "@sveltejs/kit";
 import { and, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -10,7 +10,7 @@ import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/aut
 import { db } from "#lib/server/db/index.ts";
 import { customer, order, user } from "#lib/server/db/schema.ts";
 import { nextNumber } from "#lib/server/numbering.ts";
-import { nameTaken } from "#lib/server/records.ts";
+import { nameTaken, orNotFound } from "#lib/server/records.ts";
 import { type Problem, Refused } from "#lib/server/refused.ts";
 
 import { materialFields, newMaterialFields } from "./form/material-schema.ts";
@@ -36,10 +36,12 @@ const historyFits = async (materialId: number, unit: MaterialUnit) => {
  * with the stock after each) and headline numbers.
  */
 export const getMaterial = query(v.string(), async (sku) => {
-	const found = await db.query.material.findFirst({
-		where: and(eq(material.sku, sku), inTenant(material)),
-	});
-	if (!found) error(404, m.materials_not_found_sku({ sku }));
+	const found = orNotFound(
+		await db.query.material.findFirst({
+			where: and(eq(material.sku, sku), inTenant(material)),
+		}),
+		m.materials_not_found_sku({ sku }),
+	);
 
 	// One row per order, in case an order has several lines for the material.
 	const usage = await db
@@ -136,8 +138,7 @@ export const createMaterial = form(v.object(newMaterialFields), async (input) =>
 
 export const updateMaterial = form(v.object({ id: id(), ...materialFields }), async (data) => {
 	const { id, ...input } = data;
-	const existing = await findMaterial(id);
-	if (!existing) error(404, m.materials_not_found());
+	const existing = orNotFound(await findMaterial(id), m.materials_not_found());
 
 	const problems = await nameProblems(input.name, id);
 	// Order lines are counted in the material's unit, so changing it would change them too.

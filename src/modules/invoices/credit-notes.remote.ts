@@ -3,13 +3,14 @@
  * making one, against an invoice or standalone. Its status changes and draft edits are in
  * `detail/credit-note.remote.ts`. The rules are in `./credit-note.ts`.
  */
-import { error, redirect, invalid } from "@sveltejs/kit";
+import { redirect, invalid } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer } from "#lib/server/db/schema.ts";
+import { orNotFound } from "#lib/server/records.ts";
 
 import { canCredit, leftOf, typedCreditLine } from "./credit-note.ts";
 import { creditInvoiceFields, standaloneCreditFields } from "./form/credit-note-schema.ts";
@@ -57,11 +58,13 @@ export const getCreditNote = query(v.string(), async (number) => {
  * and what's left of the invoice; whether it can be credited at all (sent or paid).
  */
 export const getCreditable = query(v.string(), async (number) => {
-	const found = await db.query.invoice.findFirst({
-		where: and(eq(invoice.number, number), inTenant(invoice)),
-		with: { customer: { columns: { name: true, code: true } } },
-	});
-	if (!found) error(404, m.invoices_number_not_found({ number }));
+	const found = orNotFound(
+		await db.query.invoice.findFirst({
+			where: and(eq(invoice.number, number), inTenant(invoice)),
+			with: { customer: { columns: { name: true, code: true } } },
+		}),
+		m.invoices_number_not_found({ number }),
+	);
 	const lines = await creditableLines(db, found.id);
 	const totals = invoiceTotals(lines, found.vatRate);
 	const summary = creditSummary(totals, await creditsOf(db, [found.id]), found.status);

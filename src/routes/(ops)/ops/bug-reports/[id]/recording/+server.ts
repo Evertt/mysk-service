@@ -1,10 +1,11 @@
-import { error, type RequestHandler } from "@sveltejs/kit";
+import { type RequestHandler } from "@sveltejs/kit";
 import { eq } from "drizzle-orm";
 
 import { requireDeveloper } from "#lib/server/bug-reports/developers.ts";
 import { bugReportStore } from "#lib/server/bug-reports/storage.ts";
 import { db } from "#lib/server/db/index.ts";
 import { bugReport } from "#lib/server/db/schema.ts";
+import { orNotFound } from "#lib/server/records.ts";
 
 /**
  * A bug report's recording, gzipped as it was sent, for its replay page to unpack: an endpoint,
@@ -18,8 +19,10 @@ export const GET: RequestHandler = async ({ params }) => {
 		.select({ objectKey: bugReport.objectKey })
 		.from(bugReport)
 		.where(eq(bugReport.id, params.id!));
-	const recording = row && (await bugReportStore().get(row.objectKey));
-	if (!recording) error(404, m.common_error_not_found());
+	const recording = orNotFound(
+		row && (await bugReportStore().get(row.objectKey)),
+		m.common_error_not_found(),
+	);
 	return new Response(recording, {
 		headers: {
 			"content-type": "application/gzip",

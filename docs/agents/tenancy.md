@@ -116,7 +116,8 @@ in `hand-written.spec.ts`; move it out when you change one, and take it off the 
   fields (`unitBySerial(serial, { id: equipment.id, name: equipment.name }, tx)`), or a query that
   joins more:
   `unitBySerial(serial, (where) => db.select(…).from(equipment).innerJoin(…).where(where))`.
-  `lookupBy()` makes another; `orNotFound(row, message)` is any other row or a 404.
+  `lookupBy()` makes another; `orNotFound(row, message)` is any other row (or a select's first)
+  or a 404, and `byKey(rows, keyOf, notFound)` a batch query's finder.
 - Deleting: `deleteAndLog(table, { subject, parent?, tx?, note?, referenced? })` deletes the
   tenant's record and logs it;
   `defineRemoval({ table, find, notFound, subject, blockers, referenced })` makes a section's

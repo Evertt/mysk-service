@@ -20,6 +20,7 @@ import type { ModuleId } from "#lib/modules/ids.ts";
 import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { integrationToken, organization, organizationModule, user } from "#lib/server/db/schema.ts";
+import { orNotFound } from "#lib/server/records.ts";
 
 import { currentTenant, idInTenant, inTenant, type Tenant } from "./session.ts";
 import { isSystemUser } from "./system.ts";
@@ -101,18 +102,20 @@ export async function issueIntegrationToken(moduleId: ModuleId, name: string) {
 /** Revokes the tenant's token `id` for `moduleId`; a 404 if it has none such that's still valid. */
 export async function revokeIntegrationToken(moduleId: ModuleId, id: number) {
 	await db.transaction(async (tx) => {
-		const [revoked] = await tx
-			.update(integrationToken)
-			.set({ revokedAt: Temporal.Now.instant() })
-			.where(
-				and(
-					idInTenant(integrationToken, id),
-					eq(integrationToken.moduleId, moduleId),
-					isNull(integrationToken.revokedAt),
-				),
-			)
-			.returning({ name: integrationToken.name });
-		if (!revoked) error(404, m.common_error_not_found());
+		const revoked = orNotFound(
+			await tx
+				.update(integrationToken)
+				.set({ revokedAt: Temporal.Now.instant() })
+				.where(
+					and(
+						idInTenant(integrationToken, id),
+						eq(integrationToken.moduleId, moduleId),
+						isNull(integrationToken.revokedAt),
+					),
+				)
+				.returning({ name: integrationToken.name }),
+			m.common_error_not_found(),
+		);
 		await recordActivity(tx, {
 			action: "revoked",
 			subject: { type: "integration_token", id, label: revoked.name },

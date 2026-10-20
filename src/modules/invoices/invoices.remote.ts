@@ -1,4 +1,4 @@
-import { error, redirect } from "@sveltejs/kit";
+import { redirect } from "@sveltejs/kit";
 import { asc, count, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -7,6 +7,7 @@ import { recordId } from "#lib/schema.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer } from "#lib/server/db/schema.ts";
+import { orNotFound } from "#lib/server/records.ts";
 
 import { newInvoiceFields } from "./form/invoice-schema.ts";
 import { invoiceState, invoiceTotals, lineAmount } from "./invoice.ts";
@@ -85,11 +86,13 @@ export const getInvoiceCustomers = query(async () => {
  * the lines they become, and other modules' items (e.g. contract fees).
  */
 export const getBillable = query(recordId(), async (customerId) => {
-	const owner = await db.query.customer.findFirst({
-		columns: { id: true },
-		where: idInTenant(customer, customerId),
-	});
-	if (!owner) error(404, m.invoices_customer_not_found());
+	orNotFound(
+		await db.query.customer.findFirst({
+			columns: { id: true },
+			where: idInTenant(customer, customerId),
+		}),
+		m.invoices_customer_not_found(),
+	);
 
 	const { orders, items } = await billableFor(customerId);
 	return {

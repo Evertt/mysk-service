@@ -1,7 +1,8 @@
-import { error, redirect, type RequestHandler } from "@sveltejs/kit";
+import { redirect, type RequestHandler } from "@sveltejs/kit";
 
 import { qrDestination, resolveQrCode } from "#lib/equipment/server/index.ts";
 import { auth } from "#lib/server/auth/index.ts";
+import { orNotFound } from "#lib/server/records.ts";
 
 /**
  * A scanned QR code of a unit or location (`/q/<token>`, see `#lib/equipment/qr.ts`): leads an
@@ -13,8 +14,10 @@ import { auth } from "#lib/server/auth/index.ts";
  */
 export const GET: RequestHandler = async ({ params, locals, request }) => {
 	if (!locals.user) redirect(303, `/login?redirectTo=${encodeURIComponent(`/q/${params.token}`)}`);
-	const found = await resolveQrCode(params.token!, locals.user.id);
-	if (!found) error(404, m.equipment_qr_not_found());
+	const found = orNotFound(
+		await resolveQrCode(params.token!, locals.user.id),
+		m.equipment_qr_not_found(),
+	);
 	if (locals.tenant?.organizationId !== found.target.organizationId) {
 		await auth.api.setActiveOrganization({
 			body: { organizationId: found.target.organizationId },

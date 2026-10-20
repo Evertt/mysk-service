@@ -13,6 +13,7 @@ import { currentTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { equipment } from "#lib/server/db/schema.ts";
 import { live } from "#lib/server/live.ts";
+import { orNotFound } from "#lib/server/records.ts";
 
 import { periods } from "./model.ts";
 import { query } from "./remote-functions.ts";
@@ -120,8 +121,10 @@ export const getEnergyZone = query(
 			periodRanges("day", site.timeZone, now),
 			now,
 		);
-		const zone = zones.find((found) => found.code === code);
-		if (!zone) error(404, m.energy_zone_not_found());
+		const zone = orNotFound(
+			zones.find((found) => found.code === code),
+			m.energy_zone_not_found(),
+		);
 		const consumers = await db
 			.select({
 				id: energyConsumer.id,

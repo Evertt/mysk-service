@@ -1,4 +1,4 @@
-import { error, redirect } from "@sveltejs/kit";
+import { redirect } from "@sveltejs/kit";
 import { and, asc, count, eq, sql, ne } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -19,6 +19,7 @@ import {
 	order,
 	orderUnit,
 } from "#lib/server/db/schema.ts";
+import { orNotFound, byKey } from "#lib/server/records.ts";
 import { type Problem, Refused } from "#lib/server/refused.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
@@ -69,12 +70,15 @@ export const getEquipment = forMembers.query.batch(v.string(), async (serialNumb
 				)
 				.groupBy(orderUnit.equipmentId)
 		: [];
-	const bySerial = new Map(units.map((unit) => [unit.serialNumber, unit]));
+	const find = byKey(
+		units,
+		(unit) => unit.serialNumber,
+		(serial) => m.equipment_serial_not_found({ serial }),
+	);
 	const countsOf = new Map(counts.map((row) => [row.equipmentId, row]));
 
 	return (serialNumber: string) => {
-		const unit = bySerial.get(serialNumber);
-		if (!unit) error(404, m.equipment_serial_not_found({ serial: serialNumber }));
+		const unit = find(serialNumber);
 		const counted = countsOf.get(unit.id);
 		return {
 			unit,
@@ -240,8 +244,10 @@ export const updateEquipment = forMembers.form(
 	v.object({ id: id(), ...equipmentFields }),
 	async (data) => {
 		const { id, ...input } = data;
-		const existing = await db.query.equipment.findFirst({ where: idInTenant(equipment, id) });
-		if (!existing) error(404, m.equipment_not_found());
+		const existing = orNotFound(
+			await db.query.equipment.findFirst({ where: idInTenant(equipment, id) }),
+			m.equipment_not_found(),
+		);
 		Refused.check(await checkUnit(existing, input));
 		// Records of optional modules (e.g. a service contract covering it) belong to the unit's
 		// current customer too; the database refuses the move while they exist.

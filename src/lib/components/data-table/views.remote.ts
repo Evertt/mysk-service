@@ -17,7 +17,7 @@ import { currentTenant, inTenant, idInTenant } from "#lib/server/auth/index.ts";
 import { user } from "#lib/server/db/auth.schema.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { savedView } from "#lib/server/db/schema.ts";
-import { nameTaken } from "#lib/server/records.ts";
+import { nameTaken, orNotFound } from "#lib/server/records.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import {
@@ -90,17 +90,19 @@ export const getTableViews = forMembers.query(tableKey, async (key) => {
  */
 async function findView(viewId: number, { edit = false } = {}) {
 	const tenant = currentTenant();
-	const [found] = await db
-		.select()
-		.from(savedView)
-		.where(
-			and(
-				eq(savedView.id, viewId),
-				inTenant(savedView),
-				or(eq(savedView.userId, tenant.user.id), eq(savedView.shared, true)),
+	const found = orNotFound(
+		await db
+			.select()
+			.from(savedView)
+			.where(
+				and(
+					eq(savedView.id, viewId),
+					inTenant(savedView),
+					or(eq(savedView.userId, tenant.user.id), eq(savedView.shared, true)),
+				),
 			),
-		);
-	if (!found) error(404, m.common_views_not_found());
+		m.common_views_not_found(),
+	);
 	if (edit && found.userId !== tenant.user.id && !canShareViews(tenant.roles)) {
 		error(403, m.common_error_no_permission());
 	}

@@ -6,7 +6,7 @@
  * access (their membership goes, or the invitation is cancelled). Logged on the customer.
  */
 import { getRequestEvent } from "$app/server";
-import { error, invalid } from "@sveltejs/kit";
+import { invalid } from "@sveltejs/kit";
 import { isAPIError } from "better-auth/api";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
@@ -210,12 +210,14 @@ export const invitePortalContact = forManagers.form(
  */
 export const revokePortalContact = forManagers.form(v.object({ id: id() }), async (input) => {
 	const { organizationId } = currentTenant();
-	const found = await db.query.portalContact.findFirst({
-		columns: { id: true, email: true, userId: true, invitationId: true },
-		where: idInTenant(portalContact, input.id),
-		with: { customer: { columns: { id: true, code: true } } },
-	});
-	if (!found) error(404, m.customers_portal_contact_not_found());
+	const found = orNotFound(
+		await db.query.portalContact.findFirst({
+			columns: { id: true, email: true, userId: true, invitationId: true },
+			where: idInTenant(portalContact, input.id),
+			with: { customer: { columns: { id: true, code: true } } },
+		}),
+		m.customers_portal_contact_not_found(),
+	);
 	if (found.userId) {
 		const [membership] = await db
 			.select({ id: member.id })

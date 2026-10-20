@@ -3,11 +3,11 @@
  * order's page with the steps it can take (confirm, ship, deliver, cancel), and the dashboard's
  * count of the open ones.
  */
-import { error } from "@sveltejs/kit";
 import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { inList } from "#lib/server/db/parameters.ts";
+import { orNotFound } from "#lib/server/records.ts";
 
 import { stepSchema } from "./form/schemas.ts";
 import { openShopOrderStatuses } from "./model.ts";
@@ -22,9 +22,10 @@ export const getShopOrders = query(v.picklist(["open", "all"]), async (view) =>
 
 /** One of the tenant's shop orders by its number, with its lines; a 404 for any other. */
 export const getShopOrder = query(v.pipe(v.string(), v.maxLength(32)), async (number) => {
-	const found = await shopOrderDetail(eq(shopOrder.number, number));
-	if (!found) error(404, m.shop_order_not_found({ number }));
-	return found;
+	return orNotFound(
+		await shopOrderDetail(eq(shopOrder.number, number)),
+		m.shop_order_not_found({ number }),
+	);
 });
 
 /** How many of the tenant's shop orders are open, and how many of those wait to be confirmed. */

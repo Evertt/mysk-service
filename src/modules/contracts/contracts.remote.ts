@@ -1,4 +1,4 @@
-import { error, redirect } from "@sveltejs/kit";
+import { redirect } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -8,6 +8,7 @@ import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, equipmentCategory, order } from "#lib/server/db/schema.ts";
 import { bulkChange, idsTarget, inDays } from "#lib/server/lists/index.ts";
+import { orNotFound } from "#lib/server/records.ts";
 
 import { contractFields } from "./form/contract-schema.ts";
 import { command, form, query } from "./remote-functions.ts";
@@ -46,16 +47,18 @@ export const getContracts = query(async () => {
 
 /** One contract with its customer and covered equipment, plus the orders it covered. */
 export const getContract = query(v.string(), async (number) => {
-	const found = await db.query.contract.findFirst({
-		where: and(eq(contract.number, number), inTenant(contract)),
-		with: {
-			customer: true,
-			coverage: {
-				with: { equipment: { with: { category: { columns: { name: true } } } } },
+	const found = orNotFound(
+		await db.query.contract.findFirst({
+			where: and(eq(contract.number, number), inTenant(contract)),
+			with: {
+				customer: true,
+				coverage: {
+					with: { equipment: { with: { category: { columns: { name: true } } } } },
+				},
 			},
-		},
-	});
-	if (!found) error(404, m.contracts_not_found_number({ number }));
+		}),
+		m.contracts_not_found_number({ number }),
+	);
 
 	const { coverage, ...rest } = found;
 	const units = coverage

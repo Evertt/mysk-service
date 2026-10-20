@@ -5,7 +5,6 @@
  * as its last one. "Create orders" on the due list and the daily run (`automatic.ts`) both do it
  * here, so their orders are made, numbered and logged alike.
  */
-import { error } from "@sveltejs/kit";
 
 import { equipmentSubject } from "#lib/activity/index.ts";
 import { createOrders } from "#lib/orders/server/index.ts";
@@ -13,6 +12,7 @@ import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { equipment, order } from "#lib/server/db/schema.ts";
+import { orNotFound } from "#lib/server/records.ts";
 import { Refused } from "#lib/server/refused.ts";
 
 import { planLabel } from "../activity.ts";
@@ -42,22 +42,24 @@ export function orderPlan(
 ): Promise<PlanOrder | null> {
 	const { organizationId } = currentTenant();
 	return db.transaction(async (tx) => {
-		const [found] = await tx
-			.select({
-				plan: maintenancePlan,
-				unit: {
-					id: equipment.id,
-					serialNumber: equipment.serialNumber,
-					customerId: equipment.customerId,
-				},
-				lastOrder: order.number,
-				lastOrderStatus: order.status,
-			})
-			.from(maintenancePlan)
-			.innerJoin(...tenantJoin(equipment, maintenancePlan.equipmentId))
-			.leftJoin(...tenantJoin(order, maintenancePlan.lastOrderId))
-			.where(idInTenant(maintenancePlan, id));
-		if (!found) error(404, m.maintenance_plan_not_found());
+		const found = orNotFound(
+			await tx
+				.select({
+					plan: maintenancePlan,
+					unit: {
+						id: equipment.id,
+						serialNumber: equipment.serialNumber,
+						customerId: equipment.customerId,
+					},
+					lastOrder: order.number,
+					lastOrderStatus: order.status,
+				})
+				.from(maintenancePlan)
+				.innerJoin(...tenantJoin(equipment, maintenancePlan.equipmentId))
+				.leftJoin(...tenantJoin(order, maintenancePlan.lastOrderId))
+				.where(idInTenant(maintenancePlan, id)),
+			m.maintenance_plan_not_found(),
+		);
 		const { plan, unit } = found;
 		if (automatic && !dueForAutomaticOrder(plan, found.lastOrderStatus, automatic.horizon)) {
 			return null;

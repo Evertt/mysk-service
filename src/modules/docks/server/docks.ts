@@ -4,7 +4,6 @@
  * page). A dock's door, leveller and location must be at its site; its code is unique in the
  * tenant (the Salvo feed names docks by it).
  */
-import { error } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, gte, isNull, ne, or } from "drizzle-orm";
 
 import { customerSubject } from "#lib/activity/index.ts";
@@ -30,7 +29,7 @@ import {
 	equipmentLocation,
 	order,
 } from "#lib/server/db/schema.ts";
-import { deleteAndLog } from "#lib/server/records.ts";
+import { deleteAndLog, orNotFound } from "#lib/server/records.ts";
 import { type Problem, Refused } from "#lib/server/refused.ts";
 
 import type { DockInput } from "../form/dock-schema.ts";
@@ -275,12 +274,14 @@ export async function saveDock(customerCode: string, input: DockInput & { id?: n
 	const parent = customerSubject(owner);
 	await db.transaction(async (tx) => {
 		if (input.id) {
-			const [before] = await tx
-				.select()
-				.from(dockPosition)
-				.innerJoin(...tenantJoin(customerSite, dockPosition.siteId))
-				.where(and(idInTenant(dockPosition, input.id), eq(customerSite.customerId, owner.id)));
-			if (!before) error(404, m.docks_not_found());
+			const before = orNotFound(
+				await tx
+					.select()
+					.from(dockPosition)
+					.innerJoin(...tenantJoin(customerSite, dockPosition.siteId))
+					.where(and(idInTenant(dockPosition, input.id), eq(customerSite.customerId, owner.id))),
+				m.docks_not_found(),
+			);
 			await tx.update(dockPosition).set(values).where(idInTenant(dockPosition, input.id));
 			await recordActivity(tx, {
 				action: "updated",
@@ -308,12 +309,14 @@ export async function saveDock(customerCode: string, input: DockInput & { id?: n
 export async function deleteDock(customerCode: string, id: number) {
 	const owner = await namedCustomer(customerCode);
 	return db.transaction(async (tx) => {
-		const [found] = await tx
-			.select({ code: dockPosition.code })
-			.from(dockPosition)
-			.innerJoin(...tenantJoin(customerSite, dockPosition.siteId))
-			.where(and(idInTenant(dockPosition, id), eq(customerSite.customerId, owner.id)));
-		if (!found) error(404, m.docks_not_found());
+		const found = orNotFound(
+			await tx
+				.select({ code: dockPosition.code })
+				.from(dockPosition)
+				.innerJoin(...tenantJoin(customerSite, dockPosition.siteId))
+				.where(and(idInTenant(dockPosition, id), eq(customerSite.customerId, owner.id))),
+			m.docks_not_found(),
+		);
 		await deleteAndLog(dockPosition, {
 			tx,
 			subject: { type: "dock", id, label: found.code },

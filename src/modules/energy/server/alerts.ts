@@ -11,6 +11,7 @@ import { recordActivity, type LoggedSubjects } from "#lib/server/activity/index.
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customerSite, order } from "#lib/server/db/schema.ts";
+import { orNotFound } from "#lib/server/records.ts";
 
 import { alertDetail, recommendation } from "../display.ts";
 import type { AlertStatus } from "../model.ts";
@@ -73,9 +74,7 @@ type SiteAlert = Awaited<ReturnType<typeof siteAlerts>>[number];
 
 /** The current tenant's alert `id`, or a 404. */
 async function loadAlert(id: number) {
-	const [alert] = await alertsWhere(eq(energyAlert.id, id));
-	if (!alert) error(404, m.energy_alert_not_found());
-	return alert;
+	return orNotFound(await alertsWhere(eq(energyAlert.id, id)), m.energy_alert_not_found());
 }
 
 const logged = (alert: SiteAlert): LoggedSubjects => ({

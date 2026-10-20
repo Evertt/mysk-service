@@ -7,7 +7,6 @@
  * customer and the sites they see (`#lib/server/auth/customer.ts`), so another customer's order or
  * unit is a 404, also by a tampered number or serial.
  */
-import { error } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -17,6 +16,7 @@ import { atSites, currentCustomer, customerOrders, ofCustomer } from "#lib/serve
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { equipment, order } from "#lib/server/db/schema.ts";
+import { orNotFound } from "#lib/server/records.ts";
 
 import { forCustomers } from "../remote-functions.ts";
 import { checklistRecords, withPointArticles } from "../server/records.ts";
@@ -47,11 +47,13 @@ function forCustomer<T extends { engineer: string | null; office: string | null 
  */
 export const getClientOrderChecklists = forCustomers.query(v.string(), async (number) => {
 	const access = await currentCustomer();
-	const [found] = await db
-		.select({ id: order.id, status: order.status })
-		.from(order)
-		.where(and(eq(order.number, number), customerOrders(access)));
-	if (!found) error(404, m.client_order_not_found({ number }));
+	const found = orNotFound(
+		await db
+			.select({ id: order.id, status: order.status })
+			.from(order)
+			.where(and(eq(order.number, number), customerOrders(access))),
+		m.client_order_not_found({ number }),
+	);
 	const checklists = await withPointArticles(
 		await checklistRecords(
 			and(
@@ -72,11 +74,17 @@ export const getClientOrderChecklists = forCustomers.query(v.string(), async (nu
  */
 export const getClientWorkOrder = forCustomers.query(v.string(), async (number) => {
 	const access = await currentCustomer();
-	const found = await loadWorkOrder(
-		and(eq(order.number, number), customerOrders(access), inList(order.status, doneOrderStatuses))!,
-		atSites(access, equipment.siteId),
+	const found = orNotFound(
+		await loadWorkOrder(
+			and(
+				eq(order.number, number),
+				customerOrders(access),
+				inList(order.status, doneOrderStatuses),
+			)!,
+			atSites(access, equipment.siteId),
+		),
+		m.client_order_not_found({ number }),
 	);
-	if (!found) error(404, m.client_order_not_found({ number }));
 	return { ...found, checklists: officeUnnamed(found.checklists) };
 });
 
@@ -86,17 +94,19 @@ export const getClientWorkOrder = forCustomers.query(v.string(), async (number) 
  */
 export const getClientUnitInspection = forCustomers.query(v.string(), async (serialNumber) => {
 	const access = await currentCustomer();
-	const [unit] = await db
-		.select({ id: equipment.id })
-		.from(equipment)
-		.where(
-			and(
-				eq(equipment.serialNumber, serialNumber),
-				ofCustomer(access, equipment),
-				atSites(access, equipment.siteId),
+	const unit = orNotFound(
+		await db
+			.select({ id: equipment.id })
+			.from(equipment)
+			.where(
+				and(
+					eq(equipment.serialNumber, serialNumber),
+					ofCustomer(access, equipment),
+					atSites(access, equipment.siteId),
+				),
 			),
-		);
-	if (!unit) error(404, m.client_unit_not_found({ serial: serialNumber }));
+		m.client_unit_not_found({ serial: serialNumber }),
+	);
 	const inspection = await unitInspection(unit.id);
 	const completed = inspection.checklists.filter((each) => each.status === "completed");
 	return { ...inspection, checklists: forCustomer(completed) };

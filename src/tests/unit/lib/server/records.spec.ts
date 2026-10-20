@@ -7,11 +7,13 @@ import type { Tenant } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipmentCategory } from "#lib/server/db/schema.ts";
 import {
+	byKey,
 	defineRemoval,
 	deleteAndLog,
 	lookupBy,
 	nameTaken,
 	nextPosition,
+	orNotFound,
 	reorder,
 } from "#lib/server/records.ts";
 import { Refused } from "#lib/server/refused.ts";
@@ -239,5 +241,31 @@ describe("ordered records", () => {
 		expect(await nameTaken(db, equipmentCategory, "LIFT")).toMatchObject({ id: 11, name: "Lift" });
 		expect(await nameTaken(db, equipmentCategory, "lift", { except: 11 })).toBeUndefined();
 		expect(await nameTaken(db, equipmentCategory, "Ketel")).toBeUndefined();
+	});
+});
+
+describe("orNotFound and byKey", () => {
+	test("orNotFound answers the row, a select's first row, or a 404", () => {
+		expect(orNotFound({ id: 1 }, "Gone")).toEqual({ id: 1 });
+		expect(orNotFound([{ id: 1 }, { id: 2 }], "Gone")).toEqual({ id: 1 });
+		expect(() => orNotFound([], "Gone")).toThrow(expect.objectContaining({ status: 404 }));
+		expect(() => orNotFound(undefined, "Gone")).toThrow(
+			expect.objectContaining({ body: expect.objectContaining({ message: "Gone" }) }),
+		);
+	});
+
+	test("byKey finds a batch's row by its key, or a 404 that names the key as asked", () => {
+		const find = byKey(
+			[{ id: 7, name: "Jo" }],
+			(row) => row.id,
+			(id) => `No engineer ${id}`,
+		);
+		expect(find(7)).toEqual({ id: 7, name: "Jo" });
+		expect(() => find(Number("007x"), "007x")).toThrow(
+			expect.objectContaining({
+				status: 404,
+				body: expect.objectContaining({ message: "No engineer 007x" }),
+			}),
+		);
 	});
 });

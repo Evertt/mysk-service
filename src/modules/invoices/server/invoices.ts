@@ -2,7 +2,6 @@
  * The invoices themselves: making a draft from what can be billed (see `./billable.ts`) and
  * loading an invoice with its totals, for its page and its PDF. The rules are in `../invoice.ts`.
  */
-import { error } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 
 import { currentDay } from "#lib/dates.ts";
@@ -13,6 +12,7 @@ import { db, type Transaction } from "#lib/server/db/index.ts";
 import { insertRows } from "#lib/server/db/parameters.ts";
 import { customer } from "#lib/server/db/schema.ts";
 import { nextNumber, type NumberTarget } from "#lib/server/numbering.ts";
+import { orNotFound } from "#lib/server/records.ts";
 import { Refused } from "#lib/server/refused.ts";
 
 import { invoiceState, invoiceTotals } from "../invoice.ts";
@@ -101,17 +101,19 @@ export async function createDraft(input: {
 
 /** One of the tenant's invoices with its customer, lines and totals, or a 404. */
 export async function loadInvoice(number: string, today = currentDay()) {
-	const found = await db.query.invoice.findFirst({
-		where: and(eq(invoice.number, number), inTenant(invoice)),
-		with: {
-			customer: true,
-			lines: {
-				orderBy: (line, { asc }) => asc(line.id),
-				with: { order: { columns: { number: true, status: true } } },
+	const found = orNotFound(
+		await db.query.invoice.findFirst({
+			where: and(eq(invoice.number, number), inTenant(invoice)),
+			with: {
+				customer: true,
+				lines: {
+					orderBy: (line, { asc }) => asc(line.id),
+					with: { order: { columns: { number: true, status: true } } },
+				},
 			},
-		},
-	});
-	if (!found) error(404, m.invoices_number_not_found({ number }));
+		}),
+		m.invoices_number_not_found({ number }),
+	);
 	const totals = invoiceTotals(found.lines, found.vatRate);
 	const credits = await creditsOf(db, [found.id]);
 	return {
@@ -134,10 +136,11 @@ export async function loadInvoice(number: string, today = currentDay()) {
 
 /** The tenant's invoice by id (e.g. from a form), with its lines' orders; or a 404. */
 export async function invoiceById(tx: Transaction, id: number) {
-	const found = await tx.query.invoice.findFirst({
-		where: idInTenant(invoice, id),
-		with: { lines: { columns: { id: true, orderId: true } } },
-	});
-	if (!found) error(404, m.invoices_not_found());
-	return found;
+	return orNotFound(
+		await tx.query.invoice.findFirst({
+			where: idInTenant(invoice, id),
+			with: { lines: { columns: { id: true, orderId: true } } },
+		}),
+		m.invoices_not_found(),
+	);
 }

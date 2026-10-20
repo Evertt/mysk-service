@@ -5,7 +5,6 @@
  * category has at most one template; a retired template has none, and isn't changed until it's
  * restored. Its points are in `points.ts`.
  */
-import { error } from "@sveltejs/kit";
 import { and, asc, count, eq, sql } from "drizzle-orm";
 
 import { unitBySerial } from "#lib/equipment/server/index.ts";
@@ -20,7 +19,7 @@ import {
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { insertRows } from "#lib/server/db/parameters.ts";
 import { equipment, equipmentCategory } from "#lib/server/db/schema.ts";
-import { nameTaken, nextPosition } from "#lib/server/records.ts";
+import { nameTaken, nextPosition, orNotFound } from "#lib/server/records.ts";
 import { Refused } from "#lib/server/refused.ts";
 
 import type { TemplateInput } from "../form/template-schema.ts";
@@ -36,12 +35,10 @@ export const templateSubject = (template: { id: number; name: string }): Subject
 
 /** The tenant's template `id`, or a 404. */
 async function findTemplate(tx: Transaction | typeof db, id: number) {
-	const [found] = await tx
-		.select()
-		.from(checklistTemplate)
-		.where(idInTenant(checklistTemplate, id));
-	if (!found) error(404, m.checklists_template_not_found());
-	return found;
+	return orNotFound(
+		await tx.select().from(checklistTemplate).where(idInTenant(checklistTemplate, id)),
+		m.checklists_template_not_found(),
+	);
 }
 
 /** The tenant's template `id`, or a 404; refuses one that's retired, which isn't changed. */
@@ -239,8 +236,10 @@ export function setTemplateCategories(id: number, categoryIds: number[]) {
 		const before = await categoryIdsOf(tx, id);
 		const categories = await categoriesWithTemplates(tx);
 		for (const categoryId of wanted) {
-			const category = categories.find((c) => c.id === categoryId);
-			if (!category) error(404, m.checklists_category_not_found());
+			const category = orNotFound(
+				categories.find((c) => c.id === categoryId),
+				m.checklists_category_not_found(),
+			);
 			if (category.templateId !== null && category.templateId !== id) {
 				throw new Refused({
 					path: ["categoryIds"],

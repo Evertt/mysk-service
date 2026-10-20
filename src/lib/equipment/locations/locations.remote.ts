@@ -3,7 +3,6 @@
  * units and their orders (its page), and adding, renaming and deleting them (see
  * `server/locations.ts`). The changes refresh the customer's locations.
  */
-import { error } from "@sveltejs/kit";
 import { and, asc, count, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -20,6 +19,7 @@ import {
 	order,
 	orderUnit,
 } from "#lib/server/db/schema.ts";
+import { orNotFound } from "#lib/server/records.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { createLocation, removeLocation, updateLocation } from "../server/locations.ts";
@@ -64,11 +64,13 @@ export const getCustomerLocations = forMembers.query(v.string(), async (code) =>
  * their orders.
  */
 export const getLocation = forMembers.query(id(), async (locationId) => {
-	const location = await db.query.equipmentLocation.findFirst({
-		where: idInTenant(equipmentLocation, locationId),
-		with: { site: { with: { customer: { columns: { id: true, code: true, name: true } } } } },
-	});
-	if (!location) error(404, m.equipment_location_not_found());
+	const location = orNotFound(
+		await db.query.equipmentLocation.findFirst({
+			where: idInTenant(equipmentLocation, locationId),
+			with: { site: { with: { customer: { columns: { id: true, code: true, name: true } } } } },
+		}),
+		m.equipment_location_not_found(),
+	);
 
 	const units = await db
 		.select({

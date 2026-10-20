@@ -1,4 +1,4 @@
-import { error, invalid } from "@sveltejs/kit";
+import { invalid } from "@sveltejs/kit";
 import * as v from "valibot";
 
 import { getSubjectActivity } from "#lib/components/activity/activity.remote.ts";
@@ -6,6 +6,7 @@ import { id } from "#lib/schema.ts";
 import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { idInTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
+import { orNotFound } from "#lib/server/records.ts";
 
 import { countFields, receiveFields } from "../form/material-schema.ts";
 import { getMaterial } from "../material.remote.ts";
@@ -19,8 +20,7 @@ import { moveStock } from "../server/stock.ts";
 export const receiveStock = form(
 	v.object({ id: id(), ...receiveFields }),
 	async ({ id, quantity, note }, issue) => {
-		const existing = await findMaterial(id);
-		if (!existing) error(404, m.materials_not_found());
+		const existing = orNotFound(await findMaterial(id), m.materials_not_found());
 		if (!fitsUnit(quantity, existing.unit)) invalid(issue.quantity(m.materials_whole_pieces()));
 
 		await db.transaction(async (tx) => {
@@ -44,8 +44,7 @@ export const receiveStock = form(
 export const countStock = form(
 	v.object({ id: id(), ...countFields }),
 	async ({ id, counted, note }, issue) => {
-		const existing = await findMaterial(id);
-		if (!existing) error(404, m.materials_not_found());
+		const existing = orNotFound(await findMaterial(id), m.materials_not_found());
 		if (!fitsUnit(counted, existing.unit)) invalid(issue.counted(m.materials_whole_pieces()));
 
 		await db.transaction(async (tx) => {

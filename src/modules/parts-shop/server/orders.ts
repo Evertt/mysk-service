@@ -6,7 +6,6 @@
  * office, or cancelled before they're shipped: their credit given back piece by piece
  * (`giveBackCredit()`) and their stock released. Every change is logged against the customer.
  */
-import { error } from "@sveltejs/kit";
 import { and, asc, desc, eq, type SQL } from "drizzle-orm";
 
 import { customerSubject } from "#lib/activity/index.ts";
@@ -24,6 +23,7 @@ import { db, type Transaction } from "#lib/server/db/index.ts";
 import { insertRows } from "#lib/server/db/parameters.ts";
 import { customer, user } from "#lib/server/db/schema.ts";
 import { type NumberTarget, nextNumber } from "#lib/server/numbering.ts";
+import { orNotFound } from "#lib/server/records.ts";
 import { Refused } from "#lib/server/refused.ts";
 import { releaseStock, reserveStock, StockShortage } from "#modules/materials/api/stock.server.ts";
 import {
@@ -221,15 +221,17 @@ export async function shopOrderDetail(where: SQL) {
  */
 export async function stepShopOrder(number: string, step: ShopOrderStep) {
 	await db.transaction(async (tx) => {
-		const [found] = await tx
-			.select({
-				order: shopOrder,
-				customer: { id: customer.id, code: customer.code },
-			})
-			.from(shopOrder)
-			.innerJoin(...tenantJoin(customer, shopOrder.customerId))
-			.where(and(inTenant(shopOrder), eq(shopOrder.number, number)));
-		if (!found) error(404, m.shop_order_not_found({ number }));
+		const found = orNotFound(
+			await tx
+				.select({
+					order: shopOrder,
+					customer: { id: customer.id, code: customer.code },
+				})
+				.from(shopOrder)
+				.innerJoin(...tenantJoin(customer, shopOrder.customerId))
+				.where(and(inTenant(shopOrder), eq(shopOrder.number, number))),
+			m.shop_order_not_found({ number }),
+		);
 		const { order, customer: holder } = found;
 		const status = statusAfter(order.status, step);
 		if (!status) throw new Refused(m.shop_step_refused({ number }));

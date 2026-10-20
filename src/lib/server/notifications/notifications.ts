@@ -8,7 +8,6 @@
  * The office's bell (`forMembers`) and the engineer portal's (`forEngineers`, whose rules read the
  * engineer's orders through `engineerActivity()`) share these.
  */
-import { error } from "@sveltejs/kit";
 import { and, desc, eq, gt, gte, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 
 import {
@@ -23,6 +22,7 @@ import { db } from "#lib/server/db/index.ts";
 import { inList, literal } from "#lib/server/db/parameters.ts";
 import { activity, notificationSeen } from "#lib/server/db/schema.ts";
 import { collectNow } from "#lib/server/extensions.ts";
+import { orNotFound } from "#lib/server/records.ts";
 
 import { coreNotificationRules } from "./rules.ts";
 
@@ -184,11 +184,10 @@ export async function notificationTray(audience: NotificationAudience): Promise<
  */
 export async function markSeenUpTo(upToId: number) {
 	const { organizationId, user } = currentTenant();
-	const [entry] = await db
-		.select({ id: activity.id })
-		.from(activity)
-		.where(idInTenant(activity, upToId));
-	if (!entry) error(404, m.common_error_not_found());
+	const entry = orNotFound(
+		await db.select({ id: activity.id }).from(activity).where(idInTenant(activity, upToId)),
+		m.common_error_not_found(),
+	);
 	await db
 		.insert(notificationSeen)
 		.values({ organizationId, userId: user.id, lastSeenActivityId: entry.id })

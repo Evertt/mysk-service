@@ -4,7 +4,6 @@
  * them, the credits of invoices, and their status changes. The rules are in `../credit-note.ts`,
  * paying an invoice with its credit notes in `./settlement.ts`.
  */
-import { error } from "@sveltejs/kit";
 import { and, asc, desc, eq, isNotNull, ne, sql } from "drizzle-orm";
 
 import { currentDay } from "#lib/dates.ts";
@@ -15,6 +14,7 @@ import { db, type Transaction } from "#lib/server/db/index.ts";
 import { inList, insertRows } from "#lib/server/db/parameters.ts";
 import { customer } from "#lib/server/db/schema.ts";
 import { nextNumber, type NumberTarget } from "#lib/server/numbering.ts";
+import { orNotFound } from "#lib/server/records.ts";
 import { Refused, type Problem } from "#lib/server/refused.ts";
 
 import {
@@ -224,8 +224,10 @@ export async function creditInvoice(input: {
 	lines: CreditChoice[];
 }): Promise<{ id: number; number: string; invoice: { id: number; number: string } }> {
 	return db.transaction(async (tx) => {
-		const found = await tx.query.invoice.findFirst({ where: idInTenant(invoice, input.invoiceId) });
-		if (!found) error(404, m.invoices_not_found());
+		const found = orNotFound(
+			await tx.query.invoice.findFirst({ where: idInTenant(invoice, input.invoiceId) }),
+			m.invoices_not_found(),
+		);
 		if (!canCredit(found.status))
 			throw new Refused(m.invoices_credit_not_creditable({ number: found.number }));
 		const lines = await creditableLines(tx, found.id);
@@ -263,11 +265,13 @@ export async function createStandalone(
 	},
 ) {
 	const { organizationId } = currentTenant();
-	const owner = await tx.query.customer.findFirst({
-		columns: { id: true },
-		where: idInTenant(customer, input.customerId),
-	});
-	if (!owner) error(404, m.invoices_customer_not_found());
+	orNotFound(
+		await tx.query.customer.findFirst({
+			columns: { id: true },
+			where: idInTenant(customer, input.customerId),
+		}),
+		m.invoices_customer_not_found(),
+	);
 	if (input.lines.reduce((sum, line) => sum + line.amount, 0) >= 0)
 		throw new Refused(m.invoices_credit_nothing());
 	const settings = await settingsOf(organizationId, tx);
@@ -288,18 +292,20 @@ export async function createStandalone(
 
 /** One of the tenant's credit notes with its customer, invoice, lines and totals, or a 404. */
 export async function loadCreditNote(number: string) {
-	const found = await db.query.creditNote.findFirst({
-		where: and(eq(creditNote.number, number), inTenant(creditNote)),
-		with: {
-			customer: true,
-			invoice: { columns: { id: true, number: true, status: true, issuedOn: true } },
-			lines: {
-				orderBy: (line, { asc }) => asc(line.id),
-				with: { order: { columns: { number: true } } },
+	const found = orNotFound(
+		await db.query.creditNote.findFirst({
+			where: and(eq(creditNote.number, number), inTenant(creditNote)),
+			with: {
+				customer: true,
+				invoice: { columns: { id: true, number: true, status: true, issuedOn: true } },
+				lines: {
+					orderBy: (line, { asc }) => asc(line.id),
+					with: { order: { columns: { number: true } } },
+				},
 			},
-		},
-	});
-	if (!found) error(404, m.invoices_credit_number_not_found({ number }));
+		}),
+		m.invoices_credit_number_not_found({ number }),
+	);
 	return { creditNote: found, totals: invoiceTotals(found.lines, found.vatRate) };
 }
 
@@ -347,15 +353,16 @@ export async function listCreditNotes() {
 
 /** The tenant's credit note by id (e.g. from a form), with its lines; or a 404. */
 export async function creditNoteById(tx: Transaction, id: number) {
-	const found = await tx.query.creditNote.findFirst({
-		where: idInTenant(creditNote, id),
-		with: {
-			lines: { columns: { id: true, amount: true, source: true } },
-			invoice: { columns: { id: true, number: true, status: true, vatRate: true } },
-		},
-	});
-	if (!found) error(404, m.invoices_credit_not_found());
-	return found;
+	return orNotFound(
+		await tx.query.creditNote.findFirst({
+			where: idInTenant(creditNote, id),
+			with: {
+				lines: { columns: { id: true, amount: true, source: true } },
+				invoice: { columns: { id: true, number: true, status: true, vatRate: true } },
+			},
+		}),
+		m.invoices_credit_not_found(),
+	);
 }
 
 // --- Changing them -----------------------------------------------------------------------------
@@ -437,11 +444,13 @@ export async function settleCredit(id: number) {
 
 /** A sent invoice's remaining amount, after its issued credit notes. */
 export async function remainingOfInvoice(tx: Transaction, invoiceId: number) {
-	const found = await tx.query.invoice.findFirst({
-		where: idInTenant(invoice, invoiceId),
-		with: { lines: { columns: { amount: true } } },
-	});
-	if (!found) error(404, m.invoices_not_found());
+	const found = orNotFound(
+		await tx.query.invoice.findFirst({
+			where: idInTenant(invoice, invoiceId),
+			with: { lines: { columns: { amount: true } } },
+		}),
+		m.invoices_not_found(),
+	);
 	const credits = await creditsOf(tx, [found.id]);
 	return {
 		invoice: found,

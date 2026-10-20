@@ -24,6 +24,7 @@ import {
 } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { engineer, equipment, order, orderUnit, user } from "#lib/server/db/schema.ts";
+import { orNotFound } from "#lib/server/records.ts";
 import { type ChecklistCompleting, checklistScore } from "#modules/checklists/api/extensions.ts";
 
 import { conditionLabel } from "../activity.ts";
@@ -117,11 +118,13 @@ export function recordOfficeCondition(
 		);
 		let part: Part | undefined;
 		if (componentId !== null) {
-			[part] = await tx
-				.select({ id: component.id, number: component.number })
-				.from(component)
-				.where(and(idInTenant(component, componentId), eq(component.equipmentId, unit.id)));
-			if (!part) error(404, m.condition_component_not_found());
+			part = orNotFound(
+				await tx
+					.select({ id: component.id, number: component.number })
+					.from(component)
+					.where(and(idInTenant(component, componentId), eq(component.equipmentId, unit.id))),
+				m.condition_component_not_found(),
+			);
 		}
 		await insertCondition(tx, unit, input, { source: "office", component: part });
 		return unit;

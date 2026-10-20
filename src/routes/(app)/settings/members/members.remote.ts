@@ -1,5 +1,5 @@
 import { getRequestEvent } from "$app/server";
-import { error, invalid } from "@sveltejs/kit";
+import { invalid } from "@sveltejs/kit";
 import { isAPIError } from "better-auth/api";
 import { and, asc, eq, not, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
@@ -21,6 +21,7 @@ import { recordActivityAfter, type Subject } from "#lib/server/activity/index.ts
 import { auth, currentTenant, inTenant, idInTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { invitation, member, user } from "#lib/server/db/schema.ts";
+import { orNotFound } from "#lib/server/records.ts";
 import { Refused } from "#lib/server/refused.ts";
 import { forManagers, forMembers } from "#lib/server/remote-functions.ts";
 
@@ -115,8 +116,10 @@ async function memberChange(memberId: string): Promise<MemberChange> {
 		.from(member)
 		.where(inTenant(member));
 	// A customer's contact is changed on their customer's page only.
-	const target = members.find((m) => m.id === memberId && !parseRoles(m.role).includes("customer"));
-	if (!target) error(404, m.settings_member_not_found());
+	const target = orNotFound(
+		members.find((one) => one.id === memberId && !parseRoles(one.role).includes("customer")),
+		m.settings_member_not_found(),
+	);
 	return {
 		actor: { userId: tenant.user.id, roles: tenant.roles },
 		target: { userId: target.userId, roles: parseRoles(target.role) },
@@ -126,12 +129,14 @@ async function memberChange(memberId: string): Promise<MemberChange> {
 
 /** One of the tenant's members as the activity log shows them (by name), with their role. */
 async function memberSubject(memberId: string) {
-	const [found] = await db
-		.select({ name: user.name, role: member.role })
-		.from(member)
-		.innerJoin(user, eq(member.userId, user.id))
-		.where(idInTenant(member, memberId));
-	if (!found) error(404, m.settings_member_not_found());
+	const found = orNotFound(
+		await db
+			.select({ name: user.name, role: member.role })
+			.from(member)
+			.innerJoin(user, eq(member.userId, user.id))
+			.where(idInTenant(member, memberId)),
+		m.settings_member_not_found(),
+	);
 	const subject: Subject = { type: "member", id: memberId, label: found.name };
 	return { subject, role: found.role };
 }
@@ -152,16 +157,17 @@ const asRoles = (roles: readonly MemberRole[]) =>
 
 /** One of the tenant's pending invitations, or a 404. Ids are global, so look up in the tenant. */
 async function findInvitation(id: string) {
-	const found = await db.query.invitation.findFirst({
-		where: and(
-			eq(invitation.id, id),
-			inTenant(invitation),
-			eq(invitation.status, "pending"),
-			not(isCustomerRole(invitation.role)),
-		),
-	});
-	if (!found) error(404, m.settings_invitation_not_found());
-	return found;
+	return orNotFound(
+		await db.query.invitation.findFirst({
+			where: and(
+				eq(invitation.id, id),
+				inTenant(invitation),
+				eq(invitation.status, "pending"),
+				not(isCustomerRole(invitation.role)),
+			),
+		}),
+		m.settings_invitation_not_found(),
+	);
 }
 
 /**

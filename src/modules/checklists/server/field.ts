@@ -32,6 +32,7 @@ import {
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { equipment, order } from "#lib/server/db/schema.ts";
 import { save } from "#lib/server/extensions.ts";
+import { orNotFound } from "#lib/server/records.ts";
 
 import { checklistCompleted } from "../api/extensions.ts";
 import { completionProblems, type PointResult, rejections, validUntil } from "../model.ts";
@@ -49,27 +50,33 @@ export type Filler = "engineer" | "office";
  * 400 saying why not otherwise.
  */
 async function findFieldChecklist(tx: Transaction, by: Filler, id: number) {
-	const [found] = await tx
-		.select({
-			id: checklist.id,
-			name: checklist.name,
-			kind: checklist.kind,
-			status: checklist.status,
-			validityMonths: checklist.validityMonths,
-			equipmentId: checklist.equipmentId,
-			order: {
-				id: order.id,
-				number: order.number,
-				status: order.status,
-				engineerId: order.engineerId,
-			},
-			unit: { name: equipment.name, manufacturer: equipment.manufacturer, model: equipment.model },
-		})
-		.from(checklist)
-		.innerJoin(...tenantJoin(order, checklist.orderId))
-		.innerJoin(...tenantJoin(equipment, checklist.equipmentId))
-		.where(and(idInTenant(checklist, id), by === "office" ? undefined : await engineerOrders()));
-	if (!found) error(404, m.checklists_not_found());
+	const found = orNotFound(
+		await tx
+			.select({
+				id: checklist.id,
+				name: checklist.name,
+				kind: checklist.kind,
+				status: checklist.status,
+				validityMonths: checklist.validityMonths,
+				equipmentId: checklist.equipmentId,
+				order: {
+					id: order.id,
+					number: order.number,
+					status: order.status,
+					engineerId: order.engineerId,
+				},
+				unit: {
+					name: equipment.name,
+					manufacturer: equipment.manufacturer,
+					model: equipment.model,
+				},
+			})
+			.from(checklist)
+			.innerJoin(...tenantJoin(order, checklist.orderId))
+			.innerJoin(...tenantJoin(equipment, checklist.equipmentId))
+			.where(and(idInTenant(checklist, id), by === "office" ? undefined : await engineerOrders())),
+		m.checklists_not_found(),
+	);
 	if (by === "office" && !isOpenOrder(found.order.status)) {
 		error(400, m.checklists_office_order_closed({ number: found.order.number }));
 	}
@@ -84,11 +91,13 @@ async function findFieldChecklist(tx: Transaction, by: Filler, id: number) {
 
 /** The tenant's point `id` of a checklist `by` may change (see `findFieldChecklist()`). */
 async function findFieldPoint(tx: Transaction, by: Filler, id: number) {
-	const [found] = await tx
-		.select({ id: checklistResult.id, checklistId: checklistResult.checklistId })
-		.from(checklistResult)
-		.where(idInTenant(checklistResult, id));
-	if (!found) error(404, m.checklists_not_found());
+	const found = orNotFound(
+		await tx
+			.select({ id: checklistResult.id, checklistId: checklistResult.checklistId })
+			.from(checklistResult)
+			.where(idInTenant(checklistResult, id)),
+		m.checklists_not_found(),
+	);
 	const owner = await findFieldChecklist(tx, by, found.checklistId);
 	return { ...found, number: owner.order.number };
 }

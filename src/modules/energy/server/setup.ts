@@ -23,7 +23,7 @@ import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customer, customerSite, equipment, equipmentCategory } from "#lib/server/db/schema.ts";
-import { deleteAndLog, nextPosition } from "#lib/server/records.ts";
+import { deleteAndLog, nextPosition, orNotFound } from "#lib/server/records.ts";
 import { type Problem, Refused } from "#lib/server/refused.ts";
 
 import type {
@@ -113,12 +113,14 @@ const siteLogged = (site: EnergySiteInput) => ({
  * and logs it. Answers its id; refuses a site that has one already.
  */
 export async function createEnergySite(input: NewEnergySiteInput): Promise<{ id: number }> {
-	const [site] = await db
-		.select({ id: customerSite.id, name: customerSite.name, customer: customer.name })
-		.from(customerSite)
-		.innerJoin(...tenantJoin(customer, customerSite.customerId))
-		.where(idInTenant(customerSite, input.siteId));
-	if (!site) error(404, m.energy_setup_site_not_found());
+	const site = orNotFound(
+		await db
+			.select({ id: customerSite.id, name: customerSite.name, customer: customer.name })
+			.from(customerSite)
+			.innerJoin(...tenantJoin(customer, customerSite.customerId))
+			.where(idInTenant(customerSite, input.siteId)),
+		m.energy_setup_site_not_found(),
+	);
 	const values = siteLogged({
 		...input,
 		name: input.name ?? `${site.customer} — ${site.name}`,
@@ -146,9 +148,10 @@ export async function createEnergySite(input: NewEnergySiteInput): Promise<{ id:
 
 /** The tenant's energy site `id`, as stored, or a 404. */
 async function siteRow(id: number, tx: Transaction | typeof db = db) {
-	const [found] = await tx.select().from(energySite).where(idInTenant(energySite, id));
-	if (!found) error(404, m.energy_site_not_found());
-	return found;
+	return orNotFound(
+		await tx.select().from(energySite).where(idInTenant(energySite, id)),
+		m.energy_site_not_found(),
+	);
 }
 
 /** The energy site as the log names it, the parent of its zones', consumers' and doors' entries. */
@@ -401,8 +404,7 @@ export async function saveZone(siteId: number, input: ZoneInput) {
  */
 export async function deleteZone(siteId: number, zoneId: number) {
 	const site = await siteRow(siteId);
-	const zone = await zoneOf(site.id, zoneId);
-	if (!zone) error(404, m.energy_zone_not_found());
+	const zone = orNotFound(await zoneOf(site.id, zoneId), m.energy_zone_not_found());
 	await db.transaction(async (tx) => {
 		if (await zoneMeasured(tx, zone.id)) throw new Refused(m.energy_setup_zone_measured());
 		await deleteAndLog(energyZone, {
@@ -516,8 +518,10 @@ export async function saveConsumer(siteId: number, input: ConsumerInput) {
 /** Deletes the consumer `consumerId` of the energy site `siteId`, and logs it. */
 export async function deleteConsumer(siteId: number, consumerId: number) {
 	const site = await siteRow(siteId);
-	const found = await consumerOf(site.id, consumerId);
-	if (!found) error(404, m.energy_setup_consumer_not_found());
+	const found = orNotFound(
+		await consumerOf(site.id, consumerId),
+		m.energy_setup_consumer_not_found(),
+	);
 	await deleteAndLog(energyConsumer, {
 		subject: { type: "energy_consumer", id: found.consumer.id, label: found.consumer.name },
 		parent: siteSubject(site),
@@ -597,8 +601,7 @@ export async function saveDoor(siteId: number, input: DoorInput) {
  */
 export async function deleteDoor(siteId: number, doorId: number) {
 	const site = await siteRow(siteId);
-	const found = await doorOf(site.id, doorId);
-	if (!found) error(404, m.energy_setup_door_not_found());
+	const found = orNotFound(await doorOf(site.id, doorId), m.energy_setup_door_not_found());
 	const { door } = found;
 	await db.transaction(async (tx) => {
 		if (await doorMeasured(tx, door.id)) throw new Refused(m.energy_setup_door_measured());

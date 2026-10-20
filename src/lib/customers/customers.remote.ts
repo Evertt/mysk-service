@@ -1,4 +1,4 @@
-import { error, redirect } from "@sveltejs/kit";
+import { redirect } from "@sveltejs/kit";
 import { and, asc, count, eq, getTableColumns, max, sql } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -13,6 +13,7 @@ import { inList } from "#lib/server/db/parameters.ts";
 import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
 import { bulkChange, idsTarget } from "#lib/server/lists/index.ts";
 import { nextNumber } from "#lib/server/numbering.ts";
+import { orNotFound, byKey } from "#lib/server/records.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { customerFields } from "./form/customer-schema.ts";
@@ -91,12 +92,15 @@ export const getCustomer = forMembers.query.batch(v.string(), async (codes) => {
 				)
 				.groupBy(order.customerId)
 		: [];
-	const byCode = new Map(found.map((c) => [c.code, c]));
+	const find = byKey(
+		found,
+		(one) => one.code,
+		(code) => m.customers_code_not_found({ code }),
+	);
 	const countsOf = new Map(counts.map((row) => [row.customerId, row]));
 
 	return (code: string) => {
-		const one = byCode.get(code);
-		if (!one) error(404, m.customers_code_not_found({ code }));
+		const one = find(code);
 		const unitsAt = Map.groupBy(one.equipment, (unit) => unit.siteId);
 		const sites = one.sites.map((site) => ({
 			...site,
@@ -193,8 +197,10 @@ export const createCustomer = forMembers.form(
 export const updateCustomer = forMembers.form(
 	v.object({ id: id(), ...customerFields }),
 	async ({ id, ...input }) => {
-		const existing = await db.query.customer.findFirst({ where: idInTenant(customer, id) });
-		if (!existing) error(404, m.customers_not_found());
+		const existing = orNotFound(
+			await db.query.customer.findFirst({ where: idInTenant(customer, id) }),
+			m.customers_not_found(),
+		);
 		await refuseUnknownCountry(input.country);
 
 		await db.transaction(async (tx) => {

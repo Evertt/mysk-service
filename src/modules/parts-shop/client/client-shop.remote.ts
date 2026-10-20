@@ -5,11 +5,12 @@
  * customers and scoped to their customer (`currentCustomer()`): another customer's order is a 404,
  * also by a tampered number, and a customer that isn't a partner has no credit to pay with.
  */
-import { error, redirect } from "@sveltejs/kit";
+import { redirect } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { currentCustomer, ofCustomer } from "#lib/server/auth/index.ts";
+import { orNotFound } from "#lib/server/records.ts";
 import { Refused } from "#lib/server/refused.ts";
 import { isPartner, walletToday } from "#modules/partner-programme/api/wallet.server.ts";
 
@@ -91,10 +92,10 @@ export const getClientShopOrder = forCustomers.query(
 	v.pipe(v.string(), v.maxLength(32)),
 	async (number) => {
 		const access = await currentCustomer();
-		const found = await shopOrderDetail(
-			and(eq(shopOrder.number, number), ofCustomer(access, shopOrder))!,
+		const found = orNotFound(
+			await shopOrderDetail(and(eq(shopOrder.number, number), ofCustomer(access, shopOrder))!),
+			m.shop_order_not_found({ number }),
 		);
-		if (!found) error(404, m.shop_order_not_found({ number }));
 		const { customer: _customer, ...order } = found;
 		return order;
 	},

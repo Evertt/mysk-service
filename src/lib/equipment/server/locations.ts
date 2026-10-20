@@ -5,7 +5,6 @@
  * customer's activity card. Names are unique at a site, whatever their case; a location with units
  * can't be deleted.
  */
-import { error } from "@sveltejs/kit";
 import { and, count, eq } from "drizzle-orm";
 
 import { customerSubject } from "#lib/activity/index.ts";
@@ -13,7 +12,7 @@ import { recordActivity, type LoggedSubjects } from "#lib/server/activity/index.
 import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { customer, customerSite, equipment, equipmentLocation } from "#lib/server/db/schema.ts";
-import { deleteAndLog, nameTaken, nextPosition } from "#lib/server/records.ts";
+import { deleteAndLog, nameTaken, nextPosition, orNotFound } from "#lib/server/records.ts";
 import { Refused } from "#lib/server/refused.ts";
 
 import type { LocationInput } from "../locations/location-schema.ts";
@@ -33,25 +32,27 @@ const subjects = (location: { id: number; name: string }, owner: Owner): LoggedS
 
 /** The tenant's site `id` with its customer, or a 404. */
 async function findSite(tx: Transaction, id: number) {
-	const [found] = await tx
-		.select({ id: customerSite.id, owner: { id: customer.id, code: customer.code } })
-		.from(customerSite)
-		.innerJoin(...tenantJoin(customer, customerSite.customerId))
-		.where(idInTenant(customerSite, id));
-	if (!found) error(404, m.customers_site_not_found());
-	return found;
+	return orNotFound(
+		await tx
+			.select({ id: customerSite.id, owner: { id: customer.id, code: customer.code } })
+			.from(customerSite)
+			.innerJoin(...tenantJoin(customer, customerSite.customerId))
+			.where(idInTenant(customerSite, id)),
+		m.customers_site_not_found(),
+	);
 }
 
 /** The tenant's location `id`, with its site's customer, or a 404. */
 async function findLocation(tx: Transaction, id: number) {
-	const [found] = await tx
-		.select({ location: equipmentLocation, owner: { id: customer.id, code: customer.code } })
-		.from(equipmentLocation)
-		.innerJoin(...tenantJoin(customerSite, equipmentLocation.siteId))
-		.innerJoin(...tenantJoin(customer, customerSite.customerId))
-		.where(idInTenant(equipmentLocation, id));
-	if (!found) error(404, m.equipment_location_not_found());
-	return found;
+	return orNotFound(
+		await tx
+			.select({ location: equipmentLocation, owner: { id: customer.id, code: customer.code } })
+			.from(equipmentLocation)
+			.innerJoin(...tenantJoin(customerSite, equipmentLocation.siteId))
+			.innerJoin(...tenantJoin(customer, customerSite.customerId))
+			.where(idInTenant(equipmentLocation, id)),
+		m.equipment_location_not_found(),
+	);
 }
 
 /** The location at site `siteId` named `name`, in any case (but `except`), if there is one. */

@@ -7,13 +7,13 @@
  * portal) take as many statements as one site's: each reads its zones' readings by a seek per zone,
  * between its own site's moments.
  */
-import { error } from "@sveltejs/kit";
 import { and, asc, eq, getTableName, type SQL, sql } from "drizzle-orm";
 
 import { inTenant, idInTenant, tenantJoin, sameTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customer, customerSite, equipment } from "#lib/server/db/schema.ts";
+import { orNotFound } from "#lib/server/records.ts";
 
 import {
 	doorLossKwh,
@@ -69,9 +69,7 @@ const selectSites = (where: SQL | undefined) =>
 
 /** The current tenant's site `id` with its customer, or a 404. */
 export async function loadSite(id: number) {
-	const [found] = await selectSites(idInTenant(energySite, id));
-	if (!found) error(404, m.energy_site_not_found());
-	return found;
+	return orNotFound(await selectSites(idInTenant(energySite, id)), m.energy_site_not_found());
 }
 
 /**

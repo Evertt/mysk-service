@@ -1,8 +1,9 @@
 /**
  * The record toolkit: what every section does with its records the same way, so it's written once.
  *
- * - `orNotFound(row, message)`: a row, or a 404. A record looked up by its key from the URL has its
- *   own lookup (`lookupBy()`) in its domain's barrel, with core's message: `unitBySerial()`
+ * - `orNotFound(row, message)`: a row, or a 404; `byKey()` for a batch query's rows. A record
+ *   looked up by its key from the URL has its own lookup (`lookupBy()`) in its domain's barrel,
+ *   with core's message: `unitBySerial()`
  *   (`#lib/equipment/server/index.ts`), `customerByCode()` (`#lib/customers/server/index.ts`) and
  *   `orderByNumber()` (`#lib/orders/server/index.ts`).
  * - `deleteAndLog()` deletes a record and logs it; `defineRemoval()` makes a section's
@@ -27,10 +28,35 @@ import { refuseIfReferenced } from "./db/errors.ts";
 import { db, type Runner, type Transaction } from "./db/index.ts";
 import { Refused } from "./refused.ts";
 
-/** `row`, or a 404 with `message` when there's none: `orNotFound(await …, m.x_not_found())`. */
-export function orNotFound<T>(row: T | null | undefined, message: string): T {
+/**
+ * `row`, or a 404 with `message` when there's none: `orNotFound(await tx.query.x.findFirst(…),
+ * m.x_not_found())`. Given a select's rows, the first: `orNotFound(await db.select(…)…, …)`.
+ */
+export function orNotFound<T>(rows: readonly T[], message: string): T;
+export function orNotFound<T>(row: T | null | undefined, message: string): T;
+export function orNotFound<T>(found: T | readonly T[] | null | undefined, message: string): T {
+	const row = Array.isArray(found) ? (found as readonly T[])[0] : (found as T | null | undefined);
 	if (row === null || row === undefined) error(404, message);
 	return row;
+}
+
+/**
+ * A batch query's finder: the row of `rows` whose key (`keyOf`) is `key`, or a 404 for it
+ * (`notFound`, with the key as the URL had it, `shown`). The rows are those of the keys asked for,
+ * loaded in one query; their extras (counts, prices) are the caller's.
+ *
+ * ```ts
+ * const find = byKey(found, (one) => one.code, (code) => m.customers_code_not_found({ code }));
+ * return (code: string) => ({ customer: find(code), … });
+ * ```
+ */
+export function byKey<Row, Key>(
+	rows: readonly Row[],
+	keyOf: (row: Row) => Key,
+	notFound: (shown: string) => string,
+): (key: Key, shown?: string) => Row {
+	const byKey = new Map(rows.map((row) => [keyOf(row), row]));
+	return (key, shown = String(key)) => orNotFound(byKey.get(key), notFound(shown));
 }
 
 /**

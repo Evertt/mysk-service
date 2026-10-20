@@ -6,6 +6,7 @@ import { id } from "#lib/schema.ts";
 import { inTenant, tenantJoin, idInTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, customerSite, equipment, equipmentLocation } from "#lib/server/db/schema.ts";
+import { orNotFound } from "#lib/server/records.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 /**
@@ -21,17 +22,19 @@ export const getLabelSheet = forMembers.query(
 		unit: v.optional(v.pipe(v.string(), v.maxLength(40))),
 	}),
 	async ({ site: siteId, location: locationId, unit: serialNumber }) => {
-		const [site] = await db
-			.select({
-				id: customerSite.id,
-				name: customerSite.name,
-				city: customerSite.city,
-				customer: { code: customer.code, name: customer.name },
-			})
-			.from(customerSite)
-			.innerJoin(...tenantJoin(customer, customerSite.customerId))
-			.where(idInTenant(customerSite, siteId));
-		if (!site) error(404, m.customers_site_not_found());
+		const site = orNotFound(
+			await db
+				.select({
+					id: customerSite.id,
+					name: customerSite.name,
+					city: customerSite.city,
+					customer: { code: customer.code, name: customer.name },
+				})
+				.from(customerSite)
+				.innerJoin(...tenantJoin(customer, customerSite.customerId))
+				.where(idInTenant(customerSite, siteId)),
+			m.customers_site_not_found(),
+		);
 
 		const locations = serialNumber
 			? []

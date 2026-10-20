@@ -18,7 +18,7 @@ import {
 } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { equipment } from "#lib/server/db/schema.ts";
-import { deleteAndLog } from "#lib/server/records.ts";
+import { deleteAndLog, orNotFound } from "#lib/server/records.ts";
 
 import { planLabel } from "../activity.ts";
 import { advanceDueDate, type PlanOrderType } from "../model.ts";
@@ -43,26 +43,28 @@ const subjects = (
 
 /** The tenant's unit with `id`, or a 404. */
 async function findUnit(tx: Transaction, id: number) {
-	const [unit] = await tx
-		.select({ id: equipment.id, serialNumber: equipment.serialNumber })
-		.from(equipment)
-		.where(idInTenant(equipment, id));
-	if (!unit) error(404, m.maintenance_unknown_equipment());
-	return unit;
+	return orNotFound(
+		await tx
+			.select({ id: equipment.id, serialNumber: equipment.serialNumber })
+			.from(equipment)
+			.where(idInTenant(equipment, id)),
+		m.maintenance_unknown_equipment(),
+	);
 }
 
 /** The tenant's plan with `id`, with its unit, or a 404. */
 async function findPlan(tx: Transaction, id: number) {
-	const [found] = await tx
-		.select({
-			plan: maintenancePlan,
-			unit: { id: equipment.id, serialNumber: equipment.serialNumber },
-		})
-		.from(maintenancePlan)
-		.innerJoin(...tenantJoin(equipment, maintenancePlan.equipmentId))
-		.where(idInTenant(maintenancePlan, id));
-	if (!found) error(404, m.maintenance_plan_not_found());
-	return found;
+	return orNotFound(
+		await tx
+			.select({
+				plan: maintenancePlan,
+				unit: { id: equipment.id, serialNumber: equipment.serialNumber },
+			})
+			.from(maintenancePlan)
+			.innerJoin(...tenantJoin(equipment, maintenancePlan.equipmentId))
+			.where(idInTenant(maintenancePlan, id)),
+		m.maintenance_plan_not_found(),
+	);
 }
 
 /** Adds a plan to the tenant's unit `equipmentId`; returns the unit's serial number. */

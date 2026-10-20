@@ -18,6 +18,7 @@ import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customer, engineer, order } from "#lib/server/db/schema.ts";
 import { bulkChange, idsTarget } from "#lib/server/lists/index.ts";
+import { orNotFound, byKey } from "#lib/server/records.ts";
 import { Refused } from "#lib/server/refused.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
@@ -103,12 +104,15 @@ export const getEngineer = forMembers.query.batch(v.string(), async (params) => 
 				)
 				.groupBy(order.engineerId)
 		: [];
-	const byId = new Map(found.map((one) => [one.id, one]));
+	const find = byKey(
+		found,
+		(one) => one.id,
+		(id) => m.engineers_id_not_found({ id }),
+	);
 	const countsOf = new Map(counts.map((row) => [row.engineerId, row]));
 
 	return (param: string) => {
-		const one = byId.get(Number(param));
-		if (!one) error(404, m.engineers_id_not_found({ id: param }));
+		const one = find(Number(param), param);
 		const counted = countsOf.get(one.id);
 		return {
 			engineer: one,
@@ -123,11 +127,13 @@ export const getEngineer = forMembers.query.batch(v.string(), async (params) => 
 /** One of the tenant's engineers' open and recent orders and last month's numbers, for their page. */
 export const getEngineerWork = forMembers.query(v.string(), async (param) => {
 	const engineerId = parseId(param);
-	const found = await db.query.engineer.findFirst({
-		where: idInTenant(engineer, engineerId),
-		columns: { hourlyRate: true },
-	});
-	if (!found) error(404, m.engineers_id_not_found({ id: param }));
+	const found = orNotFound(
+		await db.query.engineer.findFirst({
+			where: idInTenant(engineer, engineerId),
+			columns: { hourlyRate: true },
+		}),
+		m.engineers_id_not_found({ id: param }),
+	);
 
 	const columns = {
 		id: order.id,
@@ -221,8 +227,10 @@ export const updateEngineer = forMembers.form(
 	v.object({ id: id(), ...engineerFields }),
 	async (data) => {
 		const { id, ...input } = data;
-		const found = await db.query.engineer.findFirst({ where: idInTenant(engineer, id) });
-		if (!found) error(404, m.engineers_not_found());
+		const found = orNotFound(
+			await db.query.engineer.findFirst({ where: idInTenant(engineer, id) }),
+			m.engineers_not_found(),
+		);
 		await refuseTakenEmail(input.email, id);
 		await db.transaction(async (tx) => {
 			await tx.update(engineer).set(input).where(idInTenant(engineer, id));
@@ -272,11 +280,13 @@ async function setActive(found: { id: number; label: string; active: boolean }, 
 export const setEngineerActive = forMembers.command(
 	v.object({ id: recordId(), active: v.boolean() }),
 	async ({ id, active }) => {
-		const found = await db.query.engineer.findFirst({
-			columns: { id: true, name: true, active: true },
-			where: idInTenant(engineer, id),
-		});
-		if (!found) error(404, m.engineers_not_found());
+		const found = orNotFound(
+			await db.query.engineer.findFirst({
+				columns: { id: true, name: true, active: true },
+				where: idInTenant(engineer, id),
+			}),
+			m.engineers_not_found(),
+		);
 		await setActive({ id: found.id, label: found.name, active: found.active }, active);
 		void getEngineers().refresh();
 	},

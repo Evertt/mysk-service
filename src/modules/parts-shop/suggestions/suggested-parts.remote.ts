@@ -7,7 +7,6 @@
  * articles come first, then those linked to the points.
  */
 import { requested } from "$app/server";
-import { error } from "@sveltejs/kit";
 import { and, or, sql } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -18,6 +17,7 @@ import { currentCustomer, idInTenant, inTenant } from "#lib/server/auth/index.ts
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { order } from "#lib/server/db/schema.ts";
+import { orNotFound } from "#lib/server/records.ts";
 import { addOrderLine, canTakeLines } from "#modules/materials/api/lines.server.ts";
 import { isPartner, walletToday } from "#modules/partner-programme/api/wallet.server.ts";
 
@@ -85,11 +85,13 @@ export const getSuggestedParts = query(
  * is refreshed as asked (`requested()`).
  */
 export const addSuggestedPart = form(suggestedPartSchema, async (input) => {
-	const [found] = await db
-		.select({ materialId: shopProduct.materialId })
-		.from(shopProduct)
-		.where(idInTenant(shopProduct, input.productId));
-	if (!found) error(404, m.shop_product_not_found());
+	const found = orNotFound(
+		await db
+			.select({ materialId: shopProduct.materialId })
+			.from(shopProduct)
+			.where(idInTenant(shopProduct, input.productId)),
+		m.shop_product_not_found(),
+	);
 	await db.transaction((tx) => addOrderLine(tx, input.number, found.materialId, 1));
 	void getOrder(input.number).refresh();
 	await requested(getSuggestedParts, 5).refreshAll();

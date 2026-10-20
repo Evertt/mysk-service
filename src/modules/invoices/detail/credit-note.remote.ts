@@ -2,14 +2,13 @@
  * What's done on a credit note's page: issuing, settling and voiding it, and changing a draft (its
  * lines and its reason, unless another module made it). See `../credit-note.ts` for the rules.
  */
-import { error } from "@sveltejs/kit";
 import * as v from "valibot";
 
 import { id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
-import { deleteAndLog } from "#lib/server/records.ts";
+import { deleteAndLog, orNotFound } from "#lib/server/records.ts";
 import { Refused } from "#lib/server/refused.ts";
 
 import { lineNote } from "../activity.ts";
@@ -97,11 +96,13 @@ export const addCreditLine = form(v.object({ id: id(), ...lineFields }), async (
 /** Removes a line from a draft credit note. */
 export const removeCreditLine = form(v.object({ id: id() }), async ({ id }) => {
 	const draft = await db.transaction(async (tx) => {
-		const [line] = await tx
-			.select({ ...loggedLine, creditNoteId: creditNoteLine.creditNoteId })
-			.from(creditNoteLine)
-			.where(idInTenant(creditNoteLine, id));
-		if (!line) error(404, m.invoices_line_not_found());
+		const line = orNotFound(
+			await tx
+				.select({ ...loggedLine, creditNoteId: creditNoteLine.creditNoteId })
+				.from(creditNoteLine)
+				.where(idInTenant(creditNoteLine, id)),
+			m.invoices_line_not_found(),
+		);
 		const draft = await linesDraftById(tx, line.creditNoteId);
 		await deleteAndLog(creditNoteLine, {
 			tx,

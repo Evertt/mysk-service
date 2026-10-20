@@ -40,6 +40,7 @@ import {
 	orderUnit,
 } from "#lib/server/db/schema.ts";
 import { live } from "#lib/server/live.ts";
+import { orNotFound } from "#lib/server/records.ts";
 import { forAnyone, forCustomers } from "#lib/server/remote-functions.ts";
 
 /** Who is signed in, for the portal's header: their name, their customer and its supplier. */
@@ -246,8 +247,10 @@ export const getPortalSites = forCustomers.query(async () => {
  */
 export const getPortalUnit = forCustomers.query(v.string(), async (serialNumber) => {
 	const access = await currentCustomer();
-	const [unit] = await unitsWhere(access, eq(equipment.serialNumber, serialNumber));
-	if (!unit) error(404, m.client_unit_not_found({ serial: serialNumber }));
+	const unit = orNotFound(
+		await unitsWhere(access, eq(equipment.serialNumber, serialNumber)),
+		m.client_unit_not_found({ serial: serialNumber }),
+	);
 	const orders = await ordersWhere(access, onUnit(unit.id), 50);
 	return { unit, orders };
 });
@@ -255,25 +258,27 @@ export const getPortalUnit = forCustomers.query(v.string(), async (serialNumber)
 /** One of the customer's locations the contact sees (or a 404), its site and its units. */
 export const getPortalLocation = forCustomers.query(id(), async (locationId) => {
 	const access = await currentCustomer();
-	const [location] = await db
-		.select({
-			id: equipmentLocation.id,
-			name: equipmentLocation.name,
-			description: equipmentLocation.description,
-			siteId: equipmentLocation.siteId,
-			site: customerSite.name,
-		})
-		.from(equipmentLocation)
-		.innerJoin(...tenantJoin(customerSite, equipmentLocation.siteId))
-		.where(
-			and(
-				eq(equipmentLocation.id, locationId),
-				inTenant(equipmentLocation),
-				ofCustomer(access, customerSite),
-				atSites(access, equipmentLocation.siteId),
+	const location = orNotFound(
+		await db
+			.select({
+				id: equipmentLocation.id,
+				name: equipmentLocation.name,
+				description: equipmentLocation.description,
+				siteId: equipmentLocation.siteId,
+				site: customerSite.name,
+			})
+			.from(equipmentLocation)
+			.innerJoin(...tenantJoin(customerSite, equipmentLocation.siteId))
+			.where(
+				and(
+					eq(equipmentLocation.id, locationId),
+					inTenant(equipmentLocation),
+					ofCustomer(access, customerSite),
+					atSites(access, equipmentLocation.siteId),
+				),
 			),
-		);
-	if (!location) error(404, m.client_location_not_found());
+		m.client_location_not_found(),
+	);
 	const units = await unitsWhere(access, eq(equipment.locationId, location.id));
 	return { location, units };
 });

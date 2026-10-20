@@ -89,6 +89,16 @@ describe("records", () => {
 		expect(copies, "use the domain's lookup, which refuses with core's message").toEqual([]);
 	});
 
+	it("answers a row or a 404 with orNotFound() (a batch query's with byKey())", () => {
+		// The demo's sign-in, behind a flag rather than a row.
+		expect(
+			offenders(/if \(!\w+\) error\(404,/, [
+				"src/routes/demo.remote.ts",
+				"src/lib/server/records.ts",
+			]),
+		).toEqual([]);
+	});
+
 	it("places a new record with nextPosition(), not max(position) + 1", () => {
 		expect(offenders(/max\(\$\{\s*\w+\.position\s*\}\)/, ["src/lib/server/records.ts"])).toEqual(
 			[],

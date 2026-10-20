@@ -1,4 +1,4 @@
-import { error, redirect } from "@sveltejs/kit";
+import { redirect } from "@sveltejs/kit";
 import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
@@ -20,6 +20,7 @@ import {
 	user,
 } from "#lib/server/db/schema.ts";
 import { refuseOffParts } from "#lib/server/forms.ts";
+import { byKey, orNotFound } from "#lib/server/records.ts";
 import { type Problem, Refused } from "#lib/server/refused.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
@@ -83,14 +84,14 @@ export const getOrder = forMembers.query.batch(v.string(), async (numbers) => {
 					)
 			: [],
 	]);
-	const at = new Map(found.map((one, i) => [one.number, i]));
+	const notFound = (number: string) => m.orders_not_found({ number });
+	const find = byKey(found, (one) => one.number, notFound);
 	const requestOf = new Map(requests.map(({ orderId, ...request }) => [orderId, request]));
 
 	return (number: string) => {
-		const i = at.get(number);
-		const record = records.get(number);
-		if (i === undefined || !record) error(404, m.orders_not_found({ number }));
-		const one = found[i];
+		const one = find(number);
+		const i = found.indexOf(one);
+		const record = orNotFound(records.get(number), notFound(number));
 		const { units, sites, notes, signoff } = record;
 		return {
 			order: { ...one, units },
