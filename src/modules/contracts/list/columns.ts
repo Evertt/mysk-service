@@ -4,12 +4,10 @@ import { renderComponent } from "@tanstack/svelte-table";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
-import EnumBadge from "#lib/components/enum-badge.svelte";
 import { formatCents, formatDate } from "#lib/i18n/index.ts";
 
 import type { getContracts } from "../contracts.remote.ts";
 import { formatTerm, contractLevelDisplay, contractStatusDisplay } from "../display.ts";
-import { contractLabels } from "../labels.ts";
 import { contractLevels, contractStatus, contractStatuses } from "../model.ts";
 import ContractLink from "../ui/contract-link.svelte";
 
@@ -37,34 +35,20 @@ export const columns = column.columns([
 		getGroupingValue: (row) => row.customer.code,
 		meta: { label: m.contracts_customer, filter: "set" },
 	}),
-	column.accessor("level", {
-		cell: ({ getValue }) =>
-			renderComponent(EnumBadge, { display: contractLevelDisplay, value: getValue() }),
-		filterFn: "oneOf",
-		enableGrouping: true,
+	column.enum("level", {
+		values: contractLevels,
+		display: contractLevelDisplay,
 		// From basic to premium rather than alphabetically.
-		sortFn: (a, b, id) =>
-			contractLevels.indexOf(a.getValue(id)) - contractLevels.indexOf(b.getValue(id)),
-		meta: {
-			label: m.contracts_level,
-			filterValues: contractLevels,
-			clickFilter: (level) => contractLabels.labelOrValue("contractLevel", level),
-		},
+		sortByOrder: true,
+		meta: { label: m.contracts_level },
 	}),
 	// Not stored: follows from the period and today's date.
-	column.accessor((row) => contractStatus(row), {
+	column.enum((row) => contractStatus(row), {
 		id: "status",
-		cell: ({ getValue }) =>
-			renderComponent(EnumBadge, { display: contractStatusDisplay, value: getValue() }),
-		filterFn: "oneOf",
-		enableGrouping: true,
-		sortFn: (a, b, id) =>
-			contractStatuses.indexOf(a.getValue(id)) - contractStatuses.indexOf(b.getValue(id)),
-		meta: {
-			label: m.contracts_status,
-			filterValues: contractStatuses,
-			clickFilter: (status) => contractLabels.labelOrValue("contractStatus", status),
-		},
+		values: contractStatuses,
+		display: contractStatusDisplay,
+		sortByOrder: true,
+		meta: { label: m.contracts_status },
 	}),
 	column.accessor("startsOn", {
 		id: "period",

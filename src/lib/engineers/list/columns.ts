@@ -3,8 +3,6 @@ import { renderComponent } from "@tanstack/svelte-table";
 
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
-import EnumBadge from "#lib/components/enum-badge.svelte";
-import { labelOrValue } from "#lib/i18n/index.ts";
 import { engineerSpecialties } from "#lib/models.ts";
 
 import { regionLabel, engineerSpecialtyDisplay } from "../display.ts";
@@ -34,17 +32,11 @@ export const columns = column.columns([
 		enableHiding: false,
 		meta: { label: m.engineers_column_email },
 	}),
-	column.accessor("specialty", {
-		cell: ({ getValue }) =>
-			renderComponent(EnumBadge, { display: engineerSpecialtyDisplay, value: getValue() }),
-		filterFn: "oneOf",
-		enableGrouping: true,
+	column.enum("specialty", {
+		values: engineerSpecialties,
+		display: engineerSpecialtyDisplay,
 		enableGlobalFilter: false,
-		meta: {
-			label: m.engineers_column_specialty,
-			filterValues: engineerSpecialties,
-			clickFilter: (specialty) => labelOrValue("engineerSpecialty", specialty),
-		},
+		meta: { label: m.engineers_column_specialty },
 	}),
 	column.accessor("region", {
 		cell: ({ getValue }) => regionLabel(getValue()),

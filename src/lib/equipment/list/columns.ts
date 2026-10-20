@@ -5,9 +5,7 @@ import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { noneToken } from "#lib/components/data-table/url-state.ts";
-import EnumBadge from "#lib/components/enum-badge.svelte";
 import { CustomerLink } from "#lib/customers/components.ts";
-import { labelOrValue } from "#lib/i18n/index.ts";
 import { equipmentStatuses } from "#lib/models.ts";
 
 import { unitLine, unitTitle, equipmentStatusDisplay } from "../display.ts";
@@ -58,16 +56,10 @@ export const columns = column.columns([
 		getGroupingValue: (row) => row.category.id,
 		meta: { label: m.equipment_column_category, filter: "set" },
 	}),
-	column.accessor("status", {
-		cell: ({ getValue }) =>
-			renderComponent(EnumBadge, { display: equipmentStatusDisplay, value: getValue() }),
-		filterFn: "oneOf",
-		enableGrouping: true,
-		meta: {
-			label: m.equipment_column_status,
-			filterValues: equipmentStatuses,
-			clickFilter: (status) => labelOrValue("equipmentStatus", status),
-		},
+	column.enum("status", {
+		values: equipmentStatuses,
+		display: equipmentStatusDisplay,
+		meta: { label: m.equipment_column_status },
 	}),
 	column.accessor((row) => row.customer.name, {
 		id: "customer",
