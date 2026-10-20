@@ -33,4 +33,4 @@
 
 <ScannedOrders orders={data.orders} />
 
-<PlaceCard site={data.site} location={unit.location} />
+<PlaceCard site={unit.site} location={unit.location} />

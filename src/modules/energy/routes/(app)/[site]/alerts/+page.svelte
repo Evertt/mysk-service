@@ -3,6 +3,7 @@
 	import { page } from "$app/state";
 	import type { RouteParams } from "$app/types";
 
+	import FilterChips from "#lib/components/filter-chips.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { getEnergySite } from "#modules/energy/energy.remote.ts";
 	import { energyLabels } from "#modules/energy/labels.ts";
@@ -22,6 +23,13 @@
 
 	const here = $derived(resolve("/(app)/(modules)/energy/[site]/alerts", { site: params.site }));
 	const siteHref = $derived(resolve("/(app)/(modules)/energy/[site]", { site: params.site }));
+	const statusChips = $derived(
+		alertStatuses.map((option) => ({
+			value: option,
+			label: energyLabels.label("alertStatus", option),
+			href: `${here}?status=${option}`,
+		})),
+	);
 </script>
 
 <div class="flex flex-col gap-6">
@@ -35,19 +43,12 @@
 		]}
 	/>
 
-	<nav class="flex flex-wrap gap-2" aria-label={m.energy_alert_status_label()}>
-		<Button size="sm" variant={status === null ? "default" : "outline"} href={here}>
-			{m.energy_alerts_all()}
-		</Button>
-		{#each alertStatuses as option (option)}
-			<Button
-				size="sm"
-				variant={status === option ? "default" : "outline"}
-				href="{here}?status={option}"
-				data-status-filter={option}>{energyLabels.label("alertStatus", option)}</Button
-			>
-		{/each}
-	</nav>
+	<FilterChips
+		label={m.energy_alert_status_label()}
+		options={statusChips}
+		value={status}
+		all={{ label: m.energy_alerts_all(), href: here }}
+	/>
 
 	<Card.Root>
 		<Card.Content>

@@ -1,14 +1,15 @@
 <!--
 	The customer's orders in the portal, newest first: those still to be done (also not accepted
-	yet), the done ones, or all of them; cards on a phone, a table on a wide screen.
+	yet), the done ones, or all of them (`?show=`); cards on a phone, a table on a wide screen.
 -->
 <script lang="ts">
+	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
 	import ClipboardListIcon from "@lucide/svelte/icons/clipboard-list";
 
+	import FilterChips from "#lib/components/filter-chips.svelte";
 	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
-	import { formatNumber } from "#lib/i18n/index.ts";
 	import { isDoneOrder, type OrderStatus, pendingOrderStatuses } from "#lib/models.ts";
-	import { cn } from "#lib/utils.ts";
 
 	import { getPortalOrders, watchPortal } from "../client.remote.ts";
 	import OrderList from "../order-list.svelte";
@@ -17,15 +18,32 @@
 
 	refreshOnChange(watchPortal, () => getPortalOrders().refresh());
 
-	const tabs: Record<string, { label: () => string; keep: (status: OrderStatus) => boolean }> = {
+	const tabs = {
 		open: {
 			label: m.client_orders_open,
-			keep: (status) => (pendingOrderStatuses as readonly OrderStatus[]).includes(status),
+			keep: (status: OrderStatus) =>
+				(pendingOrderStatuses as readonly OrderStatus[]).includes(status),
 		},
 		done: { label: m.client_orders_done, keep: isDoneOrder },
 		all: { label: m.client_orders_all, keep: () => true },
 	};
-	let tab = $state("open");
+	type Tab = keyof typeof tabs;
+
+	// The tab is in the URL (`?show=done`, none for the open ones), so back, forward and a reload
+	// keep it.
+	const tab = $derived.by((): Tab => {
+		const show = page.url.searchParams.get("show");
+		return show === "done" || show === "all" ? show : "open";
+	});
+	const here = resolve("/(customer)/portal/orders");
+	const chips = $derived(
+		(Object.keys(tabs) as Tab[]).map((key) => ({
+			value: key,
+			label: tabs[key].label(),
+			count: orders.filter((order) => tabs[key].keep(order.status)).length,
+			href: key === "open" ? here : `${here}?show=${key}`,
+		})),
+	);
 
 	const shown = $derived(orders.filter((order) => tabs[tab].keep(order.status)));
 </script>
@@ -36,22 +54,7 @@
 
 <h1 class="text-2xl font-semibold tracking-tight">{m.client_nav_orders()}</h1>
 
-<div role="group" aria-label={m.client_orders_show()} class="flex flex-wrap gap-1">
-	{#each Object.entries(tabs) as [key, entry] (key)}
-		{@const count = orders.filter((order) => entry.keep(order.status)).length}
-		<button
-			type="button"
-			aria-pressed={tab === key}
-			onclick={() => (tab = key)}
-			class={cn(
-				"rounded-md border px-3 py-1.5 text-sm transition-colors hover:bg-accent",
-				tab === key && "border-primary bg-accent font-medium",
-			)}
-		>
-			{entry.label()} <span class="text-muted-foreground tabular-nums">{formatNumber(count)}</span>
-		</button>
-	{/each}
-</div>
+<FilterChips label={m.client_orders_show()} options={chips} value={tab} />
 
 {#if shown.length}
 	<OrderList orders={shown} />

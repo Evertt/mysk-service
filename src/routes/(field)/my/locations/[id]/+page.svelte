@@ -5,8 +5,7 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
-	import EnumBadge from "#lib/components/enum-badge.svelte";
-	import { unitLine, unitTitle, equipmentStatusDisplay } from "#lib/equipment/index.ts";
+	import { UnitRow } from "#lib/equipment/components.ts";
 
 	import PlaceCard from "../../place-card.svelte";
 	import { getMyLocation } from "../../places.remote.ts";
@@ -39,15 +38,11 @@
 	<Card.Content>
 		<ul class="flex flex-col divide-y">
 			{#each data.units as unit (unit.id)}
-				<li class="flex items-center justify-between gap-2 py-3 first:pt-0 last:pb-0">
-					<a
+				<li>
+					<UnitRow
+						{unit}
 						href={resolve("/(field)/my/equipment/[serial]", { serial: unit.serialNumber })}
-						class="flex min-w-0 flex-col"
-					>
-						<span class="truncate font-medium">{unitTitle(unit)}</span>
-						<span class="text-xs text-muted-foreground">{unitLine(unit)}</span>
-					</a>
-					<EnumBadge display={equipmentStatusDisplay} value={unit.status} />
+					/>
 				</li>
 			{:else}
 				<li class="text-sm text-muted-foreground">{m.equipment_location_units_empty()}</li>
@@ -56,4 +51,4 @@
 	</Card.Content>
 </Card.Root>
 
-<PlaceCard site={data.site} />
+<PlaceCard site={data.location.site} />

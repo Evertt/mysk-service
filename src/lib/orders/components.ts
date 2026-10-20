@@ -14,3 +14,4 @@ export { default as OrderLink } from "./ui/order-link.svelte";
 export { default as OrderTags } from "./ui/order-tags.svelte";
 export { default as SignOff } from "./ui/sign-off.svelte";
 export { default as TypeLabel } from "./ui/type-label.svelte";
+export { default as WorkUnits } from "./ui/work-units.svelte";

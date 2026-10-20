@@ -6,7 +6,7 @@
  */
 import { and, eq } from "drizzle-orm";
 
-import { isCustomerContact, isFieldEngineer, parseRoles } from "#lib/auth/index.ts";
+import { parseRoles, type ShellName, shellOf } from "#lib/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import {
 	customerSite,
@@ -50,11 +50,11 @@ export async function findQrTarget(token: string): Promise<QrTarget | undefined>
 }
 
 /**
- * Who scans a code, as it decides where it leads: someone of the office, a field engineer in their
- * portal, or a customer's contact in the customer portal, for whom it opens "report a breakdown"
+ * Who scans a code, as it decides where it leads: the shell they work in (`shellOf()`), the
+ * office, a field engineer's portal, or the customer portal, where it opens "report a breakdown"
  * on the unit or at the location.
  */
-export type QrViewer = "office" | "engineer" | "customer";
+export type QrViewer = ShellName;
 
 /**
  * Whether the customer's contact `userId` sees the unit or location the code is on: it's their
@@ -111,12 +111,15 @@ async function customerSees(target: QrTarget, userId: string) {
 
 /**
  * What the code with `token` is on and who `userId` is there, if they're a member of its tenant;
- * nothing otherwise (no such code, or another tenant's), which is a 404 for them. A field
- * engineer (`isFieldEngineer`) is led to the portal, a customer's contact (`isCustomerContact`) to
- * the customer portal if it's on their customer's unit or location at a site they see (another
- * customer's is a 404 for them too), everyone else to the office's pages.
+ * nothing otherwise (no such code, or another tenant's), which is a 404 for them. By their shell
+ * there (`shellOf()`): a field engineer is led to the portal, a customer's contact to the customer
+ * portal if it's on their customer's unit or location at a site they see (another customer's is a
+ * 404 for them too), everyone else to the office's pages.
  */
-export async function resolveQrCode(token: string, userId: string) {
+export async function resolveQrCode(
+	token: string,
+	userId: string,
+): Promise<{ target: QrTarget; viewer: QrViewer } | undefined> {
 	const target = await findQrTarget(token);
 	if (!target) return undefined;
 	const [membership] = await db
@@ -124,13 +127,8 @@ export async function resolveQrCode(token: string, userId: string) {
 		.from(member)
 		.where(and(eq(member.userId, userId), eq(member.organizationId, target.organizationId)));
 	if (!membership) return undefined;
-	const roles = parseRoles(membership.role);
-	if (isCustomerContact(roles)) {
-		return (await customerSees(target, userId))
-			? { target, viewer: "customer" as QrViewer }
-			: undefined;
-	}
-	const viewer: QrViewer = isFieldEngineer(roles) ? "engineer" : "office";
+	const viewer = shellOf(parseRoles(membership.role)).name;
+	if (viewer === "customer" && !(await customerSees(target, userId))) return undefined;
 	return { target, viewer };
 }
 

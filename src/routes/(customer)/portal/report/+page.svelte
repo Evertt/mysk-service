@@ -36,7 +36,7 @@
 	const sitesWithUnits = $derived(sites.filter((site) => site.units.length));
 	let chosenSite = $derived(
 		String(
-			scanned?.siteId ?? location?.siteId ?? (sitesWithUnits.length ? sitesWithUnits[0].id : ""),
+			scanned?.site.id ?? location?.site.id ?? (sitesWithUnits.length ? sitesWithUnits[0].id : ""),
 		),
 	);
 	const units = $derived(
@@ -76,13 +76,13 @@
 			<Card.Header>
 				<Card.Title>{unitTitle(scanned)}</Card.Title>
 				<Card.Description>
-					{unitLine(scanned, { site: scanned.site, location: scanned.location })}
+					{unitLine(scanned, { site: scanned.site.name, location: scanned.location })}
 				</Card.Description>
 			</Card.Header>
 		</Card.Root>
 	{:else if location}
 		<p class="text-sm" data-scanned-location={location.id}>
-			{m.client_report_at_location({ location: location.name, site: location.site })}
+			{m.client_report_at_location({ location: location.name, site: location.site.name })}
 		</p>
 	{/if}
 

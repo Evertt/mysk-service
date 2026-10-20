@@ -11,3 +11,4 @@ export { default as SiteLocations } from "./locations/site-locations.svelte";
 export { default as EquipmentLink } from "./ui/equipment-link.svelte";
 export { default as QrCard } from "./ui/qr-card.svelte";
 export { default as WarrantyBadge } from "./ui/warranty-badge.svelte";
+export { default as UnitRow } from "./ui/unit-row.svelte";

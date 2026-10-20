@@ -6,10 +6,11 @@ import { and, desc, eq, isNotNull, isNull } from "drizzle-orm";
 
 import { unitTitle } from "#lib/equipment/index.ts";
 import { doneOrderStatuses } from "#lib/models.ts";
+import { listedUnitsOf } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
-import { customer, engineer, equipment, order, orderUnit, user } from "#lib/server/db/schema.ts";
+import { customer, engineer, equipment, order, user } from "#lib/server/db/schema.ts";
 import { collect } from "#lib/server/extensions.ts";
 
 import { history } from "../api/extensions.ts";
@@ -49,27 +50,7 @@ async function completedOrders(
 		.orderBy(desc(order.completedAt), desc(order.id))
 		.limit(limit);
 	if (!orders.length) return [];
-	const units = await db
-		.select({
-			orderId: orderUnit.orderId,
-			serialNumber: equipment.serialNumber,
-			name: equipment.name,
-			manufacturer: equipment.manufacturer,
-			model: equipment.model,
-		})
-		.from(orderUnit)
-		.innerJoin(...tenantJoin(equipment, orderUnit.equipmentId))
-		.where(
-			and(
-				inList(
-					orderUnit.orderId,
-					orders.map((row) => row.id),
-				),
-				inTenant(orderUnit),
-			),
-		)
-		.orderBy(orderUnit.orderId, orderUnit.position);
-	const unitsOf = Map.groupBy(units, (unit) => unit.orderId);
+	const unitsOf = await listedUnitsOf(orders.map((row) => row.id));
 	return orders.map(({ id, completedAt, ...row }) => ({
 		...row,
 		kind: "order",

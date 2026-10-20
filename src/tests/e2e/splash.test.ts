@@ -1,5 +1,5 @@
 /**
- * The splash screen of a full page load (`src/app.html`, ended by `src/routes/splash.ts`): in the
+ * The splash screen of a full page load (`src/app.html`, ended by `src/lib/splash.ts`): in the
  * server's HTML, gone once the page is interactive, never on a client-side navigation or without
  * JavaScript, and visible for a while on a slow connection and computer.
  */

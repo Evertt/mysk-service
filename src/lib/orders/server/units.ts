@@ -5,8 +5,11 @@
  * them with. An order made or changed by core goes through `createOrders()` (`./creation.ts`) and
  * the order form, which save them here.
  */
-import { and, asc, eq, sql, type SQLWrapper } from "drizzle-orm";
+import { and, asc, eq, type SQL, sql, type SQLWrapper } from "drizzle-orm";
+import type { SelectResultFields } from "drizzle-orm/query-builders/select.types";
+import type { SelectedFields } from "drizzle-orm/sqlite-core";
 
+import { withUnitDetails } from "#lib/equipment/server/index.ts";
 import { currentTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { inList, insertRows } from "#lib/server/db/parameters.ts";
@@ -51,14 +54,31 @@ export async function withUnitIds<T extends { id: number }>(
 	return orders.map((row) => ({ ...row, equipmentIds: units.get(row.id) ?? [] }));
 }
 
-/** What lists show of the units of these orders of the tenant's, in their order, by order id. */
-export async function listedUnitsOf(
+/** What's read of the units of orders besides what lists show (`listedUnitsOf()`). */
+interface UnitsOptions<C extends SelectedFields> {
+	/**
+	 * More of each unit, from it, its category, site (and the site's customer) and location
+	 * (`withUnitDetails()`): an audience's (`unitColumns(audience)`), or a page's own, e.g. the
+	 * category's specialty.
+	 */
+	columns?: C;
+	/** Of the units, only those this holds for (on `equipment`), e.g. a contact's sites. */
+	where?: SQL;
+}
+
+/**
+ * What lists show of the units of these orders of the tenant's (and `columns`, those `where`
+ * holds for), in their order, by order id.
+ */
+export async function listedUnitsOf<C extends SelectedFields = {}>(
 	orderIds: readonly number[],
-): Promise<Map<number, ListedUnit[]>> {
+	{ columns, where }: UnitsOptions<C> = {},
+): Promise<Map<number, (ListedUnit & SelectResultFields<C>)[]>> {
+	type Unit = ListedUnit & SelectResultFields<C>;
 	const ids = [...new Set(orderIds)];
-	const units = new Map(ids.map((id) => [id, [] as ListedUnit[]]));
+	const units = new Map(ids.map((id) => [id, [] as Unit[]]));
 	if (!ids.length) return units;
-	const rows = await db
+	const query = db
 		.select({
 			orderId: orderUnit.orderId,
 			id: equipment.id,
@@ -66,12 +86,17 @@ export async function listedUnitsOf(
 			name: equipment.name,
 			manufacturer: equipment.manufacturer,
 			model: equipment.model,
+			...columns,
 		})
 		.from(orderUnit)
 		.innerJoin(...tenantJoin(equipment, orderUnit.equipmentId))
-		.where(and(inList(orderUnit.orderId, ids), inTenant(orderUnit)))
+		.$dynamic();
+	const rows = await (columns ? withUnitDetails(query) : query)
+		.where(and(inList(orderUnit.orderId, ids), inTenant(orderUnit), where))
 		.orderBy(asc(orderUnit.orderId), asc(orderUnit.position));
-	for (const { orderId, ...unit } of rows) units.get(orderId)?.push(unit);
+	for (const { orderId, ...unit } of rows as ({ orderId: number } & Unit)[]) {
+		units.get(orderId)?.push(unit as Unit);
+	}
 	return units;
 }
 

@@ -31,9 +31,10 @@ helpers are in `src/lib/server/auth/session.ts`:
 - **Customers' contacts** (the role `customer`, `isCustomerContact()` in `#lib/auth/roles.ts`) are
   members linked to one of the tenant's customers (`portal_contact`), for all of its sites or some
   (`portal_contact_site`). They use the customer portal only: `requireMember()` refuses them (so
-  every office set and module set does), `handleGuard` (`hooks.server.ts`) sends them from any page
-  outside the `(customer)` route group (by route id, so a module's pages there count) to
-  `/portal`, and everyone else away from it. `requireCustomer()` (the gate of `forCustomers`, and
+  every office set and module set does), and `handleGuard` (`hooks.server.ts`) sends them from any
+  page their shell doesn't own (`shellOf(roles).owns(routeId)`, `#lib/auth/shells.ts`: the
+  `(customer)` route group, by route id so a module's pages there count, and the QR codes' links)
+  to its home, `/portal`, and everyone else away from it. `requireCustomer()` (the gate of `forCustomers`, and
   of `moduleRemote(id, "customer")`) finds their contact once per request; `currentCustomer()`
   answers it: `{ contactId, customer, siteIds }` (`siteIds` `null` for all sites). Every query of
   theirs is scoped to the tenant and the customer, and to the sites they see, with the helpers in

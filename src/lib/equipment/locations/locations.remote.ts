@@ -7,14 +7,13 @@ import { and, asc, count, desc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { id } from "#lib/schema.ts";
-import { inTenant, tenantJoin, idInTenant } from "#lib/server/auth/index.ts";
+import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import {
 	customer,
 	customerSite,
 	engineer,
 	equipment,
-	equipmentCategory,
 	equipmentLocation,
 	order,
 	orderUnit,
@@ -23,6 +22,7 @@ import { orNotFound } from "#lib/server/records.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
 
 import { createLocation, removeLocation, updateLocation } from "../server/locations.ts";
+import { officeUnits, readLocation } from "../server/units.ts";
 import { locationSchema, newLocationSchema } from "./location-schema.ts";
 
 /** How many of a location's units' orders its page shows, newest first. */
@@ -64,33 +64,10 @@ export const getCustomerLocations = forMembers.query(v.string(), async (code) =>
  * their orders.
  */
 export const getLocation = forMembers.query(id(), async (locationId) => {
-	const location = orNotFound(
-		await db.query.equipmentLocation.findFirst({
-			where: idInTenant(equipmentLocation, locationId),
-			with: { site: { with: { customer: { columns: { id: true, code: true, name: true } } } } },
-		}),
+	const { location, units } = orNotFound(
+		await readLocation(officeUnits(), locationId),
 		m.equipment_location_not_found(),
 	);
-
-	const units = await db
-		.select({
-			id: equipment.id,
-			serialNumber: equipment.serialNumber,
-			name: equipment.name,
-			manufacturer: equipment.manufacturer,
-			model: equipment.model,
-			status: equipment.status,
-			category: equipmentCategory.name,
-		})
-		.from(equipment)
-		.innerJoin(...tenantJoin(equipmentCategory, equipment.categoryId))
-		.where(and(eq(equipment.locationId, location.id), inTenant(equipment)))
-		// As the customer names them, else by make, as the order form and the equipment list do.
-		.orderBy(
-			asc(sql`coalesce(${equipment.name}, ${equipment.manufacturer}) collate nocase`),
-			asc(equipment.model),
-			asc(equipment.serialNumber),
-		);
 
 	// The orders on any of them, with which of them each is about.
 	const ordersOn = await db

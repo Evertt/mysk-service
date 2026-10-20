@@ -28,7 +28,7 @@ import {
 import { forMembers } from "#lib/server/remote-functions.ts";
 import { getTheme, setTheme } from "#lib/themes/theme.remote.ts";
 import { watchShell } from "#routes/(app)/shell.remote.ts";
-import { getPortalMe } from "#routes/(customer)/portal/client.remote.ts";
+import { getPortalHome } from "#routes/(customer)/portal/client.remote.ts";
 import { getMyWork } from "#routes/(field)/my/portal.remote.ts";
 import {
 	as,
@@ -194,7 +194,7 @@ describe("a query", () => {
 		expect(await as(north.engineer, () => call(getOrder, number))).toMatchObject({ status: 403 });
 		expect(await as(north.customer, () => call(getOrder, number))).toMatchObject({ status: 403 });
 		expect(await as(north.owner, () => call(getMyWork))).toMatchObject({ status: 403 });
-		expect(await as(north.owner, () => call(getPortalMe))).toMatchObject({ status: 403 });
+		expect(await as(north.owner, () => call(getPortalHome))).toMatchObject({ status: 403 });
 		expect(await as(north.member, () => call(getCategorySettings))).toMatchObject({ status: 403 });
 		expect(await as(north.engineer, () => data(getMyWork))).toHaveProperty("open");
 	});

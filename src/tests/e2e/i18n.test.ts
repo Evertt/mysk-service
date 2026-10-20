@@ -153,11 +153,13 @@ describe("in Dutch", () => {
 		);
 	});
 
-	test("the user menu switches back to English", async () => {
+	test("the header switches back to English", async () => {
 		const { page } = app;
 		await app.go("/");
-		await page.locator('[data-sidebar="footer"] button').first().click();
-		await page.getByRole("menuitem", { name: /^Taal/ }).click();
+		await page
+			.locator('[data-slot="app-header"]')
+			.getByRole("button", { name: "Taal: Nederlands" })
+			.click();
 		await choose("English", "en");
 
 		expect(await language()).toEqual({ html: "en", cookie: "en" });

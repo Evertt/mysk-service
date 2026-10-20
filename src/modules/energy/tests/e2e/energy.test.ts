@@ -155,7 +155,7 @@ describe("the site's page", () => {
 
 	test("narrows to a floor with its button or on the plan, and to a zone on the plan, by day or month", async () => {
 		const { page } = app;
-		await page.locator('[data-scope="floor:Kelder"]').click();
+		await page.locator('[data-scopes] [data-chip="floor:Kelder"]').click();
 		await page.waitForURL((url) => url.searchParams.get("scope") === "floor:Kelder");
 		await expect.poll(() => page.locator("[data-comparison] [data-zone-row]").count()).toBe(1);
 		expect(await page.locator("[data-door]").count()).toBe(0);
@@ -196,7 +196,7 @@ describe("the site's page", () => {
 		).toBe("Z-DOCK");
 
 		// This month against last month, the scope staying, the chart per day.
-		await page.locator('[data-period="month"]').click();
+		await page.getByRole("link", { name: "Month vs last month", exact: true }).click();
 		await page.waitForURL((url) => url.searchParams.get("period") === "month");
 		await page.locator('[data-kpi="consumption"]').getByText("Consumption this month").waitFor();
 		expect(new URL(page.url()).searchParams.get("scope")).toBe("zone:Z-DOCK");

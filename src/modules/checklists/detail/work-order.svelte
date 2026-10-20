@@ -6,6 +6,7 @@
 	styles).
 -->
 <script lang="ts">
+	import { siteAddressLine } from "#lib/customers/index.ts";
 	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
 	import { formatDate, formatDateTime, formatNumber, label } from "#lib/i18n/index.ts";
 
@@ -78,12 +79,7 @@
 				</h2>
 				{#each data.sites as site (site.id)}
 					<p>
-						<span class="font-medium">{site.name}</span>{site.address ? `, ${site.address}` : ""}, {[
-							site.postalCode,
-							site.city,
-						]
-							.filter(Boolean)
-							.join(" ")}
+						<span class="font-medium">{site.name}</span>, {siteAddressLine(site)}
 					</p>
 				{/each}
 			</div>

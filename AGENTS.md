@@ -29,6 +29,10 @@ its branch after the task, then `git worktreeinclude apply` (`.env`) and `pnpm i
 - **`src/routes`** holds `+` files, plus the files of the app shell, dashboard, auth pages,
   engineer portal (`(field)/my`) and customer portal (`(customer)/portal`), which belong to no
   domain.
+- Where a role lands and which pages are its shell's is `shellOf(roles)` (`#lib/auth/shells.ts`:
+  `{ name, home, owns(routeId) }`, which the guard in `hooks.server.ts` goes by), and the link to
+  the login page and back is `loginUrl(target)`: never a role check for a home path or a
+  hand-built `/login?redirectTo` (`src/tests/unit/lib/auth/shells.spec.ts`).
 - **Generic code**: `src/lib/components/`, `activity/`, `auth/`, `i18n/`, `modules/`, `extensions/`,
   `themes/`, `errors/`; server infrastructure in `src/lib/server/`. Any `server/` folder or `*.server.ts` is
   server-only: database code and secrets go there.
@@ -54,6 +58,15 @@ its branch after the task, then `git worktreeinclude apply` (`.env`) and `pnpm i
 - A record's extension points are one `defineRecordPoints("<domain>", { detail, listColumns, bulk })`
   in its `extensions.ts` (`<domain>.detail.main`/`.side`, `.list.columns`, `.list.bulk`), passed
   to `RecordPage` as `slots={points.detail}`.
+- A single choice among a few options is `FilterChips` (chips; each with an `href` when the choice
+  is kept in the URL) or `SegmentedNav` (a page's views), from `#lib/components/`, never a
+  hand-made row of buttons or links (`src/tests/unit/choice-controls.spec.ts` refuses
+  `aria-pressed` and tabs).
+- A shell's chrome is shared, never copied (`src/routes/`): `<BrandMark>` for the icon tile before
+  its name, `<AppearanceSwitchers>` for the language, theme and mode, `<SignOutButton>` (the one
+  `signOut`, in `#lib/auth/session.remote.ts`), `<NavSidebar>` for a sidebar's navigation, and in
+  `#lib/auth/session.remote.ts` `getCurrentUser` for who's signed in; a layout names the order
+  types with `useTenantOrderTypes()` (`src/tests/unit/shell-chrome.spec.ts`).
 
 Details: `docs/agents/structure.md`.
 
@@ -143,7 +156,11 @@ Before you add a message file, an enum kind, a plural or a format, or write Dutc
   endpoint `jsonIngest()` (`#lib/server/modules/integrations.ts`), never its own copy
   (`hand-written.spec.ts`).
 - **Orders** (the transition table, `transitionOrder()`, orders awaiting acceptance, the work
-  record each portal reads with `readWorkRecord()`): `docs/agents/orders.md`.
+  record each portal reads with `readWorkRecord()`): `docs/agents/orders.md`. Units and locations
+  are read the same way, by audience: `readUnits(scope, where)` and `readLocation(scope, id)` with
+  `officeUnits()`, `engineerUnits()` or `customerUnits(access)` (`#lib/equipment/server`), the units
+  of orders with `listedUnitsOf(ids, seenBy(scope))`, and shown with `<WorkUnits>` and `<UnitRow>`;
+  never a portal's own select of them (`hand-written.spec.ts`).
 - **Lists**, in the browser or on the server: one `defineList()` (`mode: "client"` for a small
   list loaded whole), its columns `withListColumns()`, its table `createServerTable()` or
   `createClientTable()`, its page's shell `<ListLayout>` (toolbar `<ListToolbar>`) and its

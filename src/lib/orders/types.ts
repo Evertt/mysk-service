@@ -7,7 +7,7 @@
  * The names take over from the standard labels everywhere a type is shown, because `label()`
  * asks for them (`nameOrderTypes()`): on the server from the request's tenant, which loads them
  * once with itself (`loadTenant()`), in the browser from `getOrderTypes()`, which each shell's
- * layout awaits. The stored values, the lists' filters and the URL keep the types' own ids.
+ * layout hooks up and awaits (`useTenantOrderTypes()`). The stored values, the lists' filters and the URL keep the types' own ids.
  */
 import { overwriteTenantNames, standardLabel } from "#lib/i18n/index.ts";
 import { type OrderType, orderTypes } from "#lib/models.ts";

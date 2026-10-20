@@ -12,16 +12,14 @@
 	import { getCurrentTenant, switchOrganization } from "#lib/auth/session.remote.ts";
 	import { useSidebar } from "#ui/sidebar";
 
+	import BrandMark from "../brand-mark.svelte";
+
 	const sidebar = useSidebar();
 	const tenant = $derived(await getCurrentTenant());
 </script>
 
 {#snippet identity()}
-	<div
-		class="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground"
-	>
-		<FactoryIcon class="size-4" />
-	</div>
+	<BrandMark icon={FactoryIcon} sidebar />
 	<div class="grid flex-1 text-left text-sm leading-tight">
 		<span class="truncate font-medium">{tenant.name}</span>
 		<span class="truncate text-xs text-sidebar-foreground/70"

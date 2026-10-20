@@ -9,10 +9,10 @@
  */
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
+import { getCurrentUser } from "#lib/auth/session.remote.ts";
 import { resolveQrCode } from "#lib/equipment/server/qr.ts";
 import {
 	getPortalLocation,
-	getPortalMe,
 	getPortalOrder,
 	getPortalUnit,
 	reportBreakdown,
@@ -138,7 +138,7 @@ describe("a customer's contact of another tenant", () => {
 			[northId],
 		);
 		await as(north.customer, async () => {
-			expect((await data(getPortalMe)).customer).toBe(first);
+			expect((await data(getCurrentUser)).customer).toBe(first);
 			expect(await call(getPortalOrder, await doneOrderOf("Riedel B.V."))).toMatchObject({
 				status: 404,
 			});

@@ -1,10 +1,14 @@
+<!--
+	@component
+	The office's header: the sidebar's button, then the sync state, the bell, "Report a problem" and
+	the language, theme and mode, together as on the other shells' headers.
+-->
 <script lang="ts">
 	import BugReportButton from "#lib/bug-reports/bug-report-button.svelte";
 	import { useTheme } from "#lib/themes/context.ts";
-	import ModeSwitcher from "#lib/themes/mode-switcher.svelte";
-	import ThemeSwitcher from "#lib/themes/theme-switcher.svelte";
 	import { cn } from "#lib/utils.ts";
 
+	import AppearanceSwitchers from "../appearance-switchers.svelte";
 	import NotificationBell from "./notification-bell.svelte";
 	import SyncIndicator from "./sync-indicator.svelte";
 
@@ -23,7 +27,6 @@
 		<SyncIndicator />
 		<NotificationBell />
 		<BugReportButton />
-		<ThemeSwitcher />
-		<ModeSwitcher />
+		<AppearanceSwitchers />
 	</div>
 </header>

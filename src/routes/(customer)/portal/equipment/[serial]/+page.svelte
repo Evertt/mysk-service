@@ -35,7 +35,7 @@
 		<EnumBadge display={equipmentStatusDisplay} value={unit.status} />
 	</div>
 	<p class="text-sm text-muted-foreground">
-		{unitLine(unit, { category: unit.category, site: unit.site, location: unit.location })}
+		{unitLine(unit, { category: unit.category, site: unit.site.name, location: unit.location })}
 	</p>
 </header>
 

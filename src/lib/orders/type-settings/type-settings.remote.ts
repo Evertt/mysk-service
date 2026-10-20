@@ -1,6 +1,6 @@
 /**
  * The tenant's order type settings (see `#lib/orders/types.ts`): everyone in the tenant reads
- * them (each shell's layout awaits `getOrderTypes()`, so the labels in the browser have the
+ * them (each shell's layout awaits `getOrderTypes()` through `useTenantOrderTypes()`, so the labels in the browser have the
  * tenant's names), managers change them on the settings page.
  */
 import { forAnyRole, forManagers } from "#lib/server/remote-functions.ts";

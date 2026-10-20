@@ -125,9 +125,17 @@ describe("the customer portal", () => {
 		await expect
 			.poll(shown)
 			.toBe(count(["awaiting_acceptance", "quote", "scheduled", "in_progress"]));
-		await app.page.getByRole("button", { name: /^Completed/ }).click();
+		const show = app.page.getByRole("group", { name: "Show" });
+		await show.getByRole("link", { name: /^Completed/ }).click();
+		await app.page.waitForURL((url) => url.searchParams.get("show") === "done");
 		await expect.poll(shown).toBe(count(["completed", "invoiced"]));
-		await app.page.getByRole("button", { name: /^All/ }).click();
+		// The tab is in the URL: a reload keeps it.
+		await app.page.reload();
+		await expect.poll(shown).toBe(count(["completed", "invoiced"]));
+		expect(await show.getByRole("link", { name: /^Completed/ }).getAttribute("aria-current")).toBe(
+			"page",
+		);
+		await show.getByRole("link", { name: /^All/ }).click();
 		await expect.poll(shown).toBe(latest.length);
 	});
 

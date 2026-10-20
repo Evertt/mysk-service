@@ -16,11 +16,10 @@
 	import Callout from "#lib/components/callout.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import EnumBadge from "#lib/components/enum-badge.svelte";
-	import { unitLine, unitTitle, equipmentStatusDisplay } from "#lib/equipment/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatDate, formatDateTime, label } from "#lib/i18n/index.ts";
-	import { SignOff } from "#lib/orders/components.ts";
+	import { SignOff, WorkUnits } from "#lib/orders/components.ts";
 
 	import { clientStatus, clientStatusDisplay } from "../../client-status.ts";
 	import { getPortalOrder, watchPortal } from "../../client.remote.ts";
@@ -113,24 +112,19 @@
 
 	<div class="flex min-w-0 flex-col gap-6 lg:col-start-1 lg:row-start-1">
 		{#if order.units.length}
-			<section class="flex flex-col gap-3" aria-label={m.client_units()}>
-				<h2 class="text-sm font-medium text-muted-foreground">{m.client_units()}</h2>
-				{#each order.units as unit (unit.id)}
-					<a
-						href={resolve("/(customer)/portal/equipment/[serial]", { serial: unit.serialNumber })}
-						class="flex items-center justify-between gap-3 rounded-xl border bg-card p-4 transition-colors hover:bg-accent"
-						data-unit={unit.serialNumber}
-					>
-						<span class="flex min-w-0 flex-col">
-							<span class="truncate font-medium">{unitTitle(unit)}</span>
-							<span class="truncate text-xs text-muted-foreground">
-								{unitLine(unit, { site: unit.site.name, location: unit.location })}
-							</span>
-						</span>
-						<EnumBadge display={equipmentStatusDisplay} value={unit.status} />
-					</a>
-				{/each}
-			</section>
+			<Card.Root>
+				<Card.Header>
+					<Card.Title>{m.client_units()}</Card.Title>
+				</Card.Header>
+				<Card.Content>
+					<WorkUnits
+						units={order.units}
+						href={(unit) =>
+							resolve("/(customer)/portal/equipment/[serial]", { serial: unit.serialNumber })}
+						showSite
+					/>
+				</Card.Content>
+			</Card.Root>
 		{/if}
 
 		<ExtensionSlot point={orderParts} props={{ number: order.number }} />

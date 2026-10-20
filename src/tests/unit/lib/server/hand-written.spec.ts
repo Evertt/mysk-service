@@ -251,3 +251,27 @@ describe("modules' settings and integrations", () => {
 		).toEqual([]);
 	});
 });
+
+describe("units by audience", () => {
+	it("reads the units of orders with listedUnitsOf(), not a select of orderUnit joined to equipment", () => {
+		// A select whose fields name a unit's serial number, from `orderUnit` joined to its unit.
+		const pattern =
+			/\.select\(\{(?:(?!\.select\()[\s\S]){0,600}?equipment\.serialNumber(?:(?!\.select\()[\s\S]){0,400}?\.from\(orderUnit\)\s*\.innerJoin\(\.\.\.tenantJoin\(equipment, orderUnit\.equipmentId\)\)/;
+		expect(
+			offenders(pattern, ["src/lib/orders/server/units.ts"]),
+			"use listedUnitsOf(orderIds, { columns, where }) or seenBy(scope) from #lib/orders/server",
+		).toEqual([]);
+	});
+
+	it("reads a portal's units and locations with readUnits() and readLocation()", () => {
+		// The portals' remote files select no unit or location of their own.
+		const portals = appFiles.filter((file) =>
+			/^src\/routes\/\((?:field|customer)\)\/.*\.remote\.ts$/.test(file),
+		);
+		expect(portals.length).toBeGreaterThan(0);
+		expect(
+			portals.filter((file) => /\.from\((?:equipment|equipmentLocation)\)/.test(code(file))),
+			"use readUnits(scope, where) / readLocation(scope, id) from #lib/equipment/server",
+		).toEqual([]);
+	});
+});

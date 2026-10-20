@@ -33,7 +33,7 @@ describe("in the customer portal", () => {
 		expect(await site.locator('a[href^="/equipment"], a[href^="/energy/"]').count()).toBe(0);
 		expect(queries.length).toBeGreaterThan(0);
 
-		await page.locator('[data-period="month"]').click();
+		await page.getByRole("link", { name: "This month", exact: true }).click();
 		await page.waitForURL((url) => url.searchParams.get("period") === "month");
 		await site.getByText("Consumption this month").waitFor();
 	});

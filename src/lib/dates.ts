@@ -6,14 +6,11 @@
  * Temporal value has no `valueOf`), `day.add({ days: 1 })`.
  *
  * What's here is the time zone a moment is turned into a day or a time of day in: the user's
- * (`getTimeZone()`), on the server too, where the browser told it (see
- * `src/lib/server/time-zone.ts`); else the runtime's own. And the few questions asked of it
+ * (`getTimeZone()`), on the server too, where the browser told it (in a cookie, see
+ * `#lib/time-zone.ts`); else the runtime's own. And the few questions asked of it
  * everywhere: the day it is now (`currentDay()`), the day of a moment (`dayOf()`), when a day
  * starts (`startOfDay()`), and the Monday of a day's week (`mondayOf()`).
  */
-
-/** The cookie the browser keeps its time zone in, for the server (see `src/routes/time-zone.ts`). */
-export const TIME_ZONE_COOKIE = "TIME_ZONE";
 
 /** The zone this runtime is in: the browser's, or the server process's. */
 export const runtimeTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;

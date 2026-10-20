@@ -3,7 +3,6 @@
 	import { page } from "$app/state";
 	import type { RouteParams } from "$app/types";
 	import BellIcon from "@lucide/svelte/icons/bell";
-	import Building2Icon from "@lucide/svelte/icons/building-2";
 	import CircleAlertIcon from "@lucide/svelte/icons/circle-alert";
 	import DoorOpenIcon from "@lucide/svelte/icons/door-open";
 	import GaugeIcon from "@lucide/svelte/icons/gauge";
@@ -14,6 +13,8 @@
 	import TrendingUpIcon from "@lucide/svelte/icons/trending-up";
 	import ZapIcon from "@lucide/svelte/icons/zap";
 
+	import FilterChips from "#lib/components/filter-chips.svelte";
+	import SegmentedNav from "#lib/components/segmented-nav.svelte";
 	import SimulationBar from "#lib/components/simulation/simulation-bar.svelte";
 	import { getSimulation } from "#lib/components/simulation/simulation.remote.ts";
 	import { Clock } from "#lib/hooks/clock.svelte.ts";
@@ -127,14 +128,21 @@
 		return `${resolve("/(app)/(modules)/energy/[site]", { site: params.site })}${query ? `?${query}` : ""}`;
 	}
 	const hrefOf = (next: Scope) => hrefWith({ scope: next });
-	const sameScope = (a: Scope, b: Scope) => scopeParam(a) === scopeParam(b);
-	const scopes = $derived<{ scope: Scope; label: string }[]>([
-		{ scope: { kind: "building" }, label: m.energy_scope_building() },
-		...floorsOf(overview.zones).map((floor) => ({
-			scope: { kind: "floor" as const, floor },
-			label: floor,
+	// The whole building is the chip that narrows to nothing; a zone (chosen on the plan) presses
+	// none of them.
+	const floorChips = $derived(
+		floorsOf(overview.zones).map((floor) => {
+			const each: Scope = { kind: "floor", floor };
+			return { value: scopeParam(each)!, label: floor, href: hrefOf(each) };
+		}),
+	);
+	const periodItems = $derived(
+		periods.map((option) => ({
+			label: option === "day" ? m.energy_period_versus_day() : m.energy_period_versus_month(),
+			href: hrefWith({ period: option }),
+			current: option === period,
 		})),
-	]);
+	);
 	const siteHref = $derived(resolve("/(app)/(modules)/energy/[site]", { site: params.site }));
 	const zoneHref = $derived(
 		selectedZone
@@ -198,48 +206,25 @@
 	<SimulationBar module="energy" label={m.energy_simulation_title()} />
 
 	<div class="flex flex-wrap items-center gap-2">
-		<nav
-			class="flex flex-wrap gap-2"
-			aria-label={m.energy_scope_label()}
+		<FilterChips
+			label={m.energy_scope_label()}
+			options={floorChips}
+			value={scopeParam(scope)}
+			all={{ label: m.energy_scope_building(), href: hrefOf({ kind: "building" }) }}
 			data-sveltekit-reset="false"
 			data-scopes
-		>
-			{#each scopes as option (scopeParam(option.scope) ?? "building")}
-				{@const current = sameScope(option.scope, scope)}
-				<Button
-					size="sm"
-					variant={current ? "default" : "outline"}
-					href={hrefWith({ scope: option.scope })}
-					aria-current={current ? "page" : undefined}
-					data-scope={scopeParam(option.scope) ?? "building"}
-				>
-					{#if option.scope.kind === "building"}<Building2Icon data-icon="inline-start" />{/if}
-					{option.label}
-				</Button>
-			{/each}
-		</nav>
+		/>
 		{#if scope.kind !== "building"}
 			<span class="text-xs text-muted-foreground" data-selection>
 				{m.energy_selection({ name: scopeLabel })}
 			</span>
 		{/if}
-		<nav class="ml-auto flex rounded-md border bg-card p-0.5" aria-label={m.energy_period_label()}>
-			{#each periods as option (option)}
-				<a
-					href={hrefWith({ period: option })}
-					class={[
-						"rounded-sm px-3 py-1 text-xs font-medium transition-colors",
-						option === period
-							? "bg-muted text-foreground"
-							: "text-muted-foreground hover:text-foreground",
-					]}
-					aria-current={option === period ? "page" : undefined}
-					data-sveltekit-reset="false"
-					data-period={option}
-					>{option === "day" ? m.energy_period_versus_day() : m.energy_period_versus_month()}</a
-				>
-			{/each}
-		</nav>
+		<SegmentedNav
+			label={m.energy_period_label()}
+			items={periodItems}
+			class="ml-auto"
+			data-sveltekit-reset="false"
+		/>
 	</div>
 
 	<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">

@@ -5,6 +5,7 @@
 -->
 <script lang="ts">
 	import DetailItem from "#lib/components/detail-item.svelte";
+	import { siteAddressLine } from "#lib/customers/index.ts";
 
 	let {
 		site,
@@ -16,26 +17,20 @@
 			postalCode: string;
 			city: string;
 			accessNotes: string | null;
-			customer: string;
+			customer: { name: string };
 		};
 		location?: string | null;
 	} = $props();
-
-	const address = $derived(
-		[site.address, [site.postalCode, site.city].filter(Boolean).join(" ")]
-			.filter(Boolean)
-			.join(", "),
-	);
 </script>
 
 <Card.Root>
 	<Card.Header>
-		<Card.Title>{site.customer}</Card.Title>
+		<Card.Title>{site.customer.name}</Card.Title>
 		<Card.Description>{site.name}</Card.Description>
 	</Card.Header>
 	<Card.Content>
 		<dl class="grid gap-4">
-			<DetailItem label={m.portal_address()} value={address} />
+			<DetailItem label={m.portal_address()} value={siteAddressLine(site)} />
 			{#if location}
 				<DetailItem label={m.portal_location()} value={location} />
 			{/if}
