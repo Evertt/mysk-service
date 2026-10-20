@@ -5,31 +5,27 @@
 	sees it; on a phone or tablet, or in a narrow window, it's the page itself.
 -->
 <script lang="ts">
-	import { browser } from "$app/env";
 	import { resolve } from "$app/paths";
 	import HardHatIcon from "@lucide/svelte/icons/hard-hat";
 
+	import { getCurrentUser } from "#lib/auth/session.remote.ts";
 	import BugReportButton from "#lib/bug-reports/bug-report-button.svelte";
-	import { nameOrderTypes } from "#lib/orders/index.ts";
-	import { getOrderTypes } from "#lib/orders/remotes.ts";
+	import { useTenantOrderTypes } from "#lib/orders/index.ts";
 
+	import BrandMark from "../brand-mark.svelte";
 	import { getViewAs } from "../demo.remote.ts";
 	import NavigationSkeleton from "../navigation-skeleton.svelte";
 	import type { LayoutProps } from "./$types";
 	import HeaderMenu from "./header-menu.svelte";
-	import { getMe } from "./my/portal.remote.ts";
 	import NotificationBell from "./notification-bell.svelte";
 	import PhoneFrame from "./phone-frame.svelte";
 
 	let { children }: LayoutProps = $props();
 
-	// The order types read as the tenant named them: in the browser from this query, from before the
-	// first await, as the page may render meanwhile; its `current` is reactive, so the labels follow
-	// a change. (The server reads the request's tenant, see `nameOrderTypesOnServer()`.)
-	const orderTypes = getOrderTypes();
-	if (browser) nameOrderTypes(() => orderTypes.current);
+	const orderTypes = useTenantOrderTypes();
 
-	const [me, , viewAs] = $derived(await Promise.all([getMe(), orderTypes, getViewAs()]));
+	// The engineer by their name as the tenant knows them (their record's).
+	const [me, , viewAs] = $derived(await Promise.all([getCurrentUser(), orderTypes, getViewAs()]));
 </script>
 
 <PhoneFrame>
@@ -39,11 +35,7 @@
 		>
 			<!-- The way home, as an app's logo is; the rest is in the menu (`header-menu.svelte`). -->
 			<a href={resolve("/(field)/my")} class="flex min-w-0 flex-1 items-center gap-2">
-				<span
-					class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground"
-				>
-					<HardHatIcon class="size-4" />
-				</span>
+				<BrandMark icon={HardHatIcon} />
 				<span class="flex min-w-0 flex-col leading-tight">
 					<span class="truncate text-sm font-medium">{me.name}</span>
 					<span class="truncate text-xs text-muted-foreground">{me.organization}</span>

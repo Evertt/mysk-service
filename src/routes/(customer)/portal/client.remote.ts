@@ -6,7 +6,6 @@
  * also by a tampered id or serial number. Of the office's records it shows what concerns the
  * customer: no prices, notes or other customers, and of the engineer only their first name.
  */
-import { getRequestEvent } from "$app/server";
 import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, desc, eq, gte, isNotNull, type SQL } from "drizzle-orm";
 import * as v from "valibot";
@@ -17,9 +16,7 @@ import { customerWork, onUnit, readWorkRecord, requestOrder } from "#lib/orders/
 import { id, text } from "#lib/schema.ts";
 import {
 	atSites,
-	auth,
 	currentCustomer,
-	currentTenant,
 	type CustomerAccess,
 	customerOrders,
 	inTenant,
@@ -41,14 +38,7 @@ import {
 } from "#lib/server/db/schema.ts";
 import { live } from "#lib/server/live.ts";
 import { orNotFound } from "#lib/server/records.ts";
-import { forAnyone, forCustomers } from "#lib/server/remote-functions.ts";
-
-/** Who is signed in, for the portal's header: their name, their customer and its supplier. */
-export const getPortalMe = forCustomers.query(async () => {
-	const { customer } = await currentCustomer();
-	const { name, user } = currentTenant();
-	return { name: user.name, customer: customer.name, organization: name };
-});
+import { forCustomers } from "#lib/server/remote-functions.ts";
 
 // --- Orders --------------------------------------------------------------------------------
 
@@ -342,9 +332,3 @@ const portalTypes = ["order", "customer", "site", "equipment", "location"] as co
  * changed, and the queries it has the portal refresh are gated and scoped again.
  */
 export const watchPortal = forCustomers.query.live(() => live(portalTypes));
-
-/** Signs out, back to the login page. */
-export const signOut = forAnyone.form(async () => {
-	await auth.api.signOut({ headers: getRequestEvent().request.headers });
-	redirect(303, "/login");
-});

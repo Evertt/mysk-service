@@ -1,35 +1,27 @@
 <!--
 	@component
 	The customer portal's shell, like the office's: the portal's navigation in a sidebar (see
-	`portal-sidebar.svelte`), a header with the customer and who's signed in, and the page, which uses
-	the width of a desk's screen. On a phone the sidebar is a sheet the header's button opens.
+	`portal-sidebar.svelte`), a header with the customer and who's signed in, the language, theme and
+	mode, and signing out, and the page, which uses the width of a desk's screen. On a phone the sidebar is a sheet the header's button opens.
 -->
 <script lang="ts">
-	import { browser } from "$app/env";
-	import LogOutIcon from "@lucide/svelte/icons/log-out";
+	import { getCurrentUser } from "#lib/auth/session.remote.ts";
+	import { useTenantOrderTypes } from "#lib/orders/index.ts";
 
-	import LanguageSwitcher from "#lib/i18n/language-switcher.svelte";
-	import { nameOrderTypes } from "#lib/orders/index.ts";
-	import { getOrderTypes } from "#lib/orders/remotes.ts";
-	import ModeSwitcher from "#lib/themes/mode-switcher.svelte";
-
+	import AppearanceSwitchers from "../appearance-switchers.svelte";
 	import { getViewAs } from "../demo.remote.ts";
 	import NavigationSkeleton from "../navigation-skeleton.svelte";
+	import SignOutButton from "../sign-out-button.svelte";
 	import ViewAs from "../view-as.svelte";
 	import type { LayoutProps } from "./$types";
 	import PortalSidebar from "./portal-sidebar.svelte";
-	import { getPortalMe, signOut } from "./portal/client.remote.ts";
 
 	let { children }: LayoutProps = $props();
 
-	// The order types read as the tenant named them: in the browser from this query, from before the
-	// first await, as the page may render meanwhile; its `current` is reactive, so the labels follow
-	// a change. (The server reads the request's tenant, see `nameOrderTypesOnServer()`.)
-	const orderTypes = getOrderTypes();
-	if (browser) nameOrderTypes(() => orderTypes.current);
+	const orderTypes = useTenantOrderTypes();
 
 	// Together, not one after the other.
-	const [me, , viewAs] = $derived(await Promise.all([getPortalMe(), orderTypes, getViewAs()]));
+	const [me, , viewAs] = $derived(await Promise.all([getCurrentUser(), orderTypes, getViewAs()]));
 </script>
 
 <!-- On paper only the page (e.g. a work order to print): no navigation, no header, and no flex
@@ -54,19 +46,11 @@
 				</span>
 			</span>
 			<div class="ml-auto flex shrink-0 items-center gap-1">
-				<LanguageSwitcher />
-				<ModeSwitcher />
+				<AppearanceSwitchers />
 				{#if viewAs}
 					<ViewAs current={viewAs.current} />
 				{/if}
-				<!-- A plain form submission, not enhanced: the page's queries and live queries belong to
-					the session that ends, so the login page loads afresh rather than this page refreshing
-					them signed out (which logged errors). -->
-				<form method={signOut.method} action={signOut.action}>
-					<Button type="submit" variant="ghost" size="icon-sm" aria-label={m.common_sign_out()}>
-						<LogOutIcon />
-					</Button>
-				</form>
+				<SignOutButton />
 			</div>
 		</header>
 		<div

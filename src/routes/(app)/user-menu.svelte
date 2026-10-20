@@ -1,18 +1,17 @@
 <!--
 	@component
-	The signed-in user in the sidebar footer, with a menu to choose the language and to sign out
-	(and in the SHLTR demo to view it as another role, `view-as.svelte`). Signing out is a real form,
-	so it also works without JavaScript.
+	The signed-in user in the sidebar footer, with a menu to sign out (and in the SHLTR demo to view
+	it as another role, `view-as.svelte`). Signing out is a real form, so it also works without
+	JavaScript. The language is in the header, with the theme and the mode (`app-header.svelte`).
 -->
 <script lang="ts">
 	import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
-	import LogOutIcon from "@lucide/svelte/icons/log-out";
 
-	import { getCurrentUser, signOut } from "#lib/auth/session.remote.ts";
-	import LanguageSwitcher from "#lib/i18n/language-switcher.svelte";
+	import { getCurrentUser } from "#lib/auth/session.remote.ts";
 	import { useSidebar } from "#ui/sidebar";
 
 	import { getViewAs } from "../demo.remote.ts";
+	import SignOutButton from "../sign-out-button.svelte";
 	import ViewAs from "../view-as.svelte";
 
 	const sidebar = useSidebar();
@@ -64,31 +63,12 @@
 					</div>
 				</DropdownMenu.Label>
 				<DropdownMenu.Separator />
-				<DropdownMenu.Group>
-					<LanguageSwitcher submenu />
-				</DropdownMenu.Group>
 				{#if viewAs}
 					<!-- The SHLTR demo's switch between its roles (with `DEMO_SIGN_IN` only). -->
-					<DropdownMenu.Separator />
 					<ViewAs current={viewAs.current} inMenu />
+					<DropdownMenu.Separator />
 				{/if}
-				<DropdownMenu.Separator />
-				<!-- A plain form submission, not enhanced: the page's queries and live queries belong to the
-					session that ends, so the login page loads afresh rather than this page refreshing them
-					signed out (which logged errors now and then). -->
-				<form method={signOut.method} action={signOut.action}>
-					<DropdownMenu.Group>
-						<!-- Keep the menu open while signing out, so the form stays mounted until the browser leaves. -->
-						<DropdownMenu.Item onSelect={(event) => event.preventDefault()}>
-							{#snippet child({ props })}
-								<button {...props} type="submit" class={[props.class, "w-full"]}>
-									<LogOutIcon />
-									{m.common_sign_out()}
-								</button>
-							{/snippet}
-						</DropdownMenu.Item>
-					</DropdownMenu.Group>
-				</form>
+				<SignOutButton menuItem />
 			</DropdownMenu.Content>
 		</DropdownMenu.Root>
 	</Sidebar.MenuItem>
