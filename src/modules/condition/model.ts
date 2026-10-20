@@ -6,6 +6,7 @@
  * and isomorphic; the same rules are in SQL for the lists (`server/status-sql.ts`).
  */
 import type { NumberFormat } from "#lib/numbering.ts";
+import type { InspectionStatus } from "#modules/checklists/api/extensions.ts";
 
 /**
  * A unit's status, worst first: the order the Connect page sorts by.
@@ -42,9 +43,6 @@ export interface Thresholds {
 /** The thresholds a tenant starts with: Kritiek below 40%, Aandacht below 70%. */
 export const defaultThresholds: Thresholds = { critical: 40, attention: 70 };
 
-/** A unit's inspection status as checklists has it (see its `inspectionStatus()`). */
-export type InspectionState = "valid" | "expiring" | "expired" | "rejected" | "none";
-
 /** What a unit's status is worked out from. */
 export interface UnitFacts {
 	/** Its latest condition's score, none without one. */
@@ -52,7 +50,7 @@ export interface UnitFacts {
 	/** Its latest condition's advice, if any: open advice, until a newer condition says otherwise. */
 	advice: string | null;
 	/** Its inspection status; null while the tenant has no checklists. */
-	inspection: InspectionState | null;
+	inspection: InspectionStatus | null;
 	/** Whether an open order on it is scheduled (or under way): its work is in hand. */
 	planned: boolean;
 }

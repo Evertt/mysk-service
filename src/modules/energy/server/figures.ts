@@ -18,7 +18,6 @@ import { orNotFound } from "#lib/server/records.ts";
 
 import {
 	doorLossKwh,
-	type DoorKind,
 	INTERVAL_MINUTES,
 	isOffline,
 	isOverdue,
@@ -26,15 +25,14 @@ import {
 	openings,
 	openMinutes,
 	type Period,
-	type ThresholdState,
 	thresholdRatio,
 	thresholdState,
-	type ZoneTone,
 	zoneTone,
 } from "../model.ts";
 import { doorEvents } from "./door-events.ts";
 import {
 	energyAlert,
+	energyConsumer,
 	energyDoor,
 	energyReading,
 	energySite,
@@ -183,54 +181,6 @@ export function reportRanges(
 	};
 }
 
-/** A zone's figures over the period. */
-export interface ZoneFigures {
-	id: number;
-	code: string;
-	name: string;
-	floor: string | null;
-	areaM2: number;
-	/** Its latest interval's average, 0 while offline. */
-	liveKw: number;
-	latestAt: Temporal.Instant | null;
-	offline: boolean;
-	kwh: number;
-	previousKwh: number;
-	peakKw: number;
-	previousPeakKw: number;
-	kwhToday: number;
-	threshold: { enabled: boolean; maxKw: number; maxKwh: number } | null;
-	ratio: number;
-	state: ThresholdState;
-	tone: ZoneTone;
-	/** kWh per bucket of the period, and of the one before. */
-	series: number[];
-	previousSeries: number[];
-}
-
-/** A door's figures over the period. */
-export interface DoorFigures {
-	id: number;
-	code: string;
-	name: string;
-	kind: DoorKind;
-	zoneId: number;
-	lossKw: number;
-	thresholdMinutes: number;
-	insideC: number | null;
-	outsideC: number | null;
-	equipmentId: number | null;
-	unit: { serialNumber: string; name: string | null } | null;
-	/** Since when it's open, if it is. */
-	openedAt: Temporal.Instant | null;
-	minutesOpen: number;
-	overdue: boolean;
-	lossKwh: number;
-	previousLossKwh: number;
-	lossKwhToday: number;
-	openingsToday: number;
-}
-
 /** Which bucket of a period a moment is in: its local hour, or its day since `from`. */
 function bucketOf(
 	at: Temporal.Instant,
@@ -243,21 +193,17 @@ function bucketOf(
 	return from.toZonedDateTimeISO(timeZone).toPlainDate().until(local.toPlainDate()).days;
 }
 
-/** A site's zones and doors over its ranges, and whether the previous period is a full comparison. */
-export interface SiteFigures {
-	zones: ZoneFigures[];
-	doors: DoorFigures[];
-	previousComplete: boolean;
+/** A site with the ranges its figures span. */
+export interface SiteRanges {
+	site: EnergySite;
+	ranges: Ranges;
 }
 
-/** The site's zones and doors over `ranges` (see above), at `now`. */
-export async function siteFigures(
-	site: EnergySite,
-	ranges: Ranges,
-	now: Temporal.Instant,
-): Promise<SiteFigures> {
-	const [figures] = await sitesFigures([{ site, ranges }], now);
-	return figures;
+/** The site's zones and doors over `ranges` (see above), at `now`: its page's and its report's. */
+export async function siteFigures(site: EnergySite, ranges: Ranges, now: Temporal.Instant) {
+	const sites = [{ site, ranges }];
+	const [[zones], [doors]] = await Promise.all([zoneFigures(sites, now), doorFigures(sites, now)]);
+	return { ...zones, doors };
 }
 
 /** A moment a statement over several sites' zones reads per zone, its site's own (`bound()`). */
@@ -306,24 +252,20 @@ const latestKwOfZone = sql<number | null>`(select r.avg_kw from energy_reading r
 	where r.organization_id = ${zoneTable}.organization_id and r.zone_id = ${zoneTable}.id
 	order by r.start desc limit 1)`;
 
-/**
- * What `siteFigures()` answers for each of `sites`, each over its own ranges (its own time zone's
- * days), in as many statements as for one: a page of many sites doesn't queue a few for each of
- * them (the Durable Object runs them one at a time).
- */
-export async function sitesFigures(
-	sites: { site: EnergySite; ranges: Ranges }[],
-	now: Temporal.Instant,
-): Promise<SiteFigures[]> {
-	if (!sites.length) return [];
-	const siteIds = sites.map(({ site }) => site.id);
-	const until = (ranges: Ranges) => earlier(ranges.to, now);
+/** A zone as `zoneFigures()` reads it first: its thresholds and its readings' first and last. */
+type ZoneRow = Awaited<ReturnType<typeof selectZones>>[number];
+
+const selectZones = (sites: SiteRanges[], now: Temporal.Instant, where: SQL | undefined) => {
 	const periods = boundsOf(
 		new Map(
-			sites.map(({ site, ranges }) => [site.id, { from: ranges.from, until: until(ranges) }]),
+			sites.map(({ site, ranges }) => [
+				site.id,
+				{ from: ranges.from, until: earlier(ranges.to, now) },
+			]),
 		),
 	);
-	const zones = await db
+	const siteIds = sites.map(({ site }) => site.id);
+	return db
 		.select({
 			id: energyZone.id,
 			siteId: energyZone.energySiteId,
@@ -342,34 +284,108 @@ export async function sitesFigures(
 		})
 		.from(energyZone)
 		.leftJoin(...zoneThresholds())
-		.where(and(inTenant(energyZone), inList(energyZone.energySiteId, siteIds)))
+		.where(and(inTenant(energyZone), inList(energyZone.energySiteId, siteIds), where))
 		.orderBy(asc(energyZone.position), asc(energyZone.id));
+};
 
-	// This period's sums hold the intervals that have ended and come in: the previous period's go
-	// as far into it as those go into this one, not to now (at 00:10 there's no reading of today
-	// yet, and a gateway that sends every hour is up to an hour behind), for a like comparison.
-	const bounds = new Map(
-		sites.map(({ site, ranges }) => {
-			const starts = zones.filter((zone) => zone.siteId === site.id).map((zone) => zone.last);
-			const last = Math.max(...starts.filter((start) => start !== null));
-			const readTo = Number.isFinite(last)
-				? earlier(fromMomentSeconds(last).add({ minutes: INTERVAL_MINUTES }), until(ranges))
-				: ranges.from;
-			const previousTo = earlier(ranges.previousAt(readTo), ranges.previousTo);
-			return [
-				site.id,
-				{
-					from: ranges.from,
-					to: ranges.to,
-					until: until(ranges),
-					previousFrom: ranges.previousFrom,
-					previousUntil: earlier(previousTo, until(ranges)),
-					todayFrom: later(ranges.today, ranges.previousFrom),
-				},
-			];
-		}),
+/**
+ * Each site's moments its zones' sums read between (`boundsOf()`). This period's sums hold the
+ * intervals that have ended and come in: the previous period's go as far into it as those go into
+ * this one, not to now (at 00:10 there's no reading of today yet, and a gateway that sends every
+ * hour is up to an hour behind), for a like comparison.
+ */
+function boundsFor(sites: SiteRanges[], zones: ZoneRow[], now: Temporal.Instant) {
+	return boundsOf(
+		new Map(
+			sites.map(({ site, ranges }) => {
+				const until = earlier(ranges.to, now);
+				const starts = zones.filter((zone) => zone.siteId === site.id).map((zone) => zone.last);
+				const last = Math.max(...starts.filter((start) => start !== null));
+				const readTo = Number.isFinite(last)
+					? earlier(fromMomentSeconds(last).add({ minutes: INTERVAL_MINUTES }), until)
+					: ranges.from;
+				const previousTo = earlier(ranges.previousAt(readTo), ranges.previousTo);
+				return [
+					site.id,
+					{
+						from: ranges.from,
+						to: ranges.to,
+						until,
+						previousFrom: ranges.previousFrom,
+						previousUntil: earlier(previousTo, until),
+						todayFrom: later(ranges.today, ranges.previousFrom),
+					},
+				];
+			}),
+		),
 	);
-	const json = boundsOf(bounds);
+}
+
+/** A zone's sums over its site's moments, none for a zone without readings. */
+const noSums = { kwh: 0, peakKw: 0, previousKwh: 0, previousPeakKw: 0, kwhToday: 0 };
+
+/** The zone's figures from its row, its sums and its kWh per hour (UTC), over its site's `ranges`. */
+function shapeZone(
+	zone: ZoneRow,
+	sums: typeof noSums,
+	hours: { hour: number; kwh: number }[],
+	{ site, ranges }: SiteRanges,
+	now: Temporal.Instant,
+) {
+	const offline = isOffline(zone.latestAt, now);
+	// Its latest interval's average, 0 while offline.
+	const liveKw = offline || zone.latestKw === null ? 0 : zone.latestKw;
+	const threshold =
+		zone.enabled === null
+			? null
+			: { enabled: zone.enabled, maxKw: zone.maxKw!, maxKwh: zone.maxKwh! };
+	const { ratio } = threshold
+		? thresholdRatio({ kw: liveKw, kwh: sums.kwhToday }, threshold)
+		: { ratio: 0 };
+	const state = threshold && !offline ? thresholdState(ratio, threshold.enabled) : "off";
+	// As many buckets before as now: day N against day N of last month, whose days past this
+	// month's last aren't compared (and are 0 past its own last).
+	const series = Array.from({ length: ranges.buckets }, () => 0);
+	const previousSeries = Array.from({ length: ranges.buckets }, () => 0);
+	for (const row of hours) {
+		const at = fromMomentSeconds(row.hour * 3600);
+		const current = Temporal.Instant.compare(at, ranges.from) >= 0;
+		const bucket = bucketOf(at, current ? ranges.from : ranges.previousFrom, ranges, site.timeZone);
+		const target = current ? series : previousSeries;
+		if (bucket >= 0 && bucket < target.length) target[bucket] += row.kwh;
+	}
+	return {
+		id: zone.id,
+		code: zone.code,
+		name: zone.name,
+		floor: zone.floor,
+		areaM2: zone.areaM2,
+		liveKw,
+		latestAt: zone.latestAt,
+		offline,
+		...sums,
+		threshold,
+		ratio,
+		state,
+		tone: zoneTone(offline, state),
+		// kWh per bucket of the period, and of the one before.
+		series,
+		previousSeries,
+	};
+}
+
+/** A zone's figures over the period. */
+export type ZoneFigures = ReturnType<typeof shapeZone>;
+
+/**
+ * Each of `sites`' zones (those `where` picks, of `energyZone`; all without) over its own ranges
+ * (its own time zone's days), in as many statements as for one site: a page of many sites doesn't
+ * queue a few for each of them (the Durable Object runs them one at a time).
+ */
+export async function zoneFigures(sites: SiteRanges[], now: Temporal.Instant, where?: SQL) {
+	if (!sites.length) return [];
+	const zones = await selectZones(sites, now, where);
+	const json = boundsFor(sites, zones, now);
 	const ofZones = and(
 		inTenant(energyZone),
 		inList(
@@ -378,7 +394,7 @@ export async function sitesFigures(
 		),
 	);
 	const start = energyReading.start;
-	const [sums, hourly, doors] = await Promise.all([
+	const [sums, hourly] = await Promise.all([
 		db
 			.select({
 				zoneId: energyZone.id,
@@ -419,74 +435,27 @@ export async function sitesFigures(
 				),
 			)
 			.groupBy(energyReading.zoneId, sql`${start} / 3600`),
-		doorFigures(sites, now),
 	]);
-	const sumOf = new Map(sums.map((row) => [row.zoneId, row]));
+	const sumOf = new Map(sums.map(({ zoneId, ...sum }) => [zoneId, sum]));
 	const hoursOf = Map.groupBy(hourly, (row) => row.zoneId);
 
-	return sites.map(({ site, ranges }, index) => {
-		const own = zones.filter((zone) => zone.siteId === site.id);
-		const { from, previousFrom } = ranges;
+	return sites.map((of) => {
+		const own = zones.filter((zone) => zone.siteId === of.site.id);
 		// The readings go back to the previous period's first hour: else it's no comparison (a site
 		// whose readings start in the middle of last month).
 		const first = Math.min(...own.map((zone) => zone.first).filter((start) => start !== null));
-		const previousComplete = first <= momentSeconds(previousFrom.add({ hours: 1 }));
-
-		const zoneFigures: ZoneFigures[] = own.map((zone) => {
-			const sum = sumOf.get(zone.id);
-			const offline = isOffline(zone.latestAt, now);
-			const liveKw = offline || zone.latestKw === null ? 0 : zone.latestKw;
-			const kwhToday = sum?.kwhToday ?? 0;
-			const threshold =
-				zone.enabled === null
-					? null
-					: { enabled: zone.enabled, maxKw: zone.maxKw!, maxKwh: zone.maxKwh! };
-			const { ratio } = threshold
-				? thresholdRatio({ kw: liveKw, kwh: kwhToday }, threshold)
-				: { ratio: 0 };
-			const state = threshold && !offline ? thresholdState(ratio, threshold.enabled) : "off";
-			// As many buckets before as now: day N against day N of last month, whose days past this
-			// month's last aren't compared (and are 0 past its own last).
-			const series = Array.from({ length: ranges.buckets }, () => 0);
-			const previousSeries = Array.from({ length: ranges.buckets }, () => 0);
-			for (const row of hoursOf.get(zone.id) ?? []) {
-				const at = fromMomentSeconds(row.hour * 3600);
-				const current = Temporal.Instant.compare(at, from) >= 0;
-				const bucket = bucketOf(at, current ? from : previousFrom, ranges, site.timeZone);
-				const target = current ? series : previousSeries;
-				if (bucket >= 0 && bucket < target.length) target[bucket] += row.kwh;
-			}
-			return {
-				id: zone.id,
-				code: zone.code,
-				name: zone.name,
-				floor: zone.floor,
-				areaM2: zone.areaM2,
-				liveKw,
-				latestAt: zone.latestAt,
-				offline,
-				kwh: sum?.kwh ?? 0,
-				previousKwh: sum?.previousKwh ?? 0,
-				peakKw: sum?.peakKw ?? 0,
-				previousPeakKw: sum?.previousPeakKw ?? 0,
-				kwhToday,
-				threshold,
-				ratio,
-				state,
-				tone: zoneTone(offline, state),
-				series,
-				previousSeries,
-			};
-		});
-		return { zones: zoneFigures, doors: doors[index], previousComplete };
+		return {
+			zones: own.map((zone) =>
+				shapeZone(zone, sumOf.get(zone.id) ?? noSums, hoursOf.get(zone.id) ?? [], of, now),
+			),
+			previousComplete: first <= momentSeconds(of.ranges.previousFrom.add({ hours: 1 })),
+		};
 	});
 }
 
-/** Each of the sites' doors over its ranges, at `now`. */
-async function doorFigures(
-	sites: { site: EnergySite; ranges: Ranges }[],
-	now: Temporal.Instant,
-): Promise<DoorFigures[][]> {
+/** Each of the sites' doors (those `where` picks, of `energyDoor`; all without) over its ranges, at `now`. */
+export async function doorFigures(sites: SiteRanges[], now: Temporal.Instant, where?: SQL) {
+	if (!sites.length) return [];
 	const doors = await db
 		.select({
 			id: energyDoor.id,
@@ -512,6 +481,7 @@ async function doorFigures(
 					energyDoor.energySiteId,
 					sites.map(({ site }) => site.id),
 				),
+				where,
 			),
 		)
 		.orderBy(asc(energyDoor.code));
@@ -569,6 +539,37 @@ async function doorFigures(
 			});
 	});
 }
+
+/**
+ * The site's consumers ("installaties"), by zone, in their order (those in `zoneId`, if given),
+ * each with the unit it is, if it's one.
+ */
+export function siteConsumers(siteId: number, zoneId?: number) {
+	return db
+		.select({
+			id: energyConsumer.id,
+			zoneId: energyConsumer.zoneId,
+			name: energyConsumer.name,
+			ratedKw: energyConsumer.ratedKw,
+			equipmentId: energyConsumer.equipmentId,
+			serialNumber: equipment.serialNumber,
+			unitName: equipment.name,
+		})
+		.from(energyConsumer)
+		.innerJoin(...tenantJoin(energyZone, energyConsumer.zoneId))
+		.leftJoin(...tenantJoin(equipment, energyConsumer.equipmentId))
+		.where(
+			and(
+				inTenant(energyConsumer),
+				eq(energyZone.energySiteId, siteId),
+				zoneId === undefined ? undefined : eq(energyConsumer.zoneId, zoneId),
+			),
+		)
+		.orderBy(asc(energyZone.position), asc(energyConsumer.position), asc(energyConsumer.id));
+}
+
+/** A door's figures over the period. */
+export type DoorFigures = Awaited<ReturnType<typeof doorFigures>>[number][number];
 
 /** How many of the site's alerts are open. */
 export async function openAlertCount(siteId: number) {

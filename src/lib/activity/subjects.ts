@@ -105,6 +105,11 @@ export interface SubjectType {
 	label?: (subject: { id: string; label: string }) => string;
 	/** The subject's page, if it has one, from its id and latest label (see `subjectHref()`). */
 	href?: (subject: { id: string; label: string }) => string;
+	/**
+	 * It has no page of its own: it's on its parent's (a unit's component, on the unit's page), which
+	 * its link goes to, by the parent's latest label.
+	 */
+	onParentPage?: true;
 	fields?: Record<string, FieldFormat>;
 }
 

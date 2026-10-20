@@ -17,6 +17,7 @@ import { orNotFound } from "#lib/server/records.ts";
 import { alertDetail, recommendation } from "../display.ts";
 import type { AlertStatus } from "../model.ts";
 import { energyAlert, energyDoor, energySite, energyZone } from "./schema.ts";
+import { siteSubject } from "./sites.ts";
 
 /** How many alerts a list shows at most: the newest. */
 const LIMIT = 200;
@@ -80,7 +81,7 @@ async function loadAlert(id: number) {
 
 const logged = (alert: SiteAlert): LoggedSubjects => ({
 	subject: { type: "energy_alert", id: alert.id, label: alert.door?.code ?? alert.zoneCode },
-	parent: { type: "energy_site", id: alert.siteId, label: alert.siteName },
+	parent: siteSubject({ id: alert.siteId, name: alert.siteName }),
 });
 
 /**

@@ -11,6 +11,8 @@ import {
 	customerRecords,
 	facetOptions,
 	facetOptionsInput,
+	moduleFacets,
+	moduleValues,
 	planList,
 } from "#lib/server/lists/index.ts";
 
@@ -27,9 +29,9 @@ const asDay = (value: string | null) => (value ? Temporal.PlainDate.from(value) 
 /**
  * A page of the rows (the components of the tenant's units in care, and those units without
  * components) with their condition and status, their unit's and what the other modules know of it
- * (its inspection, its next visit), searched, filtered and sorted as the query says (worst first by
- * default), and how many match. With the tenant's thresholds, which colour the scores, and which
- * columns the tenant has (inspection with checklists, next due with maintenance).
+ * (its next visit, the modules' columns), searched, filtered and sorted as the query says (worst
+ * first by default), and how many match. With the tenant's thresholds, which colour the scores,
+ * and whether the tenant has maintenance's next visit.
  */
 export const getConditionUnits = query(conditionList.query, async (input) => {
 	const listSql = rowsSql();
@@ -59,7 +61,6 @@ export const getConditionUnits = query(conditionList.query, async (input) => {
 						advice: row.advice,
 						lastService: unit.lastService,
 						nextDue: sql<string | null>`${unit.nextDue ?? sql`null`}`.mapWith(asDay),
-						inspection: sql<string | null>`${unit.inspection ?? sql`null`}`,
 						status: row.status,
 						concern: row.concern,
 					})
@@ -68,12 +69,17 @@ export const getConditionUnits = query(conditionList.query, async (input) => {
 			),
 			{
 				enrich: async (found) => {
-					const known = await articlesById(
-						found.flatMap((each) => each.component?.materialId ?? []),
-					);
+					const [known, valuesOf] = await Promise.all([
+						articlesById(found.flatMap((each) => each.component?.materialId ?? [])),
+						moduleValues(
+							listSql,
+							found.map((each) => Number(each.id)),
+						),
+					]);
 					return found.map(({ component: part, ...each }) => ({
 						...each,
 						id: Number(each.id),
+						moduleValues: valuesOf.get(Number(each.id)) ?? {},
 						// A unit's own row has none.
 						component: part?.id
 							? {
@@ -92,8 +98,8 @@ export const getConditionUnits = query(conditionList.query, async (input) => {
 	return {
 		...page,
 		thresholds,
-		/** Which of the other modules' columns the tenant has. */
-		has: { inspection: unit.inspection !== null, nextDue: unit.nextDue !== null },
+		/** Whether the tenant has maintenance's next visit. */
+		hasNextDue: unit.nextDue !== null,
 	};
 });
 
@@ -107,11 +113,16 @@ export const getConditionCounts = query(conditionList.where, async (where) => {
 		status: listSql.row.status,
 		condition: listSql.row.band,
 		customer: customer.code,
+		// And the tenant's modules' columns, by their ids (the type names the list's own only).
+		...(moduleFacets(listSql) as Record<never, never>),
 	});
 	const customers = (await customerFacet(facets.customer)).toSorted(
 		(a, b) => b.count - a.count || a.name.localeCompare(b.name),
 	);
-	return { status: facets.status, condition: facets.condition, customers };
+	const counts = facets as typeof facets & {
+		readonly [moduleColumn: string]: Record<string, number>;
+	};
+	return { ...counts, customers };
 });
 
 /**

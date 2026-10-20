@@ -55,17 +55,15 @@ export const saveFieldMaterials = forEngineers.form(
 		if (problems.length) {
 			invalid(...problems.map((p) => issue.lines[p.line][p.field](p.message)));
 		}
-		const number = await db
+		await db
 			.transaction(async (tx) => {
 				const found = await findEngineerOrder(tx, { id: input.id }, "work");
 				await saveLines(tx, found, found.status, input.lines);
-				return found.number;
 			})
 			.catch((error) => {
 				if (!(error instanceof OrderStockShortage)) throw error;
 				const line = input.lines.findLastIndex((line) => line.materialId === error.materialId);
 				invalid(issue.lines[line].quantity(error.message));
 			});
-		void getFieldMaterials(number).refresh();
 	},
 );

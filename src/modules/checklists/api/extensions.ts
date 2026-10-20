@@ -19,6 +19,12 @@ import type { ChecklistKind, PointResult } from "../model.ts";
 export { checklistScore } from "../model.ts";
 
 /**
+ * A unit's inspection status today (`inspectionStatus()` in `../model.ts`): what the condition
+ * module's status takes in, through `condition.signals`.
+ */
+export type { InspectionStatus } from "../model.ts";
+
+/**
  * Below a unit's checklist on the engineer portal's page of one of their orders, e.g. the condition
  * module's question how the unit is doing once its checklist is completed. They get the order's
  * number, the unit's id, whether the checklist is completed and whether the engineer can still

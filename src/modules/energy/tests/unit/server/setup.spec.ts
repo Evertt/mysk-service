@@ -1,5 +1,5 @@
 /**
- * Setting a site's energy monitoring up (`server/setup.ts`), against a database made by the app's
+ * Setting a site's energy monitoring up (`server/sites.ts`, `server/parts.ts`), against a database made by the app's
  * migrations: an energy site for a customer site (one per site, the tenant's only), its zones (codes
  * unique per site), consumers and doors (zones and units of the site only), each change logged; and
  * deleting refused while readings, door events or alerts refer to what's deleted. And a zone set up
@@ -18,6 +18,14 @@ import { Refused } from "#lib/server/refused.ts";
 import { parseBatch } from "#modules/energy/ingest/format.ts";
 import { storeBatch } from "#modules/energy/server/ingest.ts";
 import {
+	deleteConsumer,
+	deleteDoor,
+	deleteZone,
+	saveConsumer,
+	saveDoor,
+	saveZone,
+} from "#modules/energy/server/parts.ts";
+import {
 	energyAlert,
 	energyConsumer,
 	energyDoor,
@@ -30,17 +38,11 @@ import {
 import {
 	createEnergySite,
 	customerEnergy,
-	deleteConsumer,
-	deleteDoor,
 	deleteEnergySite,
-	deleteZone,
-	saveConsumer,
-	saveDoor,
-	saveZone,
 	siteChoices,
 	siteSetup,
 	updateEnergySite,
-} from "#modules/energy/server/setup.ts";
+} from "#modules/energy/server/sites.ts";
 
 // No request: the system makes the changes (`asSystem()`), so nothing may ask for one.
 vi.mock("$app/server", () => ({

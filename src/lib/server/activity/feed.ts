@@ -40,6 +40,8 @@ export interface SubjectLink {
 	 * run in a query), or `null` if it has no page or no longer exists.
 	 */
 	target: { id: string; label: string } | null;
+	/** The type whose page `target` is, if not its own: its parent's (`SubjectType.onParentPage`). */
+	page?: string;
 }
 
 export interface ActivityEntry {
@@ -176,18 +178,26 @@ export async function present(rows: Row[]): Promise<ActivityEntry[]> {
 			target: known?.href && !state?.deleted ? { id, label: state?.label ?? label } : null,
 		};
 	};
-	return rows.map((row) => ({
-		id: row.id,
-		at: row.createdAt,
-		// The system's changes (the daily jobs) have no user's name.
-		user: row.userName || m.activity_system_user(),
-		action: row.action,
-		subject: link(row.subjectType, row.subjectId, row.subjectLabel),
-		parent:
+	return rows.map((row) => {
+		const parent =
 			row.parentType && row.parentId
 				? link(row.parentType, row.parentId, row.parentLabel ?? row.parentId)
-				: null,
-		changes: describeChanges(row.changes, types[row.subjectType], names),
-		note: row.note,
-	}));
+				: null;
+		const own = link(row.subjectType, row.subjectId, row.subjectLabel);
+		const subject =
+			types[row.subjectType]?.onParentPage && parent
+				? { ...own, target: parent.target, page: parent.type }
+				: own;
+		return {
+			id: row.id,
+			at: row.createdAt,
+			// The system's changes (the daily jobs) have no user's name.
+			user: row.userName || m.activity_system_user(),
+			action: row.action,
+			subject,
+			parent,
+			changes: describeChanges(row.changes, types[row.subjectType], names),
+			note: row.note,
+		};
+	});
 }

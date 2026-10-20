@@ -110,7 +110,7 @@ describe("the engineer portal", () => {
 				],
 			}),
 		);
-		expect(answer).toMatchObject({ status: 200, refreshed: ["getFieldMaterials"] });
+		expect(answer).toMatchObject({ status: 200 });
 		const [entry] = await rows<{ user_id: string; action: string; changes: string }>(
 			`select user_id, action, changes from activity where organization_id = ?
 			 and subject_type = 'order_line' and parent_type = 'order' and parent_id = ?

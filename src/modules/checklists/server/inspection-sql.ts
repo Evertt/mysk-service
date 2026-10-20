@@ -15,6 +15,7 @@ import { currentDay } from "#lib/dates.ts";
 import { sameTenant } from "#lib/server/auth/index.ts";
 import { literal } from "#lib/server/db/parameters.ts";
 import { equipment } from "#lib/server/db/schema.ts";
+import type { UnitSignals } from "#modules/condition/api/extensions.ts";
 
 import { EXPIRING_DAYS } from "../model.ts";
 import { checklist, checklistResult } from "./schema.ts";
@@ -44,3 +45,6 @@ export function inspectionSql(today = currentDay()) {
 		bucket: sql<string>`coalesce(${latest(status)}, 'none')`,
 	};
 }
+
+/** `condition.signals`: the unit's inspection status, for its condition status. */
+export const inspectionSignal = (): UnitSignals => ({ inspection: inspectionSql().bucket });

@@ -212,6 +212,6 @@ export const form = defineFormSlot<{ order: { id: number } | undefined }>("order
  * remote functions, and render nothing when they have nothing to say.
  */
 export const points = defineRecordPoints("orders", {
-	detail: slotProps<{ number: string }>(),
+	detail: slotProps<{ number: string; id: number }>(),
 	bulk: bulkRows<OrderBulkRow>(),
 });

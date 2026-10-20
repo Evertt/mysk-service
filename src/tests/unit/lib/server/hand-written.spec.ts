@@ -163,7 +163,6 @@ describe("refusals", () => {
 			"src/lib/orders/list/order-bulk.remote.ts",
 			"src/lib/orders/list/order-status.remote.ts",
 			"src/lib/orders/order.remote.ts",
-			"src/modules/energy/thresholds.remote.ts",
 			"src/modules/materials/detail/stock.remote.ts",
 			"src/modules/materials/material.remote.ts",
 			"src/modules/materials/portal/field-materials.remote.ts",

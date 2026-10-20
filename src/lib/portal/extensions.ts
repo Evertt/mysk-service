@@ -12,4 +12,6 @@ import { defineSlot } from "#lib/extensions/define.ts";
  * (`fieldActions()`). A card calls `changed()` when it changes what the order may do, e.g. once a
  * checklist is completed, so the page's forms drop a refusal that's outdated by it.
  */
-export const order = defineSlot<{ number: string; changed: () => void }>("portal.order");
+export const order = defineSlot<{ number: string; id: number; changed: () => void }>(
+	"portal.order",
+);

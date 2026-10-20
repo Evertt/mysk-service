@@ -12,7 +12,9 @@
 	import WrenchIcon from "@lucide/svelte/icons/wrench";
 	import { type Component, untrack } from "svelte";
 
+	import type { List } from "#lib/components/data-table/list-definition.ts";
 	import ListLayout from "#lib/components/data-table/list-layout.svelte";
+	import { withModuleTableColumns } from "#lib/components/data-table/module-table-columns.ts";
 	import { createServerTable } from "#lib/components/data-table/server-table.svelte.ts";
 	import FilterChips from "#lib/components/filter-chips.svelte";
 	import StatTile, { type StatTone } from "#lib/components/stat-tile.svelte";
@@ -25,33 +27,33 @@
 		type getConditionCounts,
 		getConditionUnits,
 	} from "./units-list.remote.ts";
-	import { conditionList, scoreBands } from "./units-list.ts";
+	import type { conditionList, scoreBands } from "./units-list.ts";
 
 	// The table is created here rather than in the page because making the table sets context,
 	// which Svelte doesn't allow after the page's `await`.
 	let {
+		list: given,
 		units,
 		counts,
 	}: {
+		/** The list with the tenant's modules' columns (`extendList()`). */
+		list: List<typeof conditionList.columns>;
 		/** The first page of units, as the URL says, and how many match in all. */
 		units: Awaited<ReturnType<typeof getConditionUnits>>;
 		/** How many units have each status, band and customer. */
 		counts: Awaited<ReturnType<typeof getConditionCounts>>;
 	} = $props();
 
+	// The tenant's, which don't change while the page is open (switching organization reloads it).
+	const shape = untrack(() => given);
 	// Worst first: the default the server has too.
 	const list = createServerTable({
-		list: conditionList,
+		list: shape,
 		first: () => units,
 		fetch: getConditionUnits,
-		columns,
-		initialState: {
-			// The other modules' columns, while the tenant has them (which a page's data doesn't change).
-			columnVisibility: untrack(() => ({
-				inspection: units.has.inspection,
-				nextDue: units.has.nextDue,
-			})),
-		},
+		columns: withModuleTableColumns(columns, shape.moduleColumns),
+		// Maintenance's next visit, while the tenant has it.
+		initialState: { columnVisibility: untrack(() => ({ nextDue: units.hasNextDue })) },
 	});
 	const { table } = list;
 
@@ -165,7 +167,7 @@
 <ListLayout
 	table={list}
 	{header}
-	facets={{ status: counts.status, condition: counts.condition }}
+	facets={{ ...counts, customers: undefined }}
 	searchLabel={m.condition_search()}
 	emptyTitle={m.condition_empty()}
 	filters={{

@@ -1,5 +1,6 @@
 import { code, defineList, oneOf } from "#lib/components/data-table/list-definition.ts";
 
+import { listColumns } from "../api/extensions.ts";
 import { unitStatuses } from "../model.ts";
 
 /** A score's band in a filter: below the critical threshold, below attention, fine, or none yet. */
@@ -21,9 +22,9 @@ export const conditionList = defineList({
 		condition: { sort: true, filter: oneOf(scoreBands) },
 		lastService: { param: "last-service", sort: true },
 		nextDue: { param: "next-due", sort: true },
-		inspection: { sort: true },
 		status: { sort: true, filter: oneOf(unitStatuses) },
 		advice: {},
 	},
 	defaults: { sort: [{ id: "status", desc: false }] },
+	moduleColumns: listColumns,
 });

@@ -9,14 +9,11 @@ import { formatOnOff, formatStoredDay, labelOrValue } from "#lib/i18n/index.ts";
 export const planLabel = (plan: { serialNumber: string; description: string }) =>
 	`${plan.serialNumber} · ${plan.description}`;
 
-/** The unit's serial number in a plan's label. */
-const serialOf = (label: string) => label.split(" · ")[0];
-
 export const maintenanceSubjects = {
 	maintenancePlan: {
 		noun: m.maintenance_activity_subject,
 		// A plan has no page of its own: it's on its unit's.
-		href: ({ label }) => resolve("/(app)/equipment/[serial]", { serial: serialOf(label) }),
+		onParentPage: true,
 		fields: {
 			orderType: {
 				label: m.maintenance_field_order_type,

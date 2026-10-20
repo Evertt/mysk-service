@@ -36,6 +36,12 @@ const listeners = new Map<string, Set<Listener>>();
 const lastChanged = new Map<string, number>();
 
 /**
+ * When each record last changed (epoch ms), by `<organization>/<type>/<id>`: one number per record
+ * changed since the server (or the organization's Durable Object) started.
+ */
+const recordChanged = new Map<string, number>();
+
+/**
  * Tells the organization's live queries that a record of `type` (an activity subject's) changed;
  * `details` names the record and who changed it, for the queries that watch one record.
  */
@@ -46,12 +52,17 @@ export function announceChange(
 ) {
 	const change: Change = { ...details, type, at: Date.now() };
 	lastChanged.set(`${organizationId}/${type}`, change.at);
+	if (details.id) recordChanged.set(`${organizationId}/${type}/${details.id}`, change.at);
 	for (const listener of listeners.get(organizationId) ?? []) listener(change);
 }
 
 /** When the organization's records of any of `types` last changed here, or 0. */
 export const changedAt = (organizationId: string, types: readonly ChangeType[]) =>
 	Math.max(0, ...types.map((type) => lastChanged.get(`${organizationId}/${type}`) ?? 0));
+
+/** When the organization's record (or one of its parts) last changed here, or 0. */
+export const recordChangedAt = (organizationId: string, record: { type: LoggedType; id: string }) =>
+	recordChanged.get(`${organizationId}/${record.type}/${record.id}`) ?? 0;
 
 /**
  * Yields whenever records of `types` change in the organization (the latest change), watching from

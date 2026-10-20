@@ -150,7 +150,10 @@
 	</Card.Content>
 </Card.Root>
 
-<ExtensionSlot point={orderParts} props={{ number: order.number, changed: () => partsChanged++ }} />
+<ExtensionSlot
+	point={orderParts}
+	props={{ number: order.number, id: order.id, changed: () => partsChanged++ }}
+/>
 
 <NotesCard orderId={order.id} notes={data.notes} canAdd={actions.note} />
 

@@ -26,6 +26,7 @@ import {
 } from "../model.ts";
 import { doorEvents } from "./door-events.ts";
 import { energyAlert, energyDoor, energyReading, energyThreshold, energyZone } from "./schema.ts";
+import { siteSubject } from "./sites.ts";
 
 /** How far back a breach still raises an alert. */
 const ALERT_WINDOW_HOURS = 24;
@@ -232,7 +233,7 @@ export async function raiseAlerts(
 		await recordActivity(tx, {
 			action: "created",
 			subject: { type: "energy_alert", id: alert.id, label: codeOf.get(alert.key)! },
-			parent: { type: "energy_site", id: site.id, label: site.name },
+			parent: siteSubject(site),
 		});
 	}
 	return created.length;

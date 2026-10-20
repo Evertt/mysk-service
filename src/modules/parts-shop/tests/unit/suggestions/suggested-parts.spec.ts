@@ -35,9 +35,8 @@ describe("a suggested part", () => {
 			submit(addSuggestedPart, { number: order.number, productId: String(product.id) }),
 		);
 		expect(answer).toMatchObject({ status: 200 });
-		expect(answer.refreshed).toEqual(
-			expect.arrayContaining(["getOrder", "getOrderChecklists", "getOrderInvoice"]),
-		);
+		// The checklists' card watches the order (`watchRecord`), which the line is logged on.
+		expect(answer.refreshed).toEqual(expect.arrayContaining(["getOrder", "getOrderInvoice"]));
 		expect(
 			await rows(`select quantity from order_line where order_id = ? and material_id = ?`, [
 				order.id,

@@ -187,7 +187,6 @@ describe("Lev's planned inspection", () => {
 		);
 		expect(await as(lev, () => call(complete, { id }))).toMatchObject({
 			status: 200,
-			refreshed: ["getFieldChecklists"],
 		});
 		const [done] = await checklistsOfOrder(job.id);
 		expect(done).toMatchObject({

@@ -310,7 +310,9 @@ e2e src/tests/e2e/skeletons.repro.test.ts`; it counts page errors, and the race 
 - **Columns in a core list** (`#lib/components/data-table/module-columns.ts`): a list that takes
   them names its point in its definition (`docs/agents/lists.md`), e.g. `points.list.columns`
   (`equipment.list.columns`, `defineRecordPoints("equipment", { …, listColumns: true })` in
-  `#lib/equipment/extensions.ts`). A module contributes two
+  `#lib/equipment/extensions.ts`); a module's own list declares one with
+  `defineListColumns("<id>.list.columns")` in its `api/extensions.ts` (condition's units, which
+  checklists gives the equipment list's inspection column too, by re-exporting it). A module contributes two
   files per list, which the generator requires together and checks like the others (point, kind,
   owner): `columns/<point id>.ts`, default export an array of `listColumn({ id, param, label, sort,
 filter, optionLabel, cell })` (isomorphic; the id is namespaced, `maintenance.nextDue`; the cell
@@ -413,11 +415,15 @@ components' (`unit_condition`, `component`, `component_checkpoint`), and works o
 SQL (`server/status-sql.ts`, and `rolledUpStatus()`/`componentStatus()` in `model.ts` for the same
 rules in code; a unit takes its worst component's): look there for a module that owns points other
 modules answer (`api/extensions.ts`: checklists gives the inspection status, maintenance the next
-visit, as SQL over `equipment`, `condition.signals`; checklists its completed checklists for the
-service history, `condition.history`, and a unit's template points, `condition.checkpoints`;
+visit, as SQL over `equipment`, `condition.signals`, for the status; checklists its inspection
+column in the list, `condition.list.columns`; checklists a unit's template points,
+`condition.checkpoints`;
 materials the articles, `condition.articles`; the parts shop the points an article's product fixes,
 `condition.articleCheckpoints`), for records that refer to another module's by id without a key (a
-component's article and points, as it only enhances materials and checklists), for SQL repeated in
+component's article and points, as it only enhances materials and checklists), for a view of the
+activity log (the service history, `server/history.ts`: the entries of orders and checklists
+completed and conditions recorded, of a customer's through their subjects' parents, which the seeds
+log too, `SeedLogEntry`), for SQL repeated in
 one statement that binds no parameters (`literal()`, `inLiterals()` in
 `#lib/server/db/parameters.ts`, and subqueries correlated on the unit's own tenant), for a
 server-side list whose rows are a left join (a row per component, and per unit without), and for a
@@ -454,7 +460,7 @@ mockup's: a page banner (`overview/hero-banner.svelte`), the floor plan with the
 live meter, door cards with the animated door, and the chart with what's still to measure
 (`overview/`); the selection (`?scope=`) is a link that keeps the scroll position
 (`data-sveltekit-reset="false"`), and the zone pages are linked from it. Managers set a site up in the office
-(`server/setup.ts`, `setup/`, the page `/energy/<site>/setup`): an energy site for one of a
+(`server/sites.ts`, `server/parts.ts`, `setup/`, the page `/energy/<site>/setup`): an energy site for one of a
 customer's sites, from the customer page's card (`customers.detail.side`) or the sites page, and
 its zones, consumers and doors (zone and door codes unique per site, as the gateway names them; a
 consumer's or door's unit one of the site's). Measurements aren't deleted with what they measure:
@@ -478,7 +484,7 @@ fills slots of a module it requires and of one it enhances (`partner-programme.c
 customer portal, and seeds data that changes another module's draft (the programme's spends that
 are its orders, `orderSpends`, and the materials' reservations, `movements`).
 Extension points are added with the first module that needs them. Not there yet: several `nav`
-entries per module, grouping by a module's column, module columns in other lists than equipment's,
+entries per module, grouping by a module's column, module columns in core lists other than equipment's,
 module filters and row actions in tables, an `orders.created` event, `order.actions`-style slots,
 slot options (order, roles), `settings.cards`, and a save hook for other records than orders.
 

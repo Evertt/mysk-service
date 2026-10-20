@@ -84,7 +84,7 @@ describe("North's call-outs on covered units", () => {
 	test("each one's page shows the same contract and deadline", async () => {
 		await as(north.member, async () => {
 			for (const row of overview.responses) {
-				const coverage = await data(getOrderCoverage, row.number);
+				const coverage = (await data(getOrderCoverage, row.number)).covered;
 				expect(coverage, row.number).toMatchObject({
 					contract: { number: row.contract.number, level: row.contract.level },
 					response: { state: row.response.state },
@@ -137,7 +137,7 @@ describe("a premium-covered repair", () => {
 		);
 		await as(north.member, async () => {
 			for (const candidate of candidates) {
-				const coverage = await data(getOrderCoverage, candidate.number);
+				const coverage = (await data(getOrderCoverage, candidate.number)).covered;
 				if (coverage?.contract.level === "premium") {
 					order = candidate;
 					return;

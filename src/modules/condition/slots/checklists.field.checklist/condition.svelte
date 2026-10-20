@@ -9,7 +9,9 @@
 	import GaugeIcon from "@lucide/svelte/icons/gauge";
 	import { toast } from "svelte-sonner";
 
+	import { watchRecord } from "#lib/components/activity/activity.remote.ts";
 	import { submitted } from "#lib/components/form/submitted.ts";
+	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 
 	import { scoreBand } from "../../model.ts";
 	import {
@@ -25,6 +27,11 @@
 	}: { number: string; equipmentId: number; completed: boolean; canChange: boolean } = $props();
 
 	const data = $derived(completed ? await getFieldCondition({ number, equipmentId }) : null);
+	// Logged on the unit: the engineer's advice.
+	refreshOnChange(
+		() => completed && watchRecord({ type: "equipment", id: equipmentId }),
+		() => getFieldCondition({ number, equipmentId }).refresh(),
+	);
 	const form = $derived(adviseFieldConditionForm.for(`${number}-${equipmentId}`));
 </script>
 

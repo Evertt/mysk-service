@@ -4,30 +4,32 @@
  * live query that says when the readings, alerts or thresholds changed, so an open page asks again.
  */
 import { error } from "@sveltejs/kit";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, count, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { momentSeconds } from "#lib/dates.ts";
 import { recordId } from "#lib/schema.ts";
-import { currentTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { equipment } from "#lib/server/db/schema.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import { live } from "#lib/server/live.ts";
 import { orNotFound } from "#lib/server/records.ts";
 
 import { periods } from "./model.ts";
 import { query } from "./remote-functions.ts";
 import {
+	doorFigures,
 	loadSite,
 	loadSites,
 	openAlertCount,
 	openAlertCounts,
 	periodRanges,
 	reportRanges,
+	siteConsumers,
 	siteFigures,
-	sitesFigures,
+	zoneFigures,
 } from "./server/figures.ts";
-import { energyAlert, energyConsumer, energyZone } from "./server/schema.ts";
+import { energyAlert, energyDoor, energyZone } from "./server/schema.ts";
 
 const siteId = recordId();
 
@@ -37,24 +39,31 @@ const siteId = recordId();
 export const getEnergySites = query(async () => {
 	const sites = await loadSites();
 	const now = Temporal.Now.instant();
-	// All sites' figures at once, each today in its own time zone (see `sitesFigures()`).
-	const [figures, openAlerts] = await Promise.all([
-		sitesFigures(
+	const siteIds = sites.map((site) => site.id);
+	// All sites' zones at once, each today in its own time zone (see `zoneFigures()`).
+	const [figures, openAlerts, doors] = await Promise.all([
+		zoneFigures(
 			sites.map((site) => ({ site, ranges: periodRanges("day", site.timeZone, now) })),
 			now,
 		),
-		openAlertCounts(sites.map((site) => site.id)),
+		openAlertCounts(siteIds),
+		db
+			.select({ siteId: energyDoor.energySiteId, count: count() })
+			.from(energyDoor)
+			.where(and(inTenant(energyDoor), inList(energyDoor.energySiteId, siteIds)))
+			.groupBy(energyDoor.energySiteId),
 	]);
+	const doorsOf = new Map(doors.map((row) => [row.siteId, row.count]));
 	return {
 		sites: sites.map((site, index) => {
-			const { zones, doors } = figures[index];
+			const { zones } = figures[index];
 			return {
 				id: site.id,
 				name: site.name,
 				customerName: site.customerName,
 				city: site.city,
 				zones: zones.length,
-				doors: doors.length,
+				doors: doorsOf.get(site.id) ?? 0,
 				liveKw: zones.reduce((total, zone) => total + zone.liveKw, 0),
 				kwhToday: zones.reduce((total, zone) => total + zone.kwh, 0),
 				openAlerts: openAlerts.get(site.id) ?? 0,
@@ -92,56 +101,20 @@ export const getEnergyOverview = query(
 	},
 );
 
-/** A site's consumers ("installaties"), by zone, in their order. */
-async function siteConsumers(siteId: number) {
-	return db
-		.select({
-			id: energyConsumer.id,
-			zoneId: energyConsumer.zoneId,
-			name: energyConsumer.name,
-			ratedKw: energyConsumer.ratedKw,
-		})
-		.from(energyConsumer)
-		.innerJoin(...tenantJoin(energyZone, energyConsumer.zoneId))
-		.where(and(inTenant(energyConsumer), eq(energyZone.energySiteId, siteId)))
-		.orderBy(asc(energyConsumer.position), asc(energyConsumer.id));
-}
-
 /** A zone of a site by its code: today's figures, its consumers and its doors. */
 export const getEnergyZone = query(
 	v.object({ site: siteId, zone: v.pipe(v.string(), v.maxLength(40)) }),
 	async ({ site: id, zone: code }) => {
 		const site = await loadSite(id);
 		const now = Temporal.Now.instant();
-		const { zones, doors, previousComplete } = await siteFigures(
-			site,
-			periodRanges("day", site.timeZone, now),
-			now,
-		);
-		const zone = orNotFound(
-			zones.find((found) => found.code === code),
-			m.energy_zone_not_found(),
-		);
-		const consumers = await db
-			.select({
-				id: energyConsumer.id,
-				name: energyConsumer.name,
-				ratedKw: energyConsumer.ratedKw,
-				serialNumber: equipment.serialNumber,
-				unitName: equipment.name,
-			})
-			.from(energyConsumer)
-			.leftJoin(...tenantJoin(equipment, energyConsumer.equipmentId))
-			.where(and(inTenant(energyConsumer), eq(energyConsumer.zoneId, zone.id)))
-			.orderBy(asc(energyConsumer.position), asc(energyConsumer.id));
-		return {
-			site,
-			asOf: now,
-			previousComplete,
-			zone,
-			consumers,
-			doors: doors.filter((door) => door.zoneId === zone.id),
-		};
+		const sites = [{ site, ranges: periodRanges("day", site.timeZone, now) }];
+		const [{ zones, previousComplete }] = await zoneFigures(sites, now, eq(energyZone.code, code));
+		const zone = orNotFound(zones[0], m.energy_zone_not_found());
+		const [consumers, [doors]] = await Promise.all([
+			siteConsumers(site.id, zone.id),
+			doorFigures(sites, now, eq(energyDoor.zoneId, zone.id)),
+		]);
+		return { site, asOf: now, previousComplete, zone, consumers, doors };
 	},
 );
 

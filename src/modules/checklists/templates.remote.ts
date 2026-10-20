@@ -1,6 +1,6 @@
 /**
  * The tenant's checklist templates: every office member reads them (the template pages, the card
- * on a unit's page); managers change them. Each change refreshes the list and the template's page.
+ * on a unit's page); managers change them. A template's page watches it (`watchRecord`).
  */
 import { redirect } from "@sveltejs/kit";
 import * as v from "valibot";
@@ -42,59 +42,38 @@ export const getTemplate = query(id(), (templateId) => templateDetail(templateId
 /** The tenant's unit (by serial number) with its category and the template it's inspected by. */
 export const getUnitTemplate = query(v.string(), (serialNumber) => unitTemplate(serialNumber));
 
-const refresh = (templateId: number) => {
-	void getTemplates().refresh();
-	void getTemplate(String(templateId)).refresh();
-};
-
 export const addTemplate = forManagers.form(newTemplateSchema, async (input) => {
 	const templateId = await createTemplate(input);
+	// Sent along with the redirect, so the list it goes back to doesn't show what it cached.
 	void getTemplates().refresh();
 	redirect(303, `/checklists/settings/${templateId}`);
 });
 
-export const saveTemplate = forManagers.form(templateSchema, async ({ id, ...input }) => {
-	await updateTemplate(id, input);
-	refresh(id);
-});
+export const saveTemplate = forManagers.form(templateSchema, ({ id, ...input }) =>
+	updateTemplate(id, input),
+);
 
 export const saveTemplateCategories = forManagers.form(
 	templateCategoriesSchema,
-	async ({ id, categoryIds }) => {
-		await setTemplateCategories(id, categoryIds);
-		refresh(id);
-	},
+	({ id, categoryIds }) => setTemplateCategories(id, categoryIds),
 );
 
-export const retire = forManagers.form(templateIdSchema, async ({ id }) => {
-	await retireTemplate(id);
-	refresh(id);
-});
+export const retire = forManagers.form(templateIdSchema, ({ id }) => retireTemplate(id));
 
-export const restore = forManagers.form(templateIdSchema, async ({ id }) => {
-	await restoreTemplate(id);
-	refresh(id);
-});
+export const restore = forManagers.form(templateIdSchema, ({ id }) => restoreTemplate(id));
 
-export const createPoint = forManagers.form(newPointSchema, async (input) => {
-	refresh(await addPoint(input));
-});
+export const createPoint = forManagers.form(newPointSchema, (input) => addPoint(input));
 
-export const savePoint = forManagers.form(pointSchema, async ({ id, ...input }) => {
-	refresh(await updatePoint(id, input));
-});
-
-export const shiftPoint = forManagers.form(moveSchema, async ({ id, direction }) => {
-	refresh(await movePoint(id, direction));
-});
-
-export const shiftGroup = forManagers.form(
-	moveGroupSchema,
-	async ({ templateId, group, direction }) => {
-		refresh(await moveGroup(templateId, group, direction));
-	},
+export const savePoint = forManagers.form(pointSchema, ({ id, ...input }) =>
+	updatePoint(id, input),
 );
 
-export const removePoint = forManagers.form(pointIdSchema, async ({ id }) => {
-	refresh(await deletePoint(id));
-});
+export const shiftPoint = forManagers.form(moveSchema, ({ id, direction }) =>
+	movePoint(id, direction),
+);
+
+export const shiftGroup = forManagers.form(moveGroupSchema, ({ templateId, group, direction }) =>
+	moveGroup(templateId, group, direction),
+);
+
+export const removePoint = forManagers.form(pointIdSchema, ({ id }) => deletePoint(id));

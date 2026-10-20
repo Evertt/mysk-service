@@ -19,7 +19,7 @@ import { activity, customer, engineer, equipment, order } from "#lib/server/db/s
 import { inDays } from "#lib/server/lists/index.ts";
 import { live } from "#lib/server/live.ts";
 import { orNotFound } from "#lib/server/records.ts";
-import { forMembers } from "#lib/server/remote-functions.ts";
+import { forAnyRole, forMembers } from "#lib/server/remote-functions.ts";
 
 import { type WatchedType, watchedTypes } from "./watched.ts";
 
@@ -118,6 +118,18 @@ const loggedTypes = everyLoggedType();
  * something. See `watchSchedule` in the schedule module.
  */
 export const watchActivity = forMembers.query.live(() => live(loggedTypes));
+
+/**
+ * When a record of the tenant (or one of its parts, logged with it as their parent) last changed
+ * since the page opened it, for a card that shows it to refresh on (`refreshOnChange()`): a page
+ * stays live by the subject it shows, also after another user's change, and a form or command
+ * needs no list of what to refresh. For any role: it says only when, and the queries it has the
+ * card refresh are gated again.
+ */
+export const watchRecord = forAnyRole.query.live(
+	v.object({ type: v.picklist(loggedTypes), id: v.union([v.string(), v.number()]) }),
+	(subject) => live(subject),
+);
 
 /** The latest entries about a subject of the tenant and its parts, e.g. an order and its lines. */
 export const getSubjectActivity = forMembers.query(

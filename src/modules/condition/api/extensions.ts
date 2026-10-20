@@ -1,12 +1,12 @@
 /**
  * The condition module's extension points, for the modules that enhance it (see
  * `#lib/extensions/define.ts`): what they know about a unit that its status and service history
- * take in. Checklists answers with the unit's inspection status and its completed checklists,
+ * take in. Checklists answers with the unit's inspection status (and its column in the list),
  * maintenance with its next visit; without them, the condition module goes without.
  */
 import type { SQL } from "drizzle-orm";
 
-import { defineCollector } from "#lib/extensions/define.ts";
+import { defineCollector, defineListColumns } from "#lib/extensions/define.ts";
 
 /**
  * What a module knows of a unit, as SQL over the `equipment` row of the query it goes in
@@ -16,7 +16,7 @@ import { defineCollector } from "#lib/extensions/define.ts";
 export interface UnitSignals {
 	/**
 	 * The unit's inspection status today: `valid`, `expiring`, `expired`, `rejected` (its latest
-	 * inspection rejected a point) or `none` (see `InspectionState` in `../model.ts`).
+	 * inspection rejected a point) or `none` (checklists' `InspectionStatus`), for its status.
 	 */
 	inspection?: SQL<string>;
 	/** The day its next maintenance visit is due (`yyyy-mm-dd`), or null. */
@@ -32,37 +32,11 @@ export const unitSignals = defineCollector<void, UnitSignals>("condition.signals
 	now: true,
 });
 
-/** Whose service history is asked for: a customer's units, or every unit (`null`). */
-export interface HistoryQuery {
-	customerId: number | null;
-	/** At most this many entries, the newest. */
-	limit: number;
-}
-
-/** A completed checklist in a unit's service history ("Werkbon keuring 2026 afgerond"). */
-export interface ChecklistEntry {
-	/** Unique among a module's entries, e.g. `checklist:12`. */
-	key: string;
-	at: Temporal.Instant;
-	checklistKind: "inspection" | "maintenance";
-	/** How many points it rejected. */
-	rejections: number;
-	/** The general remark for the customer, if any. */
-	remarks: string | null;
-	/** Who completed it. */
-	by: string | null;
-	order: string;
-	unit: { serialNumber: string; title: string };
-	customer: { code: string; name: string };
-}
-
 /**
- * The completed checklists of the units asked about, newest first. A module that fails is left
- * out: the rest of the history still shows.
+ * Columns in the Connect page's list (`../list/units-list.ts`), like those of the equipment list:
+ * checklists' inspection status.
  */
-export const history = defineCollector<HistoryQuery, ChecklistEntry[]>("condition.history", {
-	onError: "skip",
-});
+export const listColumns = defineListColumns("condition.list.columns");
 
 /** An article a component can be linked to: one of the tenant's materials. */
 export interface Article {

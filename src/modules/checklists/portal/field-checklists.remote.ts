@@ -48,8 +48,7 @@ export const remarkForCustomer = forEngineers.command(remarksSchema, async (inpu
 	await remarkChecklist("engineer", input.id, input.remarks);
 });
 
-/** Completes one of the engineer's checklists once every point is answered; refreshes the card. */
+/** Completes one of the engineer's checklists once every point is answered (logged on its order). */
 export const complete = forEngineers.command(checklistIdSchema, async (input) => {
-	const number = await completeChecklist("engineer", input.id);
-	void getFieldChecklists(number).refresh();
+	await completeChecklist("engineer", input.id);
 });

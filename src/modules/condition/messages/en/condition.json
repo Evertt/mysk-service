@@ -29,17 +29,11 @@
 	"condition_column_condition": "Condition",
 	"condition_column_last_service": "Last service",
 	"condition_column_next_due": "Next due",
-	"condition_column_inspection": "Inspection",
 	"condition_column_status": "Status",
 	"condition_column_advice": "Advice",
 	"condition_column_condition_status": "Condition status",
 	"condition_component_whole_unit": "Whole unit",
 	"condition_component_article": "art. {sku}",
-	"condition_inspection_valid": "Valid",
-	"condition_inspection_expiring": "Expiring",
-	"condition_inspection_expired": "Expired",
-	"condition_inspection_rejected": "Rejected",
-	"condition_inspection_none": "None",
 	"condition_band_low": "Low",
 	"condition_band_fair": "Fair",
 	"condition_band_good": "Good",
@@ -47,46 +41,8 @@
 	"condition_feed_title": "Activity log",
 	"condition_feed_description": "What happened to the units lately: orders, work orders and conditions.",
 	"condition_feed_description_customer": "What happened to {name}'s units lately.",
+	"condition_feed_list": "The units' service history",
 	"condition_feed_empty": "Nothing has happened to these units yet.",
-	"condition_feed_order": "{type} completed",
-	"condition_feed_checklist": "Work order {kind} {year} completed",
-	"condition_feed_rejections": [
-		{
-			"declarations": [
-				"input count",
-				"local countPlural = count: plural",
-				"local countText = count: number"
-			],
-			"selectors": ["countPlural"],
-			"match": {
-				"countPlural=one": "1 rejected point",
-				"countPlural=*": "{countText} rejected points"
-			}
-		}
-	],
-	"condition_feed_all_ok": "all in order",
-	"condition_feed_condition": "Condition recorded: {score}",
-	"condition_feed_kind_inspection": "inspection",
-	"condition_feed_kind_maintenance": "maintenance",
-	"condition_feed_soort_inspection": "Inspection",
-	"condition_feed_soort_maintenance": "Maintenance",
-	"condition_feed_soort_condition": "Condition",
-	"condition_feed_soort_advice": "Advice",
-	"condition_feed_by": "by {name}",
-	"condition_feed_more_units": [
-		{
-			"declarations": [
-				"input count",
-				"local countPlural = count: plural",
-				"local countText = count: number"
-			],
-			"selectors": ["countPlural"],
-			"match": {
-				"countPlural=one": "and 1 more unit",
-				"countPlural=*": "and {countText} more units"
-			}
-		}
-	],
 	"condition_card_title": "Condition",
 	"condition_card_description": "The unit's latest condition, and how it went.",
 	"condition_card_none": "No condition recorded yet.",

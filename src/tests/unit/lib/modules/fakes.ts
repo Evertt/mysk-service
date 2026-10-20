@@ -39,6 +39,8 @@ export const widgets = {
 				size: { label: () => "size of the widget", format: (value) => `${String(value)} cm` },
 			},
 		},
+		// A part of a unit, on its page.
+		widget_part: { noun: () => "widget part", onParentPage: true },
 	},
 	actions: { approved: sentence("approved") },
 } satisfies AppModule;

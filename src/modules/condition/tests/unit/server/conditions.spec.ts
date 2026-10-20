@@ -118,7 +118,7 @@ describe("a member recording a unit's condition, in North", () => {
 				advice: "Veerpakket vervangen (SD-001).",
 			}),
 		);
-		expect(answer).toMatchObject({ status: 200, refreshed: ["getUnitCondition"] });
+		expect(answer).toMatchObject({ status: 200 });
 		const [recorded] = await conditionsOf(unit.id);
 		expect(recorded).toEqual({
 			id: expect.any(Number),
@@ -313,7 +313,7 @@ describe("the engineer's advice, in the portal", () => {
 		const before = await conditionCount();
 
 		const answer = await advise({ advice: "Kabelset vervangen (SD-002)." });
-		expect(answer).toMatchObject({ status: 200, refreshed: ["getFieldCondition"] });
+		expect(answer).toMatchObject({ status: 200 });
 		expect(await conditionCount()).toBe(before);
 		const [recorded] = await conditionsOf(job.equipment_id);
 		expect(recorded).toMatchObject({

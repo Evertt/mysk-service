@@ -12,7 +12,7 @@ import { customerSite } from "#lib/server/db/schema.ts";
 
 import { periods } from "../model.ts";
 import { forCustomers } from "../remote-functions.ts";
-import { loadSites, periodRanges, sitesFigures } from "../server/figures.ts";
+import { doorFigures, loadSites, periodRanges, zoneFigures } from "../server/figures.ts";
 
 /** The contact's sites with their figures over `period`. */
 export const getClientEnergy = forCustomers.query(v.picklist(periods), async (period) => {
@@ -22,7 +22,7 @@ export const getClientEnergy = forCustomers.query(v.picklist(periods), async (pe
 	);
 	const now = Temporal.Now.instant();
 	const ofSites = own.map((site) => ({ site, ranges: periodRanges(period, site.timeZone, now) }));
-	const figures = await sitesFigures(ofSites, now);
+	const [zones, doors] = await Promise.all([zoneFigures(ofSites, now), doorFigures(ofSites, now)]);
 	const sites = ofSites.map(({ site, ranges }, index) => ({
 		from: ranges.from,
 		site: {
@@ -34,10 +34,9 @@ export const getClientEnergy = forCustomers.query(v.picklist(periods), async (pe
 			co2Factor: site.co2Factor,
 			timeZone: site.timeZone,
 		},
-		previousComplete: figures[index].previousComplete,
-		zones: figures[index].zones,
+		...zones[index],
 		// Their doors' figures, without the units' links into the office.
-		doors: figures[index].doors.map((door) => ({ ...door, unit: null, equipmentId: null })),
+		doors: doors[index].map((door) => ({ ...door, unit: null, equipmentId: null })),
 	}));
 	return { period, asOf: now, sites };
 });

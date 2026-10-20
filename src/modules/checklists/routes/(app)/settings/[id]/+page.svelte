@@ -7,11 +7,13 @@
 	import { toast } from "svelte-sonner";
 
 	import { canManage } from "#lib/auth/can-manage.ts";
+	import { watchRecord } from "#lib/components/activity/activity.remote.ts";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import RecordPage from "#lib/components/record-page.svelte";
+	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import CategoriesCard from "#modules/checklists/detail/categories-card.svelte";
 	import PointsCard from "#modules/checklists/detail/points-card.svelte";
 	import TemplateDialog from "#modules/checklists/form/template-dialog.svelte";
@@ -20,6 +22,11 @@
 	let { params }: { params: RouteParams<"/(app)/(modules)/checklists/settings/[id]"> } = $props();
 
 	const data = $derived(await getTemplate(params.id));
+	// Another manager's change too.
+	refreshOnChange(
+		() => watchRecord({ type: "checklistTemplate", id: params.id }),
+		() => getTemplate(params.id).refresh(),
+	);
 	const template = $derived(data.template);
 	const manager = $derived(await canManage());
 	/** Managers change an active template; a retired one is restored first. */
