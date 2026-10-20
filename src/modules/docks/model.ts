@@ -319,14 +319,5 @@ export function dockFigures(
 	};
 }
 
-/** A duration in seconds as the board's timer reads it: `mm:ss` below an hour, else `h:mm:ss`. */
-export function formatDuration(total: number) {
-	const whole = Math.max(0, Math.floor(total));
-	const h = Math.floor(whole / 3600);
-	const mm = String(Math.floor((whole % 3600) / 60)).padStart(2, "0");
-	const ss = String(whole % 60).padStart(2, "0");
-	return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
-}
-
 /** A dock's code as Salvo sends it and the board shows it, e.g. `DOCK 05`. */
 export const dockCodePattern = /^[A-Za-z0-9][A-Za-z0-9 ._-]{0,31}$/;

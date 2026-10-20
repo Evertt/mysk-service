@@ -155,13 +155,18 @@ export function formatTimeAgo(
 	return format.format(-Math.floor(minutes / 60 / 24), "day");
 }
 
+const twoDigits = (value: number) => String(value).padStart(2, "0");
+
 /**
- * Formats a stopwatch's time, in minutes and seconds: `0:07`, `12:30` (the same in every language
- * the app has), e.g. how long a bug report has been recording.
+ * Formats a stopwatch's time in minutes and seconds, `00:07`, `72:30` (the same in every language
+ * the app has), e.g. how long a bug report recorded; with `hours`, from an hour on as `1:12:30`,
+ * e.g. how long a dock's door has been open.
  */
-export function formatStopwatch(milliseconds: number) {
+export function formatStopwatch(milliseconds: number, { hours = false } = {}) {
 	const seconds = Math.max(0, Math.floor(milliseconds / 1000));
-	return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+	const h = hours ? Math.floor(seconds / 3600) : 0;
+	const time = `${twoDigits(Math.floor(seconds / 60) - h * 60)}:${twoDigits(seconds % 60)}`;
+	return h ? `${h}:${time}` : time;
 }
 
 /**
