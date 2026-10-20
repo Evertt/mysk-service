@@ -27,8 +27,8 @@ const pointKinds = {
 	slot: { define: "defineSlot", name: "a slot" },
 	form: { define: "defineFormSlot", name: "a form slot" },
 	bulk: { define: "defineBulkTable", name: "a bulk table" },
-	// Only a record's list takes columns (`defineRecordPoints()`).
-	columns: { define: undefined, name: "a list that takes columns" },
+	// A record's list (`defineRecordPoints()`), or a module's own.
+	columns: { define: "defineListColumns", name: "a list that takes columns" },
 	collector: { define: "defineCollector", name: "a collector" },
 	event: { define: "defineEvent", name: "an event" },
 	vote: { define: "defineVote", name: "a vote" },

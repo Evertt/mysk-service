@@ -1,3 +1,4 @@
+import type { InspectionStatus } from "#modules/checklists/api/extensions.ts";
 /**
  * What the condition module's harness specs share: each unit's and component's facts as stored in
  * the spec file's database, with their status worked out from them by the module's pure rules
@@ -8,7 +9,6 @@ import {
 	type Concern,
 	componentStatus,
 	defaultThresholds,
-	type InspectionState,
 	rolledUpStatus,
 	type Thresholds,
 	type UnitStatus,
@@ -108,7 +108,7 @@ export async function unitStates(organizationId: string, all = false): Promise<U
 	);
 	const day = today();
 	return found.map((unit) => {
-		let inspection: InspectionState = "none";
+		let inspection: InspectionStatus = "none";
 		if (unit.valid_until) {
 			const until = Temporal.PlainDate.from(unit.valid_until);
 			if (Temporal.PlainDate.compare(day, until) > 0) inspection = "expired";

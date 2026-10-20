@@ -2,8 +2,8 @@
  * The Connect page's list in SQL (see `../list/units-list.ts`), shared by its rows and its counts
  * (the KPI tiles and the customer chips): a row per component of a unit in care, and one per unit
  * in care without components, so none is left out. A row's condition and status are its
- * component's (`componentSql()`), or its unit's for a unit without (`conditionSql()`); its
- * inspection, last and next visit are its unit's.
+ * component's (`componentSql()`), or its unit's for a unit without (`conditionSql()`); its last
+ * and next visit are its unit's, like the modules' columns (`withModuleColumns()`).
  */
 import { and, eq, ne, type SQL, sql } from "drizzle-orm";
 import type { SQLiteSelect } from "drizzle-orm/sqlite-core";
@@ -13,6 +13,7 @@ import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customer, customerSite, equipment, equipmentLocation } from "#lib/server/db/schema.ts";
 import { type ListSql, nocase } from "#lib/server/lists/index.ts";
+import { withModuleColumns } from "#lib/server/lists/module-columns.ts";
 
 import { conditionList } from "../list/units-list.ts";
 import { component } from "./schema.ts";
@@ -40,12 +41,6 @@ export const withRowJoins = <T extends SQLiteSelect>(query: T) =>
 
 /** The units in care: the tenant's, but the decommissioned ones. */
 export const inCare = () => and(inTenant(equipment), ne(equipment.status, "decommissioned"))!;
-
-/** An inspection status's place, worst first, like the equipment list's column. */
-const inspectionRank = (inspection: ConditionSql["inspection"]) =>
-	inspection
-		? sql`(case ${inspection} when 'expired' then 0 when 'rejected' then 1 when 'expiring' then 2 when 'valid' then 3 else 4 end)`
-		: sql`4`;
 
 /** A row's: its component's `part`, or its unit's `whole` on a unit's own row. */
 const either = <T>(part: SQL<T>, whole: SQL<T>) =>
@@ -81,10 +76,7 @@ export function rowsSql(
 	const row = rowSql(unit);
 	// A component's row by its id, made negative; a unit's own by the unit's id.
 	const rowId = sql<number>`coalesce(-${component.id}, ${equipment.id})`.mapWith(Number);
-	return {
-		unit,
-		row,
-		rowId,
+	const listSql = withModuleColumns({
 		list: conditionList,
 		from: (fields) => withRowJoins(db.select(fields).from(equipment).$dynamic()),
 		columns: {
@@ -113,7 +105,6 @@ export function rowsSql(
 			},
 			lastService: { sort: unit.lastService, nullsLast: true },
 			nextDue: { sort: unit.nextDue ?? sql`null`, nullsLast: true },
-			inspection: { sort: inspectionRank(unit.inspection) },
 			status: {
 				sort: row.sort,
 				filter: (statuses) => inList(row.status, statuses),
@@ -132,5 +123,6 @@ export function rowsSql(
 		],
 		id: rowId,
 		scope: inCare,
-	};
+	});
+	return { ...listSql, unit, row, rowId };
 }

@@ -5,11 +5,11 @@
  * getting there; and the pages' parts.
  */
 import { type App, rows, value } from "#e2e/app.ts";
+import type { InspectionStatus } from "#modules/checklists/api/extensions.ts";
 import {
 	type Concern,
 	componentStatus,
 	defaultThresholds,
-	type InspectionState,
 	rolledUpStatus,
 	type Thresholds,
 	type UnitStatus,
@@ -111,7 +111,7 @@ export async function unitStates(organizationId: string, all = false): Promise<U
 	);
 	const day = today();
 	return found.map((unit) => {
-		let inspection: InspectionState = "none";
+		let inspection: InspectionStatus = "none";
 		if (unit.valid_until) {
 			const until = Temporal.PlainDate.from(unit.valid_until);
 			if (Temporal.PlainDate.compare(day, until) > 0) inspection = "expired";

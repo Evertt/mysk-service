@@ -10,7 +10,6 @@ import { unitTitle } from "#lib/equipment/index.ts";
 import { unitStatusDisplay } from "../display.ts";
 import { type Concern, type ScoreBand, unitStatuses } from "../model.ts";
 import ConditionBar from "../ui/condition-bar.svelte";
-import InspectionBadge from "../ui/inspection-badge.svelte";
 import StatusBadge from "../ui/status-badge.svelte";
 import type { getConditionUnits } from "./units-list.remote.ts";
 import { conditionList } from "./units-list.ts";
@@ -85,11 +84,6 @@ export const columns = withListColumns(conditionList, {
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
 		meta: { label: m.condition_column_next_due },
-	}),
-	inspection: column.accessor("inspection", {
-		cell: ({ getValue }) => renderComponent(InspectionBadge, { status: getValue() }),
-		enableGlobalFilter: false,
-		meta: { label: m.condition_column_inspection },
 	}),
 	status: column.enum("status", {
 		values: unitStatuses,

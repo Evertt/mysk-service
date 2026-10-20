@@ -4,8 +4,13 @@
 	import HistoryIcon from "@lucide/svelte/icons/history";
 	import SettingsIcon from "@lucide/svelte/icons/settings";
 
+	import { getTenantModules } from "#lib/auth/session.remote.ts";
+	import { extendList } from "#lib/components/data-table/list-definition.ts";
 	import { listQueries } from "#lib/components/data-table/server-table.svelte.ts";
 	import PageBanner from "#lib/components/page-banner.svelte";
+	import { columnContributions } from "#lib/extensions/contributions.gen.ts";
+	import { loadContributions } from "#lib/extensions/define.ts";
+	import { listColumns } from "#modules/condition/api/extensions.ts";
 	import {
 		getConditionCounts,
 		getConditionUnits,
@@ -19,8 +24,19 @@
 	// The props the route passes; this page needs none of them.
 	const _props: { params: RouteParams<"/(app)/(modules)/condition"> } = $props();
 
+	// The list with the columns of the tenant's modules (checklists' inspection status), whose
+	// parameters the URL may hold.
+	const columns = $derived(
+		await loadContributions(columnContributions, listColumns, await getTenantModules()),
+	);
+	const list = $derived(
+		extendList(
+			conditionList,
+			columns.flatMap(({ value }) => value ?? []),
+		),
+	);
 	// The server filters, sorts and pages the units, as the URL says (see the orders page).
-	const units = listQueries(() => conditionList, getConditionUnits, getConditionCounts);
+	const units = listQueries(() => list, getConditionUnits, getConditionCounts);
 	/** The chosen customer, whose service history the log shows; everyone's without one. */
 	const customer = $derived.by(() => {
 		const { customer } = units.query.filters;
@@ -54,7 +70,7 @@
 
 <StatusLegend thresholds={(await units.rows).thresholds} />
 
-<UnitsTable units={await units.rows} counts={await units.facets} />
+<UnitsTable {list} units={await units.rows} counts={await units.facets} />
 
 <!-- The service history of the chosen customer's units, beside the list, so it stays in view. -->
 <Sheet.Root bind:open={showHistory}>

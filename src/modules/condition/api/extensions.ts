@@ -6,7 +6,7 @@
  */
 import type { SQL } from "drizzle-orm";
 
-import { defineCollector } from "#lib/extensions/define.ts";
+import { defineCollector, defineListColumns } from "#lib/extensions/define.ts";
 
 /**
  * What a module knows of a unit, as SQL over the `equipment` row of the query it goes in
@@ -16,7 +16,7 @@ import { defineCollector } from "#lib/extensions/define.ts";
 export interface UnitSignals {
 	/**
 	 * The unit's inspection status today: `valid`, `expiring`, `expired`, `rejected` (its latest
-	 * inspection rejected a point) or `none` (see `InspectionState` in `../model.ts`).
+	 * inspection rejected a point) or `none` (checklists' `InspectionStatus`), for its status.
 	 */
 	inspection?: SQL<string>;
 	/** The day its next maintenance visit is due (`yyyy-mm-dd`), or null. */
@@ -31,6 +31,12 @@ export const unitSignals = defineCollector<void, UnitSignals>("condition.signals
 	onError: "fail",
 	now: true,
 });
+
+/**
+ * Columns in the Connect page's list (`../list/units-list.ts`), like those of the equipment list:
+ * checklists' inspection status.
+ */
+export const listColumns = defineListColumns("condition.list.columns");
 
 /** Whose service history is asked for: a customer's units, or every unit (`null`). */
 export interface HistoryQuery {

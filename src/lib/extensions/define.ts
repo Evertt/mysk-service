@@ -188,8 +188,11 @@ export interface ListColumnsPoint {
 	readonly kind: "columns";
 }
 
-/** Declares a server-side list that modules add columns to (a record's, `defineRecordPoints()`). */
-const defineListColumns = (id: string): ListColumnsPoint => ({ id, kind: "columns" });
+/**
+ * Declares a server-side list that modules add columns to: a record's (`defineRecordPoints()`), or
+ * a module's own (condition's units, `condition.list.columns`).
+ */
+export const defineListColumns = (id: string): ListColumnsPoint => ({ id, kind: "columns" });
 
 /** Carries a type in `defineRecordPoints()`'s options; never read. */
 export interface Shape<T> {
