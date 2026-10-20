@@ -1,5 +1,6 @@
 import { redirect, type RequestHandler } from "@sveltejs/kit";
 
+import { loginUrl } from "#lib/auth/index.ts";
 import { qrDestination, resolveQrCode } from "#lib/equipment/server/index.ts";
 import { auth } from "#lib/server/auth/index.ts";
 import { orNotFound } from "#lib/server/records.ts";
@@ -13,7 +14,7 @@ import { orNotFound } from "#lib/server/records.ts";
  * is; one of another of their organizations makes that their current one first.
  */
 export const GET: RequestHandler = async ({ params, locals, request }) => {
-	if (!locals.user) redirect(303, `/login?redirectTo=${encodeURIComponent(`/q/${params.token}`)}`);
+	if (!locals.user) redirect(303, loginUrl(`/q/${params.token}`));
 	const found = orNotFound(
 		await resolveQrCode(params.token!, locals.user.id),
 		m.equipment_qr_not_found(),

@@ -24,7 +24,6 @@
 <script lang="ts">
 	import { browser } from "$app/env";
 	import { goto } from "$app/navigation";
-	import { resolve } from "$app/paths";
 	import { page, updated } from "$app/state";
 	import LogInIcon from "@lucide/svelte/icons/log-in";
 	import RefreshCwIcon from "@lucide/svelte/icons/refresh-cw";
@@ -35,6 +34,7 @@
 	import { toast } from "svelte-sonner";
 	import { on } from "svelte/events";
 
+	import { loginUrl } from "#lib/auth/index.ts";
 	import { classify } from "#lib/errors/classify.ts";
 	import { describeError } from "#lib/errors/messages.ts";
 
@@ -74,9 +74,7 @@
 		}
 	});
 
-	const signIn = $derived(
-		`${resolve("/login")}?${new URLSearchParams({ redirectTo: page.url.pathname + page.url.search })}`,
-	);
+	const signIn = $derived(loginUrl(page.url.pathname + page.url.search));
 </script>
 
 <Empty.Root data-error-kind={kind}>

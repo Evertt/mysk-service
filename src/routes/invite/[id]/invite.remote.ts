@@ -4,7 +4,7 @@ import { isAPIError } from "better-auth/api";
 import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { invitationState, isCustomerContact, parseRoles } from "#lib/auth/index.ts";
+import { invitationState, isCustomerContact, parseRoles, shellOf } from "#lib/auth/index.ts";
 import { formatNumber } from "#lib/i18n/index.ts";
 import { recordActivityAfter } from "#lib/server/activity/index.ts";
 import { auth, currentUser } from "#lib/server/auth/index.ts";
@@ -114,9 +114,9 @@ async function accept(
 	);
 }
 
-/** Where someone who accepted `found` starts: a customer's contact in the customer portal. */
+/** Where someone who accepted `found` starts: their shell's home, by the role it invites with. */
 const startPage = (found: { role: string | null }) =>
-	isCustomerContact(parseRoles(found.role ?? "member")) ? "/portal" : "/";
+	shellOf(parseRoles(found.role ?? "member")).home;
 
 /** Accepts the invitation as the signed-in user, who then works in its organization. */
 export const acceptInvitation = forUsers.form(v.object({ id: v.string() }), async ({ id }) => {

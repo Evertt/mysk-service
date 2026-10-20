@@ -6,7 +6,7 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
-	import { invitedAsText } from "#lib/auth/index.ts";
+	import { invitedAsText, loginUrl } from "#lib/auth/index.ts";
 	import { formatDate, messageParts } from "#lib/i18n/index.ts";
 
 	import PublicShell from "../../public-shell.svelte";
@@ -45,9 +45,7 @@
 			}),
 		);
 
-	const loginHref = $derived(
-		`${resolve("/login")}?redirectTo=${encodeURIComponent(`/invite/${params.id}`)}`,
-	);
+	const loginHref = $derived(loginUrl(`/invite/${params.id}`));
 </script>
 
 <svelte:head>

@@ -3,7 +3,7 @@ import { error, redirect } from "@sveltejs/kit";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { isCustomerContact, isFieldEngineer } from "#lib/auth/index.ts";
+import { shellOf } from "#lib/auth/index.ts";
 import { auth, currentTenant, currentUser } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { member, organization } from "#lib/server/db/schema.ts";
@@ -21,10 +21,10 @@ export const getCurrentUser = forUsers.query(async () => {
  */
 export const getCurrentTenant = forAnyRole.query(async () => {
 	const tenant = currentTenant();
-	// The app shell awaits this, so field engineers and customers' contacts who navigate here go to
-	// their portal instead.
-	if (isFieldEngineer(tenant.roles)) redirect(303, "/my");
-	if (isCustomerContact(tenant.roles)) redirect(303, "/portal");
+	// The office shell awaits this, so field engineers and customers' contacts who navigate here
+	// (client-side, which the guard in `hooks.server.ts` doesn't see) go to their portal instead.
+	const shell = shellOf(tenant.roles);
+	if (shell.name !== "office") redirect(303, shell.home);
 	const organizations = await db
 		.select({ id: organization.id, name: organization.name })
 		.from(member)

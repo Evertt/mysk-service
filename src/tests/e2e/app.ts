@@ -15,7 +15,8 @@ import {
 import { afterAll, afterEach, beforeAll, expect } from "vite-plus/test";
 
 import { clockContext } from "#clock/clock.ts";
-import { isCustomerContact, isFieldEngineer, parseRoles } from "#lib/auth/roles.ts";
+import { parseRoles } from "#lib/auth/roles.ts";
+import { shellOf } from "#lib/auth/shells.ts";
 import { previewDelayKey } from "#lib/components/record-link/preview-delay.ts";
 import { TIME_ZONE_COOKIE } from "#lib/dates.ts";
 import { demoOrganizations, demoUsers } from "#lib/server/db/demo.ts";
@@ -116,8 +117,9 @@ export async function signInContext(context: BrowserContext, email: string) {
 }
 
 /**
- * Where signing in takes `email`: the engineer portal for a field engineer, the customer portal
- * for a customer's contact, else the office's dashboard (see `login.remote.ts`).
+ * Where signing in takes `email`: their shell's home (`shellOf()`, `#lib/auth/shells.ts`), the
+ * engineer portal for a field engineer, the customer portal for a customer's contact, else the
+ * office's dashboard.
  */
 export async function homeOf(email: string) {
 	const [membership] = await rows<{ role: string }>(
@@ -125,10 +127,7 @@ export async function homeOf(email: string) {
 		 order by m.created_at limit 1`,
 		[email],
 	);
-	const roles = parseRoles(membership?.role ?? "");
-	if (isFieldEngineer(roles)) return "/my";
-	if (isCustomerContact(roles)) return "/portal";
-	return "/";
+	return shellOf(parseRoles(membership?.role ?? "")).home;
 }
 
 /**

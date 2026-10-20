@@ -3,8 +3,7 @@ import { redirect } from "@sveltejs/kit";
 import { isAPIError } from "better-auth/api";
 import * as v from "valibot";
 
-import { isCustomerContact, isFieldEngineer } from "#lib/auth/index.ts";
-import { auth, loadTenant } from "#lib/server/auth/index.ts";
+import { auth } from "#lib/server/auth/index.ts";
 import { Refused } from "#lib/server/refused.ts";
 import { forAnyone } from "#lib/server/remote-functions.ts";
 
@@ -27,41 +26,20 @@ export const login = forAnyone.form(
 		redirectTo: v.optional(v.string()),
 	}),
 	async ({ email, _password, redirectTo }) => {
-		let userId: string;
 		try {
 			// Sets the session cookie through the `sveltekitCookies` plugin.
-			({
-				user: { id: userId },
-			} = await auth.api.signInEmail({
+			await auth.api.signInEmail({
 				body: { email, password: _password },
 				headers: getRequestEvent().request.headers,
-			}));
+			});
 		} catch (e) {
 			if (isAPIError(e) && e.statusCode === 401) throw new Refused(m.auth_incorrect());
 			if (isAPIError(e) && e.statusCode < 500) throw new Refused(e.message || m.auth_failed());
 			throw e;
 		}
-		// Field engineers start in their portal; the office app isn't theirs. A QR code they
-		// scanned (`/q/<token>`) leads them into it.
-		const tenant = await loadTenant(userId, null);
-		const target = safeRedirect(redirectTo);
-		if (
-			tenant &&
-			isFieldEngineer(tenant.roles) &&
-			!target.startsWith("/my") &&
-			!target.startsWith("/q/")
-		) {
-			redirect(303, "/my");
-		}
-		// Customers' contacts likewise start in the customer portal, or where a QR code leads them.
-		if (
-			tenant &&
-			isCustomerContact(tenant.roles) &&
-			!target.startsWith("/portal") &&
-			!target.startsWith("/q/")
-		) {
-			redirect(303, "/portal");
-		}
-		redirect(303, target);
+		// Back to the page they came for. Where it's another shell's than theirs (`shellOf()`), that
+		// sends them home: the office shell an engineer or contact (`getCurrentTenant`), as the page
+		// loads client-side; a page loaded in full the guard (`handleGuard` in `hooks.server.ts`).
+		redirect(303, safeRedirect(redirectTo));
 	},
 );

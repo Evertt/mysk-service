@@ -6,7 +6,7 @@ import { redirect } from "@sveltejs/kit";
 import { type Handle, type HandleServerError, sequence } from "@sveltejs/kit/hooks";
 import { svelteKitHandler } from "better-auth/svelte-kit";
 
-import { isCustomerContact, isFieldEngineer } from "#lib/auth/index.ts";
+import { loginUrl, shellOf } from "#lib/auth/index.ts";
 import { DENSITY_COOKIE, parseDensity } from "#lib/components/data-table/density.svelte.ts";
 import { nameOrderTypesOnServer } from "#lib/orders/server/index.ts";
 import { m } from "#lib/paraglide/messages.js";
@@ -103,7 +103,7 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 /**
  * Paths anyone may open: the login page, invitations (`/invite/[id]`), better-auth's endpoints,
  * SvelteKit's own assets, and the operations endpoints (`/_ops/daily`), which check a token of
- * their own instead of a session.
+ * their own instead of a session. By path, as some have no route.
  */
 const isPublic = (pathname: string) =>
 	pathname === "/login" ||
@@ -120,63 +120,41 @@ const isPublic = (pathname: string) =>
 const isIntegration = (routeId: string | null) => routeId?.startsWith("/(api)/") ?? false;
 
 /**
- * The engineer portal, the only part of the app field engineers use, and the QR codes'
- * links (`/q/<token>`), which lead them into it.
- */
-const isPortal = (pathname: string) =>
-	pathname === "/my" || pathname.startsWith("/my/") || pathname.startsWith("/q/");
-
-/**
- * The customer portal: the pages of the `(customer)` route group (`/portal`, and the modules' pages
- * there), the only part of the app customers' contacts use. By route id, so a module's page in the
- * group (`/(customer)/(modules)/<id>/…`, under the module's own URL) is part of it too.
- */
-const isCustomerPortal = (routeId: string | null) => routeId?.startsWith("/(customer)/") ?? false;
-
-/**
- * Paths of every signed-in role, each with a gate of its own: the bug reports' upload (`/bug-reports`,
+ * Pages of every signed-in role, each with a gate of its own: the bug reports' upload (`/bug-reports`,
  * the office's and the engineer portal's record button) and the developers' pages (`/ops/…`,
  * `forDevelopers`, a 404 for everyone else). The guard leaves them to it.
  */
-const isForAnyRole = (pathname: string) =>
-	pathname === "/bug-reports" || pathname === "/ops" || pathname.startsWith("/ops/");
+const isForAnyRole = (routeId: string | null) =>
+	routeId === "/bug-reports" || (routeId?.startsWith("/(ops)/") ?? false);
 
 /**
- * Sends signed-out visitors to the login page, and signed-in ones away from it; field engineers
- * from the office app to their portal, customers' contacts from everything but the customer portal
- * (and the QR codes' links, which lead them into it) to theirs, and everyone else out of the
- * customer portal. This only guards page requests. Remote function calls pass through (their
- * `event.url` is the calling page's, so a redirect here would be wrong): each is gated by the set
- * it's made with (`forMembers`, `forEngineers`, `forCustomers`, … in
+ * Sends signed-out visitors to the login page, and signed-in ones away from it; and everyone from
+ * a page that isn't their shell's (`shellOf()`, `#lib/auth/shells.ts`) to its home: field
+ * engineers from the office app to their portal, customers' contacts from everything but the
+ * customer portal (and the QR codes' links, which lead them into it) to theirs, and everyone else
+ * out of the customer portal. This only guards page requests, as the browser loads a page in full.
+ * After a client-side navigation (such as the one after signing in, to whichever page the login
+ * page leads back to), the office shell sends engineers and contacts home itself
+ * (`getCurrentTenant`), and the portals' gates refuse whoever isn't theirs. Remote function calls
+ * pass through (their `event.url` is the calling page's, so a redirect here would be wrong): each
+ * is gated by the set it's made with (`forMembers`, `forEngineers`, `forCustomers`, … in
  * `#lib/server/remote-functions.ts`).
  */
 const handleGuard: Handle = ({ event, resolve }) => {
 	if (event.isRemoteRequest) return resolve(event);
 
 	const { pathname, search } = event.url;
+	const routeId = event.route.id;
 	if (event.locals.user) {
 		if (pathname === "/login" && event.request.method === "GET") {
 			redirect(303, "/");
 		}
-		const { tenant } = event.locals;
-		const routeId = event.route.id;
-		if (tenant && isCustomerContact(tenant.roles)) {
-			const allowed =
-				isCustomerPortal(routeId) ||
-				pathname.startsWith("/q/") ||
-				isPublic(pathname) ||
-				isForAnyRole(pathname);
-			if (!allowed) redirect(303, "/portal");
-		} else if (isCustomerPortal(routeId)) {
-			redirect(303, "/");
+		if (!isPublic(pathname) && !isForAnyRole(routeId)) {
+			const shell = shellOf(event.locals.tenant?.roles ?? []);
+			if (!shell.owns(routeId)) redirect(303, shell.home);
 		}
-		const elsewhere = !isPortal(pathname) && !isPublic(pathname) && !isForAnyRole(pathname);
-		if (tenant && isFieldEngineer(tenant.roles) && elsewhere) {
-			redirect(303, "/my");
-		}
-	} else if (!isPublic(pathname) && !isIntegration(event.route.id)) {
-		const target = pathname + search;
-		redirect(303, target === "/" ? "/login" : `/login?redirectTo=${encodeURIComponent(target)}`);
+	} else if (!isPublic(pathname) && !isIntegration(routeId)) {
+		redirect(303, loginUrl(pathname + search));
 	}
 
 	return resolve(event);
