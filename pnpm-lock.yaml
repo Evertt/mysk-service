@@ -310,6 +310,9 @@ importers:
       playwright:
         specifier: ^1.60.0
         version: 1.63.0
+      runed:
+        specifier: 0.37.1
+        version: 0.37.1(@sveltejs/kit@3.0.0(patch_hash=9bc4f272dd5de71b6f4d7eabc6d6b55dec833901acd94d0bde5ab8d40848937e)(@sveltejs/vite-plugin-svelte@7.3.1(@voidzero-dev/vite-plus-core@1.0.0(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))(svelte@5.57.1(patch_hash=336e48a4b5e79121fdc93bcc25fcd35b5359f97b9454448487e38e05213b3a40)))(@voidzero-dev/vite-plus-core@1.0.0(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1))(svelte@5.57.1(patch_hash=336e48a4b5e79121fdc93bcc25fcd35b5359f97b9454448487e38e05213b3a40))(typescript@6.0.3))(svelte@5.57.1(patch_hash=336e48a4b5e79121fdc93bcc25fcd35b5359f97b9454448487e38e05213b3a40))(zod@4.6.5)
       shadcn-svelte:
         specifier: ^1.7.0
         version: 1.7.0(svelte@5.57.1(patch_hash=336e48a4b5e79121fdc93bcc25fcd35b5359f97b9454448487e38e05213b3a40))

@@ -89,6 +89,7 @@
 		"nodemailer": "^10.0.15",
 		"pdf-lib": "^1.17.1",
 		"playwright": "^1.60.0",
+		"runed": "0.37.1",
 		"shadcn-svelte": "^1.7.0",
 		"svelte": "^5.57.1",
 		"svelte-check": "^4.6.0",
