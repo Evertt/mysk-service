@@ -15,11 +15,11 @@
 -->
 <script lang="ts">
 	import CheckIcon from "@lucide/svelte/icons/check";
-	import { Debounced, resource } from "runed";
 	import { untrack } from "svelte";
 	import type { Attachment } from "svelte/attachments";
 	import { SvelteMap } from "svelte/reactivity";
 
+	import { SearchWhileOpen } from "#lib/hooks/search-while-open.svelte.ts";
 	import { formatNumber } from "#lib/i18n/format.ts";
 	import { cn } from "#lib/utils.ts";
 
@@ -55,9 +55,6 @@
 		none?: string | boolean;
 	} = $props();
 
-	/** How long typing waits before searching. */
-	const searchDelay = 250;
-
 	const table = useTableContext();
 	const filter = filterColumn(table, () => ({ columnId, title: givenTitle, none: givenNone }));
 	const column = $derived(filter.column);
@@ -65,19 +62,12 @@
 	const none = $derived(filter.none);
 	const selected = $derived((column?.getFilterValue() as string[] | undefined) ?? []);
 
-	/** Whether the options are on screen (in the Filter menu or the pill's popover). */
-	let shown = $state(false);
-	let search = $state("");
-	/** What's searched for: once typing pauses. */
-	const term = new Debounced(() => search.trim(), searchDelay);
-
 	/** On the option list: it's searched while shown, and the search starts over each time. */
 	const whileShown: Attachment = () => {
-		shown = true;
+		search.open = true;
 		return () => {
-			shown = false;
-			search = "";
-			term.setImmediately("");
+			search.open = false;
+			search.clear();
 		};
 	};
 
@@ -104,33 +94,28 @@
 			.catch(() => {});
 	});
 
-	// Searching, while shown: right away when shown or the list's other filters change (a new
-	// `load`), and for each term. A failed search keeps what was found before.
-	const answer = resource(
-		[() => shown, () => load, () => term.current],
-		async (
-			[open, ask, words],
-			_,
-			{ data, signal },
-		): Promise<{ load: LoadRecordOptions; options: RecordOptions } | undefined> => {
-			if (!open) return data;
+	// Searched while shown (the Filter menu or the pill's popover), also when the list's other
+	// filters change (a new `load`).
+	const search = new SearchWhileOpen(
+		async (words) => {
+			const ask = load;
 			const options = await ask({ search: words, selected });
-			signal.throwIfAborted();
 			remember(options);
 			return { load: ask, options };
 		},
+		{ also: () => load },
 	);
 	/**
 	 * What was found, while the list's other filters are those it was found under: another's counts
 	 * (on opening the filter after they changed) aren't shown while the new ones come.
 	 */
-	const found = $derived(answer.current?.load === load ? answer.current.options : undefined);
-	const searching = $derived(term.pending || answer.loading);
+	const found = $derived(search.found?.load === load ? search.found.options : undefined);
+	const searching = $derived(search.searching);
 
 	/** The option for rows without a value, unless the search rules it out. */
 	const noneOption = $derived.by((): RecordOption | undefined => {
 		if (!none) return undefined;
-		const words = search.trim().toLowerCase();
+		const words = search.text.trim().toLowerCase();
 		if (words && !none.toLowerCase().includes(words)) return undefined;
 		return { value: noneToken, label: none, count: found?.none };
 	});
@@ -178,7 +163,7 @@
 
 {#snippet content()}
 	<Command.Root shouldFilter={false} {@attach whileShown}>
-		<Command.Input bind:value={search} placeholder={searchLabel} aria-label={searchLabel} />
+		<Command.Input bind:value={search.text} placeholder={searchLabel} aria-label={searchLabel} />
 		<Command.List aria-busy={searching || undefined}>
 			{#if !options.length}
 				<p class="py-6 text-center text-sm text-muted-foreground" role="status">
