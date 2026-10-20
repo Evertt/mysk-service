@@ -345,12 +345,13 @@ Already reported: the `$effect.pending()` leak, https://github.com/sveltejs/svel
   signal), and `refreshOnChange()` keeps the proxy only in a `$derived` of the component. Two
   components asking for the same record share one stream, as they should.
 - **Workaround:** the public API has no way to close a live query (the `pagehide`/`offline`
-  listeners close every live query, the page's own too), so the office avoids per-record live
-  queries: one feed of the tenant's changes per tab (`watchTenantChanges`, a key that never
-  changes), and components subscribe to their record in it for as long as they're mounted
-  (`src/lib/components/activity/change-feed.ts`). So far for `<ChangedElsewhere>` and the order's
-  and unit's module cards; the other `watchRecord` users and the portals still have a stream per
-  record. `orders.live.test.ts` checks that going from record to record opens no stream.
+  listeners close every live query, the page's own too), so the app has no live query per record:
+  each shell has one feed of the tenant's changes (the office's `watchTenantChanges`, the engineer
+  portal's `watchFieldChanges`, keys that never change), and components subscribe to their record
+  in it for as long as they're mounted (`src/lib/components/activity/change-feed.ts`).
+  `orders.live.test.ts` checks that going from record to record opens no stream. The live queries
+  of a whole type (`watchSchedule`, `watchEnergy`, the portals' `watchMyWork` and `watchPortal`)
+  still stay open after their page until a collection, one each at most.
 - **Expected / possible fix:** a live query's connection follows the effects that read it: when
   the last one is destroyed, interrupt the connection (after a tick, so a navigation that reads it
   again keeps it), keep the entry and its last value, and connect again on the next read. E.g.

@@ -1,6 +1,6 @@
 /**
  * The tenant's checklist templates: every office member reads them (the template pages, the card
- * on a unit's page); managers change them. A template's page watches it (`watchRecord`).
+ * on a unit's page); managers change them. A template's page watches it (`refreshOnRecordChange()`).
  */
 import { redirect } from "@sveltejs/kit";
 import * as v from "valibot";

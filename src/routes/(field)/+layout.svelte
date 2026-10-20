@@ -10,6 +10,7 @@
 
 	import { getCurrentUser } from "#lib/auth/session.remote.ts";
 	import BugReportButton from "#lib/bug-reports/bug-report-button.svelte";
+	import { provideChangeFeed } from "#lib/components/activity/change-feed.svelte.ts";
 
 	import BrandMark from "../brand-mark.svelte";
 	import { getViewAs } from "../demo.remote.ts";
@@ -17,10 +18,14 @@
 	import { useTenantOrderTypes } from "../tenant-order-types.ts";
 	import type { LayoutProps } from "./$types";
 	import HeaderMenu from "./header-menu.svelte";
+	import { watchFieldChanges } from "./my/portal.remote.ts";
 	import NotificationBell from "./notification-bell.svelte";
 	import PhoneFrame from "./phone-frame.svelte";
 
 	let { children }: LayoutProps = $props();
+
+	// One feed of the changes to the engineer's orders and units for the tab, which their cards follow.
+	provideChangeFeed(watchFieldChanges);
 
 	const orderTypes = useTenantOrderTypes();
 

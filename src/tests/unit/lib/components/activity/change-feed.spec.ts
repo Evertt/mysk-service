@@ -6,7 +6,7 @@
  */
 import { describe, expect, test, vi } from "vite-plus/test";
 
-import type { TenantChange, TenantChanges } from "#lib/components/activity/activity.remote.ts";
+import type { TenantChange, TenantChanges } from "#lib/activity/index.ts";
 import { ChangeFeed } from "#lib/components/activity/change-feed.ts";
 
 const order = { type: "order", id: 7 } as const;

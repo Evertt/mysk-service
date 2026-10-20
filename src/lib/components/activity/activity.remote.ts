@@ -8,10 +8,10 @@ import { and, count, desc, eq, gt, isNotNull, lt, max, or } from "drizzle-orm";
 import * as v from "valibot";
 
 import {
-	type ChangeType,
 	everyLoggedType,
 	subjectTypeLabel,
 	subjectTypes,
+	type TenantChange,
 } from "#lib/activity/index.ts";
 import { isDay } from "#lib/dates.ts";
 import { intlLocale } from "#lib/i18n/index.ts";
@@ -23,7 +23,7 @@ import { recordChangedAt } from "#lib/server/changes.ts";
 import { db } from "#lib/server/db/index.ts";
 import { activity } from "#lib/server/db/schema.ts";
 import { inDays } from "#lib/server/lists/index.ts";
-import { type FeedAnswer, live, liveFeed } from "#lib/server/live.ts";
+import { live, liveFeed } from "#lib/server/live.ts";
 import { forAnyRole, forMembers } from "#lib/server/remote-functions.ts";
 
 const allModules = appModules.map((module) => module.id);
@@ -128,15 +128,6 @@ const subjectSchema = v.object({
  */
 export const watchActivity = forMembers.query.live(() => live(loggedTypes));
 
-/**
- * When a record of the tenant (or one of its parts, logged with it as their parent) last changed
- * since the page opened it, for a card that shows it to refresh on (`refreshOnChange()`): a page
- * stays live by the subject it shows, also after another user's change, and a form or command
- * needs no list of what to refresh. For any role: it says only when, and the queries it has the
- * card refresh are gated again.
- */
-export const watchRecord = forAnyRole.query.live(subjectSchema, (subject) => live(subject));
-
 /** The latest entries about a subject of the tenant and its parts, e.g. an order and its lines. */
 export const getSubjectActivity = forMembers.query(
 	v.object({ type: v.picklist(loggedTypes), id: v.string() }),
@@ -191,25 +182,6 @@ export const getActivityFilters = forMembers.query(async () => {
 	};
 });
 
-/** A change to one of the tenant's records, as the office's tab hears of it (`watchTenantChanges`). */
-export interface TenantChange {
-	/** E.g. `order`. */
-	type: ChangeType;
-	/** The record's id, as text; `null` for a change announced for its type only. */
-	id: string | null;
-	/** What was done, e.g. `updated` (an activity action). */
-	action: string;
-	/** Who did it, `""` for the system. */
-	name: string;
-	/** Whether the signed-in user did it. */
-	mine: boolean;
-	/** When (epoch ms, the server's clock). */
-	at: number;
-}
-
-/** One of `watchTenantChanges`'s answers. */
-export type TenantChanges = FeedAnswer<TenantChange>;
-
 /**
  * Every change to the tenant's records, for the one live query an office tab shares
  * (`provideChangeFeed()`, `change-feed.svelte.ts`), which tells the components that watch a record
@@ -218,22 +190,25 @@ export type TenantChanges = FeedAnswer<TenantChange>;
  */
 export const watchTenantChanges = forMembers.query.live(() => {
 	const { user } = currentTenant();
-	return liveFeed((change): TenantChange => ({
-		type: change.type,
-		id: change.id ?? null,
-		action: change.action ?? "updated",
-		name: change.user?.name ?? "",
-		mine: change.user?.id === user.id,
-		at: change.at,
-	}));
+	return liveFeed(loggedTypes, (changes) =>
+		changes.map((change): TenantChange => ({
+			type: change.type,
+			id: change.id ?? null,
+			action: change.action ?? "updated",
+			name: change.user?.name ?? "",
+			mine: change.user?.id === user.id,
+			at: change.at,
+		})),
+	);
 });
 
 /**
  * When a record of the tenant last changed (epoch ms, 0 if not since the server started), for a
  * component that read it before the tab's feed was watching (`onRecordChange()`): on the page's
- * first load, and after the feed reconnected.
+ * first load, and after the feed reconnected. For any role (the engineer portal's feed too): it
+ * says only when, and the queries it has the component refresh are gated again.
  */
-export const getRecordChangedAt = forMembers.query.batch(subjectSchema, () => {
+export const getRecordChangedAt = forAnyRole.query.batch(subjectSchema, () => {
 	const { organizationId } = currentTenant();
 	return ({ type, id }) => recordChangedAt(organizationId, { type, id: String(id) });
 });

@@ -93,11 +93,12 @@ describe("watchSubject", () => {
 
 describe("watchEvery", () => {
 	it("yields every record's latest change of a burst, in the order they came", async () => {
-		const changes = watchEvery("org-m");
+		const changes = watchEvery("org-m", ["order", "customer"]);
 		announceChange("org-m", "order", { id: "1", action: "updated" });
 		announceChange("org-m", "customer", { id: "1", action: "updated" });
 		announceChange("org-m", "order", { id: "1", action: "scheduled" });
 		announceChange("org-m", "order");
+		announceChange("org-m", "engineer", { id: "1" });
 		announceChange("org-n", "order", { id: "2" });
 		const { value } = await changes.next();
 		expect(value?.map(({ type, id, action }) => [type, id, action])).toEqual([
@@ -110,7 +111,7 @@ describe("watchEvery", () => {
 	});
 
 	it("ends when stopped, also while waiting", async () => {
-		const changes = watchEvery("org-o");
+		const changes = watchEvery("org-o", ["order"]);
 		const waiting = changes.next();
 		changes.stop();
 		expect(await waiting).toEqual({ value: undefined, done: true });

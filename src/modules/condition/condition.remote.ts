@@ -38,7 +38,7 @@ export const getUnitCondition = query(v.string(), async (serialNumber) => {
 
 /**
  * Records a unit's condition in the office, or one of its components' (`componentId`), logged on
- * the unit, which its cards watch (`watchRecord`).
+ * the unit, which its cards watch (`refreshOnRecordChange()`).
  */
 export const recordCondition = form(conditionSchema, ({ serialNumber, componentId, ...input }) =>
 	recordOfficeCondition(serialNumber, input, componentId ?? null),

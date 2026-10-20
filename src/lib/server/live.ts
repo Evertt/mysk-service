@@ -12,7 +12,7 @@
  */
 import { getRequestEvent } from "$app/server";
 
-import { type ChangeType, isGone, type LoggedType } from "#lib/activity/index.ts";
+import { type ChangeType, type FeedAnswer, isGone, type LoggedType } from "#lib/activity/index.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
 import {
 	type Change,
@@ -61,31 +61,34 @@ export function live(
 /** How long a change stays in `liveFeed()`'s answers (ms). */
 export const FEED_WINDOW = 10_000;
 
-/** One of `liveFeed()`'s answers. */
-export interface FeedAnswer<T> {
-	/** When this stream started watching (epoch ms, the server's clock): it has every change since. */
-	since: number;
-	/** When it answered: the changes up to then are in this answer or an earlier one. */
-	now: number;
-	/** The changes of the last `FEED_WINDOW` ms, the latest of each record, oldest first. */
-	changes: T[];
+/** A change as a feed presents it: its record, and when it was made. */
+interface FeedChange {
+	type: string;
+	id: string | null;
+	at: number;
 }
 
 /**
- * Every change to the current tenant's records, for the one live query a tab shares
- * (`watchTenantChanges`), each as `present` makes it: no changes at first, then after each burst.
- * An answer repeats the changes of the last `FEED_WINDOW` ms, so a client that reads only the
- * latest answer (a live query's `current`) misses none that came in quick succession; it tells
- * them apart by when they were made.
+ * Every change to the current tenant's records of `types`, for the one live query a tab shares
+ * (`watchTenantChanges`, `watchFieldChanges`): no changes at first, then after each burst, as
+ * `present` makes them of its changes (leaving out those the user mustn't hear of: a burst with
+ * none left answers nothing). An answer repeats the changes of the last `FEED_WINDOW` ms, so a
+ * client that reads only the latest answer (a live query's `current`) misses none that came in
+ * quick succession; it tells them apart by when they were made.
  */
-export function liveFeed<T>(present: (change: Change) => T): AsyncGenerator<FeedAnswer<T>, void> {
+export function liveFeed<T extends FeedChange>(
+	types: readonly ChangeType[],
+	present: (changes: Change[]) => T[] | Promise<T[]>,
+): AsyncGenerator<FeedAnswer<T>, void> {
 	const { organizationId } = currentTenant();
 	const since = Date.now();
 	/** The changes in the window, by record, oldest first. */
-	const recent = new Map<string, Change>();
-	return answering(watchEvery(organizationId), (batch) => {
+	const recent = new Map<string, T>();
+	return answering(watchEvery(organizationId, types), async (batch) => {
+		const presented = batch ? await present(batch) : [];
+		if (batch && !presented.length) return skip;
 		const now = Date.now();
-		for (const change of batch ?? []) {
+		for (const change of presented) {
 			const key = `${change.type}/${change.id ?? ""}`;
 			recent.delete(key);
 			recent.set(key, change);
@@ -94,9 +97,12 @@ export function liveFeed<T>(present: (change: Change) => T): AsyncGenerator<Feed
 			if (change.at >= now - FEED_WINDOW) break;
 			recent.delete(key);
 		}
-		return { since, now, changes: [...recent.values()].map(present) };
+		return { since, now, changes: [...recent.values()] };
 	});
 }
+
+/** What a live query's `respond` returns to answer nothing this time (`answering()`). */
+const skip = Symbol("skip");
 
 /**
  * What every live query does with what it watches (`changes`): answers at first, then after each
@@ -104,7 +110,7 @@ export function liveFeed<T>(present: (change: Change) => T): AsyncGenerator<Feed
  */
 function answering<C, T>(
 	changes: AsyncGenerator<C, void> & { stop: () => void },
-	respond: (change: C | null) => T | Promise<T>,
+	respond: (change: C | null) => T | typeof skip | Promise<T | typeof skip>,
 ): AsyncGenerator<Awaited<T>, void> {
 	const event = getRequestEvent();
 	event.request.signal.addEventListener("abort", changes.stop, { once: true });
@@ -113,8 +119,12 @@ function answering<C, T>(
 	const again = inThisRequest();
 	return (async function* () {
 		try {
-			yield await respond(null);
-			for await (const change of changes) yield await again(() => respond(change));
+			// The first answer is never skipped.
+			yield (await respond(null)) as Awaited<T>;
+			for await (const change of changes) {
+				const answer = await again(() => respond(change));
+				if (answer !== skip) yield answer as Awaited<T>;
+			}
 		} finally {
 			changes.stop();
 			closed();

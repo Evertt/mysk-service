@@ -8,6 +8,8 @@
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { getCurrentUser } from "#lib/auth/session.remote.ts";
+import type { Change } from "#lib/server/changes.ts";
+import { fieldChanges } from "#routes/(field)/my/changes.server.ts";
 import {
 	addNote,
 	completeWork,
@@ -15,6 +17,7 @@ import {
 	getMyWork,
 	logHours,
 	startWork,
+	watchFieldChanges,
 } from "#routes/(field)/my/portal.remote.ts";
 import {
 	as,
@@ -180,5 +183,39 @@ describe("South's order", () => {
 			}
 		});
 		expect(await Promise.all([southern, own].map((order) => snapshot(order.id)))).toEqual(before);
+	});
+});
+
+describe("the portal's feed of changes", () => {
+	const change = (type: Change["type"], id: number, action = "updated"): Change => ({
+		type,
+		id: String(id),
+		action,
+		user: { id: "someone-else", name: "Pieter" },
+		at: 1,
+	});
+
+	test("starts with none", async () => {
+		expect(await as(erik, () => data(watchFieldChanges))).toMatchObject({ changes: [] });
+	});
+
+	test("tells the engineer of their own orders and of units, not who did it", async () => {
+		const [others] = await rows<{ id: number }>(
+			`select id from "order" where organization_id = ? and engineer_id is not ? limit 1`,
+			[northId, mine],
+		);
+		const told = await as(erik, () =>
+			fieldChanges([
+				change("order", own.id, "scheduled"),
+				change("order", others.id),
+				change("order", southern.id),
+				change("equipment", 1, "deleted"),
+				change("customer", 1),
+			]),
+		);
+		expect(told).toEqual([
+			{ type: "order", id: String(own.id), action: "updated", name: "", mine: false, at: 1 },
+			{ type: "equipment", id: "1", action: "deleted", name: "", mine: false, at: 1 },
+		]);
 	});
 });

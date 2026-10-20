@@ -110,12 +110,15 @@ every request inside one Durable Object, `AppDatabase`, whose SQLite is the app'
     `watchSchedule`, the portals' `watchMyWork` and `watchPortal`);
   - `live(watched, answer)` answers what `answer` makes of nothing first (`null`: a check that
     refuses goes there), then of each change, to records of some types or to one record, with who
-    changed it (`watchRecordChanges`, for `<ChangedElsewhere>` on an order's and a customer's pages;
-    `getSimulation`).
+    changed it (`getSimulation`);
+  - `liveFeed(types, present)` answers every change to the tenant's records, for a shell's one
+    feed (the office's `watchTenantChanges`, the engineer portal's `watchFieldChanges`), which a
+    record's cards and `<ChangedElsewhere>` follow with `refreshOnRecordChange()` /
+    `onRecordChange()` (`#lib/components/activity/change-feed.svelte.ts`): no live query per record.
 
   The page refreshes with `refreshOnChange(watchX, () => getX().refresh())`
   (`src/lib/hooks/refresh-on-change.svelte.ts`): not on the first answer, unless it is later than
-  the data's read time (`readAt(types)` on the server; the schedule's board and month pass it).
+  the data's read time (`readAt()` on the server; the schedule's board and month pass it).
   Record types are typed (`ChangeType`): a type a module announces but never logs, like energy's
   readings, is in its manifest's `liveTypes`. In memory: on Cloudflare one object serves every
   request; on Node, one process.

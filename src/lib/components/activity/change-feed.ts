@@ -9,9 +9,7 @@
  * it, and over HTTP/1.1 they took the connections the next page needed
  * (`docs/upstream-bugs/README.md`, 14). A listener comes and goes with its component instead.
  */
-import type { LoggedType } from "#lib/activity/index.ts";
-
-import type { TenantChange, TenantChanges } from "./activity.remote.ts";
+import type { LoggedType, TenantChange, TenantChanges } from "#lib/activity/index.ts";
 
 /** A record of the tenant, as the activity log names it. */
 export interface Subject {

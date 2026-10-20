@@ -1,20 +1,24 @@
 /**
- * The office tab's one feed of the tenant's changes, for the components that follow a record:
- * `provideChangeFeed()` in the office's layout opens it (`watchTenantChanges`), and
+ * A tab's one feed of the tenant's changes, for the components that follow a record:
+ * `provideChangeFeed()` in a shell's layout opens it (the office's `watchTenantChanges`, the
+ * engineer portal's `watchFieldChanges`), and
  * `onRecordChange()` / `refreshOnRecordChange()` subscribe a component to a record for as long as
  * it's mounted. See `change-feed.ts` for why one feed.
  */
 import { createContext, untrack } from "svelte";
 
-import { isGone } from "#lib/activity/index.ts";
+import { isGone, type TenantChanges } from "#lib/activity/index.ts";
 
-import { getRecordChangedAt, watchTenantChanges } from "./activity.remote.ts";
+import { getRecordChangedAt } from "./activity.remote.ts";
 import { type ChangeListener, ChangeFeed, type Subject } from "./change-feed.ts";
 
 const [getChangeFeed, setChangeFeed] = createContext<ChangeFeed>();
 
-/** Opens the tab's feed for the component's children (the office shell). */
-export function provideChangeFeed() {
+/**
+ * Opens the tab's feed for the component's children (a shell): `watch`, the shell's live query of
+ * the changes its user may hear of.
+ */
+export function provideChangeFeed(watch: () => { readonly current: TenantChanges | undefined }) {
 	const feed = setChangeFeed(
 		new ChangeFeed(async (subject) => {
 			// Asked afresh: a cached answer would be from an earlier visit.
@@ -24,7 +28,7 @@ export function provideChangeFeed() {
 		}),
 	);
 	// Made once, so its key and its stream stay as long as the shell.
-	const changes = watchTenantChanges();
+	const changes = watch();
 	$effect(() => {
 		const answer = changes.current;
 		if (answer) untrack(() => feed.receive(answer));
@@ -34,7 +38,8 @@ export function provideChangeFeed() {
 /**
  * Calls `listener` on each change to the record `subject` gives (none: no record yet), while the
  * component is mounted (see `ChangeFeed.subscribe()` for `readTime`). Call it while a component
- * initializes, inside the office shell. `listener` runs untracked.
+ * initializes, inside a shell with a feed (the office, the engineer portal). `listener` runs
+ * untracked.
  */
 export function onRecordChange(
 	subject: () => Subject | false | null | undefined,

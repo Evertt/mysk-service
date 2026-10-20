@@ -117,7 +117,7 @@ export const findArticles = query(v.pipe(v.string(), v.maxLength(100)), async (s
 
 /**
  * Adds a component to a unit, or changes one (with its id). Like the others below, logged on the
- * unit, which its cards watch (`watchRecord`).
+ * unit, which its cards watch (`refreshOnRecordChange()`).
  */
 export const saveComponent = form(componentSchema, async ({ serialNumber, id, ...input }) => {
 	const fields = { ...input, materialId: input.materialId ?? null };

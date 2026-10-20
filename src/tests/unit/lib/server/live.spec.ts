@@ -7,7 +7,8 @@ import { AsyncLocalStorage } from "node:async_hooks";
 
 import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
-import { announceChange } from "#lib/server/changes.ts";
+import type { FeedAnswer } from "#lib/activity/index.ts";
+import { announceChange, type Change } from "#lib/server/changes.ts";
 import type { DurableRequest } from "#lib/server/db/durable.ts";
 import { FEED_WINDOW, live, liveFeed, readAt } from "#lib/server/live.ts";
 
@@ -146,48 +147,70 @@ describe("live(watched, answer)", () => {
 	});
 });
 
-describe("liveFeed(present)", () => {
+describe("liveFeed(types, present)", () => {
 	beforeEach(() => signIn("org-feed"));
 
-	test("answers no changes at first, then each burst's, as `present` makes them", async () => {
+	/** A change as the specs present it: its record and what was done. */
+	const shown = (change: Change) => ({
+		type: change.type,
+		id: change.id ?? null,
+		at: change.at,
+		action: change.action,
+	});
+	const all = (changes: Change[]) => changes.map(shown);
+	/** An answer's records, as `type/id`. */
+	const records = (answer: IteratorResult<FeedAnswer<ReturnType<typeof shown>>, void>) =>
+		answer.done ? undefined : answer.value.changes.map((change) => `${change.type}/${change.id}`);
+
+	test("answers no changes at first, then each burst's of its types, as `present` makes them", async () => {
 		vi.useFakeTimers({ now: 3_000_000, toFake: ["Date"] });
 		announceChange("org-feed", "order", { id: "1" });
-		const answers = liveFeed((change) => `${change.type}/${change.id}`);
+		const answers = liveFeed(["order"], all);
 		expect((await answers.next()).value).toEqual({ since: 3_000_000, now: 3_000_000, changes: [] });
 
 		vi.setSystemTime(3_000_010);
 		const pending = answers.next();
 		announceChange("org-feed", "order", { id: "2" });
+		announceChange("org-feed", "energy_reading");
 		announceChange("org-elsewhere", "order", { id: "3" });
-		expect((await pending).value).toEqual({
-			since: 3_000_000,
-			now: 3_000_010,
-			changes: ["order/2"],
-		});
+		const answer = await pending;
+		expect(answer.value).toMatchObject({ since: 3_000_000, now: 3_000_010 });
+		expect(records(answer)).toEqual(["order/2"]);
 	});
 
 	test("repeats the changes of its window, the latest of each record, then lets them go", async () => {
 		vi.useFakeTimers({ now: 4_000_000, toFake: ["Date"] });
-		const answers = liveFeed((change) => [`${change.type}/${change.id}`, change.action]);
+		const answers = liveFeed(["order", "customer", "engineer"], all);
 		await answers.next();
 		announceChange("org-feed", "order", { id: "1", action: "updated" });
-		expect((await answers.next()).value?.changes).toEqual([["order/1", "updated"]]);
+		expect(records(await answers.next())).toEqual(["order/1"]);
 
 		vi.setSystemTime(4_000_000 + FEED_WINDOW - 1);
 		announceChange("org-feed", "customer", { id: "1", action: "updated" });
 		announceChange("org-feed", "order", { id: "1", action: "scheduled" });
-		expect((await answers.next()).value?.changes).toEqual([
-			["customer/1", "updated"],
-			["order/1", "scheduled"],
-		]);
+		const both = await answers.next();
+		expect(records(both)).toEqual(["customer/1", "order/1"]);
+		expect(both.value?.changes[1]).toMatchObject({ action: "scheduled" });
 
 		vi.setSystemTime(4_000_000 + 2 * FEED_WINDOW);
 		announceChange("org-feed", "engineer", { id: "1", action: "updated" });
-		expect((await answers.next()).value?.changes).toEqual([["engineer/1", "updated"]]);
+		expect(records(await answers.next())).toEqual(["engineer/1"]);
+	});
+
+	test("answers nothing for a burst `present` leaves nothing of", async () => {
+		const answers = liveFeed(["order"], (changes) =>
+			all(changes.filter((change) => change.id === "mine")),
+		);
+		await answers.next();
+		const pending = answers.next();
+		announceChange("org-feed", "order", { id: "theirs" });
+		expect(await nextOf(answers, pending)).toBe("waiting");
+		announceChange("org-feed", "order", { id: "mine" });
+		expect(records(await pending)).toEqual(["order/mine"]);
 	});
 
 	test("stops when its request ends", async () => {
-		const answers = liveFeed((change) => change);
+		const answers = liveFeed(["order"], all);
 		await answers.next();
 		const waiting = answers.next();
 		request.abort();

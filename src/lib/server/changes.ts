@@ -94,14 +94,14 @@ export const watchSubject = (organizationId: string, subject: { type: LoggedType
 	);
 
 /**
- * Like `watchChanges()`, for all of the organization's changes, losing none of their records:
- * yields the changes announced since it last yielded, the latest of each record (and of each type,
- * for those announced without one). For the one live query a tab shares (`liveFeed()`).
+ * Like `watchChanges()`, losing none of the records: yields the changes of `types` announced since
+ * it last yielded, the latest of each record (and of each type, for those announced without one).
+ * For the one live query a tab shares (`liveFeed()`).
  */
-export const watchEvery = (organizationId: string) =>
+export const watchEvery = (organizationId: string, types: readonly ChangeType[]) =>
 	watch(
 		organizationId,
-		() => true,
+		(change) => types.includes(change.type),
 		(change) => `${change.type}/${change.id ?? ""}`,
 	);
 

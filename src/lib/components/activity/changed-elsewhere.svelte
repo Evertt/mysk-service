@@ -12,10 +12,10 @@
 	import HistoryIcon from "@lucide/svelte/icons/history";
 	import RefreshIcon from "@lucide/svelte/icons/refresh-ccw";
 
+	import type { TenantChange } from "#lib/activity/index.ts";
 	import { Clock } from "#lib/hooks/clock.svelte.ts";
 	import { formatTimeAgo } from "#lib/i18n/index.ts";
 
-	import type { TenantChange } from "./activity.remote.ts";
 	import { onRecordChange } from "./change-feed.svelte.ts";
 	import type { WatchedType } from "./watched.ts";
 
