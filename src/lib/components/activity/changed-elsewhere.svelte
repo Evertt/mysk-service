@@ -11,6 +11,7 @@
 	import HistoryIcon from "@lucide/svelte/icons/history";
 	import RefreshIcon from "@lucide/svelte/icons/refresh-ccw";
 
+	import { Clock } from "#lib/hooks/clock.svelte.ts";
 	import { formatTimeAgo } from "#lib/i18n/index.ts";
 
 	import { type RecordChange, watchRecordChanges } from "./activity.remote.ts";
@@ -42,13 +43,7 @@
 	});
 
 	// "1 minute ago" moves on while it shows.
-	let now = $state(Temporal.Now.instant());
-	$effect(() => {
-		if (!change) return;
-		now = Temporal.Now.instant();
-		const timer = setInterval(() => (now = Temporal.Now.instant()), 30_000);
-		return () => clearInterval(timer);
-	});
+	const clock = new Clock(30_000);
 
 	let reloading = $state(false);
 	async function reload() {
@@ -76,7 +71,7 @@
 							? m.activity_deleted_elsewhere({ name: change.name })
 							: m.activity_changed_elsewhere({ name: change.name })}
 						<span class="font-normal text-muted-foreground">
-							· <time datetime={change.at.toString()}>{formatTimeAgo(change.at, now)}</time>
+							· <time datetime={change.at.toString()}>{formatTimeAgo(change.at, clock.now)}</time>
 						</span>
 					</p>
 					<p class="text-muted-foreground">

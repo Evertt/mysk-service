@@ -19,8 +19,8 @@
 	import { BitsConfig } from "bits-ui";
 	import type { Snippet } from "svelte";
 	import type { Attachment } from "svelte/attachments";
-	import { createSubscriber } from "svelte/reactivity";
 
+	import { Clock } from "#lib/hooks/clock.svelte.ts";
 	import { formatTime } from "#lib/i18n/index.ts";
 
 	import AppToaster from "../app-toaster.svelte";
@@ -35,14 +35,8 @@
 	};
 
 	/** The status bar's clock, read anew every 15 seconds while it's shown. */
-	const ticks = createSubscriber((update) => {
-		const timer = setInterval(update, 15_000);
-		return () => clearInterval(timer);
-	});
-	const clock = $derived.by(() => {
-		ticks();
-		return formatTime(Temporal.Now.instant());
-	});
+	const ticks = new Clock(15_000);
+	const clock = $derived(formatTime(ticks.now));
 </script>
 
 <div class="phone-stage" data-phone-stage>
