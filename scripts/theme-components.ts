@@ -1,6 +1,7 @@
 /**
  * Makes the shadcn-svelte components in `src/lib/components/ui` themeable, and lists their parts
- * for the theme types. Run it after adding or updating components: `pnpm themes:sync`.
+ * for the theme types. Run it after adding or updating components: `pnpm themes:sync`
+ * (`theme-components.spec.ts` fails until you have).
  *
  * For every element with a `data-slot`, the theme's classes for that slot are merged in between
  * the component's own classes and the consumer's `class`:
@@ -8,191 +9,227 @@
  *   class={cn("…shadcn classes…", className)}
  *   → class={cn("…shadcn classes…", theme.classes("card-header"), className)}
  *
- * Elements that are our own components (`<Input>`, `<Dialog.Content>`, …) are skipped, since those
- * theme themselves. Already-themed elements are left alone, so the script can be re-run. Classes
- * per variant or size (e.g. `theme.classes("button", { variant, size })`) are added by hand once.
+ * It reads the components with Svelte's own parser and edits them with `magic-string`, so only
+ * those spots change. Elements that are our own components (`<Input>`, `<Dialog.Content>`, …) are
+ * skipped, since those theme themselves. Already-themed elements are left alone, so the script can
+ * be re-run. Classes per variant or size (e.g. `theme.classes("button", { variant, size })`) are
+ * added by hand once.
+ *
+ * Why not plain CSS (`[data-theme=x] [data-slot=y] { @apply … }`)? A theme's classes must beat the
+ * component's own and lose to the `class` its user passes. In CSS both of those are utilities of
+ * the same specificity, so a rule can't sit between them; only `cn()` merging the class strings in
+ * that order can.
  */
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
+import MagicString from "magic-string";
+import { type AST, parse } from "svelte/compiler";
+
 const uiDir = "src/lib/components/ui";
 const slotsFile = "src/lib/themes/slots.ts";
 
-const files = readdirSync(uiDir, { recursive: true, encoding: "utf8" })
-	.filter((file) => file.endsWith(".svelte"))
-	.map((file) => join(uiDir, file))
-	.sort();
+// The parts of the AST this reads, loosely: estree and Svelte nodes alike.
+interface Node {
+	type: string;
+	start: number;
+	end: number;
+	[key: string]: unknown;
+}
 
-/** Index of the bracket that closes the one at `start`, skipping strings and nested brackets. */
-function matchBracket(source: string, start: number): number {
-	const open = source[start];
-	const close = { "(": ")", "{": "}", "[": "]" }[open]!;
-	let depth = 0;
-	for (let i = start; i < source.length; i++) {
-		const char = source[i];
-		if (char === '"' || char === "'" || char === "`") {
-			i = source.indexOf(char, i + 1);
-			continue;
+const isNode = (value: unknown): value is Node =>
+	typeof value === "object" && value !== null && typeof (value as Node).type === "string";
+
+/** Every node under `root`, depth first. */
+function* nodes(root: unknown): Generator<Node> {
+	if (Array.isArray(root)) {
+		for (const item of root) yield* nodes(item);
+	} else if (isNode(root)) {
+		yield root;
+		for (const [key, value] of Object.entries(root)) {
+			if (key !== "metadata" && typeof value === "object") yield* nodes(value);
 		}
-		if (char === open) depth++;
-		else if (char === close && --depth === 0) return i;
 	}
-	throw new Error(`Unbalanced ${open} at ${start}`);
 }
 
-/** Index of the `>` that ends the tag starting at `start`. */
-function tagEnd(source: string, start: number): number {
-	for (let i = start; i < source.length; i++) {
-		const char = source[i];
-		if (char === "{") i = matchBracket(source, i);
-		else if (char === '"') i = source.indexOf('"', i + 1);
-		else if (char === ">") return i;
-	}
-	throw new Error(`Unterminated tag at ${start}`);
+const svelteFiles = (dir: string) =>
+	readdirSync(dir, { recursive: true, encoding: "utf8" })
+		.filter((file) => file.endsWith(".svelte"))
+		.map((file) => join(dir, file))
+		.sort();
+
+/** A string literal's value: `"card"`, or the default in `"data-slot": dataSlot = "input"`. */
+function literal(node: unknown): string | undefined {
+	if (!isNode(node)) return undefined;
+	if (node.type === "Literal" && typeof node.value === "string") return node.value;
+	if (node.type === "AssignmentPattern") return literal(node.right);
+	return undefined;
 }
 
-/** Adds `expr` to a `cn(…)` call: before the consumer's `className`, or else at the end. */
-function addToCn(call: string, expr: string): string {
-	const inner = call.slice(3, -1);
-	const className = /(,\s*)className(\s*,?\s*)$/.exec(inner);
-	if (className) {
-		const before = inner.slice(0, className.index);
-		return `cn(${before}${className[1]}${expr}${className[1]}className${className[2]})`;
-	}
-	return `cn(${inner.replace(/,?\s*$/, "")}, ${expr})`;
-}
-
-/** Rewrites the `class` in `tag` (a static string or a `cn()` call) to include `expr`. */
-function themeClass(tag: string, expr: string): string | undefined {
-	if (tag.includes("theme.classes(")) return undefined;
-	const staticClass = /\bclass="([^"]*)"/.exec(tag);
-	if (staticClass) {
-		return tag.replace(staticClass[0], `class={cn("${staticClass[1]}", ${expr})}`);
-	}
-	const cnStart = tag.search(/\bclass(?:=\{|: )cn\(/);
-	if (cnStart === -1) return undefined;
-	const callStart = tag.indexOf("cn(", cnStart);
-	const callEnd = matchBracket(tag, callStart + 2);
-	return (
-		tag.slice(0, callStart) +
-		addToCn(tag.slice(callStart, callEnd + 1), expr) +
-		tag.slice(callEnd + 1)
+const propertyNamed = (object: Node, name: string) =>
+	(object.properties as Node[]).find(
+		(property) =>
+			property.type === "Property" &&
+			((property.key as Node).name === name || literal(property.key) === name),
 	);
+
+const isObject = (node: Node) => node.type === "ObjectExpression" || node.type === "ObjectPattern";
+
+/**
+ * The `data-slot` of a template element, a props object or the props' destructuring (with a
+ * default): a name, `dataSlot`, or none.
+ */
+function slotOf(node: Node): string | { dynamic: true } | undefined {
+	if (isObject(node)) return literal(propertyNamed(node, "data-slot")?.value);
+	const attribute = (node.attributes as Node[]).find(
+		(attribute) => attribute.type === "Attribute" && attribute.name === "data-slot",
+	);
+	const value = attribute?.value;
+	if (Array.isArray(value) && value.length === 1 && value[0].type === "Text") return value[0].data;
+	if (isNode(value) && (value.expression as Node).name === "dataSlot") return { dynamic: true };
+	return undefined;
 }
 
-/** Identifiers imported from our own components; tags using them theme themselves. */
-function ownComponents(source: string): Set<string> {
+/** Identifiers imported from our own components; elements using them theme themselves. */
+function ownComponents(script: AST.Script | null): Set<string> {
 	const names = new Set<string>();
-	const imports = source.matchAll(
-		/import\s+(?:\*\s+as\s+(\w+)|(\w+)|\{([^}]*)\})\s+from\s+"([^"]+)"/g,
-	);
-	for (const [, namespace, defaultName, named, path] of imports) {
-		const isOwn =
-			path.includes("/components/ui/") || (path.startsWith("./") && path.endsWith(".svelte"));
-		if (!isOwn) continue;
-		for (const name of [namespace, defaultName, ...(named?.split(",") ?? [])]) {
-			const local = name
-				?.trim()
-				.split(/\s+as\s+/)
-				.at(-1);
-			if (local && !local.startsWith("type ")) names.add(local);
-		}
+	for (const node of script?.content.body ?? []) {
+		if (node.type !== "ImportDeclaration") continue;
+		const path = String(node.source.value);
+		if (!path.includes("/components/ui/") && !(path.startsWith("./") && path.endsWith(".svelte")))
+			continue;
+		for (const specifier of node.specifiers) names.add(specifier.local.name);
 	}
 	return names;
 }
 
-function themeFile(source: string): { source: string; count: number } {
+/**
+ * Merges `expr` into a class: into a `cn(…)` call (before the consumer's `className`, or else at
+ * the end), or turns a static `class="…"` into one. False for any other class, or one already
+ * themed.
+ */
+function themeClass(code: MagicString, source: string, value: unknown, expr: string): boolean {
+	if (Array.isArray(value) && value.length === 1 && value[0].type === "Text") {
+		const text = value[0] as Node;
+		code.overwrite(text.start - 1, text.end + 1, `{cn(${JSON.stringify(text.data)}, ${expr})}`);
+		return true;
+	}
+	const call = isNode(value) && value.type === "ExpressionTag" ? value.expression : value;
+	if (!isNode(call) || call.type !== "CallExpression" || (call.callee as Node).name !== "cn") {
+		return false;
+	}
+	if (source.slice(call.start, call.end).includes("theme.classes(")) return false;
+	const args = call.arguments as Node[];
+	const last = args.at(-1);
+	if (!last) code.appendLeft(call.end - 1, expr);
+	else if (last.type === "Identifier" && last.name === "className")
+		code.appendLeft(last.start, `${expr}, `);
+	else code.appendLeft(last.end, `, ${expr}`);
+	return true;
+}
+
+/** Adds the theme's classes to every slotted element of a component; how many it themed. */
+export function themeComponent(source: string): { source: string; count: number } {
+	const ast = parse(source, { modern: true });
+	const code = new MagicString(source);
+	const own = ownComponents(ast.instance);
 	let count = 0;
-	const own = ownComponents(source);
-	const markupStart = source.lastIndexOf("</script>");
+
+	const theme = (node: Node, classValue: unknown) => {
+		const slot = slotOf(node);
+		if (!slot) return;
+		const expr =
+			typeof slot === "string" ? `theme.classes("${slot}")` : "theme.classes(dataSlot as Slot)";
+		if (themeClass(code, source, classValue, expr)) count++;
+	};
 
 	// Elements in the markup: `data-slot="name"` or `data-slot={dataSlot}`.
-	const slotPattern = /data-slot=(?:"([a-z-]+)"|\{dataSlot\})/g;
-	for (let match; (match = slotPattern.exec(source));) {
-		if (match.index < markupStart) continue;
-		const start = source.lastIndexOf("<", match.index);
-		const tagName = /^<([\w.]+)/.exec(source.slice(start))?.[1] ?? "";
-		if (own.has(tagName.split(".")[0])) continue;
-		const end = tagEnd(source, start);
-		const expr = match[1] ? `theme.classes("${match[1]}")` : "theme.classes(dataSlot as Slot)";
-		const themed = themeClass(source.slice(start, end + 1), expr);
-		if (!themed) continue;
-		source = source.slice(0, start) + themed + source.slice(end + 1);
-		slotPattern.lastIndex = start + themed.length;
-		count++;
+	for (const node of nodes(ast.fragment)) {
+		if (!["RegularElement", "SvelteElement", "Component"].includes(node.type)) continue;
+		if (node.type === "Component" && own.has(String(node.name).split(".")[0])) continue;
+		const classAttribute = (node.attributes as Node[]).find(
+			(attribute) => attribute.type === "Attribute" && attribute.name === "class",
+		);
+		if (classAttribute) theme(node, classAttribute.value);
 	}
 
 	// Props objects in the script: `{ class: cn(…), "data-slot": "name", … }`.
-	const objectPattern = /"data-slot": "([a-z-]+)"/g;
-	for (let match; (match = objectPattern.exec(source));) {
-		if (match.index > markupStart) continue;
-		let start = match.index;
-		for (let depth = 0; start > 0; start--) {
-			if (source[start] === "}") depth++;
-			else if (source[start] === "{" && depth-- === 0) break;
-		}
-		const end = matchBracket(source, start);
-		const themed = themeClass(source.slice(start, end + 1), `theme.classes("${match[1]}")`);
-		if (!themed) continue;
-		source = source.slice(0, start) + themed + source.slice(end + 1);
-		objectPattern.lastIndex = start + themed.length;
-		count++;
+	for (const node of nodes(ast.instance?.content)) {
+		if (node.type !== "ObjectExpression") continue;
+		const classProperty = propertyNamed(node, "class");
+		if (classProperty) theme(node, classProperty.value);
 	}
 
 	if (count === 0) return { source, count };
 
-	// Imports and `const theme = useTheme()` in the instance script (the one with `$props()`).
-	const props = source.indexOf("$props();");
-	const scriptStart = source.lastIndexOf('<script lang="ts">', props) + '<script lang="ts">'.length;
+	// `const theme = useTheme()` after `$props()`, and the imports, in the instance script.
+	const script = ast.instance!.content;
+	const imported = new Set(
+		[...(ast.module?.content.body ?? []), ...script.body].flatMap((node) =>
+			node.type === "ImportDeclaration" ? node.specifiers.map((s) => s.local.name) : [],
+		),
+	);
+	const props = script.body.find(
+		(node) =>
+			node.type === "VariableDeclaration" &&
+			node.declarations.some(
+				(declaration) =>
+					declaration.init?.type === "CallExpression" &&
+					(declaration.init.callee as Node).name === "$props",
+			),
+	) as Node | undefined;
+	if (!props) throw new Error("A themed component needs `$props()` in its instance script");
+	if (!source.includes("useTheme()")) code.appendLeft(props.end, "\n\n\tconst theme = useTheme();");
 	const imports = [
-		!source.includes("useTheme") && 'import { useTheme } from "#lib/themes/context.ts";',
-		source.includes("as Slot)") &&
-			!source.includes("type Slot") &&
+		!imported.has("useTheme") && 'import { useTheme } from "#lib/themes/context.ts";',
+		code.toString().includes("as Slot)") &&
+			!imported.has("Slot") &&
 			'import type { Slot } from "#lib/themes/types.ts";',
-		!/import \{[^}]*\bcn\b/.test(source) && 'import { cn } from "#lib/utils.ts";',
+		!imported.has("cn") && 'import { cn } from "#lib/utils.ts";',
 	].filter(Boolean);
-	if (!source.includes("useTheme()")) {
-		const lineEnd = source.indexOf("\n", props);
-		source = `${source.slice(0, lineEnd)}\n\n\tconst theme = useTheme();${source.slice(lineEnd)}`;
-	}
-	if (imports.length) {
-		source = `${source.slice(0, scriptStart)}\n\t${imports.join("\n\t")}${source.slice(scriptStart)}`;
-	}
-	return { source, count };
+	if (imports.length) code.appendLeft(script.start, `\n\t${imports.join("\n\t")}`);
+
+	return { source: code.toString(), count };
 }
 
-for (const file of files) {
-	const original = readFileSync(file, "utf8");
-	const { source, count } = themeFile(original);
-	if (source !== original) {
-		writeFileSync(file, source);
-		console.log(`${file}: themed ${count} element(s)`);
+/**
+ * The slot names in `files`, so app components can define themeable parts too (they call
+ * `theme.classes()` themselves).
+ */
+export function slotNames(files: string[]): string[] {
+	const slots = new Set<string>();
+	for (const file of files) {
+		const ast = parse(readFileSync(file, "utf8"), { modern: true });
+		for (const node of nodes([ast.fragment, ast.instance?.content, ast.module?.content])) {
+			const slot = isObject(node) || Array.isArray(node.attributes) ? slotOf(node) : undefined;
+			if (typeof slot === "string") slots.add(slot);
+		}
 	}
+	return [...slots].sort();
 }
 
-// Slot names from all of `src`, so app components can define themeable parts too (they call
-// `theme.classes()` themselves).
-const slots = new Set<string>();
-for (const file of readdirSync("src", { recursive: true, encoding: "utf8" })) {
-	if (!file.endsWith(".svelte")) continue;
-	const source = readFileSync(join("src", file), "utf8");
-	for (const [, slot] of source.matchAll(
-		/(?:data-slot="|"data-slot": (?:dataSlot = )?")([a-z-]+)"/g,
-	)) {
-		slots.add(slot);
-	}
-}
-
-writeFileSync(
-	slotsFile,
+/** `slots.ts` for these names. */
+export const slotsModule = (slots: string[]) =>
 	`// Generated by \`pnpm themes:sync\` (scripts/theme-components.ts) from the \`data-slot\`
 // names in \`src\`. Don't edit by hand.
 
 export type GeneratedSlot =
-${[...slots]
-	.sort()
-	.map((slot) => `\t| "${slot}"`)
-	.join("\n")};
-`,
-);
-console.log(`${slotsFile}: ${slots.size} slots`);
+${slots.map((slot) => `\t| "${slot}"`).join("\n")};
+`;
+
+export const uiFiles = () => svelteFiles(uiDir);
+export const srcFiles = () => svelteFiles("src");
+
+if (import.meta.main) {
+	for (const file of uiFiles()) {
+		const original = readFileSync(file, "utf8");
+		const { source, count } = themeComponent(original);
+		if (source !== original) {
+			writeFileSync(file, source);
+			console.log(`${file}: themed ${count} element(s)`);
+		}
+	}
+	const slots = slotNames(srcFiles());
+	writeFileSync(slotsFile, slotsModule(slots));
+	console.log(`${slotsFile}: ${slots.length} slots`);
+}

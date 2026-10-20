@@ -19,7 +19,7 @@
 	bind:this={ref}
 	data-slot="breadcrumb"
 	aria-label={m.common_breadcrumb()}
-	class={cn(className, theme.classes("breadcrumb"))}
+	class={cn(theme.classes("breadcrumb"), className)}
 	{...restProps}
 >
 	{@render children?.()}
