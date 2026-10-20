@@ -6,7 +6,7 @@ import { slotContributions } from "#lib/extensions/contributions.gen.ts";
 import { generatedModuleIds } from "#lib/modules/ids.gen.ts";
 import { moduleGraph, moduleIds } from "#lib/modules/ids.ts";
 import { manifests } from "#lib/modules/manifests.gen.ts";
-import { type AppModule, modules } from "#lib/modules/manifests.ts";
+import { type AppModule, modulePages, modules } from "#lib/modules/manifests.ts";
 
 test("the registry has the modules of the plain list of ids, in order", () => {
 	expect(modules.map((module) => module.id)).toEqual([...moduleIds]);
@@ -57,10 +57,15 @@ test("module ids are unique", () => {
 	expect(new Set(ids).size).toBe(ids.length);
 });
 
-test.each(modules)("the $id module's route is a page", ({ route }) => {
-	expect(existsSync(new URL(`../../../../routes${route}/+page.svelte`, import.meta.url))).toBe(
-		true,
-	);
+test.each(modules)("the $id module's pages are pages, and its portal entry has one", ({ id }) => {
+	const pages = Object.values(modulePages[id]);
+	for (const route of pages) {
+		expect(existsSync(new URL(`../../../../routes${route}/+page.svelte`, import.meta.url))).toBe(
+			true,
+		);
+	}
+	const manifest: AppModule = modules.find((module) => module.id === id)!;
+	expect(Boolean(manifest.portal)).toBe(Boolean(modulePages[id].portal));
 });
 
 test("the modules' contributions are in registry order", () => {

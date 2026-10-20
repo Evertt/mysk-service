@@ -8,9 +8,6 @@ export default defineModule({
 	id: "partner-programme",
 	label: m.partners_module_name,
 	description: m.partners_module_description,
-	route: "/(app)/(modules)/partner-programme",
-	// Managers set each year's levels and categories there.
-	settings: "/(app)/(modules)/partner-programme/years",
 	icon: AwardIcon,
 	subjects: partnerSubjects,
 	actions: partnerActions,
@@ -18,7 +15,6 @@ export default defineModule({
 	requires: ["invoices"],
 	// A partner's own bonus, wallet and choice, in the customer portal.
 	portal: {
-		route: "/(customer)/(modules)/partner-programme/portal",
 		label: m.partners_portal_label,
 		icon: AwardIcon,
 	},

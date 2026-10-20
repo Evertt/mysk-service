@@ -9,7 +9,7 @@
 	import { addProgrammeYear, getProgrammeYears } from "#modules/partner-programme/years.remote.ts";
 
 	// The props the route passes; this page needs none of them.
-	const _props: { params: RouteParams<"/(app)/(modules)/partner-programme/years"> } = $props();
+	const _props: { params: RouteParams<"/(app)/(modules)/partner-programme/settings"> } = $props();
 
 	const data = $derived(await getProgrammeYears());
 </script>
@@ -57,7 +57,7 @@
 							<Table.Cell>
 								<a
 									class="font-medium underline-offset-4 hover:underline"
-									href={resolve("/(app)/(modules)/partner-programme/years/[year]", {
+									href={resolve("/(app)/(modules)/partner-programme/settings/[year]", {
 										year: String(each.year),
 									})}
 								>
@@ -70,7 +70,7 @@
 									<Button
 										variant="outline"
 										size="sm"
-										href={resolve("/(app)/(modules)/partner-programme/years/[year]/close", {
+										href={resolve("/(app)/(modules)/partner-programme/settings/[year]/close", {
 											year: String(each.year),
 										})}
 									>

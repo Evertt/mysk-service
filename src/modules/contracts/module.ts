@@ -8,7 +8,6 @@ export default defineModule({
 	id: "contracts",
 	label: m.contracts_module_name,
 	description: m.contracts_module_description,
-	route: "/(app)/(modules)/contracts",
 	icon: FileCheckIcon,
 	subjects: contractSubjects,
 	// Materials only for the seed: the call-outs it makes get material lines.

@@ -49,7 +49,7 @@ design.
   releases the stock (`release`). Shipping and delivery move no stock.
 - **Pages**: the office's `/parts-shop` (open or all orders), `/parts-shop/orders/[number]` (the
   steps, history), `/parts-shop/products` (every material, put in the shop in a dialog with its
-  checklist points) and `/parts-shop/categories`; the dashboard's stat of open orders. The portal's
+  checklist points) and `/parts-shop/settings`; the dashboard's stat of open orders. The portal's
   `/parts-shop/portal` (catalogue by category, search by name or SKU, stock badge from the materials'
   low threshold, "Parts Credit geschikt", points, the low-stock banner, cart, checkout with balance
   before and after) and `/parts-shop/portal/orders[/number]`.

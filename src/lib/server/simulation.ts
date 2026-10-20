@@ -24,13 +24,12 @@
 import "temporal-polyfill/global";
 import { and, eq } from "drizzle-orm";
 
-import { effectiveModules } from "#lib/modules/graph.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
 import { modules } from "#lib/modules/manifests.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
-import { asSystem, currentTenant, inTenant, type Tenant } from "#lib/server/auth/index.ts";
+import { asSystem, currentTenant, inTenant, tenantOf } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { organization, organizationModule, simulation } from "#lib/server/db/schema.ts";
+import { simulation } from "#lib/server/db/schema.ts";
 import { collect } from "#lib/server/extensions.ts";
 import { orNotFound } from "#lib/server/records.ts";
 import {
@@ -52,23 +51,6 @@ interface SimulationTicked {
 	from: Temporal.Instant;
 	to: Temporal.Instant;
 	speed: number;
-}
-
-/** The organization as the system works in it: its modules that are on, and no role. */
-async function systemTenantOf(organizationId: string): Promise<Tenant | null> {
-	const [[found], stored] = await Promise.all([
-		db
-			.select({ name: organization.name, slug: organization.slug })
-			.from(organization)
-			.where(eq(organization.id, organizationId)),
-		db
-			.select({ id: organizationModule.moduleId })
-			.from(organizationModule)
-			.where(eq(organizationModule.organizationId, organizationId)),
-	]);
-	if (!found) return null;
-	const modules = effectiveModules(stored.map((row) => row.id));
-	return { organizationId, ...found, roles: [], modules };
 }
 
 /** The request's tenant as the system (no role), for a module's simulation in a member's request. */
@@ -125,7 +107,8 @@ export async function runSimulations(
 		.orderBy(simulation.organizationId, simulation.moduleId);
 	const ticked: SimulationTicked[] = [];
 	for (const organizationId of new Set(rows.map((row) => row.organizationId))) {
-		const tenant = await systemTenantOf(organizationId);
+		// The system has no role: it's no member, and only the simulations run as it.
+		const tenant = await tenantOf(organizationId, { roles: [] });
 		if (!tenant) continue;
 		for (const { moduleId } of rows.filter((row) => row.organizationId === organizationId)) {
 			if (!tenant.modules.includes(moduleId)) continue;

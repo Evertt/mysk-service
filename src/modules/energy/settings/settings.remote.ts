@@ -1,23 +1,29 @@
 /**
- * The module's settings page (`/energy/settings`), for managers: the integration tokens the sites'
- * gateways post with (made and revoked through the core's `#lib/server/auth/integrations.ts`,
- * which stores only their hashes), and the sites with the codes a gateway names.
+ * The module's settings page (`/energy/settings`): the integration tokens the sites' gateways post
+ * with (made and revoked through the core's `#lib/server/auth/integrations.ts`, which stores only
+ * their hashes, so a token's first characters are all anyone sees again), and the sites with the
+ * codes a gateway names. Every member may read them; only managers make and revoke tokens.
  */
 import * as v from "valibot";
 
+import { isManager } from "#lib/auth/index.ts";
 import {
 	integrationTokens,
 	issueIntegrationToken,
 	revokeIntegrationToken,
 } from "#lib/server/auth/integrations.ts";
+import { currentTenant } from "#lib/server/auth/session.ts";
 
-import { forManagers } from "../remote-functions.ts";
+import { forManagers, query } from "../remote-functions.ts";
 import { ingestSites } from "../server/ingest.ts";
 
-/** The tokens (newest first, revoked ones too) and the sites with their codes. */
-export const getEnergySettings = forManagers.query(async () => {
+/**
+ * The tokens (newest first, revoked ones too), the sites with their codes, and whether the user
+ * may change them.
+ */
+export const getEnergySettings = query(async () => {
 	const [tokens, sites] = await Promise.all([integrationTokens("energy"), ingestSites()]);
-	return { tokens, sites };
+	return { tokens, sites, canManage: isManager(currentTenant().roles) };
 });
 
 /** Makes a token: answers it, the one time it's shown. */

@@ -134,6 +134,7 @@
 	"docks_settings_title": "Salvo feed",
 	"docks_settings_description": "The tokens the Salvo integration posts its events with, to {url}.",
 	"docks_tokens_title": "Integration tokens",
+	"docks_tokens_managers": "Only owners and admins make and revoke tokens.",
 	"docks_tokens_empty": "No tokens yet: make one for the Salvo integration.",
 	"docks_token_name": "Name",
 	"docks_token_name_required": "Name the token, e.g. Salvo Barneveld",

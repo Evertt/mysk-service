@@ -8,7 +8,6 @@ export default defineModule({
 	id: "materials",
 	label: m.materials_module_name,
 	description: m.materials_module_description,
-	route: "/(app)/(modules)/materials",
 	icon: PackageIcon,
 	nav: { after: "engineers" },
 	subjects: materialSubjects,

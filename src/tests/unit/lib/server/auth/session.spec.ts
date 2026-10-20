@@ -22,6 +22,7 @@ import {
 	requireUser,
 	type Tenant,
 	tenantJoin,
+	tenantOf,
 } from "#lib/server/auth/session.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, order } from "#lib/server/db/schema.ts";
@@ -457,5 +458,22 @@ describe("loadTenant", () => {
 
 	test("is undefined for a user without memberships", async () => {
 		expect(await loadTenant("nobody", "north")).toBeUndefined();
+	});
+
+	// The system's tenant (the daily jobs, the simulations, an integration's request) is made the
+	// same way, with no role: so it names the order types as the members see them.
+	test("makes the system's tenant the same way, order types included", async () => {
+		expect(await tenantOf("north", { roles: [] })).toEqual({
+			organizationId: "north",
+			name: "North Facilities",
+			slug: "north",
+			roles: [],
+			modules: ["core-ish"],
+			orderTypes: {
+				survey: { names: { nl: "Offerte-opname" }, hidden: false },
+				damage: { names: {}, hidden: true },
+			},
+		});
+		expect(await tenantOf("gone", { roles: [] })).toBeUndefined();
 	});
 });

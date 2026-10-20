@@ -62,7 +62,7 @@ describe("the list of assets", () => {
 		await page().waitForURL((url) => url.pathname === "/checklists");
 		// The templates are a click away, and lead back.
 		await page().getByRole("link", { name: "Templates" }).click();
-		await page().waitForURL((url) => url.pathname === "/checklists/templates");
+		await page().waitForURL((url) => url.pathname === "/checklists/settings");
 		await page().getByRole("heading", { name: "Checklist templates" }).first().waitFor();
 		await page().locator("main").getByRole("link", { name: "Work orders" }).click();
 		await page().waitForURL((url) => url.pathname === "/checklists");

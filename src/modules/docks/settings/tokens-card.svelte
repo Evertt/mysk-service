@@ -1,7 +1,8 @@
 <!--
 	@component
-	The Salvo feed's integration tokens: make one (shown once, to copy), see when each was last
-	used, and revoke one.
+	The Salvo feed's integration tokens: see when each was last used, and for managers make one
+	(shown once, to copy) and revoke one. Members see them read-only: a token's first characters only,
+	like everyone.
 -->
 <script lang="ts">
 	import CopyIcon from "@lucide/svelte/icons/copy";
@@ -17,7 +18,7 @@
 
 	type Settings = Awaited<ReturnType<typeof getDockSettings>>;
 
-	let { tokens }: { tokens: Settings["tokens"] } = $props();
+	let { tokens, canManage }: { tokens: Settings["tokens"]; canManage: boolean } = $props();
 
 	/** The token just made: shown until the page is left. */
 	let made = $state<string>();
@@ -34,42 +35,46 @@
 		<Card.Title>{m.docks_tokens_title()}</Card.Title>
 	</Card.Header>
 	<Card.Content class="flex flex-col gap-6">
-		<form
-			{...createDockToken.enhance(async ({ element, submit }) => {
-				if (!(await submitted(submit))) return;
-				const result = createDockToken.result;
-				if (result) {
-					made = result.token;
-					element.reset();
-				}
-			})}
-			class="flex flex-col gap-3 sm:flex-row sm:items-end"
-		>
-			<TextField
-				field={createDockToken.fields.name}
-				label={m.docks_token_name()}
-				placeholder="Salvo Barneveld"
-				class="sm:flex-1"
-			/>
-			<SubmitButton icon={KeyRoundIcon} pending={createDockToken.pending}>
-				{m.docks_token_new()}
-			</SubmitButton>
-		</form>
+		{#if canManage}
+			<form
+				{...createDockToken.enhance(async ({ element, submit }) => {
+					if (!(await submitted(submit))) return;
+					const result = createDockToken.result;
+					if (result) {
+						made = result.token;
+						element.reset();
+					}
+				})}
+				class="flex flex-col gap-3 sm:flex-row sm:items-end"
+			>
+				<TextField
+					field={createDockToken.fields.name}
+					label={m.docks_token_name()}
+					placeholder="Salvo Barneveld"
+					class="sm:flex-1"
+				/>
+				<SubmitButton icon={KeyRoundIcon} pending={createDockToken.pending}>
+					{m.docks_token_new()}
+				</SubmitButton>
+			</form>
 
-		{#if made}
-			<div class="flex flex-col gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3">
-				<p class="text-sm font-medium">{m.docks_token_created_title()}</p>
-				<p class="text-sm text-muted-foreground">{m.docks_token_created_description()}</p>
-				<div class="flex flex-wrap items-center gap-2">
-					<code class="min-w-0 rounded bg-background px-2 py-1 text-xs break-all" data-new-token
-						>{made}</code
-					>
-					<Button size="sm" variant="outline" onclick={copy}>
-						<CopyIcon data-icon="inline-start" />
-						{m.docks_token_copy()}
-					</Button>
+			{#if made}
+				<div class="flex flex-col gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3">
+					<p class="text-sm font-medium">{m.docks_token_created_title()}</p>
+					<p class="text-sm text-muted-foreground">{m.docks_token_created_description()}</p>
+					<div class="flex flex-wrap items-center gap-2">
+						<code class="min-w-0 rounded bg-background px-2 py-1 text-xs break-all" data-new-token
+							>{made}</code
+						>
+						<Button size="sm" variant="outline" onclick={copy}>
+							<CopyIcon data-icon="inline-start" />
+							{m.docks_token_copy()}
+						</Button>
+					</div>
 				</div>
-			</div>
+			{/if}
+		{:else}
+			<p class="text-sm text-muted-foreground" data-managers-only>{m.docks_tokens_managers()}</p>
 		{/if}
 
 		{#if tokens.length}
@@ -101,7 +106,7 @@
 								<Table.Cell class="text-right">
 									{#if token.revokedAt}
 										<Badge variant="neutral">{m.docks_token_revoked()}</Badge>
-									{:else}
+									{:else if canManage}
 										<form {...revoke}>
 											<input {...revoke.fields.id.as("hidden", String(token.id))} />
 											<SubmitButton size="sm" variant="outline" pending={revoke.pending}>

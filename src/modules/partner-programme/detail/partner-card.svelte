@@ -91,7 +91,7 @@
 				{m.partners_no_rules({ year: String(card.year) })}
 				<a
 					class="underline-offset-4 hover:underline"
-					href={resolve("/(app)/(modules)/partner-programme/years")}
+					href={resolve("/(app)/(modules)/partner-programme/settings")}
 				>
 					{m.partners_rules_link()}
 				</a>

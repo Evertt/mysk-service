@@ -30,7 +30,7 @@
 		]}
 	/>
 
-	<TokensCard tokens={settings.tokens} />
+	<TokensCard tokens={settings.tokens} canManage={settings.canManage} />
 
 	<Card.Root>
 		<Card.Header>

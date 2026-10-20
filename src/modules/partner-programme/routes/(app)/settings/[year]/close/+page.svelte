@@ -6,8 +6,9 @@
 	import { getClosePreview } from "#modules/partner-programme/close.remote.ts";
 	import ClosePreview from "#modules/partner-programme/detail/close-preview.svelte";
 
-	let { params }: { params: RouteParams<"/(app)/(modules)/partner-programme/years/[year]/close"> } =
-		$props();
+	let {
+		params,
+	}: { params: RouteParams<"/(app)/(modules)/partner-programme/settings/[year]/close"> } = $props();
 
 	// Not a year at all: the query refuses it.
 	const year = $derived(Number(params.year));
@@ -23,10 +24,13 @@
 	description={m.partners_close_description()}
 	breadcrumbs={[
 		{ label: m.partners_title(), href: resolve("/(app)/(modules)/partner-programme") },
-		{ label: m.partners_years_title(), href: resolve("/(app)/(modules)/partner-programme/years") },
+		{
+			label: m.partners_years_title(),
+			href: resolve("/(app)/(modules)/partner-programme/settings"),
+		},
 		{
 			label: String(year),
-			href: resolve("/(app)/(modules)/partner-programme/years/[year]", { year: String(year) }),
+			href: resolve("/(app)/(modules)/partner-programme/settings/[year]", { year: String(year) }),
 		},
 		{ label: m.partners_years_close() },
 	]}

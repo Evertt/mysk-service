@@ -61,9 +61,13 @@ vi.mock("#lib/server/db/index.ts", async () => {
 		create table organization_module (
 			organization_id text not null, module_id text not null, enabled_at integer not null
 		);
+		create table order_type_setting (
+			organization_id text not null, type text not null, names text not null, hidden integer not null
+		);
 		insert into organization values ('north', 'North', 'north', null, 1, null);
 		insert into organization values ('south', 'South', 'south', null, 2, null);
 		insert into organization_module values ('north', 'a', 0), ('north', 'b', 0), ('south', 'b', 0);
+		insert into order_type_setting values ('north', 'survey', '{"nl":"Offerte-opname"}', 0);
 	`);
 	return { db: drizzle(client, { schema }) };
 });
@@ -119,6 +123,24 @@ describe("runDaily", () => {
 		expect(seen).toHaveLength(3);
 		// Outside the run, there's no tenant again.
 		expect(() => requireTenant()).toThrow();
+	});
+
+	test("the jobs see the organization's order types as its members do", async () => {
+		const seen = new Map<string, unknown>();
+		registry.modules = [
+			defineServerModule("b" as never, [
+				contribute(daily, async () => {
+					const { organizationId, orderTypes } = currentTenant();
+					seen.set(organizationId, orderTypes);
+					return {};
+				}),
+			]),
+		];
+		await runDaily(day("2026-10-15"));
+		expect(Object.fromEntries(seen)).toEqual({
+			north: { survey: { names: { nl: "Offerte-opname" }, hidden: false } },
+			south: {},
+		});
 	});
 
 	test("a job that fails is left out, and the others go on", async () => {

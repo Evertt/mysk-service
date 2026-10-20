@@ -60,7 +60,7 @@ const refresh = (templateId: number) => {
 export const addTemplate = forManagers.form(newTemplateSchema, async (input) => {
 	const templateId = await createTemplate(input);
 	void getTemplates().refresh();
-	redirect(303, `/checklists/templates/${templateId}`);
+	redirect(303, `/checklists/settings/${templateId}`);
 });
 
 export const saveTemplate = forManagers.form(templateSchema, async ({ id, ...input }) => {

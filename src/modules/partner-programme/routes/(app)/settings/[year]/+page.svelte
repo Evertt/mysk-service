@@ -7,7 +7,7 @@
 	import RulesForm from "#modules/partner-programme/form/rules-form.svelte";
 	import { getYearRules } from "#modules/partner-programme/years.remote.ts";
 
-	let { params }: { params: RouteParams<"/(app)/(modules)/partner-programme/years/[year]"> } =
+	let { params }: { params: RouteParams<"/(app)/(modules)/partner-programme/settings/[year]"> } =
 		$props();
 
 	// Not a year at all: the query refuses it.
@@ -28,14 +28,17 @@
 			: m.partners_rules_none()}
 	breadcrumbs={[
 		{ label: m.partners_title(), href: resolve("/(app)/(modules)/partner-programme") },
-		{ label: m.partners_years_title(), href: resolve("/(app)/(modules)/partner-programme/years") },
+		{
+			label: m.partners_years_title(),
+			href: resolve("/(app)/(modules)/partner-programme/settings"),
+		},
 		{ label: String(year) },
 	]}
 >
 	{#snippet actions()}
 		<Button
 			variant="outline"
-			href={resolve("/(app)/(modules)/partner-programme/years/[year]/close", {
+			href={resolve("/(app)/(modules)/partner-programme/settings/[year]/close", {
 				year: String(year),
 			})}
 		>

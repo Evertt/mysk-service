@@ -50,12 +50,10 @@
 			{/if}
 		{/snippet}
 		{#snippet actions()}
-			{#if board.canManage}
-				<Button variant="secondary" href={resolve("/(app)/(modules)/docks/settings")}>
-					<SettingsIcon data-icon="inline-start" />
-					{m.docks_settings_title()}
-				</Button>
-			{/if}
+			<Button variant="secondary" href={resolve("/(app)/(modules)/docks/settings")}>
+				<SettingsIcon data-icon="inline-start" />
+				{m.docks_settings_title()}
+			</Button>
 		{/snippet}
 	</PageBanner>
 

@@ -33,7 +33,7 @@
 				<Table.Cell class="font-medium">
 					<a
 						class="hover:underline"
-						href={resolve("/(app)/(modules)/checklists/templates/[id]", {
+						href={resolve("/(app)/(modules)/checklists/settings/[id]", {
 							id: String(template.id),
 						})}>{template.name}</a
 					>

@@ -1,5 +1,7 @@
 import { parseSync } from "vite-plus";
 
+import type { ModuleFolder } from "./shared.ts";
+
 export type RouteFileKind = "page" | "layout" | "error" | "script";
 
 /** What kind of route file `name` is (`+page.svelte`, `+layout.server.ts`, …), if it is one. */
@@ -131,4 +133,26 @@ export function routeExports(file: string, source: string): RouteExports {
 		}
 	}
 	return { names, literals };
+}
+
+/** Where in a module's `routes/` the pages the core links to are (`modulePages()`). */
+export const MODULE_PAGES = {
+	home: "(app)/+page.svelte",
+	settings: "(app)/settings/+page.svelte",
+	portal: "(customer)/portal/+page.svelte",
+} as const;
+
+/**
+ * The pages of a module that the core links to, by where its `routes/` has them (no `module.ts`
+ * names them): its section (`MODULE_PAGES.home`, the sidebar's entry), its settings (`.settings`,
+ * which the organization's settings link to) and its page in the customer portal (`.portal`, the
+ * portal's entry). As route ids, for `resolve()`.
+ */
+export function modulePages(module: Pick<ModuleFolder, "id" | "routeFiles">) {
+	const has = (file: string) => module.routeFiles.includes(file);
+	const pages: { home?: string; settings?: string; portal?: string } = {};
+	if (has(MODULE_PAGES.home)) pages.home = `/(app)/${MODULES_GROUP}/${module.id}`;
+	if (has(MODULE_PAGES.settings)) pages.settings = `/(app)/${MODULES_GROUP}/${module.id}/settings`;
+	if (has(MODULE_PAGES.portal)) pages.portal = `/(customer)/${MODULES_GROUP}/${module.id}/portal`;
+	return pages;
 }

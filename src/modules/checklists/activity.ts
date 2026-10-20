@@ -17,7 +17,7 @@ const place = (value: unknown) => formatNumber(Number(value) + 1);
 export const checklistSubjects = {
 	checklistTemplate: {
 		noun: m.checklists_activity_subject_template,
-		href: ({ id }) => resolve("/(app)/(modules)/checklists/templates/[id]", { id: String(id) }),
+		href: ({ id }) => resolve("/(app)/(modules)/checklists/settings/[id]", { id: String(id) }),
 		fields: {
 			name: { label: m.checklists_field_name },
 			norm: { label: m.checklists_field_norm },

@@ -15,7 +15,7 @@
 	import type { Component } from "svelte";
 
 	import { getTenantModules } from "#lib/auth/session.remote.ts";
-	import { type AppModule, modules } from "#lib/modules/manifests.ts";
+	import { type AppModule, modulePages, modules } from "#lib/modules/manifests.ts";
 	import { useSidebar } from "#ui/sidebar";
 
 	let { organization }: { organization: string } = $props();
@@ -37,12 +37,13 @@
 		exact ? page.route.id === route : (page.route.id?.startsWith(route) ?? false);
 
 	/** The tenant's modules with a page in the portal, in registry order, and their entries. */
-	const modulePages = $derived(
-		(modules as readonly AppModule[]).flatMap((module) =>
-			module.portal && tenantModules.some((id) => id === module.id)
-				? [{ id: module.id, ...module.portal }]
-				: [],
-		),
+	const portalPages = $derived(
+		(modules as readonly AppModule[]).flatMap((module) => {
+			const route = modulePages[module.id].portal;
+			return route && module.portal && tenantModules.some((id) => id === module.id)
+				? [{ id: module.id, route, ...module.portal }]
+				: [];
+		}),
 	);
 
 	const nav: NavEntry[] = $derived([
@@ -74,11 +75,10 @@
 			icon: BuildingIcon,
 			current: isAt("/(customer)/portal/equipment") || isAt("/(customer)/portal/locations"),
 		},
-		...modulePages.map((entry) => ({
+		...portalPages.map((entry) => ({
 			id: entry.id,
 			label: entry.label(),
-			// A page without parameters, which the manifest's `RouteId` can't say.
-			href: resolve(entry.route as "/(customer)/portal"),
+			href: resolve(entry.route),
 			icon: entry.icon,
 			current: isAt(entry.route),
 		})),

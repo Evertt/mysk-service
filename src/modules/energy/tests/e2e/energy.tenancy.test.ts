@@ -1,8 +1,7 @@
 /**
- * The energy module and tenancy: SHLTR's managers make and revoke the feed's tokens; a planner's
- * pages offer no setup, and only read the thresholds; North, which doesn't have the module, gets
- * 404s for its pages and no tile on the dashboard. That a planner is refused the managers' queries
- * and forms, and what the feed answers (another site, unknown codes, a refused token), is
+ * The energy module and tenancy: SHLTR's managers make and revoke the feed's tokens; a planner
+ * reads the tokens and the thresholds, and is offered no site's setup; North, which doesn't have the module, gets
+ * 404s for its pages and no tile on the dashboard. That a planner is refused the managers' forms, and what the feed answers (another site, unknown codes, a refused token), is
  * `tests/unit/server/feed.spec.ts`'s and `sites.spec.ts`'s; that the module's remote queries refuse
  * a tenant without it `remote-functions.spec.ts`'s.
  */
@@ -54,13 +53,21 @@ describe("SHLTR's integration tokens", () => {
 		}
 	});
 
-	test("a planner, who's no manager, is offered neither them nor a site's setup or thresholds", async () => {
+	test("a planner, who's no manager, reads them and the thresholds, and is offered no site's setup", async () => {
 		const { page } = await signedInPage(app, shltrPlanner);
 		const { siteId } = await riedel();
 		try {
-			await page.goto(`${baseURL}/energy`);
-			await page.locator(`[data-energy-site="${siteId}"]`).waitFor();
-			expect(await page.getByRole("link", { name: "Energy settings" }).count()).toBe(0);
+			// The organization's settings link to the module's, which the planner reads.
+			await page.goto(`${baseURL}/settings`);
+			await page.locator('[data-module="energy"]').getByRole("link", { name: "Set up" }).click();
+			await page.waitForURL((url) => url.pathname === "/energy/settings");
+			await page.locator("[data-managers-only]").waitFor();
+			await page.locator('[data-token="Simulator (demo)"]').waitFor();
+			expect(await page.locator(`[data-site-codes="${siteId}"]`).textContent()).toContain("Z-R61");
+			expect(await page.getByLabel("Name").count()).toBe(0);
+			expect(await page.getByRole("button", { name: "Revoke" }).count()).toBe(0);
+			expect(await page.locator('a[href$="/setup"]').count()).toBe(0);
+
 			await page.goto(`${baseURL}/energy/${siteId}`);
 			await page.locator('[data-hero-chip="site"]').waitFor();
 			expect(await page.getByRole("link", { name: "Set up" }).count()).toBe(0);

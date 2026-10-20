@@ -7,6 +7,7 @@ import {
 	API_GROUP,
 	isGroup,
 	isIntegrationRoute,
+	MODULE_PAGES,
 	MODULES_GROUP,
 	routeFileKind,
 	routePlace,
@@ -147,6 +148,26 @@ export function checkModules(
 			} else {
 				sectionOwner.set(section, `the ${module.id} module`);
 			}
+		}
+
+		// Its pages are where its routes/ has them (`modulePages()`), never named in module.ts.
+		for (const key of module.declaredPages ?? []) {
+			problems.push(
+				`${where}/module.ts: ${key}: is where routes/ has the page now (routes/${MODULE_PAGES.home}, ` +
+					`routes/${MODULE_PAGES.settings}, routes/${MODULE_PAGES.portal}), so drop it.`,
+			);
+		}
+		const hasPortalPage = module.routeFiles.includes(MODULE_PAGES.portal);
+		if (hasPortalPage && !module.declaresPortal) {
+			problems.push(
+				`${where}/module.ts: the module has a page in the customer portal (routes/${MODULE_PAGES.portal}), ` +
+					`so it declares portal: { label, icon } for the portal's navigation.`,
+			);
+		} else if (module.declaresPortal && !hasPortalPage) {
+			problems.push(
+				`${where}/module.ts: portal: is the entry of the module's page in the customer portal, ` +
+					`which is routes/${MODULE_PAGES.portal}; it has none.`,
+			);
 		}
 
 		if (module.declaredId && module.declaredId !== module.id) {

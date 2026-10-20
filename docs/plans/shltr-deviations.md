@@ -182,7 +182,7 @@ _Changed, low impact._
 _Changed, high impact._
 
 - **Mockup:** "Werkbonnen" (clipboard-check) → the digital checkpoint work order page.
-- **Built:** "Checklists" (clipboard-check) → `/checklists/templates` ("Checklistsjablonen"). The checklists are filled in on the orders and in the engineer portal (§7, phase 1).
+- **Built:** "Checklists" (clipboard-check) → `/checklists/settings` ("Checklistsjablonen"). The checklists are filled in on the orders and in the engineer portal (§7, phase 1).
 - **Why:** a checklist is one per unit per order (§5 "What My24Service tells us"), so the sidebar leads to the template setup and not to a work-order screen.
 - **Now:** the sidebar's "Werkbonnen" ("Work orders") opens the work orders page (`/checklists`); the templates are a button on it and the module's settings page.
 
@@ -1157,7 +1157,7 @@ _Changed, low impact._
 _Changed, high impact._
 
 - **Mockup:** sidebar "Werkbonnen" → page "Digitale checkpoint-werkbon" ("Per asset een vaste checklist voor keuring en onderhoud. Elk jaar start een nieuwe lijst; eerdere bonnen blijven bewaard.") with an asset list on the left and the checklist on the right
-- **Built:** sidebar "Checklists" opens "Checklistsjablonen" (`/checklists/templates`). Checklists live on orders: filled in on the engineer portal, read on the order page (office), printed as "Werkbon {nummer}" (`/checklists/work-orders/<number>`), history on the unit's page, results in the customer portal
+- **Built:** sidebar "Checklists" opens "Checklistsjablonen" (`/checklists/settings`). Checklists live on orders: filled in on the engineer portal, read on the order page (office), printed as "Werkbon {nummer}" (`/checklists/work-orders/<number>`), history on the unit's page, results in the customer portal
 - **Why:** user decision, Doc §5 "Decided": "Checklists: one per unit per order"; Doc §4.2 checklists module
 - **Now:** sidebar "Werkbonnen" → "Digitale checkpoint-werkbon" at `/checklists`, the mockup's two columns: the asset list, and the selected unit's checklist of this year with "Historie per jaar"; checklists stay one per unit per order.
 
@@ -1824,7 +1824,7 @@ _Changed, medium impact._
 _Added, medium impact._
 
 - **Mockup:** a fixed list of 14 products in two fixed categories.
-- **Built:** "Shopartikelen" (`/parts-shop/products`): every material, put in the shop in a dialog (categorie, omschrijving, verkocht per set/stuk/paar, populair, "Te betalen met Parts Credit", "Op aanvraag", checkpoint-punten); any office member may. "Shopcategorieën" (`/parts-shop/categories`): the tenant's own categories, in the portal's order, managed by owners/admins.
+- **Built:** "Shopartikelen" (`/parts-shop/products`): every material, put in the shop in a dialog (categorie, omschrijving, verkocht per set/stuk/paar, populair, "Te betalen met Parts Credit", "Op aanvraag", checkpoint-punten); any office member may. "Shopcategorieën" (`/parts-shop/settings`): the tenant's own categories, in the portal's order, managed by owners/admins.
 - **Why:** §4.2 `parts-shop`; parts-shop.md "Tables".
 
 #### 207. Products are materials: price and stock from the stock system
@@ -2042,7 +2042,7 @@ _Added, medium impact._
 _Added, medium impact._
 
 - **Mockup:** the eight tiers (BRONZE € 50.000 2,5 %/3,0 % … ELITE+ € 500.000 4,5 %/5,6 %) and the seven revenue categories are fixed.
-- **Built:** the same eight tiers and seven categories are SHLTR's defaults, but managers set them per year on "Programmajaren" (`/partner-programme/years`): levels (name, threshold, cash %, credit %), per category whether it counts for the level and for cash/credit (Ja / Nee / Volgens afspraak), and "Credit geldig (jaren na het bonusjaar)". A new year starts as a copy of the previous one.
+- **Built:** the same eight tiers and seven categories are SHLTR's defaults, but managers set them per year on "Programmajaren" (`/partner-programme/settings`): levels (name, threshold, cash %, credit %), per category whether it counts for the level and for cash/credit (Ja / Nee / Volgens afspraak), and "Credit geldig (jaren na het bonusjaar)". A new year starts as a copy of the previous one.
 - **Why:** §3.5; conditions "SHLTR kan levels, drempels … voor een volgend kalenderjaar aanpassen".
 
 #### 234. Levels table

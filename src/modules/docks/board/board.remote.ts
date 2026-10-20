@@ -7,9 +7,8 @@
 import { and, asc, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { isManager } from "#lib/auth/index.ts";
 import { recordId } from "#lib/schema.ts";
-import { currentTenant, inTenant, sameTenant } from "#lib/server/auth/index.ts";
+import { inTenant, sameTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { activity } from "#lib/server/db/schema.ts";
@@ -52,8 +51,7 @@ function latestSessions(ids: number[]) {
 export const getDockBoard = query(v.optional(recordId()), async (siteId) => {
 	const sites = await sitesWithDocks();
 	const site = sites.find((each) => each.id === siteId) ?? sites[0] ?? null;
-	const canManage = isManager(currentTenant().roles);
-	if (!site) return { sites, site: null, docks: [], notices: [], canManage };
+	if (!site) return { sites, site: null, docks: [], notices: [] };
 
 	const docks = await db
 		.select({
@@ -123,7 +121,6 @@ export const getDockBoard = query(v.optional(recordId()), async (siteId) => {
 	return {
 		sites,
 		site,
-		canManage,
 		docks: docks.map((dock) => ({
 			...dock,
 			// A dock without events has no state yet (no row to join).

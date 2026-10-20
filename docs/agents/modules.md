@@ -109,16 +109,16 @@ true })`, whose contributors answer at once, without awaiting: for an owner that
 
 Optional modules (things a tenant can switch off) are folders `src/modules/<id>/`, each
 self-contained: `module.ts` (its manifest, `defineModule()` from `#lib/modules/define.ts`: label,
-description, `route`, icon, `nav`, `subjects` (written `satisfies Record<string, SubjectType>`, so
+description, icon, `nav`, `subjects` (written `satisfies Record<string, SubjectType>`, so
 their names stay in the `LoggedType` union), `actions`, `orderTypes` (the types of the orders it
 makes or works with, which a tenant can't hide while it's on: a module that calls `createOrders()`
 declares every type it names, which `src/tests/unit/modules/order-types.spec.ts` checks),
-`liveTypes` (types it announces for its live pages but never logs, e.g. energy's readings), and `settings`, the route of the page
-where it's set up, which its card on the settings page links to while it's on; it is in every tenant's
-bundle, so it imports only messages, icons, types, `import()` loaders and its own small scripts),
+`liveTypes` (types it announces for its live pages but never logs, e.g. energy's readings), and
+`portal` (below); it is in every tenant's bundle, so it imports only messages, icons, types,
+`import()` loaders and its own small scripts),
 `server/` (`index.ts` with `defineServerModule()`, `schema.ts`, `seed.ts` with `defineSeed()`, its
 columns' SQL in `columns/`, its logic; server-only), `routes/` (its pages, in route groups, under
-the module's own URL, `/<id>`: `+` files only), its components
+the module's own URL, `/<id>`: `+` files only; see "A module's pages" below), its components
 in folders by feature like a core domain's (`ui/` for links and badges, `list/`, `form/`, `detail/`,
 or a feature's own, e.g. the schedule's `board/`), `messages/<locale>/<section>.json` and
 `tests/` (below). Its model, labels, display maps, domain rules and activity subjects stay at the
@@ -181,12 +181,21 @@ migration committed.
   the module a 404, and the handler runs as the system in the token's tenant (`asSystem()`), so
   `inTenant()`, transactions and `recordActivity()` work as in a member's request. Tokens are the
   core's `integration_token` rows (hash only), made and revoked through
-  `#lib/server/auth/integrations.ts` (`issueIntegrationToken()`, `revokeIntegrationToken()`,
-  `integrationTokens()`) from the module's manager-only remote functions; a seed gives its demo
+  `#lib/server/auth/integrations.ts` (`issueIntegrationToken()`, `revokeIntegrationToken()`) from
+  the module's manager-only forms, and listed (`integrationTokens()`, a token's first characters
+  only) on its settings page, which every member reads; a seed gives its demo
   tenant a known one with `seedIntegrationToken()` (`src/lib/server/db/seed/integrations.ts`).
 - **Route ids include the group**: a module names its routes `/(app)/(modules)/contracts/[number]`
-  everywhere a route id goes: `resolve()`, `RouteParams<…>`, the manifest's `route`, its activity
-  subjects' `href`s.
+  everywhere a route id goes: `resolve()`, `RouteParams<…>`, its activity subjects' `href`s.
+- **A module's pages**: no `module.ts` names its pages; the core links to them by where its
+  `routes/` has them, which the generator lists in `#lib/modules/pages.gen.ts` (`modulePages` in
+  `#lib/modules/manifests.ts`, route ids for `resolve()`): `routes/(app)/+page.svelte` is its
+  section, the sidebar's entry; `routes/(app)/settings/+page.svelte` its settings, which its card on
+  the organization's settings page links to while it's on (with its sub-pages under `settings/`,
+  e.g. checklists' templates at `settings/[id]`); `routes/(customer)/portal/+page.svelte` its page in
+  the customer portal. Every member reads a module's settings page; only managers change what's on
+  it (the page asks for `canManage`, as `condition`'s does). The generator refuses a `route:` or
+  `settings:` in `module.ts`.
 - **The guard**: each `(modules)` group's generated `+layout.ts` 404s the tenants without the
   module that owns the route (`guardModuleRoute()` in `#lib/modules/route-guard.ts`: the module is
   the folder after `(modules)` in the route id, so the layout names no modules; it asks
@@ -249,9 +258,10 @@ e2e src/tests/e2e/skeletons.repro.test.ts`; it counts page errors, and the race 
   `routes/(customer)/<rest>` is the route `/(customer)/(modules)/<id>/<rest>`, at `/<id>/<rest>`, in
   the portal's shell and guarded like any module route (checklists'
   `routes/(customer)/portal/work-orders/[number]`, the printable work order; mind that a path that
-  is also one of the module's `(app)` routes collides). Its manifest's `portal: { route, label,
-icon }` puts one of them in the portal's navigation, after the portal's own entries, for the
-  tenants that have the module: that's where the partner programme's bonus and wallet and a parts
+  is also one of the module's `(app)` routes collides). Its `routes/(customer)/portal/+page.svelte`
+  is in the portal's navigation, after the portal's own entries, for the tenants that have the
+  module, with the manifest's `portal: { label, icon }` (the generator asks a module for both or
+  neither): that's where the partner programme's bonus and wallet and a parts
   shop are (`/partner-programme/portal`, `/parts-shop/portal`). Use remote queries there: a module's server files (`+page.server.ts`, endpoints) are
   guarded by `requireModule()`, which refuses customers' contacts.
 - **A slot owned by a module**: a module declares its points in its `api/extensions.ts` and renders

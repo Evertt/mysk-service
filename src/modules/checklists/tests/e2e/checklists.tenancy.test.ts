@@ -44,9 +44,9 @@ describe("in North, which has the module", () => {
 		const loggedBefore = await shltrLogged();
 
 		expect(
-			(await app.expectingErrors(() => app.go(`/checklists/templates/${target.id}`)))?.status(),
+			(await app.expectingErrors(() => app.go(`/checklists/settings/${target.id}`)))?.status(),
 		).toBe(404);
-		await app.go(`/checklists/templates/${own.id}`);
+		await app.go(`/checklists/settings/${own.id}`);
 
 		// Its details, through North's own template's form.
 		await page().getByRole("button", { name: "Edit", exact: true }).click();
@@ -73,7 +73,7 @@ describe("in South, which doesn't have the module", () => {
 		await settingsCard().getByRole("button", { name: "Enable" }).waitFor();
 		expect(await settingsCard().getByRole("link", { name: "Set up" }).count()).toBe(0);
 
-		const response = await app.go("/checklists/templates");
+		const response = await app.go("/checklists/settings");
 		expect(response?.status()).toBe(404);
 		// The app's own 404 page, inside its layout.
 		expect(await page().locator('[data-sidebar="content"]').count()).toBe(1);

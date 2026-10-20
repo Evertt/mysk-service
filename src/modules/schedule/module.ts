@@ -6,7 +6,6 @@ export default defineModule({
 	id: "schedule",
 	label: m.schedule_module_name,
 	description: m.schedule_module_description,
-	route: "/(app)/(modules)/schedule",
 	icon: CalendarDaysIcon,
 	nav: { after: "orders" },
 });

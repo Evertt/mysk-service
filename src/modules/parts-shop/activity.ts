@@ -43,7 +43,7 @@ export const shopSubjects = {
 	/** A category of the shop, by its name. */
 	shop_category: {
 		noun: m.shop_activity_subject_category,
-		href: () => resolve("/(app)/(modules)/parts-shop/categories"),
+		href: () => resolve("/(app)/(modules)/parts-shop/settings"),
 		fields: { name: { label: m.shop_field_name } },
 	},
 } satisfies Record<string, SubjectType>;

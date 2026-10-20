@@ -40,7 +40,7 @@
 	]}
 >
 	{#snippet actions()}
-		<Button variant="outline" href={resolve("/(app)/(modules)/parts-shop/categories")}>
+		<Button variant="outline" href={resolve("/(app)/(modules)/parts-shop/settings")}>
 			{m.shop_categories_title()}
 		</Button>
 	{/snippet}

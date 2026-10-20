@@ -56,6 +56,33 @@ describe("renderRegistries", () => {
 		expect(files["src/lib/server/db/module-seeds.gen.ts"]).not.toContain("alpha");
 	});
 
+	test("list each module's pages where its routes/ has them", () => {
+		const files = renderRegistries([
+			module("a", {
+				routeFiles: [
+					"(app)/+page.svelte",
+					"(app)/settings/+page.svelte",
+					"(app)/settings/[id]/+page.svelte",
+					"(customer)/portal/+page.svelte",
+				],
+			}),
+			module("b", { routeFiles: ["(app)/+page.svelte", "(app)/setup/+page.svelte"] }),
+			module("c"),
+		]);
+		expect(files["src/lib/modules/pages.gen.ts"]).toContain(
+			[
+				`export const generatedModulePages = {`,
+				`\t"a": { home: "/(app)/(modules)/a", settings: "/(app)/(modules)/a/settings", portal: "/(customer)/(modules)/a/portal" },`,
+				`\t"b": { home: "/(app)/(modules)/b" },`,
+				`\t"c": {},`,
+				`} as const satisfies`,
+			].join("\n"),
+		);
+		expect(renderRegistries([])["src/lib/modules/pages.gen.ts"]).toContain(
+			"export const generatedModulePages = {} as const satisfies",
+		);
+	});
+
 	test("collect each module's schema by namespace, in dependency order", () => {
 		const files = renderRegistries([
 			module("alpha-beta", { server: { index: false, schema: true, seed: false } }),

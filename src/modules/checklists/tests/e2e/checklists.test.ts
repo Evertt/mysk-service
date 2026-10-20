@@ -60,7 +60,7 @@ describe("an owner, in North", () => {
 	test("finds the templates from the settings and the sidebar, with the categories they miss", async () => {
 		await app.go("/settings");
 		await settingsCard().getByRole("link", { name: "Set up" }).click();
-		await page().waitForURL((url) => url.pathname === "/checklists/templates");
+		await page().waitForURL((url) => url.pathname === "/checklists/settings");
 		await page().getByRole("heading", { name: "Checklist templates" }).first().waitFor();
 
 		const shown = await page()
@@ -91,7 +91,7 @@ describe("an owner, in North", () => {
 		await dialog().getByLabel("Name").fill("Compressor");
 		await dialog().getByLabel("Norm").fill("NEN-EN 1012");
 		await app.submit(dialog().getByRole("button", { name: "Save template" }));
-		await page().waitForURL((url) => /^\/checklists\/templates\/\d+$/.test(url.pathname));
+		await page().waitForURL((url) => /^\/checklists\/settings\/\d+$/.test(url.pathname));
 		await page().getByRole("heading", { name: "Compressor" }).waitFor();
 		added = app.path().split("/").at(-1)!;
 		expect(added).toBe(String((await templateNamed(north.id, "Compressor")).id));
@@ -109,13 +109,13 @@ describe("an owner, in North", () => {
 		await app.submit(categoriesCard().getByRole("button", { name: "Save categories" }));
 		await app.toast("Categories saved");
 
-		await app.go("/checklists/templates");
+		await app.go("/checklists/settings");
 		expect(await gaps().count()).toBe(0);
 		expect(await templateRow("Compressor").innerText()).toContain("Pomp");
 	});
 
 	test("adds points in groups, moves one, and deletes one", async () => {
-		await app.go(`/checklists/templates/${added}`);
+		await app.go(`/checklists/settings/${added}`);
 		await addPoint("Smering", "Olie ververst");
 		await addPoint("Veiligheid", "Drukschakelaar getest");
 		// Through its group's own button, the group filled in.
@@ -163,7 +163,7 @@ describe("an owner, in North", () => {
 		expect(await pointsCard().getByRole("button", { name: "Add point" }).count()).toBe(0);
 		expect(await categoriesCard().getByRole("checkbox").count()).toBe(0);
 
-		await app.go("/checklists/templates");
+		await app.go("/checklists/settings");
 		expect(
 			await page()
 				.locator("[data-checklist-retired]")
@@ -176,7 +176,7 @@ describe("an owner, in North", () => {
 		await app.go(`/equipment/${await unitOf(north.id, "Compressor")}`);
 		await unitCard().getByText("Compressor has no checklist template yet.").waitFor();
 
-		await app.go(`/checklists/templates/${added}`);
+		await app.go(`/checklists/settings/${added}`);
 		await app.submit(page().getByRole("button", { name: "Restore" }));
 		await app.toast("Template restored");
 		await pointsCard().getByRole("button", { name: "Add point" }).waitFor();
@@ -191,7 +191,7 @@ describe("an owner, in North", () => {
 		expect(text).toContain("F-gassen");
 		expect(text).toContain("12 months");
 		await card.getByRole("link", { name: "Koelmachine" }).click();
-		await page().waitForURL((url) => url.pathname.startsWith("/checklists/templates/"));
+		await page().waitForURL((url) => url.pathname.startsWith("/checklists/settings/"));
 		await page().getByRole("heading", { name: "Koelmachine" }).waitFor();
 	});
 });
@@ -201,12 +201,12 @@ describe("a member, in North", () => {
 		const koelmachine = await templateNamed(north.id, "Koelmachine");
 		await page().context().clearCookies();
 		await app.signIn(users.planner);
-		await app.go("/checklists/templates");
+		await app.go("/checklists/settings");
 		await templateRow("Koelmachine").waitFor();
 		expect(await page().getByRole("button", { name: "Add template" }).count()).toBe(0);
 		expect(await gaps().innerText()).toContain("Owners and admins change these.");
 
-		await app.go(`/checklists/templates/${koelmachine.id}`);
+		await app.go(`/checklists/settings/${koelmachine.id}`);
 		await pointsCard().getByText("Lekdichtheidscontrole uitgevoerd").waitFor();
 		expect(await page().getByRole("button", { name: "Edit", exact: true }).count()).toBe(0);
 		expect(await page().getByRole("button", { name: "Retire" }).count()).toBe(0);

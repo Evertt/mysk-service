@@ -29,7 +29,9 @@ import {
 import type { CoreActivityAction } from "#lib/models.ts";
 import {
 	type AppModule,
+	type ModuleId,
 	type ModuleLiveType,
+	modulePages,
 	type ModuleSubjectType,
 	modules,
 } from "#lib/modules/manifests.ts";
@@ -264,8 +266,8 @@ export const coreSubjectTypes = {
 		noun: m.activity_subject_simulation,
 		label: ({ id, label }) => modules.find((module) => module.id === id)?.label ?? label,
 		href: ({ id }) => {
-			const route = modules.find((module) => module.id === id)?.route;
-			return route ? resolve(route) : resolve("/(app)/settings");
+			const home = Object.hasOwn(modulePages, id) ? modulePages[id as ModuleId].home : undefined;
+			return home ? resolve(home) : resolve("/(app)/settings");
 		},
 		fields: {
 			running: { label: m.activity_field_running },
