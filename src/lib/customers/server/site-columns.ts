@@ -4,8 +4,6 @@
  * come, how to get in). The work record (`readWorkRecord()`) and the unit reads (`readUnits()`)
  * select one of these, by their audience's policy.
  */
-import type { Column, GetColumnData } from "drizzle-orm";
-
 import { customerSite } from "#lib/server/db/schema.ts";
 
 /** Where a site is. */
@@ -38,10 +36,3 @@ export const siteColumns = {
 
 /** How much of a site the reader sees. */
 export type SiteDetail = keyof typeof siteColumns;
-
-/** A site as a reader who sees `D` of it has it. */
-export type Site<D extends SiteDetail> = {
-	[K in keyof (typeof siteColumns)[D]]: (typeof siteColumns)[D][K] extends Column
-		? GetColumnData<(typeof siteColumns)[D][K]>
-		: never;
-};
