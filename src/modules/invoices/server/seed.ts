@@ -254,14 +254,6 @@ function generateCredits(invoices: SeedInvoice[], random: Faker, today: Date): S
 }
 
 export default defineSeed<InvoicedData>({
-	clear: async (tx) => {
-		await tx.delete(creditNoteLine);
-		await tx.delete(creditNote);
-		await tx.delete(invoiceLine);
-		await tx.delete(invoice);
-		await tx.delete(invoicingSettings);
-	},
-
 	// What the invoices follow from; they are made in `run()`, when every module has made its data
 	// and can be asked what it adds to prices and what it bills (the collectors).
 	generate: ({ engineers, orders }) => ({ engineers, orders }),

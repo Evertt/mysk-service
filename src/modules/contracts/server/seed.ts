@@ -376,11 +376,6 @@ interface ContractsSeed {
 }
 
 export default defineSeed<ContractsSeed>({
-	clear: async (tx) => {
-		await tx.delete(contractEquipment);
-		await tx.delete(contract);
-	},
-
 	// Right after the core's data, with its faker: the terms and the call-outs follow from it.
 	generate(draft, previous) {
 		const terms = generateContractTerms(

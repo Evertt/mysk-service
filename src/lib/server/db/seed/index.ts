@@ -136,33 +136,10 @@ const count = (table: string, rows: unknown[]) =>
 	(totals[table] = (totals[table] ?? 0) + rows.length);
 
 await db.transaction(async (tx) => {
-	// The modules' tables first: they reference the core's.
-	for (const { seed } of moduleSeeds.toReversed()) await seed.clear?.(tx);
-	for (const table of [
-		schema.activity,
-		schema.savedView,
-		schema.orderSignoff,
-		schema.orderRequest,
-		schema.orderNote,
-		schema.portalContactSite,
-		schema.portalContact,
-		schema.orderUnit,
-		order,
-		equipment,
-		schema.equipmentLocation,
-		schema.equipmentCategory,
-		schema.customerSite,
-		engineer,
-		customer,
-		schema.simulation,
-		schema.organizationModule,
-		schema.orderTypeSetting,
-		schema.invitation,
-		schema.member,
-		schema.organization,
-	]) {
-		await tx.delete(table);
-	}
+	// Every row of the organizations goes with them: each tenant table's `organization_id` cascades
+	// (`tenantTable()`), as do the keys of the one table without it (contract coverage). The demo
+	// users are made again after (`createDemoUsers()`).
+	await tx.delete(schema.organization);
 
 	// Ids are global, so each tenant's ids continue where the previous tenant's ended.
 	const offset = {

@@ -19,7 +19,7 @@ import { defineSeed } from "#lib/server/db/seed/module-seed.ts";
 import { toMoment } from "#lib/server/db/seed/temporal.ts";
 
 import { type DemoDock, demoDockToken, demoSalvoDocks, mockupDocks } from "./demo.ts";
-import { dockEvent, dockEscalation, dockPosition, dockSession, dockState } from "./schema.ts";
+import { dockPosition, dockSession, dockState } from "./schema.ts";
 
 const minutes = 60 * 1000;
 
@@ -38,14 +38,6 @@ const plate = (random: Faker) =>
 	`${random.number.int({ min: 10, max: 99 })}-${random.string.alpha({ length: 3, casing: "upper" })}-${random.number.int({ min: 1, max: 9 })}`;
 
 export default defineSeed({
-	clear: async (tx) => {
-		await tx.delete(dockEscalation);
-		await tx.delete(dockEvent);
-		await tx.delete(dockSession);
-		await tx.delete(dockState);
-		await tx.delete(dockPosition);
-	},
-
 	async run({ tx, tenants, count }) {
 		for (const tenant of tenants) {
 			const organizationId = tenant.id;
@@ -174,7 +166,7 @@ export default defineSeed({
 			await tx.insert(dockState).values(states);
 			count("dockStates", states);
 
-			// The organization's deletion takes it away again (the core's seed clears them).
+			// Deleting the organization (the next seed does) takes it away again.
 			await seedIntegrationToken(tx, {
 				organizationId,
 				moduleId: "docks",

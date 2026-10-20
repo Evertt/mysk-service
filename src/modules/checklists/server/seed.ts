@@ -8,13 +8,7 @@ import {
 } from "#lib/server/db/seed/categories.ts";
 import { defineSeed, type TenantDraft } from "#lib/server/db/seed/module-seed.ts";
 
-import {
-	checklist,
-	checklistResult,
-	checklistTemplate,
-	checklistTemplateCategory,
-	checklistTemplateItem,
-} from "./schema.ts";
+import { checklistTemplate, checklistTemplateCategory, checklistTemplateItem } from "./schema.ts";
 import { seedChecklists } from "./seed-checklists.ts";
 
 type ShltrCategory = (typeof shltrCategories)[number]["key"];
@@ -184,14 +178,6 @@ const categoryName = (key: string) =>
 	[...seedCategories, ...shltrCategories].find((category) => category.key === key)!.name;
 
 export default defineSeed<TenantDraft["profile"]>({
-	clear: async (tx) => {
-		await tx.delete(checklistResult);
-		await tx.delete(checklist);
-		await tx.delete(checklistTemplateCategory);
-		await tx.delete(checklistTemplateItem);
-		await tx.delete(checklistTemplate);
-	},
-
 	// Whose business the tenant is, which says which templates it gets.
 	generate: ({ profile }) => profile,
 

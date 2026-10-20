@@ -24,12 +24,6 @@ interface MaterialsSeed extends MaterialsDraft {
 const draftOf = (modules: Record<string, unknown>) => modules.materials as MaterialsDraft;
 
 export default defineSeed<MaterialsSeed>({
-	clear: async (tx) => {
-		await tx.delete(stockMovement);
-		await tx.delete(orderLine);
-		await tx.delete(material);
-	},
-
 	during: {
 		// Where the core used to make the catalog: after the equipment, before the orders.
 		// SHLTR has its parts shop's instead (`./seed/shltr.ts`).

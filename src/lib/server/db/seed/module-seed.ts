@@ -102,11 +102,6 @@ export interface ModuleSeed<Data = any> {
 	/** Steps in the core's generation, for the tenants that have the module (see above). */
 	during?: TenantSteps;
 	/**
-	 * Empties the module's tables (children before parents), before the core's data is replaced.
-	 * Runs for every module, whether or not a tenant has it.
-	 */
-	clear?(tx: SeedTransaction): Promise<void>;
-	/**
 	 * Makes the module's data for a tenant that has it, once the core's is generated (see above).
 	 * Ids are the tenant's own, from 1, like the draft's; `previous` is what this made for the
 	 * tenants before, for the ones that must continue where those ended. May add to the draft.

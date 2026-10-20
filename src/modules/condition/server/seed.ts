@@ -28,7 +28,7 @@ import { defineSeed, type ModuleSeed, type TenantDraft } from "#lib/server/db/se
 import { toMoment } from "#lib/server/db/seed/temporal.ts";
 import { checklistScore } from "#modules/checklists/api/extensions.ts";
 
-import { component, componentCheckpoint, conditionSettings, unitCondition } from "./schema.ts";
+import { component, componentCheckpoint, unitCondition } from "./schema.ts";
 
 /** A unit the mockup names, with how its condition went: oldest first, the last one now. */
 interface FixedCondition {
@@ -428,13 +428,6 @@ async function seedComponents(
 }
 
 export default defineSeed<TenantDraft["profile"]>({
-	clear: async (tx) => {
-		await tx.delete(unitCondition);
-		await tx.delete(componentCheckpoint);
-		await tx.delete(component);
-		await tx.delete(conditionSettings);
-	},
-
 	// The components' articles are the materials', which have to be in.
 	after: ["materials"],
 

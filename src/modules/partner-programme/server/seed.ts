@@ -349,15 +349,6 @@ function northPartners(draft: TenantDraft): PartnersSeed {
 }
 
 export default defineSeed<PartnersSeed>({
-	clear: async (tx) => {
-		await tx.delete(bonusCreditNote);
-		await tx.delete(walletEntry);
-		await tx.delete(bonusYear);
-		await tx.delete(orderClassification);
-		await tx.delete(partnerAccount);
-		await tx.delete(programmeYear);
-	},
-
 	generate(draft, previous) {
 		const random = new Faker({ locale: [nl, en] });
 		random.seed(20_261_017 + previous.length);

@@ -112,10 +112,6 @@ function generatePlans(equipments: TenantDraft["equipments"], seed: number) {
 }
 
 export default defineSeed<TenantDraft["equipments"]>({
-	clear: async (tx) => {
-		await tx.delete(maintenancePlan);
-	},
-
 	// The units the plans are for; the plans themselves come from a faker of their own, in `run()`.
 	generate: ({ equipments }) => equipments,
 

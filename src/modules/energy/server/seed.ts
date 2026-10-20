@@ -76,21 +76,6 @@ async function findRiedel(tx: Transaction, organizationId: string) {
 }
 
 export default defineSeed({
-	clear: async (tx) => {
-		for (const table of [
-			energyAlert,
-			energyDoorEvent,
-			energyReading,
-			energyThreshold,
-			energyDoor,
-			energyConsumer,
-			energyZone,
-			energySite,
-		]) {
-			await tx.delete(table);
-		}
-	},
-
 	async run({ tx, tenants, count }) {
 		for (const tenant of tenants) {
 			const organizationId = tenant.id;
