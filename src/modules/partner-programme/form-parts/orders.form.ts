@@ -7,20 +7,15 @@
  */
 import * as v from "valibot";
 
+import { wholeIn } from "#lib/schema.ts";
+
 import { eligibilities, revenueCategories } from "../model.ts";
 
 export default v.pipe(
 	v.object({
 		category: v.picklist(["", ...revenueCategories], m.validation_choose_one),
 		eligibility: v.picklist(["", ...eligibilities], m.validation_choose_one),
-		share: v.optional(
-			v.pipe(
-				v.number(m.partners_share_range),
-				v.integer(m.partners_share_range),
-				v.minValue(1, m.partners_share_range),
-				v.maxValue(99, m.partners_share_range),
-			),
-		),
+		share: v.optional(wholeIn({ min: 1, max: 99, message: m.partners_share_range })),
 	}),
 	v.forward(
 		v.check(

@@ -1,19 +1,13 @@
 import * as v from "valibot";
 
-import { date, id, text } from "#lib/schema.ts";
+import { date, id, text, wholeIn } from "#lib/schema.ts";
 
 import { intervalLimits, planOrderTypes } from "../model.ts";
 
 const intervalMessage = () => m.maintenance_interval_range(intervalLimits);
 
 /** A plan's interval in whole months, 1–60. */
-const intervalMonths = () =>
-	v.pipe(
-		v.number(intervalMessage),
-		v.integer(intervalMessage),
-		v.minValue(intervalLimits.min, intervalMessage),
-		v.maxValue(intervalLimits.max, intervalMessage),
-	);
+const intervalMonths = () => wholeIn({ ...intervalLimits, message: intervalMessage });
 
 /** What the office says about a plan: the fields of its dialog. */
 const planFields = {

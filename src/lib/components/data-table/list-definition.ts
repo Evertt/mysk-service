@@ -41,7 +41,7 @@ import * as v from "valibot";
 
 import { isDay } from "#lib/dates.ts";
 import type { ListColumnsPoint } from "#lib/extensions/define.ts";
-import { recordId } from "#lib/schema.ts";
+import { recordId, wholeIn } from "#lib/schema.ts";
 
 import type { Features } from "./features.ts";
 import { type ModuleListColumn, moduleColumnIdPattern } from "./module-columns.ts";
@@ -531,7 +531,7 @@ function listSchemas(
 				),
 			),
 			group: v.nullable(v.picklist(groupIds)),
-			pageIndex: v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(listLimits.pageIndex)),
+			pageIndex: wholeIn({ max: listLimits.pageIndex }),
 			pageSize: v.literal(pageSize),
 		}),
 		v.check((input) => jsonBytes(input) <= listLimits.bytes, m.common_error_generic),

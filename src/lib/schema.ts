@@ -134,12 +134,60 @@ export const optionalTime = () =>
 	);
 
 /** A required email address, stored in lower case. */
-export const email = (required: Message = m.validation_email_required) =>
-	v.pipe(formatted(required, v.EMAIL_REGEX, m.validation_email_invalid), v.toLowerCase());
+export const email = (
+	required: Message = m.validation_email_required,
+	invalid: Message = m.validation_email_invalid,
+) => v.pipe(formatted(required, v.EMAIL_REGEX, invalid), v.toLowerCase());
 
 /** A required phone number: digits with optional +, spaces, dots, dashes and brackets. */
 export const phone = (required: Message = m.validation_phone_required) =>
 	formatted(required, /^\+?[\d\s().-]{6,20}$/, m.validation_phone_invalid);
+
+/** Where a number may be, and what to say when it isn't (a command's refusals need no message). */
+export interface Bounds {
+	/** The least it may be (0 if left out), or with `above`, what it must be more than. */
+	min?: number;
+	above?: boolean;
+	/** The most it may be; no limit if left out. */
+	max?: number;
+	/** Said when it's missing or out of bounds, unless `tooLow` or `tooHigh` says otherwise. */
+	message?: Message;
+	tooLow?: Message;
+	tooHigh?: Message;
+}
+
+/** A number from a number input (an empty one arrives as undefined) or a command, in bounds. */
+export const numberIn = ({
+	min = 0,
+	above = false,
+	max = Infinity,
+	message,
+	tooLow = message,
+	tooHigh = message,
+}: Bounds = {}) =>
+	v.pipe(
+		v.number(message),
+		v.finite(message),
+		above ? v.gtValue(min, tooLow) : v.minValue(min, tooLow),
+		v.maxValue(max, tooHigh),
+	);
+
+/** Like `numberIn()`, a whole number; `fraction` is said for one that isn't. */
+export const wholeIn = ({
+	fraction,
+	...bounds
+}: Omit<Bounds, "above"> & { fraction?: Message } = {}) =>
+	v.pipe(numberIn(bounds), v.integer(fraction ?? bounds.message));
+
+/** A whole number from a hidden field, in bounds. */
+export const hiddenInt = (bounds: Omit<Bounds, "above"> = {}) =>
+	v.pipe(v.string(), v.transform(Number), wholeIn(bounds));
+
+/** The years the app knows. */
+export const yearBounds = { min: 2000, max: 2100 } as const;
+
+/** A year, as a command takes it (from a hidden field: `hiddenInt(yearBounds)`). */
+export const year = () => wholeIn(yearBounds);
 
 /** The hours of labour on an order. */
 export const laborHours = () =>

@@ -5,35 +5,27 @@
  */
 import * as v from "valibot";
 
-import { id, omittableText, optionalId, text, textMax, type Message } from "#lib/schema.ts";
+import { isTimeZone } from "#lib/dates.ts";
+import {
+	type Bounds,
+	id,
+	type Message,
+	numberIn,
+	omittableText,
+	optionalId,
+	text,
+	textMax,
+	wholeIn,
+} from "#lib/schema.ts";
 
 import { doorKinds } from "../model.ts";
 
-/** A number from a number input, from `min` (or above it, with `above`) up to `max`. */
-const amount = (message: Message, { min = 0, max = 100_000, above = false } = {}) =>
-	v.pipe(
-		v.number(message),
-		v.finite(message),
-		above ? v.gtValue(min, message) : v.minValue(min, message),
-		v.maxValue(max, message),
-	);
-
-/** A whole number from a number input, from `min` up to `max`. */
-const whole = (message: Message, min: number, max: number) =>
-	v.pipe(v.number(message), v.integer(message), v.minValue(min, message), v.maxValue(max, message));
+/** A number from a number input, up to 100,000 unless `max` says otherwise. */
+const amount = (message: Message, bounds: Bounds = {}) =>
+	numberIn({ max: 100_000, ...bounds, message });
 
 /** A required, trimmed text up to `max`. */
 const requiredText = (message: Message, max: number) => v.pipe(text(message), textMax(max));
-
-/** Whether `value` is a time zone this runtime knows, e.g. `Europe/Amsterdam`. */
-export function isTimeZone(value: string) {
-	try {
-		Temporal.Now.instant().toZonedDateTimeISO(value);
-		return true;
-	} catch {
-		return false;
-	}
-}
 
 /**
  * A zone's or door's code: what the gateway names it by (`../ingest/format.ts` takes 1 to 40
@@ -44,7 +36,7 @@ const code = () => requiredText(m.energy_setup_code_required, 40);
 /** An energy site's contract, panels, tariff, CO₂ factor and time zone. */
 const siteFields = {
 	contractedPeakKw: amount(m.energy_setup_peak_invalid, { above: true }),
-	contractedKwhPerYear: whole(m.energy_setup_kwh_year_invalid, 0, 1_000_000_000),
+	contractedKwhPerYear: wholeIn({ max: 1_000_000_000, message: m.energy_setup_kwh_year_invalid }),
 	// An empty number input is no field at all: the default.
 	pvCapacityKw: v.optional(amount(m.energy_setup_pv_invalid), 0),
 	tariff: amount(m.energy_setup_tariff_invalid, { above: true, max: 10 }),
@@ -53,7 +45,7 @@ const siteFields = {
 		v.string(),
 		v.trim(),
 		v.nonEmpty(m.energy_setup_time_zone_invalid),
-		v.check(isTimeZone, m.energy_setup_time_zone_invalid),
+		v.check((zone: string) => isTimeZone(zone), m.energy_setup_time_zone_invalid),
 	),
 };
 
@@ -86,7 +78,7 @@ export const zoneSchema = v.object({
 	code: code(),
 	name: requiredText(m.energy_setup_name_required, 80),
 	floor: omittableText(40),
-	areaM2: v.optional(whole(m.energy_setup_area_invalid, 0, 1_000_000), 0),
+	areaM2: v.optional(wholeIn({ max: 1_000_000, message: m.energy_setup_area_invalid }), 0),
 });
 
 export type ZoneInput = Omit<v.InferOutput<typeof zoneSchema>, "energySiteId">;
@@ -119,7 +111,7 @@ export const doorSchema = v.object({
 	name: requiredText(m.energy_setup_name_required, 80),
 	kind: v.picklist(doorKinds, m.validation_choose_one),
 	lossKw: amount(m.energy_setup_loss_invalid),
-	thresholdMinutes: whole(m.energy_setup_minutes_invalid, 1, 1440),
+	thresholdMinutes: wholeIn({ min: 1, max: 1440, message: m.energy_setup_minutes_invalid }),
 	insideC: temperature(),
 	outsideC: temperature(),
 	equipmentId: unit(),

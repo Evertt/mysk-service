@@ -7,7 +7,7 @@
 import * as v from "valibot";
 
 import { isManager } from "#lib/auth/index.ts";
-import { customerCode, recordId } from "#lib/schema.ts";
+import { customerCode, id, recordId } from "#lib/schema.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
 import { live } from "#lib/server/live.ts";
 
@@ -35,7 +35,7 @@ export const saveCustomerDock = forManagers.form(
 
 /** Deletes one of the customer's docks. */
 export const deleteCustomerDock = forManagers.form(
-	v.object({ customer: code, id: v.pipe(v.string(), v.transform(Number), v.integer()) }),
+	v.object({ customer: code, id: id() }),
 	async (input) => {
 		const deleted = await deleteDock(input.customer, input.id);
 		void getCustomerDocks(input.customer).refresh();

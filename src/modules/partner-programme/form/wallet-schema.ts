@@ -1,16 +1,10 @@
 /** The forms on a partner's card: which year, and an entry in its wallet made by hand. */
 import * as v from "valibot";
 
-import { cents, customerCode, optionalDate, text } from "#lib/schema.ts";
+import { cents, customerCode, hiddenInt, optionalDate, text, yearBounds } from "#lib/schema.ts";
 
 /** A year, from a hidden field. */
-export const yearField = v.pipe(
-	v.string(),
-	v.transform(Number),
-	v.integer(),
-	v.minValue(2000),
-	v.maxValue(2100),
-);
+export const yearField = hiddenInt(yearBounds);
 
 /** What happened: credit spent outside the shop, or credit added by hand. */
 const manualEntryKinds = ["spend", "adjustment"] as const;

@@ -1,15 +1,11 @@
 import * as v from "valibot";
 
+import { wholeIn } from "#lib/schema.ts";
+
 import { validThresholds } from "../model.ts";
 
 /** A threshold: a whole percentage from 1 to 100. */
-const threshold = () =>
-	v.pipe(
-		v.number(m.condition_threshold_range),
-		v.integer(m.condition_threshold_range),
-		v.minValue(1, m.condition_threshold_range),
-		v.maxValue(100, m.condition_threshold_range),
-	);
+const threshold = () => wholeIn({ min: 1, max: 100, message: m.condition_threshold_range });
 
 /** The organization's condition settings: the fields of its settings page. */
 export const settingsSchema = v.pipe(

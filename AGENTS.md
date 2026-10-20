@@ -134,6 +134,10 @@ Before you change the schema, add a migration, or log a new subject or action: r
   with `<EnumBadge display={…Display} value />`, as a table column with `column.enum()`. Ask
   whether a value is one of a list's with `isOneOf(values, value)` (`#lib/one-of.ts`, which
   narrows it), never a cast `.includes()` (`is-one-of.spec.ts`).
+- A schema takes its fields from `#lib/schema.ts`: a number in bounds is `numberIn({ min, max,
+above, message })` or `wholeIn()`, from a hidden field `hiddenInt()`, a year `year()`, an id
+  `id()` (a command's `recordId()`), an email address `email()`; never hand-built from
+  `v.minValue()`, `v.integer()` and the like (`schema-helpers.spec.ts`).
 - Days are `Temporal.PlainDate` and moments are `Temporal.Instant`. Compare them with `compare()` or
   `.equals()`. Ask the user's time zone through `#lib/dates.ts`: `currentDay()` (today), `dayOf(moment)`,
   `startOfDay(day)` and `mondayOf(day)`, not `Temporal.Now.plainDateISO(getTimeZone())` and the like.

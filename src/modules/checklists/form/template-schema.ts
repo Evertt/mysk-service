@@ -1,7 +1,7 @@
 /** The forms of the checklist templates: a template's details, its categories, and its points. */
 import * as v from "valibot";
 
-import { id, text, textMax, moveDirection } from "#lib/schema.ts";
+import { id, text, textMax, moveDirection, wholeIn } from "#lib/schema.ts";
 
 import { textLimits, validityLimits } from "../model.ts";
 
@@ -17,12 +17,7 @@ const templateFields = {
 		textMax(textLimits.norm),
 		v.transform((value) => value || null),
 	),
-	validityMonths: v.pipe(
-		v.number(validityMessage),
-		v.integer(validityMessage),
-		v.minValue(validityLimits.min, validityMessage),
-		v.maxValue(validityLimits.max, validityMessage),
-	),
+	validityMonths: wholeIn({ ...validityLimits, message: validityMessage }),
 };
 
 export const newTemplateSchema = v.object(templateFields);

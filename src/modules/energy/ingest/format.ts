@@ -8,6 +8,7 @@ import * as v from "valibot";
 
 import { momentSeconds } from "#lib/dates.ts";
 import { type BatchIssue, batchIssues } from "#lib/modules/batch-issues.ts";
+import { numberIn, wholeIn } from "#lib/schema.ts";
 
 import { INTERVAL_MINUTES } from "../model.ts";
 
@@ -41,13 +42,7 @@ const moment = () =>
 		v.transform((text) => Temporal.Instant.from(text)),
 	);
 
-const kw = () =>
-	v.pipe(
-		v.number(m.energy_ingest_power),
-		v.finite(m.energy_ingest_power),
-		v.minValue(0, m.energy_ingest_power),
-		v.maxValue(100_000, m.energy_ingest_power),
-	);
+const kw = () => numberIn({ max: 100_000, message: m.energy_ingest_power });
 
 /** Whether `start` is on a quarter hour, in whole minutes. */
 const onQuarter = (start: Temporal.Instant) => {
@@ -62,11 +57,7 @@ const reading = v.pipe(
 			start: v.pipe(moment(), v.check(onQuarter, m.energy_ingest_quarter)),
 			avgKw: kw(),
 			peakKw: kw(),
-			kwh: v.pipe(
-				v.number(m.energy_ingest_energy),
-				v.finite(m.energy_ingest_energy),
-				v.minValue(0, m.energy_ingest_energy),
-			),
+			kwh: numberIn({ message: m.energy_ingest_energy }),
 		},
 		m.energy_ingest_unknown_field,
 	),
@@ -89,7 +80,7 @@ const doorEvent = v.strictObject(
 /** A batch as posted (see above), before it's checked against the clock and the site. */
 const batchSchema = v.strictObject(
 	{
-		site: v.pipe(v.number(m.energy_ingest_site), v.integer(m.energy_ingest_site), v.minValue(1)),
+		site: wholeIn({ min: 1, message: m.energy_ingest_site }),
 		readings: v.optional(
 			v.pipe(
 				v.array(reading, m.energy_ingest_list),
