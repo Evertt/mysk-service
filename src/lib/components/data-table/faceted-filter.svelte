@@ -1,46 +1,36 @@
 <!--
 	@component
 	Multi-select filter for a column with a fixed set of values (status, type, …), showing how
-	many rows have each value. The column needs `filterFn: "oneOf"` (or a filter function and
-	`meta.filter` of its own). A server-side table passes the `counts`, which it can't count itself.
-	A column that can be empty gives `none` a label, and the rows without a value are an option too.
+	many rows have each value: a list's set filter (`oneOf()`, `code`, …, which `ListToolbar` renders
+	it for). Its title, options and `none` default to the column's (its label, `meta.filterOptions`,
+	and for a column that can be empty, `meta.none`: the rows without a value are an option too). A
+	server-side table passes the `counts`, which it can't count itself.
 	It goes inside the table's `Toolbar`, which lists it in its Filter menu and shows it as a pill
 	while values are chosen; this component renders nothing of its own.
 -->
 <script lang="ts">
 	import CheckIcon from "@lucide/svelte/icons/check";
-	import type { Component } from "svelte";
 
 	import { formatNumber } from "#lib/i18n/format.ts";
 	import { cn } from "#lib/utils.ts";
 
-	import { registerTableFilter } from "./filters.svelte.ts";
+	import type { FilterOption } from "./features.ts";
+	import { filterColumn, registerTableFilter } from "./filters.svelte.ts";
 	import { useTableContext } from "./table.svelte.ts";
 	import { noneToken } from "./url-state.ts";
 
-	interface Option {
-		value: string;
-		label: string;
-		icon?: Component;
-		/** What the search box finds it by, if not only its label, e.g. a customer's code too. */
-		keywords?: string[];
-		/**
-		 * How many rows have it, rather than `counts`' number; greyed at 0, as a `RecordFilter`'s
-		 * options are (`recordFacets()`' options have it).
-		 */
-		count?: number;
-	}
-
 	let {
 		columnId,
-		title,
-		options,
+		title: givenTitle,
+		options: givenOptions,
 		counts: given,
-		none,
+		none: givenNone,
 	}: {
 		columnId: string;
-		title: string;
-		options: Option[];
+		/** The column's label if not given. */
+		title?: string;
+		/** The column's (`meta.filterOptions`, e.g. an enum's) if not given. */
+		options?: readonly FilterOption[];
 		/**
 		 * How many rows have each value (the rows without one under `none`); counted from the
 		 * table's rows if not given.
@@ -48,14 +38,19 @@
 		counts?: Readonly<Record<string, number>> | ReadonlyMap<string, number>;
 		/**
 		 * For a column that can be empty: offers the rows without a value as the first option, with
-		 * this label, e.g. "Unassigned" (`true` for a generic "(None)"). Its value is `none` in the
-		 * URL (`noneToken`), which `filterFn: "oneOf"` keeps rows without a value by.
+		 * this label, e.g. "Unassigned" (`true` for the column's, `noneLabel()`). Its value is `none` in the
+		 * URL (`noneToken`), which `filterFn: "oneOf"` keeps rows without a value by. The column's
+		 * (`columnNone()`) if not given; `false` offers none.
 		 */
-		none?: string | true;
+		none?: string | boolean;
 	} = $props();
 
 	const table = useTableContext();
-	const column = $derived(table.getColumn(columnId));
+	const filter = filterColumn(table, () => ({ columnId, title: givenTitle, none: givenNone }));
+	const column = $derived(filter.column);
+	const title = $derived(filter.title);
+	const none = $derived(filter.none);
+	const options = $derived(givenOptions ?? column?.columnDef.meta?.filterOptions ?? []);
 	const counts = $derived.by((): ReadonlyMap<unknown, number> => {
 		if (given instanceof Map) return given;
 		if (given) return new Map(Object.entries(given));
@@ -68,14 +63,7 @@
 		return found;
 	});
 	/** The options, the one for rows without a value first. */
-	const shown = $derived(
-		none
-			? [
-					{ value: noneToken, label: none === true ? m.common_table_filter_none() : none },
-					...options,
-				]
-			: options,
-	);
+	const shown = $derived(none ? [{ value: noneToken, label: none }, ...options] : options);
 	const selected = $derived(new Set((column?.getFilterValue() as string[] | undefined) ?? []));
 
 	function toggle(value: string) {

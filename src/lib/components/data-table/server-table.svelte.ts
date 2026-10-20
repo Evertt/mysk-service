@@ -1,16 +1,16 @@
 /**
  * The client side of a server-side table (see `#lib/server/lists/plan.ts`): the page reads the
- * table's state from the URL into the list's query (`urlListQuery()`) and asks its remote queries
- * for the first page of rows (the query) and its filters' counts (its `whereOf()`), so the URL
- * (which the table keeps in sync, debouncing the search) decides what's fetched. The table loads
- * the pages after it as it's scrolled (`scrollPages()`), and shows the rows as they come
- * (`createAppTable` with `serverSide`); `isStale()` and `serverTableLoading()` tell whether they
- * are the table's.
+ * table's state from the URL into the list's query and asks its remote queries for the first page
+ * of rows (the query) and its filters' counts (its `whereOf()`), so the URL (which the table keeps
+ * in sync, debouncing the search) decides what's fetched (`listQueries()`). The table
+ * (`createServerTable()`) loads the pages after it as it's scrolled (`scrollPages()`), and shows
+ * the rows as they come (`createAppTable` with `serverSide`); `isStale()` and
+ * `serverTableLoading()` tell whether they are the table's.
  */
 import type { RemoteQuery } from "$app/server";
 import { navigating, page } from "$app/state";
 import type { RowData, SvelteTable } from "@tanstack/svelte-table";
-import { untrack } from "svelte";
+import { getContext, setContext, untrack } from "svelte";
 
 import type { Features } from "./features.ts";
 import type { PageGroups } from "./grouping.ts";
@@ -22,15 +22,17 @@ import {
 	queryKey,
 	startingAt,
 	toListQuery,
+	whereOf,
 } from "./list-definition.ts";
 import type { ScrollWindow } from "./scroll-window.svelte.ts";
+import { type AppTableOptions, createAppTable, type ListTable } from "./table.svelte.ts";
 import { parseTablePosition, parseTableUrl, type TableUrlSpec } from "./url-state.ts";
 
 /**
  * What a URL spec makes of URLs: its sortable, groupable and filtered columns, with their names
- * in the URL, and its defaults. A server-side table's spec (from its columns, see `tableUrlSpec`)
- * and its list's (`urlSpec`, from the definition) must agree on it, which its `columns.spec.ts`
- * checks.
+ * in the URL, and its defaults. A list's table's spec (from its columns, see `tableUrlSpec`) and
+ * its list's (`urlSpec`, from the definition) agree on it, as its columns take theirs from the
+ * definition (`withListColumns()`).
  */
 export function urlGrammar(spec: TableUrlSpec) {
 	return {
@@ -79,7 +81,7 @@ function isStale<TData extends RowData>(
  * after it's gone, and with it the table, and in development navigating from such a page to the
  * dashboard's charts hangs the tab.
  */
-export function serverTableLoading<TData extends RowData>(
+function serverTableLoading<TData extends RowData>(
 	table: SvelteTable<Features, TData>,
 	list: List<any>,
 	key: () => string,
@@ -173,7 +175,7 @@ export function recordOptions<C>(
  * scrolled, is read when they change (or the page opens), not as it changes. Call it while the
  * page initializes, and ask for the rows with `current`.
  */
-export function urlListQuery<C>(list: () => List<C>) {
+function urlListQuery<C>(list: () => List<C>) {
 	const base = $derived(toListQuery(list(), parseTableUrl(page.url.searchParams, list().urlSpec)));
 	const key = $derived(queryKey(base));
 	const query = $derived.by(() => {
@@ -366,4 +368,127 @@ export function scrollPages<Page extends ListPage<{ id: unknown }, ListQuery<any
 	});
 
 	return scroll;
+}
+
+const whereKey = Symbol("list-where");
+
+/**
+ * Which rows a server-side list's table shows, its first page's `where` (`createServerTable()`
+ * sets it), for the filters inside it that count under the list's search and other filters
+ * (`ListToolbar`'s record filters). Call it while a component inside the table initializes.
+ */
+export function listWhere<C>(): () => ListWhere<C> {
+	const where = getContext<(() => ListWhere<C>) | undefined>(whereKey);
+	if (!where) throw new Error("A list's record filter needs to be inside a server-side table");
+	return where;
+}
+
+/** A server-side list's table: see `createServerTable()`. */
+export interface ServerTable<
+	Row extends { id: unknown },
+	C,
+	Query = ListQuery<C>,
+> extends ListTable<Row, C> {
+	/** Its rows as it's scrolled. */
+	pages: ScrollPages<Row, Query>;
+	/** Which rows it shows (its first page's query's `where`). */
+	where: () => ListWhere<C>;
+	readonly loading: boolean;
+	readonly matching: { where: ListWhere<C>; key: string; count: number };
+}
+
+/**
+ * The table of a server-side list (`defineList()`): `first` is the page of rows the page asked for
+ * and awaited (`listQueries()`), `fetch` the rows' remote query, which it asks for the pages before
+ * and after it as it's scrolled (`scrollPages()`). Its columns are the list's (`withListColumns()`),
+ * its rows by id, and its state starts at the list's defaults (the server's too). It says whether
+ * it waits for rows (`serverTableLoading()`), what the server knows of its groups and which rows
+ * match, and gives its filters the rows' `where` (`listWhere()`). Call it while the component
+ * initializes.
+ */
+export function createServerTable<C, Page extends ListPage<{ id: unknown }, ListQuery<C>>>({
+	list,
+	first,
+	fetch,
+	columns,
+	initialState,
+}: {
+	/** The list, with the tenant's modules' columns if it takes them (`extendList()`). */
+	list: List<C>;
+	first: () => Page;
+	fetch: (query: Page["query"]) => RemoteQuery<Page>;
+	columns: AppTableOptions<Page["rows"][number]>["columns"];
+	/** Besides the list's defaults, e.g. the hidden columns. */
+	initialState?: AppTableOptions<Page["rows"][number]>["initialState"];
+}): ServerTable<Page["rows"][number], C, Page["query"]> {
+	type Row = Page["rows"][number];
+	const pages = scrollPages({ first, fetch });
+	const table = createAppTable<Row>({
+		columns,
+		serverSide: true,
+		scroll: pages,
+		get data() {
+			return pages.rows;
+		},
+		get rowCount() {
+			return pages.rowCount;
+		},
+		getRowId: (row) => String(row.id),
+		initialState: { ...list.urlSpec.defaults, ...initialState },
+	});
+	const loading = serverTableLoading(table, list, () => pages.key);
+	const where = () => whereOf(first().query);
+	setContext(whereKey, where);
+	return {
+		table,
+		list,
+		pages,
+		where,
+		get loading() {
+			return loading.current;
+		},
+		get groups() {
+			return pages.groups;
+		},
+		get matching() {
+			const page = first();
+			return { where: whereOf(page.query), key: page.key, count: page.rowCount };
+		},
+	};
+}
+
+/**
+ * A server-side list page's queries, as the page's URL says (`urlListQuery()`): its rows' first
+ * page (`rows`, e.g. `getOrders`) and, if it has them, its filters' counts (`facets`, asked with
+ * the query's `where`), which start at once. A change of the search, filters, sorting or grouping
+ * asks for them again (the sorting alone, only the rows). Call it while the page initializes, and
+ * await `rows` and `facets` for the table (`createServerTable()`).
+ *
+ * ```ts
+ * const orders = listQueries(() => ordersList, getOrders, getOrderFacets);
+ * // <OrdersTable orders={await orders.rows} facets={await orders.facets} />
+ * ```
+ */
+export function listQueries<C, Rows, Facets = undefined>(
+	list: () => List<C>,
+	rows: (query: ListQuery<C>) => Rows,
+	facets?: (where: ListWhere<C>) => Facets,
+) {
+	const listQuery = urlListQuery(list);
+	const query = $derived(listQuery.current);
+	const where = $derived(whereOf(query));
+	const rowsQuery = $derived(rows(query));
+	const facetsQuery = $derived(facets?.(where));
+	return {
+		/** The rows' query: the first page's. */
+		get query() {
+			return query;
+		},
+		get rows() {
+			return rowsQuery;
+		},
+		get facets() {
+			return facetsQuery as Facets;
+		},
+	};
 }

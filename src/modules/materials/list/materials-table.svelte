@@ -1,21 +1,13 @@
 <script lang="ts">
-	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
-	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
-	import { whereOf } from "#lib/components/data-table/list-definition.ts";
-	import NumberRangeFilter from "#lib/components/data-table/number-range-filter.svelte";
-	import {
-		scrollPages,
-		serverTableLoading,
-	} from "#lib/components/data-table/server-table.svelte.ts";
-	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
+	import ListLayout from "#lib/components/data-table/list-layout.svelte";
+	import { createServerTable } from "#lib/components/data-table/server-table.svelte.ts";
 
-	import { stockLevelOptions, unitOptions } from "../display.ts";
 	import { deleteMaterials } from "./bulk-actions.ts";
 	import { columns } from "./columns.ts";
 	import { type getMaterialFacets, getMaterials } from "./material-list.remote.ts";
 	import { materialsList } from "./materials-list.ts";
 
-	// The table is created here rather than in the page because `createAppTable` sets context,
+	// The table is created here rather than in the page because making the table sets context,
 	// which Svelte doesn't allow after the page's `await`.
 	let {
 		materials,
@@ -30,57 +22,25 @@
 		facets: Awaited<ReturnType<typeof getMaterialFacets>>;
 	} = $props();
 
-	const pages = scrollPages({ first: () => materials, fetch: getMaterials });
-
-	const table = createAppTable({
+	// By name: the default the server has too.
+	const table = createServerTable({
+		list: materialsList,
+		first: () => materials,
+		fetch: getMaterials,
 		columns,
-		serverSide: true,
-		scroll: pages,
-		get data() {
-			return pages.rows;
-		},
-		get rowCount() {
-			return pages.rowCount;
-		},
-		getRowId: (row) => String(row.id),
-		// By name: the default the server has too.
-		initialState: {
-			...materialsList.urlSpec.defaults,
-			columnVisibility: { sku: false, stockLevel: false },
-		},
+		initialState: { columnVisibility: { sku: false, stockLevel: false } },
 	});
-
-	const loading = serverTableLoading(table, materialsList, () => pages.key);
 </script>
 
-<table.AppTable>
-	<div class="flex min-h-0 flex-1 flex-col gap-4">
-		<table.Toolbar searchLabel={m.materials_search()}>
-			<FacetedFilter
-				columnId="unit"
-				title={m.materials_unit()}
-				options={unitOptions}
-				counts={facets.unit}
-			/>
-			<FacetedFilter
-				columnId="stockLevel"
-				title={m.materials_stock_level()}
-				options={stockLevelOptions}
-				counts={facets.stockLevel}
-			/>
-			<NumberRangeFilter columnId="unitPrice" title={m.materials_unit_price()} money min={0} />
-			<NumberRangeFilter columnId="stock" title={m.materials_stock()} min={0} />
-			<NumberRangeFilter columnId="orderCount" title={m.materials_used_on()} step={1} min={0} />
-		</table.Toolbar>
-		<table.Table
-			emptyTitle={m.materials_empty()}
-			fillViewport
-			loading={loading.current}
-			groups={pages.groups}
-		/>
-		<BulkActionBar
-			actions={[deleteMaterials]}
-			matching={{ where: whereOf(materials.query), key: materials.key, count: materials.rowCount }}
-		/>
-	</div>
-</table.AppTable>
+<ListLayout
+	{table}
+	{facets}
+	actions={[deleteMaterials]}
+	searchLabel={m.materials_search()}
+	emptyTitle={m.materials_empty()}
+	filters={{
+		unitPrice: { min: 0 },
+		stock: { min: 0 },
+		orderCount: { step: 1, min: 0 },
+	}}
+/>

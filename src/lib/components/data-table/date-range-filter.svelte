@@ -38,6 +38,7 @@
 	import { isDay } from "#lib/dates.ts";
 	import { dateFormatter, formatDate } from "#lib/i18n/format.ts";
 
+	import { filterColumn } from "./filters.svelte.ts";
 	import RangeFilter from "./range-filter.svelte";
 	import {
 		type DateRange,
@@ -48,26 +49,35 @@
 		presetCanBe,
 		presetRange,
 	} from "./ranges.ts";
+	import { useTableContext } from "./table.svelte.ts";
 	import { noneToken } from "./url-state.ts";
 
 	let {
 		columnId,
-		title,
+		title: givenTitle,
 		presets = ["today", "this-week", "next-week", "this-month", "last-30-days", "before-today"],
-		none,
+		none: givenNone,
 	}: {
 		columnId: string;
-		title: string;
+		/** The column's label if not given. */
+		title?: string;
 		/** The presets offered, in their order (the URL takes any of `datePresets`). */
 		presets?: readonly DatePreset[];
 		/**
-		 * For a column that can be empty (`meta.filterNone`): offers the rows without a date first,
+		 * For a column that can be empty (`meta.filterNone`, the column's `meta.none` if not given): offers the rows without a date first,
 		 * with this label, e.g. "Unscheduled". Its value is `none` in the URL.
 		 */
-		none?: string;
+		none?: string | boolean;
 	} = $props();
 
 	const id = $props.id();
+	const filter = filterColumn(useTableContext(), () => ({
+		columnId,
+		title: givenTitle,
+		none: givenNone,
+	}));
+	const title = $derived(filter.title);
+	const none = $derived(filter.none);
 
 	const shortDay = dateFormatter({ day: "numeric", month: "short" });
 

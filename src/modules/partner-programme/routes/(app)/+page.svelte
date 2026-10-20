@@ -3,7 +3,7 @@
 	import type { RouteParams } from "$app/types";
 	import SettingsIcon from "@lucide/svelte/icons/settings";
 
-	import { urlListQuery } from "#lib/components/data-table/server-table.svelte.ts";
+	import { listQueries } from "#lib/components/data-table/server-table.svelte.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { partnersList } from "#modules/partner-programme/list/partners-list.ts";
 	import PartnersTable from "#modules/partner-programme/list/partners-table.svelte";
@@ -14,10 +14,8 @@
 	const _props: { params: RouteParams<"/(app)/(modules)/partner-programme"> } = $props();
 
 	// The server filters, sorts and pages the partners, as the URL says (see the orders page).
-	const listQuery = urlListQuery(() => partnersList);
-	const query = $derived(listQuery.current);
 	// They start at once.
-	const partners = $derived(getPartners(query));
+	const partners = listQueries(() => partnersList, getPartners);
 	const year = $derived(getPartnersYear());
 	const overview = $derived(getProgrammeOverview());
 </script>
@@ -34,4 +32,8 @@
 	{/snippet}
 </PageHeader>
 
-<PartnersTable partners={await partners} levels={(await year).levels} overview={await overview} />
+<PartnersTable
+	partners={await partners.rows}
+	levels={(await year).levels}
+	overview={await overview}
+/>

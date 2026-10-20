@@ -27,7 +27,7 @@ export const byCount = (
  * with how many rows each has among those the search and the other filters leave, most first
  * (`byCount`), and greyed at 0. The column filters by `record(row).value`.
  */
-export function recordFacets<TData extends RowData>(
+function recordFacets<TData extends RowData>(
 	table: SvelteTable<Features, TData>,
 	columnId: string,
 	record: (row: TData) => RowRecord,
@@ -79,4 +79,18 @@ export function recordOptionsInOrder({
 			return seen ? { value, label: seen.label, detail: seen.detail } : { value, label: value };
 		});
 	return [...(none ? [none] : []), ...ticked, ...found.options];
+}
+
+/**
+ * The options of a client-side list's customer filter (`recordFacets()`): its rows' customers, by
+ * code (the filter's value, the column's grouping value), named, and found by their code too.
+ */
+export function customerFacets<
+	TData extends RowData & { customer: { code: string; name: string } },
+>(table: SvelteTable<Features, TData>, columnId = "customer") {
+	return recordFacets(table, columnId, (row) => ({
+		value: row.customer.code,
+		label: row.customer.name,
+		detail: row.customer.code,
+	}));
 }

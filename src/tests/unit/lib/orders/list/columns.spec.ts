@@ -1,11 +1,8 @@
 import type { TableState } from "@tanstack/svelte-table";
 import { describe, expect, test, vi } from "vite-plus/test";
 
-import { urlGrammar } from "#lib/components/data-table/server-table.svelte.ts";
 import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
-import { tableUrlSpec } from "#lib/components/data-table/url-sync.svelte.ts";
 import { columns, type OrderRow } from "#lib/orders/list/columns.ts";
-import { ordersList } from "#lib/orders/list/orders-list.ts";
 import { at, freezeNow } from "#unit/temporal-support.ts";
 
 const order = (number: string, fields: Partial<OrderRow> = {}): OrderRow => ({
@@ -181,13 +178,4 @@ test("the type and status filters keep the chosen values", () => {
 		{ id: "status", value: ["completed", "invoiced"] },
 	];
 	expect(shown(rows, { columnFilters: filters })).toEqual(["ORD-003"]);
-});
-
-test("the table reads and writes the URL as the orders list says", () => {
-	const table = createAppTable({
-		columns,
-		data: [],
-		initialState: { ...ordersList.urlSpec.defaults },
-	});
-	expect(urlGrammar(tableUrlSpec(table))).toEqual(urlGrammar(ordersList.urlSpec));
 });

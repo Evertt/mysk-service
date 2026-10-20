@@ -1,6 +1,7 @@
 import { resolve } from "$app/paths";
 import { renderComponent } from "@tanstack/svelte-table";
 
+import { withListColumns } from "#lib/components/data-table/list-definition.ts";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 
@@ -9,6 +10,7 @@ import { materialLabels } from "../labels.ts";
 import { materialUnits } from "../model.ts";
 import MaterialLink from "../ui/material-link.svelte";
 import type { getMaterials } from "./material-list.remote.ts";
+import { materialsList } from "./materials-list.ts";
 import StockCell from "./stock-cell.svelte";
 
 /** A row of the materials list, a page of which comes from the server (see `materialsList`). */
@@ -16,42 +18,40 @@ export type MaterialRow = Awaited<ReturnType<typeof getMaterials>>["rows"][numbe
 
 const column = createAppColumnHelper<MaterialRow>();
 
-export const columns = column.columns([
-	column.select(),
-	column.accessor("name", {
+export const columns = withListColumns(materialsList, {
+	select: column.select(),
+	name: column.accessor("name", {
 		cell: ({ row }) =>
 			renderComponent(MaterialLink, { sku: row.original.sku, name: row.original.name }),
 		enableHiding: false,
 		meta: { label: m.materials_material },
 	}),
 	// Hidden, so the search finds materials by SKU too.
-	column.accessor("sku", {
+	sku: column.accessor("sku", {
 		enableHiding: false,
 		meta: { label: m.materials_sku },
 	}),
-	column.enum("unit", {
+	unit: column.enum("unit", {
 		values: materialUnits,
 		label: (unit) => materialLabels.label("materialUnit", unit),
 		enableGlobalFilter: false,
 		meta: { label: m.materials_unit },
 	}),
-	column.accessor("unitPrice", {
+	// In euros in the URL: `?price=..12.50`.
+	unitPrice: column.accessor("unitPrice", {
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
-		// In euros in the URL: `?price=..12.50`.
-		filterFn: "inMoneyRange",
-		meta: { label: m.materials_unit_price, align: "end", param: "price" },
+		meta: { label: m.materials_unit_price, align: "end" },
 	}),
-	column.accessor("stock", {
+	// `?quantity=..10`: at most 10 in stock.
+	stock: column.accessor("stock", {
 		cell: ({ row }) =>
 			renderComponent(StockCell, { stock: row.original.stock, unit: row.original.unit }),
 		enableGlobalFilter: false,
-		// `?quantity=..10`: at most 10 in stock.
-		filterFn: "inNumberRange",
-		meta: { label: m.materials_stock, align: "end", param: "quantity" },
+		meta: { label: m.materials_stock, align: "end" },
 	}),
 	// Not shown; the stock level filter filters on it, and the rows can be grouped by it.
-	column.enum((row) => stockLevel(row.stock, row.unit), {
+	stockLevel: column.enum((row) => stockLevel(row.stock, row.unit), {
 		id: "stockLevel",
 		values: stockLevels,
 		label: (level) => materialLabels.label("stockLevel", level),
@@ -61,15 +61,14 @@ export const columns = column.columns([
 		enableHiding: false,
 		enableGlobalFilter: false,
 		// `?stock=out,low`, e.g. from the dashboard.
-		meta: { label: m.materials_stock_level, param: "stock" },
+		meta: { label: m.materials_stock_level },
 	}),
-	column.accessor("orderCount", {
+	orderCount: column.accessor("orderCount", {
 		cell: ({ cell }) => renderComponent(cell.NumberCell, { format: m.common_count_orders }),
 		enableGlobalFilter: false,
-		filterFn: "inNumberRange",
-		meta: { label: m.materials_used_on, align: "end", param: "used" },
+		meta: { label: m.materials_used_on, align: "end" },
 	}),
-	column.display({
+	actions: column.display({
 		id: "actions",
 		cell: ({ row }) =>
 			renderComponent(RowActions, {
@@ -82,4 +81,4 @@ export const columns = column.columns([
 				],
 			}),
 	}),
-]);
+});

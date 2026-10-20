@@ -48,18 +48,20 @@ export function tableUrlSpec<TData extends RowData>(
 		prefix: options.prefix,
 		columns: table.getAllLeafColumns().map((column) => {
 			const meta = column.columnDef.meta;
+			const filter =
+				meta?.filter ??
+				(typeof column.columnDef.filterFn === "string"
+					? filterFnGrammar[column.columnDef.filterFn]
+					: undefined);
 			return {
 				id: column.id,
 				param: meta?.param,
 				sortable: column.getCanSort(),
 				groupable: column.getCanGroup(),
-				filter:
-					meta?.filter ??
-					(typeof column.columnDef.filterFn === "string"
-						? filterFnGrammar[column.columnDef.filterFn]
-						: undefined),
+				filter,
 				values: meta?.filterValues,
-				none: meta?.filterNone,
+				// A set filter's `none` is among its values (or any value).
+				none: filter && filter !== "set" ? meta?.filterNone : undefined,
 			};
 		}),
 		defaults: {

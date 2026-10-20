@@ -12,6 +12,7 @@ export const partnersList = defineList({
 		partner: { sort: true },
 		level: { filter: orNone(code) },
 		revenue: { sort: true },
+		progress: {},
 		wallet: { sort: true },
 		accepted: { sort: true },
 	},

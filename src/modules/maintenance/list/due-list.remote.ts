@@ -1,5 +1,4 @@
 /** The due list's queries and its bulk action, "Create orders" (see `bulk-actions.ts`). */
-import { queryKey } from "#lib/components/data-table/list-definition.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, equipment, order } from "#lib/server/db/schema.ts";
 import {
@@ -22,41 +21,30 @@ import { dueList } from "./due-list.ts";
  * A page of the tenant's active plans that are due as the query's range says, with their unit,
  * customer and last order, searched and sorted as it says (see `dueList`), and how many match.
  */
-export const getDuePlans = query(dueList.query, async (input) => {
-	const plan = planList(dueSql(), input);
-	const [rows, rowCount] = await Promise.all([
-		plan.paged(
-			withPlanJoins(
-				db
-					.select({
-						id: maintenancePlan.id,
-						description: maintenancePlan.description,
-						orderType: maintenancePlan.orderType,
-						intervalMonths: maintenancePlan.intervalMonths,
-						nextDueOn: maintenancePlan.nextDueOn,
-						unit: {
-							id: equipment.id,
-							serialNumber: equipment.serialNumber,
-							manufacturer: equipment.manufacturer,
-							model: equipment.model,
-						},
-						customer: { code: customer.code, name: customer.name },
-						lastOrder: order.number,
-					})
-					.from(maintenancePlan)
-					.$dynamic(),
-			),
+export const getDuePlans = query(dueList.query, (input) =>
+	planList(dueSql(), input).answer(
+		withPlanJoins(
+			db
+				.select({
+					id: maintenancePlan.id,
+					description: maintenancePlan.description,
+					orderType: maintenancePlan.orderType,
+					intervalMonths: maintenancePlan.intervalMonths,
+					nextDueOn: maintenancePlan.nextDueOn,
+					unit: {
+						id: equipment.id,
+						serialNumber: equipment.serialNumber,
+						manufacturer: equipment.manufacturer,
+						model: equipment.model,
+					},
+					customer: { code: customer.code, name: customer.name },
+					lastOrder: order.number,
+				})
+				.from(maintenancePlan)
+				.$dynamic(),
 		),
-		plan.count(),
-	]);
-	return {
-		rows,
-		rowCount,
-		/** The query the rows are for (its `where` is the target of "select all matching"). */
-		query: input,
-		key: queryKey(input),
-	};
-});
+	),
+);
 
 /** How many plans of each order type match the search and the other filters. */
 export const getDueFacets = query(dueList.where, async (where) =>

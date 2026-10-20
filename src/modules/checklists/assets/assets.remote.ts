@@ -7,7 +7,6 @@
 import { error } from "@sveltejs/kit";
 import * as v from "valibot";
 
-import { queryKey } from "#lib/components/data-table/list-definition.ts";
 import { unitBySerial } from "#lib/equipment/server/index.ts";
 import { recordId } from "#lib/schema.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -40,20 +39,17 @@ import { assetList } from "./asset-list.ts";
  * A page of the tenant's assets as the query says (see `assetList`), each with its customer, site,
  * where it stands this year and its components, and how many match.
  */
-export const getAssets = query(assetList.query, async (input) => {
+export const getAssets = query(assetList.query, (input) => {
 	const state = yearStateSql();
-	const plan = planList(assetSql(state), input);
-	const [rows, rowCount] = await Promise.all([
-		plan.paged(withAssetJoins(db.select(assetFields(state)).from(equipment).$dynamic())),
-		plan.count(),
-	]);
-	const components = await componentsByUnit(rows.map((row) => row.id));
-	return {
-		rows: rows.map((row) => ({ ...row, components: components.get(row.id) ?? [] })),
-		rowCount,
-		query: input,
-		key: queryKey(input),
-	};
+	return planList(assetSql(state), input).answer(
+		withAssetJoins(db.select(assetFields(state)).from(equipment).$dynamic()),
+		{
+			enrich: async (rows) => {
+				const components = await componentsByUnit(rows.map((row) => row.id));
+				return rows.map((row) => ({ ...row, components: components.get(row.id) ?? [] }));
+			},
+		},
+	);
 });
 
 /**

@@ -19,6 +19,8 @@ import CurrencyCell from "./currency-cell.svelte";
 import DataTable from "./data-table.svelte";
 import DateCell from "./date-cell.svelte";
 import { type DataTableColumnMeta, type Features, features } from "./features.ts";
+import type { PageGroups } from "./grouping.ts";
+import type { List } from "./list-definition.ts";
 import NumberCell from "./number-cell.svelte";
 import { setRowBulkActions } from "./row-bulk-actions.svelte.ts";
 import {
@@ -179,6 +181,14 @@ export function createAppColumnHelper<TData extends RowData>() {
 					...column,
 					meta: {
 						filterValues: values,
+						// The filter's, their labels read when shown.
+						filterOptions: values.map((value) => ({
+							value,
+							get label() {
+								return named(value);
+							},
+							...(display?.[value].icon ? { icon: display[value].icon } : {}),
+						})),
 						...(clickFilter
 							? { clickFilter: (value: string) => (known(value) ? named(value) : value) }
 							: {}),
@@ -297,4 +307,54 @@ export function createAppTable<TData extends RowData>(options: AppTableOptions<T
 	}
 
 	return table;
+}
+
+/** An app table, as `createAppTable` makes it. */
+type AppTable<TData extends RowData> = ReturnType<typeof createAppTable<TData>>;
+
+/**
+ * A list's table (`createServerTable()`, `createClientTable()`): what `ListLayout` shows. A
+ * server-side one also says whether it's waiting for rows, what the server knows of its groups,
+ * and which rows match, for its bulk actions.
+ */
+export interface ListTable<TData extends RowData, C = unknown> {
+	table: AppTable<TData>;
+	/** Its definition. */
+	list: { columns: C; filterKinds: Readonly<Record<string, { range?: string }>> };
+	readonly loading?: boolean;
+	readonly groups?: PageGroups<TData>;
+	/** The rows that match, for "select all matching" (see `BulkActionBar`). */
+	readonly matching?: { where: unknown; key: string; count: number };
+}
+
+/**
+ * The table of a client-side list (`defineList({ mode: "client" })`): all its rows are loaded, and
+ * it searches, filters, sorts and groups them in the browser. Its columns are the list's
+ * (`withListColumns()`), its rows by id, and its state starts at the list's defaults, kept in the
+ * URL. Call it while the component initializes.
+ */
+export function createClientTable<TData extends RowData & { id: unknown }, C>({
+	list,
+	data,
+	columns,
+	initialState,
+	getRowId = (row) => String(row.id),
+}: {
+	list: List<C, "client">;
+	/** All the rows. */
+	data: () => TData[];
+	columns: AppTableOptions<TData>["columns"];
+	/** Besides the list's defaults, e.g. the hidden columns. */
+	initialState?: AppTableOptions<TData>["initialState"];
+	getRowId?: (row: TData) => string;
+}): ListTable<TData, C> {
+	const table = createAppTable<TData>({
+		columns,
+		get data() {
+			return data();
+		},
+		getRowId,
+		initialState: { ...list.urlSpec.defaults, ...initialState },
+	});
+	return { table, list };
 }

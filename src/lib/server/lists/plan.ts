@@ -9,8 +9,9 @@
  *
  * ```ts
  * const plan = planList(ordersSql(), query);
- * const rows = await plan.paged(withOrderJoins(db.select({ … }).from(order).$dynamic()));
- * const total = await plan.count();
+ * // A page of rows, how many match, and its groups: what the list's rows query answers.
+ * return plan.answer(withOrderJoins(db.select({ … }).from(order).$dynamic()), { enrich });
+ * // The counts in its filters.
  * const facets = await plan.facets({ status: order.status });
  * ```
  *
@@ -40,14 +41,15 @@ import type { SelectedFields, SQLiteSelect } from "drizzle-orm/sqlite-core";
 import * as v from "valibot";
 
 import { groupKey, type PageGroups } from "#lib/components/data-table/grouping.ts";
-import type {
-	FilterId,
-	FilterValue,
-	GroupId,
-	List,
-	ListQuery,
-	ListWhere,
-	SortId,
+import {
+	type FilterId,
+	type FilterValue,
+	type GroupId,
+	type List,
+	type ListQuery,
+	type ListWhere,
+	queryKey,
+	type SortId,
 } from "#lib/components/data-table/list-definition.ts";
 import { type DateRange, type NumberRange } from "#lib/components/data-table/ranges.ts";
 import { searchWords } from "#lib/components/data-table/search-words.ts";
@@ -176,6 +178,29 @@ export interface ListPlan<C> extends ListWherePlan<C> {
 	 * the filters: for the group rows' counts. `undefined` when not grouped.
 	 */
 	groupCounts(): Promise<Record<string, number> | undefined>;
+	/**
+	 * What a list's rows query answers (`ListPage`): the page of rows of `select` (as `paged()`),
+	 * how many match in all, the query they're for and its key, and, when grouped, what the table
+	 * needs to know of the page's groups. `enrich` adds what SQL doesn't have to the rows fetched
+	 * (the page's, and the rows around it when grouped), e.g. their totals, before they're split.
+	 */
+	answer<Q extends SQLiteSelect, Row = Awaited<Q>[number]>(
+		select: Q,
+		options?: { enrich?: (rows: Awaited<Q>) => Row[] | Promise<Row[]> },
+	): Promise<ListAnswer<Row, ListQuery<C>>>;
+}
+
+/** What a list's rows query answers for a page (`ListPage` in `server-table.svelte.ts`). */
+interface ListAnswer<Row, Query> {
+	rows: Row[];
+	/** How many rows match in all. */
+	rowCount: number;
+	/** The query the rows are for (its `where` is the target of "select all matching"). */
+	query: Query;
+	/** The same as a string, to tell whether the table is waiting for other rows (`isStale`). */
+	key: string;
+	/** When grouped, what the server knows of the page's groups. */
+	groups: PageGroups<Row> | undefined;
 }
 
 /** `like` with `%` and `_` in the text taken literally. */
@@ -436,6 +461,30 @@ function buildPlan(source: LooseSql, query: LooseQuery) {
 	};
 }
 
+/** Adds `answer()` to a page's plan. */
+function withAnswer<C>(plan: Omit<ListPlan<C>, "answer">, query: ListQuery<C>): ListPlan<C> {
+	async function answer<Q extends SQLiteSelect, Row = Awaited<Q>[number]>(
+		select: Q,
+		options: { enrich?: (rows: Awaited<Q>) => Row[] | Promise<Row[]> } = {},
+	): Promise<ListAnswer<Row, ListQuery<C>>> {
+		const [fetched, rowCount, counts] = await Promise.all([
+			plan.paged(select),
+			plan.count(),
+			plan.groupCounts(),
+		]);
+		const rows = options.enrich ? await options.enrich(fetched) : (fetched as unknown as Row[]);
+		const page = plan.page(rows);
+		return {
+			rows: page.rows,
+			rowCount,
+			query,
+			key: queryKey(query),
+			groups: pageGroupsOf(counts, page),
+		};
+	}
+	return { ...plan, answer };
+}
+
 /**
  * Plans a list's query (`ListQuery` for a page of rows, or `ListWhere` for the rows that match,
  * for counts, facets and bulk targets) on the list's SQL: build `sql` per request, since it reads
@@ -453,7 +502,10 @@ export function planList<C>(listSql: ListSql<C>, query: ListWhere<C> | ListQuery
 		}
 	}
 	const source = listSql as unknown as LooseSql;
-	if ("sort" in query) return buildPlan(source, query as unknown as LooseQuery);
+	if ("sort" in query) {
+		const plan = buildPlan(source, query as unknown as LooseQuery) as Omit<ListPlan<C>, "answer">;
+		return withAnswer(plan, query);
+	}
 	const { where, count, facets, ids } = buildPlan(source, {
 		...(query as unknown as LooseQuery),
 		sort: [],
@@ -521,7 +573,7 @@ async function groupCounts(
  * `<table.Table groups>`): `counts` from `groupCounts()`, the rows around the page from
  * `plan.page()`; nothing when it isn't grouped.
  */
-export function pageGroupsOf<Row>(
+function pageGroupsOf<Row>(
 	counts: Record<string, number> | undefined,
 	page: { previous?: Row; next?: Row },
 ): PageGroups<Row> | undefined {

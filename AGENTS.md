@@ -144,8 +144,11 @@ Before you add a message file, an enum kind, a plural or a format, or write Dutc
   (`hand-written.spec.ts`).
 - **Orders** (the transition table, `transitionOrder()`, orders awaiting acceptance, the work
   record each portal reads with `readWorkRecord()`): `docs/agents/orders.md`.
-- **Server-side lists** (filtering, sorting, range filters, module columns):
-  `docs/agents/lists.md`.
+- **Lists**, in the browser or on the server: one `defineList()` (`mode: "client"` for a small
+  list loaded whole), its columns `withListColumns()`, its table `createServerTable()` or
+  `createClientTable()`, its page's shell `<ListLayout>` (toolbar `<ListToolbar>`) and its
+  page's queries `listQueries()`, and on the server `planList(…).answer()`; never a hand-written
+  toolbar or a table without a definition (`lists.spec.ts`). Read `docs/agents/lists.md` first.
 - **Tests** (where they go, e2e conventions, component harnesses): `docs/agents/tests.md`.
 - **Cloudflare deployment**: README.md, "On Cloudflare"; the plan is in `docs/plans/cloudflare.md`.
 - **Svelte and SvelteKit**: use the Svelte MCP. Fetch the docs sections a task needs

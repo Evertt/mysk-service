@@ -4,7 +4,6 @@
  */
 import { sql } from "drizzle-orm";
 
-import { queryKey } from "#lib/components/data-table/list-definition.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, customerSite, equipment, equipmentLocation } from "#lib/server/db/schema.ts";
 import {
@@ -35,9 +34,8 @@ const asDay = (value: string | null) => (value ? Temporal.PlainDate.from(value) 
 export const getConditionUnits = query(conditionList.query, async (input) => {
 	const listSql = rowsSql();
 	const { unit, row } = listSql;
-	const plan = planList(listSql, input);
-	const [found, rowCount, thresholds] = await Promise.all([
-		plan.paged(
+	const [page, thresholds] = await Promise.all([
+		planList(listSql, input).answer(
 			withRowJoins(
 				db
 					.select({
@@ -68,33 +66,34 @@ export const getConditionUnits = query(conditionList.query, async (input) => {
 					.from(equipment)
 					.$dynamic(),
 			),
+			{
+				enrich: async (found) => {
+					const known = await articlesById(
+						found.flatMap((each) => each.component?.materialId ?? []),
+					);
+					return found.map(({ component: part, ...each }) => ({
+						...each,
+						id: Number(each.id),
+						// A unit's own row has none.
+						component: part?.id
+							? {
+									id: part.id,
+									number: part.number!,
+									name: part.name!,
+									sku: part.materialId === null ? null : (known.get(part.materialId)?.sku ?? null),
+								}
+							: null,
+					}));
+				},
+			},
 		),
-		plan.count(),
 		thresholdsOf(),
 	]);
-	const known = await articlesById(found.flatMap((each) => each.component?.materialId ?? []));
-	const rows = found.map(({ component: part, ...each }) => ({
-		...each,
-		id: Number(each.id),
-		// A unit's own row has none.
-		component: part?.id
-			? {
-					id: part.id,
-					number: part.number!,
-					name: part.name!,
-					sku: part.materialId === null ? null : (known.get(part.materialId)?.sku ?? null),
-				}
-			: null,
-	}));
 	return {
-		rows,
-		rowCount,
+		...page,
 		thresholds,
 		/** Which of the other modules' columns the tenant has. */
 		has: { inspection: unit.inspection !== null, nextDue: unit.nextDue !== null },
-		/** The query the rows are for. */
-		query: input,
-		key: queryKey(input),
 	};
 });
 

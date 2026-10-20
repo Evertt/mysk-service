@@ -1,10 +1,6 @@
 <script lang="ts">
-	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
-	import {
-		scrollPages,
-		serverTableLoading,
-	} from "#lib/components/data-table/server-table.svelte.ts";
-	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
+	import ListLayout from "#lib/components/data-table/list-layout.svelte";
+	import { createServerTable } from "#lib/components/data-table/server-table.svelte.ts";
 	import { noneToken } from "#lib/components/data-table/url-state.ts";
 
 	import type { getProgrammeOverview } from "../overview.remote.ts";
@@ -12,7 +8,7 @@
 	import { partnersList } from "./partners-list.ts";
 	import { getPartners } from "./partners.remote.ts";
 
-	// The table is created here rather than in the page because `createAppTable` sets context,
+	// The table is created here rather than in the page because making the table sets context,
 	// which Svelte doesn't allow after the page's `await`.
 	let {
 		partners,
@@ -27,23 +23,12 @@
 		overview: Awaited<ReturnType<typeof getProgrammeOverview>>;
 	} = $props();
 
-	const pages = scrollPages({ first: () => partners, fetch: getPartners });
-
-	const table = createAppTable({
+	const table = createServerTable({
+		list: partnersList,
+		first: () => partners,
+		fetch: getPartners,
 		columns,
-		serverSide: true,
-		scroll: pages,
-		get data() {
-			return pages.rows;
-		},
-		get rowCount() {
-			return pages.rowCount;
-		},
-		getRowId: (row) => String(row.id),
-		initialState: { ...partnersList.urlSpec.defaults },
 	});
-
-	const loading = serverTableLoading(table, partnersList, () => pages.key);
 
 	const levelOptions = $derived(
 		levels.toReversed().map((level) => ({ value: level, label: level })),
@@ -53,17 +38,10 @@
 	);
 </script>
 
-<table.AppTable>
-	<div class="flex min-h-0 flex-1 flex-col gap-4">
-		<table.Toolbar searchLabel={m.partners_search()}>
-			<FacetedFilter
-				columnId="level"
-				title={m.partners_column_level()}
-				options={levelOptions}
-				counts={levelCounts}
-				none={m.partners_no_level()}
-			/>
-		</table.Toolbar>
-		<table.Table emptyTitle={m.partners_empty()} fillViewport loading={loading.current} />
-	</div>
-</table.AppTable>
+<ListLayout
+	{table}
+	facets={{ level: levelCounts }}
+	searchLabel={m.partners_search()}
+	emptyTitle={m.partners_empty()}
+	filters={{ level: { options: levelOptions } }}
+/>

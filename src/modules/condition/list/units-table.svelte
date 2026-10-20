@@ -12,20 +12,12 @@
 	import WrenchIcon from "@lucide/svelte/icons/wrench";
 	import { type Component, untrack } from "svelte";
 
-	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
-	import { whereOf } from "#lib/components/data-table/list-definition.ts";
-	import RecordFilter from "#lib/components/data-table/record-filter.svelte";
-	import {
-		recordOptions,
-		scrollPages,
-		serverTableLoading,
-	} from "#lib/components/data-table/server-table.svelte.ts";
-	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
+	import ListLayout from "#lib/components/data-table/list-layout.svelte";
+	import { createServerTable } from "#lib/components/data-table/server-table.svelte.ts";
 	import FilterChips from "#lib/components/filter-chips.svelte";
 	import StatTile, { type StatTone } from "#lib/components/stat-tile.svelte";
 	import { formatNumber } from "#lib/i18n/index.ts";
 
-	import { conditionLabels } from "../labels.ts";
 	import { needsAttention, type UnitStatus, unitStatuses } from "../model.ts";
 	import { columns } from "./columns.ts";
 	import {
@@ -35,7 +27,7 @@
 	} from "./units-list.remote.ts";
 	import { conditionList, scoreBands } from "./units-list.ts";
 
-	// The table is created here rather than in the page because `createAppTable` sets context,
+	// The table is created here rather than in the page because making the table sets context,
 	// which Svelte doesn't allow after the page's `await`.
 	let {
 		units,
@@ -47,22 +39,13 @@
 		counts: Awaited<ReturnType<typeof getConditionCounts>>;
 	} = $props();
 
-	const pages = scrollPages({ first: () => units, fetch: getConditionUnits });
-
-	const table = createAppTable({
+	// Worst first: the default the server has too.
+	const list = createServerTable({
+		list: conditionList,
+		first: () => units,
+		fetch: getConditionUnits,
 		columns,
-		serverSide: true,
-		scroll: pages,
-		get data() {
-			return pages.rows;
-		},
-		get rowCount() {
-			return pages.rowCount;
-		},
-		getRowId: (row) => String(row.id),
 		initialState: {
-			// Worst first: the default the server has too.
-			...conditionList.urlSpec.defaults,
 			// The other modules' columns, while the tenant has them (which a page's data doesn't change).
 			columnVisibility: untrack(() => ({
 				inspection: units.has.inspection,
@@ -70,15 +53,7 @@
 			})),
 		},
 	});
-
-	const loading = serverTableLoading(table, conditionList, () => pages.key);
-
-	// The customer filter, counted under the list's search and other filters.
-	const customerOptions = recordOptions(
-		getConditionCustomerOptions,
-		() => whereOf(units.query),
-		"customer",
-	);
+	const { table } = list;
 
 	const filterOf = (id: "status" | "customer") =>
 		(table.getColumn(id)?.getFilterValue() as string[] | undefined) ?? [];
@@ -128,7 +103,6 @@
 	/** Every customer's units, for "All customers". */
 	const everyone = $derived(counts.customers.reduce((sum, chip) => sum + chip.count, 0));
 
-	const statusOptions = $derived(conditionLabels.labelOptions("unitStatus", unitStatuses));
 	const bandOptions = $derived([
 		{ value: "low", label: m.condition_band_low() },
 		{ value: "fair", label: m.condition_band_fair() },
@@ -137,79 +111,68 @@
 	] satisfies { value: (typeof scoreBands)[number]; label: string }[]);
 </script>
 
-<table.AppTable>
-	<div class="flex min-h-0 flex-1 flex-col gap-4">
-		<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5" data-kpis>
-			<div data-kpi="units" class="contents">
-				<StatTile label={m.condition_kpi_units()} value={formatNumber(total)} icon={WrenchIcon} />
+{#snippet header()}
+	<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5" data-kpis>
+		<div data-kpi="units" class="contents">
+			<StatTile label={m.condition_kpi_units()} value={formatNumber(total)} icon={WrenchIcon} />
+		</div>
+		{#each tiles as tile (tile.status)}
+			<div data-kpi={tile.status} class="contents">
+				<StatTile
+					label={tile.label}
+					value={formatNumber(counts.status[tile.status] ?? 0)}
+					icon={tile.icon}
+					tone={tile.tone}
+				>
+					{#snippet action()}
+						<Button
+							variant={statuses.length === 1 && statuses[0] === tile.status ? "secondary" : "ghost"}
+							size="xs"
+							aria-pressed={statuses.length === 1 && statuses[0] === tile.status}
+							onclick={() =>
+								setFilter(
+									"status",
+									statuses.length === 1 && statuses[0] === tile.status ? [] : [tile.status],
+								)}
+						>
+							{m.common_view()}
+						</Button>
+					{/snippet}
+				</StatTile>
 			</div>
-			{#each tiles as tile (tile.status)}
-				<div data-kpi={tile.status} class="contents">
-					<StatTile
-						label={tile.label}
-						value={formatNumber(counts.status[tile.status] ?? 0)}
-						icon={tile.icon}
-						tone={tile.tone}
-					>
-						{#snippet action()}
-							<Button
-								variant={statuses.length === 1 && statuses[0] === tile.status
-									? "secondary"
-									: "ghost"}
-								size="xs"
-								aria-pressed={statuses.length === 1 && statuses[0] === tile.status}
-								onclick={() =>
-									setFilter(
-										"status",
-										statuses.length === 1 && statuses[0] === tile.status ? [] : [tile.status],
-									)}
-							>
-								{m.common_view()}
-							</Button>
-						{/snippet}
-					</StatTile>
-				</div>
-			{/each}
-		</div>
-
-		<div class="flex flex-col gap-3">
-			<!-- One customer at a time; several chosen in the Customer filter press none. -->
-			<FilterChips
-				label={m.condition_customers_label()}
-				options={chips}
-				value={customers.length === 0 ? null : customers.length === 1 ? customers[0] : ""}
-				all={{ label: m.condition_customers_all(), count: everyone }}
-				onchange={(code) => setFilter("customer", code ? [code] : [])}
-			/>
-			<Label class="flex w-fit items-center gap-2 text-sm font-normal">
-				<Checkbox
-					checked={onlyAttention}
-					onCheckedChange={(checked) => setFilter("status", checked ? [...needsAttention] : [])}
-				/>
-				{m.condition_only_attention()}
-			</Label>
-		</div>
-
-		<table.Toolbar searchLabel={m.condition_search()}>
-			<FacetedFilter
-				columnId="status"
-				title={m.condition_column_status()}
-				options={statusOptions}
-				counts={counts.status}
-			/>
-			<FacetedFilter
-				columnId="condition"
-				title={m.condition_column_condition()}
-				options={bandOptions}
-				counts={counts.condition}
-			/>
-			<RecordFilter
-				columnId="customer"
-				title={m.condition_column_customer()}
-				searchLabel={m.common_table_search_customers()}
-				load={customerOptions.current}
-			/>
-		</table.Toolbar>
-		<table.Table emptyTitle={m.condition_empty()} fillViewport loading={loading.current} />
+		{/each}
 	</div>
-</table.AppTable>
+
+	<div class="flex flex-col gap-3">
+		<!-- One customer at a time; several chosen in the Customer filter press none. -->
+		<FilterChips
+			label={m.condition_customers_label()}
+			options={chips}
+			value={customers.length === 0 ? null : customers.length === 1 ? customers[0] : ""}
+			all={{ label: m.condition_customers_all(), count: everyone }}
+			onchange={(code) => setFilter("customer", code ? [code] : [])}
+		/>
+		<Label class="flex w-fit items-center gap-2 text-sm font-normal">
+			<Checkbox
+				checked={onlyAttention}
+				onCheckedChange={(checked) => setFilter("status", checked ? [...needsAttention] : [])}
+			/>
+			{m.condition_only_attention()}
+		</Label>
+	</div>
+{/snippet}
+
+<ListLayout
+	table={list}
+	{header}
+	facets={{ status: counts.status, condition: counts.condition }}
+	searchLabel={m.condition_search()}
+	emptyTitle={m.condition_empty()}
+	filters={{
+		condition: { options: bandOptions },
+		customer: {
+			load: getConditionCustomerOptions,
+			searchLabel: m.common_table_search_customers(),
+		},
+	}}
+/>

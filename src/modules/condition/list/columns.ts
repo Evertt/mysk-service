@@ -1,5 +1,6 @@
 import { renderComponent } from "@tanstack/svelte-table";
 
+import { withListColumns } from "#lib/components/data-table/list-definition.ts";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { CustomerLink } from "#lib/customers/components.ts";
@@ -12,15 +13,15 @@ import ConditionBar from "../ui/condition-bar.svelte";
 import InspectionBadge from "../ui/inspection-badge.svelte";
 import StatusBadge from "../ui/status-badge.svelte";
 import type { getConditionUnits } from "./units-list.remote.ts";
-import { scoreBands } from "./units-list.ts";
+import { conditionList } from "./units-list.ts";
 
 /** A row of the Connect page's list, a page of which comes from the server (see `conditionList`). */
 type ConditionRow = Awaited<ReturnType<typeof getConditionUnits>>["rows"][number];
 
 const column = createAppColumnHelper<ConditionRow>();
 
-export const columns = column.columns([
-	column.accessor((row) => row.component?.name ?? null, {
+export const columns = withListColumns(conditionList, {
+	component: column.accessor((row) => row.component?.name ?? null, {
 		id: "component",
 		cell: ({ row }) => {
 			const part = row.original.component;
@@ -40,7 +41,7 @@ export const columns = column.columns([
 		enableHiding: false,
 		meta: { label: m.condition_column_component },
 	}),
-	column.accessor((row) => unitTitle(row), {
+	unit: column.accessor((row) => unitTitle(row), {
 		id: "unit",
 		cell: ({ getValue, row }) =>
 			renderComponent(EquipmentLink, {
@@ -51,7 +52,7 @@ export const columns = column.columns([
 		enableHiding: false,
 		meta: { label: m.condition_column_unit },
 	}),
-	column.accessor((row) => row.customer.name, {
+	customer: column.accessor((row) => row.customer.name, {
 		id: "customer",
 		cell: ({ row }) =>
 			renderComponent(CustomerLink, {
@@ -59,10 +60,10 @@ export const columns = column.columns([
 				code: row.original.customer.code,
 			}),
 		// By the customer's code, e.g. `?customer=RIE-001`.
-		filterFn: (row, _id, codes: string[]) => codes.includes(row.original.customer.code),
-		meta: { label: m.condition_column_customer, filter: "set" },
+		getGroupingValue: (row) => row.customer.code,
+		meta: { label: m.condition_column_customer },
 	}),
-	column.accessor("score", {
+	condition: column.accessor("score", {
 		id: "condition",
 		cell: ({ getValue, row }) =>
 			renderComponent(ConditionBar, {
@@ -71,25 +72,26 @@ export const columns = column.columns([
 			}),
 		sortUndefined: "last",
 		enableGlobalFilter: false,
-		filterFn: "oneOf",
-		meta: { label: m.condition_column_condition, filter: "set", filterValues: scoreBands },
+		// By its band, e.g. `?condition=low,fair`.
+		getGroupingValue: (row) => row.band,
+		meta: { label: m.condition_column_condition },
 	}),
-	column.accessor("lastService", {
+	lastService: column.accessor("lastService", {
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
-		meta: { label: m.condition_column_last_service, param: "last-service" },
+		meta: { label: m.condition_column_last_service },
 	}),
-	column.accessor("nextDue", {
+	nextDue: column.accessor("nextDue", {
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
-		meta: { label: m.condition_column_next_due, param: "next-due" },
+		meta: { label: m.condition_column_next_due },
 	}),
-	column.accessor("inspection", {
+	inspection: column.accessor("inspection", {
 		cell: ({ getValue }) => renderComponent(InspectionBadge, { status: getValue() }),
 		enableGlobalFilter: false,
 		meta: { label: m.condition_column_inspection },
 	}),
-	column.enum("status", {
+	status: column.enum("status", {
 		values: unitStatuses,
 		display: unitStatusDisplay,
 		// With the mark of what a planned unit's condition asks for.
@@ -98,14 +100,12 @@ export const columns = column.columns([
 				status: getValue()!,
 				concern: row.original.concern as Concern,
 			}),
-		enableGrouping: false,
 		enableGlobalFilter: false,
 		meta: { label: m.condition_column_status },
 	}),
-	column.accessor("advice", {
+	advice: column.accessor("advice", {
 		cell: ({ getValue }) => getValue() ?? "",
-		enableSorting: false,
 		enableGlobalFilter: false,
 		meta: { label: m.condition_column_advice },
 	}),
-]);
+});

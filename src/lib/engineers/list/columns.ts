@@ -1,6 +1,7 @@
 import { resolve } from "$app/paths";
 import { renderComponent } from "@tanstack/svelte-table";
 
+import { withListColumns } from "#lib/components/data-table/list-definition.ts";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import { engineerSpecialties } from "#lib/models.ts";
@@ -8,15 +9,16 @@ import { engineerSpecialties } from "#lib/models.ts";
 import { regionLabel, engineerSpecialtyDisplay } from "../display.ts";
 import type { getEngineers } from "../engineers.remote.ts";
 import EngineerLink from "../ui/engineer-link.svelte";
+import { engineersList, engineerStates } from "./engineers-list.ts";
 import StatusCell from "./status-cell.svelte";
 
 export type EngineerRow = Awaited<ReturnType<typeof getEngineers>>[number];
 
 const column = createAppColumnHelper<EngineerRow>();
 
-export const columns = column.columns([
-	column.select(),
-	column.accessor("name", {
+export const columns = withListColumns(engineersList, {
+	select: column.select(),
+	name: column.accessor("name", {
 		cell: ({ row }) =>
 			renderComponent(EngineerLink, {
 				id: row.original.id,
@@ -27,31 +29,31 @@ export const columns = column.columns([
 		meta: { label: m.engineers_column_engineer },
 	}),
 	// Hidden; it lets the search find engineers by email address.
-	column.accessor("email", {
-		enableSorting: false,
+	email: column.accessor("email", {
 		enableHiding: false,
 		meta: { label: m.engineers_column_email },
 	}),
-	column.enum("specialty", {
+	specialty: column.enum("specialty", {
 		values: engineerSpecialties,
 		display: engineerSpecialtyDisplay,
 		enableGlobalFilter: false,
 		meta: { label: m.engineers_column_specialty },
 	}),
-	column.accessor("region", {
+	region: column.accessor("region", {
 		cell: ({ getValue }) => regionLabel(getValue()),
-		filterFn: "oneOf",
-		enableGrouping: true,
 		meta: { label: m.engineers_column_region, clickFilter: regionLabel },
 	}),
-	column.accessor("hourlyRate", {
+	hourlyRate: column.accessor("hourlyRate", {
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
-		filterFn: "inMoneyRange",
-		meta: { label: m.engineers_column_hourly_rate, align: "end", param: "rate" },
+		meta: { label: m.engineers_column_hourly_rate, align: "end" },
 	}),
-	column.accessor((row) => (row.active ? "active" : "inactive"), {
+	status: column.enum((row) => (row.active ? "active" : "inactive"), {
 		id: "status",
+		values: engineerStates,
+		label: (state) => (state === "active" ? m.engineers_active() : m.engineers_inactive()),
+		// The status cell switches it.
+		clickFilter: false,
 		cell: ({ row, column }) =>
 			renderComponent(StatusCell, {
 				id: row.original.id,
@@ -60,24 +62,20 @@ export const columns = column.columns([
 				// Grouped by status, it's the group's heading, which changes no engineer.
 				fixed: column.getIsGrouped(),
 			}),
-		filterFn: "oneOf",
-		enableGrouping: true,
 		enableGlobalFilter: false,
-		meta: { label: m.engineers_column_status, filterValues: ["active", "inactive"] },
+		meta: { label: m.engineers_column_status },
 	}),
-	column.accessor("openOrders", {
+	openOrders: column.accessor("openOrders", {
 		cell: ({ cell }) => renderComponent(cell.NumberCell),
 		enableGlobalFilter: false,
-		filterFn: "inNumberRange",
-		meta: { label: m.engineers_column_open_orders, align: "end", param: "open-orders" },
+		meta: { label: m.engineers_column_open_orders, align: "end" },
 	}),
-	column.accessor("hiredAt", {
+	hiredAt: column.accessor("hiredAt", {
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
-		filterFn: "inDateRange",
-		meta: { label: m.engineers_column_hired, param: "hired" },
+		meta: { label: m.engineers_column_hired },
 	}),
-	column.display({
+	actions: column.display({
 		id: "actions",
 		cell: ({ row }) =>
 			renderComponent(RowActions, {
@@ -90,4 +88,4 @@ export const columns = column.columns([
 				],
 			}),
 	}),
-]);
+});

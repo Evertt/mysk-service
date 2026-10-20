@@ -3,8 +3,7 @@
 	import type { RouteParams } from "$app/types";
 	import SettingsIcon from "@lucide/svelte/icons/settings";
 
-	import { whereOf } from "#lib/components/data-table/list-definition.ts";
-	import { urlListQuery } from "#lib/components/data-table/server-table.svelte.ts";
+	import { listQueries } from "#lib/components/data-table/server-table.svelte.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { getDueFacets, getDuePlans } from "#modules/maintenance/list/due-list.remote.ts";
 	import { dueList } from "#modules/maintenance/list/due-list.ts";
@@ -14,11 +13,7 @@
 	const _props: { params: RouteParams<"/(app)/(modules)/maintenance"> } = $props();
 
 	// The server filters, sorts and pages the plans, as the URL says (see the orders page).
-	const listQuery = urlListQuery(() => dueList);
-	const query = $derived(listQuery.current);
-	// Both start at once.
-	const plans = $derived(getDuePlans(query));
-	const facets = $derived(getDueFacets(whereOf(query)));
+	const plans = listQueries(() => dueList, getDuePlans, getDueFacets);
 </script>
 
 <PageHeader title={m.maintenance_title()} description={m.maintenance_description()}>
@@ -30,4 +25,4 @@
 	{/snippet}
 </PageHeader>
 
-<DueTable plans={await plans} facets={await facets} />
+<DueTable plans={await plans.rows} facets={await plans.facets} />
