@@ -10,6 +10,7 @@
 	import { dismissSplash } from "#lib/splash.ts";
 	import ThemeProvider from "#lib/themes/theme-provider.svelte";
 	import { getMode, getTheme } from "#lib/themes/theme.remote.ts";
+	import { keepTimeZone } from "#lib/time-zone.ts";
 
 	import type { LayoutProps } from "./$types";
 	import AppToaster from "./app-toaster.svelte";
@@ -17,7 +18,6 @@
 	import "./layout.css";
 	import { watchActivity, whenIdle } from "./idle.ts";
 	import { takeNewVersion, tookNewVersion } from "./new-version.ts";
-	import { keepTimeZone } from "./time-zone.ts";
 
 	let { children }: LayoutProps = $props();
 

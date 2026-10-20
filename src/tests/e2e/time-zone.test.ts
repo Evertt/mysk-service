@@ -6,7 +6,7 @@
 import { chromium } from "playwright";
 import { describe, expect, test } from "vite-plus/test";
 
-import { TIME_ZONE_COOKIE } from "#lib/dates.ts";
+import { TIME_ZONE_COOKIE } from "#lib/time-zone.ts";
 
 import { baseURL, hydrated, newContext, organizations, rows, useApp } from "./app.ts";
 

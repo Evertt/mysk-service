@@ -18,8 +18,8 @@ import { clockContext } from "#clock/clock.ts";
 import { parseRoles } from "#lib/auth/roles.ts";
 import { shellOf } from "#lib/auth/shells.ts";
 import { previewDelayKey } from "#lib/components/record-link/preview-delay.ts";
-import { TIME_ZONE_COOKIE } from "#lib/dates.ts";
 import { demoOrganizations, demoUsers } from "#lib/server/db/demo.ts";
+import { TIME_ZONE_COOKIE } from "#lib/time-zone.ts";
 
 import { fixture, forgetTables, rows } from "./db.ts";
 import { authSecret, baseURL } from "./lane.ts";
@@ -260,7 +260,7 @@ interface TableGroup {
  * desktop screen unless `viewport` says
  * otherwise, in the time zone of the machine running them (the server's) unless `timeZone` says
  * otherwise: then the browser has told the server its zone already (the cookie the app sets, see
- * `src/routes/time-zone.ts`). After each test, checks that the app logged no errors or hydration
+ * `#lib/time-zone.ts`). After each test, checks that the app logged no errors or hydration
  * warnings.
  */
 export function useApp({
