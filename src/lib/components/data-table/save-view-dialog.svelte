@@ -45,16 +45,18 @@
 	done={m.common_views_saved()}
 	bind:open
 >
-	<TextField
-		field={save.fields.name}
-		label={m.common_views_name()}
-		placeholder={m.common_views_name_placeholder()}
-	/>
-	{#if canShare}
-		<CheckboxField
-			field={save.fields.shared}
-			label={m.common_views_share_label()}
-			description={m.common_views_share_description()}
+	<Field.FieldGroup>
+		<TextField
+			field={save.fields.name}
+			label={m.common_views_name()}
+			placeholder={m.common_views_name_placeholder()}
 		/>
-	{/if}
+		{#if canShare}
+			<CheckboxField
+				field={save.fields.shared}
+				label={m.common_views_share_label()}
+				description={m.common_views_share_description()}
+			/>
+		{/if}
+	</Field.FieldGroup>
 </FormDialog>

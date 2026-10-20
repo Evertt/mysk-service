@@ -8,9 +8,8 @@
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 	import type { ComponentProps, Snippet } from "svelte";
-	import { toast } from "svelte-sonner";
 
-	import { submitted } from "#lib/components/form/submitted.ts";
+	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
 
 	import SiteDialog from "../form/site-dialog.svelte";
 	import SiteDetails from "../ui/site-details.svelte";
@@ -78,29 +77,15 @@
 
 	<SiteDialog {customer} {site} {countries} bind:open={editing} />
 
-	<AlertDialog.Root bind:open={deleting}>
-		<AlertDialog.Content>
-			<AlertDialog.Header>
-				<AlertDialog.Title>{m.customers_site_delete_title({ name: site.name })}</AlertDialog.Title>
-				<AlertDialog.Description>{m.customers_site_delete_description()}</AlertDialog.Description>
-			</AlertDialog.Header>
-			<form
-				{...remove.enhance(async ({ submit }) => {
-					if (!(await submitted(submit))) return;
-					deleting = false;
-					toast.success(m.customers_site_deleted());
-				})}
-			>
-				<input {...remove.fields.id.as("hidden", String(site.id))} />
-				<!-- E.g. while equipment is at the site. -->
-				<Field.FieldError errors={remove.fields.allIssues()} class="mb-4" />
-				<AlertDialog.Footer>
-					<AlertDialog.Cancel type="button">{m.common_cancel()}</AlertDialog.Cancel>
-					<Button type="submit" variant="destructive" disabled={!!remove.pending}>
-						{m.common_delete()}
-					</Button>
-				</AlertDialog.Footer>
-			</form>
-		</AlertDialog.Content>
-	</AlertDialog.Root>
+	<!-- Refused while equipment is at the site. -->
+	<ConfirmDialog
+		form={remove}
+		hidden={{ id: String(site.id) }}
+		title={m.customers_site_delete_title({ name: site.name })}
+		description={m.customers_site_delete_description()}
+		confirmLabel={m.common_delete()}
+		destructive
+		done={m.customers_site_deleted()}
+		bind:open={deleting}
+	/>
 </li>

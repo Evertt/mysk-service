@@ -20,5 +20,7 @@
 	done={m.common_views_renamed()}
 	bind:open
 >
-	<TextField field={rename.fields.name} label={m.common_views_name()} value={view.name} />
+	<Field.FieldGroup>
+		<TextField field={rename.fields.name} label={m.common_views_name()} value={view.name} />
+	</Field.FieldGroup>
 </FormDialog>
