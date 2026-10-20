@@ -188,7 +188,7 @@
 				width="9"
 				height="9"
 				rx="1.5"
-				class={locked ? "fill-emerald-500" : "fill-slate-400"}
+				class={locked ? "fill-success" : "fill-slate-400"}
 			/>
 			{#if locked}
 				<circle cx="78.5" cy="134" r="2" fill="#34d399" class="blink" />

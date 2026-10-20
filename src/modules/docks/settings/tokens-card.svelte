@@ -59,7 +59,7 @@
 			</form>
 
 			{#if made}
-				<div class="flex flex-col gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3">
+				<div class="flex flex-col gap-2 rounded-md border border-warning/40 bg-warning/10 p-3">
 					<p class="text-sm font-medium">{m.docks_token_created_title()}</p>
 					<p class="text-sm text-muted-foreground">{m.docks_token_created_description()}</p>
 					<div class="flex flex-wrap items-center gap-2">

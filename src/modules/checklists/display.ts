@@ -1,6 +1,7 @@
 /**
  * How the checklists show: the badge tone of a unit's inspection status and of a checklist's
- * outcome, and a checklist's outcome in words ("Approved", "2 rejected"). Isomorphic.
+ * outcome, a checklist's outcome in words ("Approved", "2 rejected") and a picked result's colours.
+ * Isomorphic.
  */
 import type { BadgeTone } from "#lib/components/ui/badge/index.ts";
 import type { BadgeDisplay } from "#lib/i18n/index.ts";
@@ -36,6 +37,16 @@ export function outcome(checklist: {
 		? { label: m.checklists_rejected_count({ count }), tone: "warning" }
 		: { label: m.checklists_approved(), tone: "success" };
 }
+
+/**
+ * A point's result button once picked, strong as the mockup's (green, red, grey): over the outline
+ * button's own background and hover.
+ */
+export const pickedResultClasses: Record<PointResult, string> = {
+	ok: "aria-pressed:border-success! aria-pressed:bg-success! aria-pressed:text-success-foreground!",
+	nok: "aria-pressed:border-destructive! aria-pressed:bg-destructive! aria-pressed:text-white!",
+	na: "aria-pressed:border-muted-foreground! aria-pressed:bg-muted-foreground! aria-pressed:text-background!",
+};
 
 /**
  * Who completed a checklist, as the pages name them: the engineer, or the office member who filled

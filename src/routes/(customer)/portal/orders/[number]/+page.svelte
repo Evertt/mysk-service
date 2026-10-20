@@ -10,8 +10,10 @@
 	import { page } from "$app/state";
 	import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
 	import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
+	import CircleXIcon from "@lucide/svelte/icons/circle-x";
 
 	import { order as orderParts } from "#lib/client/extensions.ts";
+	import Callout from "#lib/components/callout.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { unitLine, unitTitle, equipmentStatusDisplay } from "#lib/equipment/index.ts";
@@ -47,17 +49,15 @@
 </div>
 
 {#if reported && status === "awaiting"}
-	<div
+	<Callout
+		tone="success"
+		icon={CircleCheckIcon}
+		title={m.client_reported_title()}
 		role="status"
-		class="flex gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm"
 		data-reported
 	>
-		<CircleCheckIcon class="size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-		<div class="flex flex-col gap-1">
-			<p class="font-medium">{m.client_reported_title()}</p>
-			<p class="text-muted-foreground">{m.client_reported_description()}</p>
-		</div>
-	</div>
+		<p class="text-muted-foreground">{m.client_reported_description()}</p>
+	</Callout>
 {/if}
 
 <header class="flex flex-col gap-2">
@@ -72,13 +72,9 @@
 </header>
 
 {#if status === "rejected"}
-	<div
-		class="flex flex-col gap-1 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm"
-		data-rejection
-	>
-		<p class="font-medium text-destructive">{m.client_rejected_title()}</p>
+	<Callout tone="danger" icon={CircleXIcon} title={m.client_rejected_title()} data-rejection>
 		<p class="whitespace-pre-line">{order.rejectionReason}</p>
-	</div>
+	</Callout>
 {/if}
 
 <!-- On a wide screen its details beside the rest. -->

@@ -86,7 +86,7 @@
 								<span
 									class={[
 										"min-w-0 font-mono break-words",
-										entry.level === "error" ? "text-destructive" : "text-amber-600",
+										entry.level === "error" ? "text-destructive" : "text-warning",
 									]}
 								>
 									{entry.text}

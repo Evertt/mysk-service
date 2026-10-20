@@ -24,7 +24,7 @@
 		<span
 			class={[
 				"size-2 shrink-0 rounded-full",
-				marked === "critical" ? "bg-destructive" : "bg-amber-500",
+				marked === "critical" ? "bg-destructive" : "bg-warning",
 			]}
 			title={text}
 			data-concern={marked}

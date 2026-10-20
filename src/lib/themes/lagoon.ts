@@ -26,6 +26,12 @@ export default defineTheme({
 		"--accent": "oklch(0.984 0.014 180.72)",
 		"--accent-foreground": "oklch(0.511 0.096 186.391)",
 		"--destructive": "oklch(0.586 0.253 17.585)",
+		"--success": "oklch(0.508 0.118 165.612)",
+		"--success-foreground": "oklch(1 0 0)",
+		"--warning": "oklch(0.58 0.155 62)",
+		"--warning-foreground": "oklch(1 0 0)",
+		"--info": "oklch(0.5 0.134 242.749)",
+		"--info-foreground": "oklch(1 0 0)",
 		"--border": "oklch(0.929 0.013 255.508)",
 		"--input": "oklch(0.929 0.013 255.508)",
 		"--ring": "oklch(0.777 0.152 181.912)",
@@ -60,6 +66,12 @@ export default defineTheme({
 		"--accent": "oklch(0.704 0.14 182.503 / 14%)",
 		"--accent-foreground": "oklch(0.855 0.138 181.071)",
 		"--destructive": "oklch(0.712 0.194 13.428)",
+		"--success": "oklch(0.765 0.177 163.223)",
+		"--success-foreground": "oklch(0.129 0.042 264.695)",
+		"--warning": "oklch(0.828 0.189 84.429)",
+		"--warning-foreground": "oklch(0.129 0.042 264.695)",
+		"--info": "oklch(0.746 0.16 232.661)",
+		"--info-foreground": "oklch(0.129 0.042 264.695)",
 		"--border": "oklch(1 0 0 / 10%)",
 		"--input": "oklch(1 0 0 / 14%)",
 		"--ring": "oklch(0.6 0.118 184.704)",
@@ -79,28 +91,21 @@ export default defineTheme({
 	},
 	components: {
 		"app-header": { base: "border-border bg-card" },
-		// Small, square-ish and tinted, a hue per variant: teal, sky, white, rose and grey; the tones
-		// as the mockup colours statuses: emerald, amber, sky, rose and slate.
+		// Small, square-ish and tinted with a hairline in their hue: the brand's, the info tone's,
+		// white, the destructive one's and grey; the tones as the mockup colours statuses.
 		badge: {
 			base: "rounded-[0.25rem] border px-2 text-[0.6875rem] font-medium",
 			variant: {
-				default:
-					"border-teal-200 bg-teal-50 text-teal-700 dark:border-teal-400/30 dark:bg-teal-400/10 dark:text-teal-300",
-				secondary:
-					"border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-400/30 dark:bg-sky-400/10 dark:text-sky-300",
+				default: "border-primary/25 bg-primary/8 text-accent-foreground",
+				secondary: "border-info/25 bg-info/8 text-info",
 				outline: "border-border bg-card text-secondary-foreground",
-				destructive:
-					"border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-300",
+				destructive: "border-destructive/25 bg-destructive/8",
 				ghost: "bg-muted text-muted-foreground",
-				success:
-					"border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300",
-				warning:
-					"border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300",
-				info: "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-400/30 dark:bg-sky-400/10 dark:text-sky-300",
-				danger:
-					"border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-300",
-				neutral:
-					"border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-400/25 dark:bg-slate-400/10 dark:text-slate-300",
+				success: "border-success/25 bg-success/8",
+				warning: "border-warning/25 bg-warning/8",
+				info: "border-info/25 bg-info/8",
+				danger: "border-destructive/25 bg-destructive/8",
+				neutral: "border-border bg-muted/60",
 			},
 		},
 		button: {

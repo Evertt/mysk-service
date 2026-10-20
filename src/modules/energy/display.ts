@@ -42,7 +42,7 @@ export const formatMinutes = (minutes: number) => `${whole(Math.floor(minutes))}
  */
 export function changeClass(change: number | null) {
 	if (change === null || Math.abs(change) < 0.5) return "text-muted-foreground";
-	return change < 0 ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400";
+	return change < 0 ? "text-success" : "text-destructive";
 }
 
 /** A zone's tone as a badge. */
@@ -55,17 +55,17 @@ export const zoneToneDisplay = energyLabels.withLabels("zoneTone", {
 
 /** A zone's tone as the border of its block on the floor plan. */
 export const toneBorders: Record<ZoneTone, string> = {
-	nominal: "border-emerald-500",
-	elevated: "border-amber-500",
-	peak: "border-rose-500",
+	nominal: "border-success",
+	elevated: "border-warning",
+	peak: "border-destructive",
 	offline: "border-slate-300 dark:border-slate-600",
 };
 
 /** A zone's tone as a bar or dot. */
 export const toneColours: Record<ZoneTone, string> = {
-	nominal: "bg-emerald-500",
-	elevated: "bg-amber-500",
-	peak: "bg-rose-600",
+	nominal: "bg-success",
+	elevated: "bg-warning",
+	peak: "bg-destructive",
 	offline: "bg-muted-foreground/40",
 };
 

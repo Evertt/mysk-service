@@ -52,8 +52,8 @@
 		return dock.locked ? m.docks_locked() : m.docks_not_locked();
 	});
 	const lockClass = $derived.by(() => {
-		if (dock.locked) return "text-emerald-700 dark:text-emerald-400";
-		return session ? "text-rose-700 dark:text-rose-400" : "text-muted-foreground";
+		if (dock.locked) return "text-success";
+		return session ? "text-destructive" : "text-muted-foreground";
 	});
 	const drawingLabel = $derived(
 		m.docks_drawing_label({
@@ -101,9 +101,9 @@
 			<div class="grid gap-3 sm:grid-cols-3">
 				{#snippet lockIcon()}
 					{#if dock.locked}
-						<LockIcon class="size-3.5 text-emerald-600 dark:text-emerald-400" />
+						<LockIcon class="size-3.5 text-success" />
 					{:else}
-						<LockOpenIcon class="size-3.5 {session ? 'text-rose-600 dark:text-rose-400' : ''}" />
+						<LockOpenIcon class="size-3.5 {session ? 'text-destructive' : ''}" />
 					{/if}
 				{/snippet}
 				{#snippet lockValue()}
@@ -174,7 +174,7 @@
 					<div class="flex items-start gap-2">
 						<KeyRoundIcon
 							class="mt-0.5 size-5 shrink-0 {dock.keyLocation === 'driver'
-								? 'text-amber-600 dark:text-amber-400'
+								? 'text-warning'
 								: 'text-primary'}"
 						/>
 						<div class="min-w-0">
@@ -230,7 +230,7 @@
 				class="flex items-start gap-2 rounded-md border px-3 py-2 text-xs {warning === 'fault' ||
 				warning === 'red'
 					? 'border-destructive/30 bg-destructive/10 text-destructive'
-					: 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-300'}"
+					: 'border-warning/30 bg-warning/10 text-warning'}"
 				data-dock-warning={warning}
 			>
 				<TriangleAlertIcon class="mt-0.5 size-3.5 shrink-0" />

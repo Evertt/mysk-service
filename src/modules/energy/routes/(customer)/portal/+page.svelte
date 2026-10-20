@@ -98,7 +98,7 @@
 				<KpiTile
 					kpi="peak"
 					icon={TrendingUpIcon}
-					tone="text-amber-600 dark:text-amber-400"
+					tone="text-warning"
 					label={m.energy_kpi_peak()}
 					value={formatKw(kpis.peakKw)}
 					change={kpis.peakChange}
@@ -107,14 +107,14 @@
 				<KpiTile
 					kpi="co2"
 					icon={LeafIcon}
-					tone="text-emerald-600 dark:text-emerald-400"
+					tone="text-success"
 					label={m.energy_kpi_co2()}
 					value={formatCo2(kpis.co2Kg)}
 				/>
 				<KpiTile
 					kpi="doors"
 					icon={DoorOpenIcon}
-					tone="text-sky-600 dark:text-sky-400"
+					tone="text-info"
 					label={m.energy_kpi_doors()}
 					value={formatKwh(kpis.doorLossKwh)}
 					change={kpis.doorLossChange}

@@ -263,7 +263,7 @@
 		<KpiTile
 			kpi="peak"
 			icon={TrendingUpIcon}
-			tone="text-amber-600 dark:text-amber-400"
+			tone="text-warning"
 			label={m.energy_kpi_peak()}
 			value={formatKw(kpis.peakKw)}
 			change={kpis.peakChange}
@@ -272,7 +272,7 @@
 		<KpiTile
 			kpi="co2"
 			icon={LeafIcon}
-			tone="text-emerald-600 dark:text-emerald-400"
+			tone="text-success"
 			label={m.energy_kpi_co2()}
 			value={formatCo2(kpis.co2Kg)}
 			detail={m.energy_kpi_co2_factor({ factor: formatFactor(site.co2Factor) })}
@@ -280,9 +280,7 @@
 		<KpiTile
 			kpi="alerts"
 			icon={CircleAlertIcon}
-			tone={kpis.activeAlerts
-				? "text-rose-600 dark:text-rose-400"
-				: "text-emerald-600 dark:text-emerald-400"}
+			tone={kpis.activeAlerts ? "text-destructive" : "text-success"}
 			label={m.energy_kpi_alerts()}
 			value={formatNumber(kpis.activeAlerts)}
 			detail={m.energy_kpi_alerts_open({ count: overview.openAlerts })}
@@ -290,7 +288,7 @@
 		<KpiTile
 			kpi="doors"
 			icon={DoorOpenIcon}
-			tone="text-sky-600 dark:text-sky-400"
+			tone="text-info"
 			label={m.energy_kpi_doors()}
 			value={formatKwh(kpis.doorLossKwh)}
 			change={kpis.doorLossChange}
@@ -305,9 +303,7 @@
 		<Card.Root data-door-watch>
 			<Card.Header>
 				<div class="flex items-center gap-2">
-					<span
-						class="grid size-9 shrink-0 place-items-center rounded-md bg-sky-50 text-sky-600 dark:bg-sky-400/10 dark:text-sky-400"
-					>
+					<span class="grid size-9 shrink-0 place-items-center rounded-md bg-info/10 text-info">
 						<DoorOpenIcon class="size-4" aria-hidden="true" />
 					</span>
 					<div class="flex flex-col gap-0.5">

@@ -36,7 +36,8 @@
 		{#snippet badges()}
 			<span class="inline-flex items-center gap-1.5" data-feed={simulation ? "simulated" : "live"}>
 				<span
-					class="size-1.5 rounded-full bg-emerald-300 {simulation?.running !== false
+					class="size-1.5 rounded-full bg-[color-mix(in_oklch,var(--success),white_40%)] {simulation?.running !==
+					false
 						? 'motion-safe:animate-pulse'
 						: ''}"
 					aria-hidden="true"

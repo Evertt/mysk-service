@@ -24,8 +24,8 @@
 	>
 		<span
 			class="size-1.5 rounded-full {tone === 'banner'
-				? 'bg-emerald-300'
-				: 'bg-emerald-500'} {simulation.running ? 'motion-safe:animate-pulse' : 'opacity-50'}"
+				? 'bg-[color-mix(in_oklch,var(--success),white_40%)]'
+				: 'bg-success'} {simulation.running ? 'motion-safe:animate-pulse' : 'opacity-50'}"
 			aria-hidden="true"
 		></span>
 		{simulation.running ? m.simulation_running({ speed: simulation.speed }) : m.simulation_paused()}

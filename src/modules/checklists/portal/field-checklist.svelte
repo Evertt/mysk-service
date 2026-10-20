@@ -21,7 +21,7 @@
 	import { fieldChecklist } from "../api/extensions.ts";
 	import { checklistDraft } from "../detail/checklist-draft.svelte.ts";
 	import ChecklistPoints from "../detail/checklist-points.svelte";
-	import { completerName } from "../display.ts";
+	import { completerName, pickedResultClasses } from "../display.ts";
 	import { checklistLabels } from "../labels.ts";
 	import { isAnswered, type PointResult, pointResults } from "../model.ts";
 	import OutcomeBadge from "../ui/outcome-badge.svelte";
@@ -81,12 +81,6 @@
 	}
 
 	const icons = { ok: CircleCheckIcon, nok: CircleXIcon, na: CircleMinusIcon };
-	// Strong once picked, over the outline button's own background and hover.
-	const tones: Record<PointResult, string> = {
-		ok: "aria-pressed:border-emerald-600! aria-pressed:bg-emerald-600! aria-pressed:text-white! dark:aria-pressed:bg-emerald-500!",
-		nok: "aria-pressed:border-destructive! aria-pressed:bg-destructive! aria-pressed:text-white!",
-		na: "aria-pressed:border-foreground! aria-pressed:bg-foreground! aria-pressed:text-background!",
-	};
 </script>
 
 <Card.Root data-field-checklist={checklist.unit.serialNumber}>
@@ -146,7 +140,7 @@
 									<Button
 										type="button"
 										variant="outline"
-										class={["h-12 px-2 text-sm", tones[result]]}
+										class={["h-12 px-2 text-sm", pickedResultClasses[result]]}
 										aria-pressed={point.result === result}
 										onclick={() => draft.setResult(point, result)}
 									>
