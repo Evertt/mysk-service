@@ -171,5 +171,10 @@ Before you add a message file, an enum kind, a plural or a format, or write Dutc
 - **Svelte and SvelteKit**: use the Svelte MCP. Fetch the docs sections a task needs
   (`list-sections`, then `get-documentation`), and run `svelte-autofixer` on Svelte code you write
   until it reports nothing.
+- **Reactive utilities**: runed (`runed`) first (debounce, resource, observers, persisted state,
+  idle, state machines): `useDebounce` (a value: `Debounced`), a search `resource()` on a
+  `Debounced` term (dropping a stale answer with `signal.throwIfAborted()`), `IsIdle`; never a
+  hand-rolled `setTimeout` debounce or observer. A context is `createContext()`, a time that moves
+  on `Clock` (`#lib/hooks/clock.svelte.ts`) (`src/tests/unit/runed.spec.ts`).
 - **Vite+**: `vp <command>` is a built-in, and `vp run <name>` runs a `package.json` script; the docs
   are in `node_modules/vite-plus/docs`.
