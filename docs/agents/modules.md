@@ -184,7 +184,9 @@ migration committed.
   `inTenant()`, transactions and `recordActivity()` work as in a member's request. A `POST` that
   takes a JSON batch is `jsonIngest({ maxBytes }, handle)` (`#lib/server/modules/integrations.ts`):
   it answers 415, 413 and 400 for a body it can't take, and what `handle` throws as an
-  `IngestRefused` (`InvalidBatch`, `UnknownCodes` for codes the tenant hasn't, both 422), always as
+  `IngestRefused` (`InvalidBatch` with its `issues`, each `{ path, message }` with a dotted path from
+  `batchIssues()` in `#lib/modules/batch-issues.ts`; `UnknownCodes` for codes the tenant hasn't;
+  both 422), always as
   `{ error, message, …details }`; the feed's `docs/` keep that table. Tokens are the core's
   `integration_token` rows (hash only), made and revoked through
   `#lib/server/auth/integrations.ts`, and shown on the module's settings page by

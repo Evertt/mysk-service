@@ -202,7 +202,7 @@ describe("storing a batch", () => {
 			},
 			now,
 		);
-		expect(parsed.issues).toEqual([expect.stringMatching(/^doorEvents\[1\]: /)]);
+		expect(parsed.issues).toEqual([{ path: "doorEvents.1", message: expect.any(String) }]);
 	});
 
 	test("a resent interval replaces the one in", async () => {

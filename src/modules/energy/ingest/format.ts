@@ -6,6 +6,8 @@
  */
 import * as v from "valibot";
 
+import { type BatchIssue, batchIssues } from "#lib/modules/batch-issues.ts";
+
 import { INTERVAL_MINUTES } from "../model.ts";
 
 export const MAX_READINGS = 2000;
@@ -109,13 +111,6 @@ const batchSchema = v.strictObject(
 
 export type Batch = v.InferOutput<typeof batchSchema>;
 
-/** Where an issue is in the batch, e.g. `readings[3].start`. */
-const pathOf = (issue: v.BaseIssue<unknown>) =>
-	(issue.path ?? [])
-		.map((item) => (typeof item.key === "number" ? `[${item.key}]` : `.${String(item.key)}`))
-		.join("")
-		.replace(/^\./, "");
-
 /**
  * The batch in `body` (parsed JSON), or what's wrong with it: its format's issues, each with
  * where it is, then what the clock refuses (an interval that hasn't ended, an event in the future,
@@ -124,19 +119,13 @@ const pathOf = (issue: v.BaseIssue<unknown>) =>
 export function parseBatch(
 	body: unknown,
 	now: Temporal.Instant,
-): { batch: Batch; issues?: undefined } | { batch?: undefined; issues: string[] } {
+): { batch: Batch; issues?: undefined } | { batch?: undefined; issues: BatchIssue[] } {
 	const parsed = v.safeParse(batchSchema, body);
-	if (!parsed.success) {
-		return {
-			issues: parsed.issues.map((issue) => {
-				const path = pathOf(issue);
-				return path ? `${path}: ${issue.message}` : issue.message;
-			}),
-		};
-	}
+	if (!parsed.success) return { issues: batchIssues(parsed.issues) };
 	const batch = parsed.output;
-	const issues: string[] = [];
-	if (!batch.readings.length && !batch.doorEvents.length) issues.push(m.energy_ingest_empty());
+	const issues: BatchIssue[] = [];
+	const issue = (path: string, message: string) => issues.push({ path, message });
+	if (!batch.readings.length && !batch.doorEvents.length) issue("", m.energy_ingest_empty());
 
 	const oldest = now.subtract({ hours: MAX_AGE_DAYS * 24 });
 	const tooOld = (at: Temporal.Instant) => Temporal.Instant.compare(at, oldest) < 0;
@@ -144,29 +133,25 @@ export function parseBatch(
 	batch.readings.forEach((r, i) => {
 		const ends = r.start.add({ minutes: INTERVAL_MINUTES });
 		if (Temporal.Instant.compare(ends, now) > 0) {
-			issues.push(`readings[${i}].start: ${m.energy_ingest_not_ended()}`);
+			issue(`readings.${i}.start`, m.energy_ingest_not_ended());
 		} else if (tooOld(r.start)) {
-			issues.push(
-				`readings[${i}].start: ${m.energy_ingest_too_old({ days: String(MAX_AGE_DAYS) })}`,
-			);
+			issue(`readings.${i}.start`, m.energy_ingest_too_old({ days: String(MAX_AGE_DAYS) }));
 		}
 		const key = `${r.zone}|${r.start.epochMilliseconds}`;
-		if (seenReadings.has(key)) issues.push(`readings[${i}]: ${m.energy_ingest_duplicate()}`);
+		if (seenReadings.has(key)) issue(`readings.${i}`, m.energy_ingest_duplicate());
 		seenReadings.add(key);
 	});
 	const seenEvents = new Set<string>();
 	batch.doorEvents.forEach((e, i) => {
 		// A minute's leeway for the gateway's clock.
 		if (Temporal.Instant.compare(e.at, now.add({ minutes: 1 })) > 0) {
-			issues.push(`doorEvents[${i}].at: ${m.energy_ingest_future()}`);
+			issue(`doorEvents.${i}.at`, m.energy_ingest_future());
 		} else if (tooOld(e.at)) {
-			issues.push(
-				`doorEvents[${i}].at: ${m.energy_ingest_too_old({ days: String(MAX_AGE_DAYS) })}`,
-			);
+			issue(`doorEvents.${i}.at`, m.energy_ingest_too_old({ days: String(MAX_AGE_DAYS) }));
 		}
 		// By the second, as it's stored: two in the same second would be the same row.
 		const key = `${e.door}|${Math.floor(e.at.epochMilliseconds / 1000)}|${e.state}`;
-		if (seenEvents.has(key)) issues.push(`doorEvents[${i}]: ${m.energy_ingest_duplicate()}`);
+		if (seenEvents.has(key)) issue(`doorEvents.${i}`, m.energy_ingest_duplicate());
 		seenEvents.add(key);
 	});
 	return issues.length ? { issues } : { batch };

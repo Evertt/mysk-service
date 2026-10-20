@@ -7,6 +7,7 @@
 import type { RequestHandler } from "@sveltejs/kit";
 
 import { formatNumber } from "#lib/i18n/index.ts";
+import type { BatchIssue } from "#lib/modules/batch-issues.ts";
 import { Refused } from "#lib/server/refused.ts";
 
 /**
@@ -25,9 +26,9 @@ export class IngestRefused extends Refused {
 	}
 }
 
-/** A batch that isn't in the feed's format: a 422 with its `issues`. */
+/** A batch that isn't in the feed's format: a 422 with its `issues` (`#lib/modules/batch-issues.ts`). */
 export class InvalidBatch extends IngestRefused {
-	constructor(readonly issues: readonly unknown[]) {
+	constructor(readonly issues: readonly BatchIssue[]) {
 		super("invalid_batch", m.common_ingest_invalid(), { issues });
 	}
 }

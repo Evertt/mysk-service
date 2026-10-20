@@ -9,6 +9,8 @@
 import "temporal-polyfill/global";
 import * as v from "valibot";
 
+import { batchIssues, type BatchIssue } from "#lib/modules/batch-issues.ts";
+
 import { dockCodePattern, type DockEvent, keyLocations } from "../model.ts";
 
 /** At most this many events per batch: one transaction holds the database, keep it short. */
@@ -97,12 +99,6 @@ const batchSchema = v.strictObject({
 /** An event as it came in, validated: its id and dock code, and the event itself. */
 export type IncomingEvent = DockEvent & { id: string; dock: string; index: number };
 
-/** A problem with the batch, at a path like `events.3.at`. */
-interface BatchIssue {
-	path: string;
-	message: string;
-}
-
 /**
  * The batch's events, validated, in the order to apply them: by time, and in the order they came
  * for the same time. Refuses the lot if any is wrong, or more than `allowedSkew` ahead of `now`.
@@ -113,12 +109,7 @@ export function parseBatch(
 ): { events: IncomingEvent[] } | { issues: BatchIssue[] } {
 	const result = v.safeParse(batchSchema, body);
 	if (!result.success) {
-		return {
-			issues: result.issues.map((issue) => ({
-				path: v.getDotPath(issue) ?? "",
-				message: issue.message,
-			})),
-		};
+		return { issues: batchIssues(result.issues) };
 	}
 	const latest = now.add(allowedSkew);
 	const issues: BatchIssue[] = [];

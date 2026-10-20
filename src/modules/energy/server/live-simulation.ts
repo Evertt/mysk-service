@@ -222,7 +222,7 @@ async function post(siteId: number, { readings, doorEvents }: Posted, now: Tempo
 			})),
 		};
 		const parsed = parseBatch(body, now);
-		if (parsed.issues) throw new Error(`The simulation's batch: ${parsed.issues.join("; ")}`);
+		if (parsed.issues) throw new Error(`The simulation's batch: ${JSON.stringify(parsed.issues)}`);
 		await storeBatch(parsed.batch, now);
 	}
 }

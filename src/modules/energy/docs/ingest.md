@@ -103,16 +103,16 @@ The site's page hears of each batch at once (its live query).
 
 The same shape as every module's feed (`jsonIngest()` in `#lib/server/modules/integrations.ts`):
 
-| Status | Body                                                                                    |
-| ------ | --------------------------------------------------------------------------------------- |
-| 200    | `{ "readings": 672, "doorEvents": 210, "alerts": 3 }`: stored, new, raised              |
-| 400    | `{ "error": "invalid_json", "message" }`: the body isn't JSON                           |
-| 401    | no valid token                                                                          |
-| 404    | `{ "error": "unknown_site", "message" }`: not one of the token's tenant's sites         |
-| 413    | `{ "error": "too_large", "message" }`: over 1 MB                                        |
-| 415    | `{ "error": "unsupported_media_type", "message" }`: not `application/json`              |
-| 422    | `{ "error": "invalid_batch", "message", "issues": ["readings[3].start: …"] }`           |
-| 422    | `{ "error": "unknown_codes", "message", "unknown": { "zones": ["Z-X"], "doors": [] } }` |
+| Status | Body                                                                                                  |
+| ------ | ----------------------------------------------------------------------------------------------------- |
+| 200    | `{ "readings": 672, "doorEvents": 210, "alerts": 3 }`: stored, new, raised                            |
+| 400    | `{ "error": "invalid_json", "message" }`: the body isn't JSON                                         |
+| 401    | no valid token                                                                                        |
+| 404    | `{ "error": "unknown_site", "message" }`: not one of the token's tenant's sites                       |
+| 413    | `{ "error": "too_large", "message" }`: over 1 MB                                                      |
+| 415    | `{ "error": "unsupported_media_type", "message" }`: not `application/json`                            |
+| 422    | `{ "error": "invalid_batch", "message", "issues": [{ "path": "readings.3.start", "message": "…" }] }` |
+| 422    | `{ "error": "unknown_codes", "message", "unknown": { "zones": ["Z-X"], "doors": [] } }`               |
 
 ## The live simulation
 
