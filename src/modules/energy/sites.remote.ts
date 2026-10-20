@@ -9,7 +9,7 @@ import { redirect } from "@sveltejs/kit";
 import { customerCode } from "#lib/schema.ts";
 
 import { forManagers, query } from "./remote-functions.ts";
-import { createEnergySite as create, customerEnergy, siteChoices } from "./server/setup.ts";
+import { createEnergySite as create, customerEnergy, siteChoices } from "./server/sites.ts";
 import { newEnergySiteSchema } from "./setup/setup-schema.ts";
 
 /** The customer's sites with their energy sites. */

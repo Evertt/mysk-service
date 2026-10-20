@@ -8,6 +8,7 @@
  * `inThisRequest()`). The changes themselves come from `#lib/server/changes.ts`.
  *
  *     export const watchSchedule = query.live(() => live(["order", "engineer", "customer"]));
+ *     export const watchSite = query.live(recordId(), (id) => live({ type: "energy_site", id }));
  */
 import { getRequestEvent } from "$app/server";
 
@@ -22,9 +23,12 @@ type Watched = readonly ChangeType[] | { type: LoggedType; id: string | number }
 
 /**
  * When the tenant's records of `types` last changed (epoch ms, 0 if not since the server started),
- * answered again after each change (once for a burst). Call it in the live query's function.
+ * answered again after each change (once for a burst). Call it in the live query's function. For
+ * one record (and its parts, which are logged with it as their parent), when it last changed since
+ * the query opened (0 until then): a page that shows one record watches it alone,
+ * `live({ type: "energy_site", id })`.
  */
-export function live(types: readonly ChangeType[]): AsyncGenerator<number, void>;
+export function live(watched: Watched): AsyncGenerator<number, void>;
 /**
  * What `answer` makes of nothing at first (`null`: a check that refuses goes there, after watching
  * started), then of each change to the tenant's records of the watched types, or to the one
@@ -48,7 +52,11 @@ export function live(
 	// How long the stream was open, with `TIMING_LOGS` (`#lib/server/logs/timing.ts`).
 	const closed = timeLiveStream(event);
 	const again = inThisRequest();
-	const respond = answer ?? (() => changedAt(organizationId, watched as readonly ChangeType[]));
+	const respond =
+		answer ??
+		("type" in watched
+			? (change: Change | null) => change?.at ?? 0
+			: () => changedAt(organizationId, watched));
 	return (async function* () {
 		try {
 			yield await respond(null);

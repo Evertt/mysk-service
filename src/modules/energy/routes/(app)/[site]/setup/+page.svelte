@@ -8,12 +8,13 @@
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
+	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
 	import { formatKw } from "#modules/energy/display.ts";
 	import { energyLabels } from "#modules/energy/labels.ts";
 	import ConsumerDialog from "#modules/energy/setup/consumer-dialog.svelte";
-	import DeletePart from "#modules/energy/setup/delete-part.svelte";
 	import DoorDialog from "#modules/energy/setup/door-dialog.svelte";
+	import PartsCard from "#modules/energy/setup/parts-card.svelte";
 	import {
 		deleteEnergyConsumer,
 		deleteEnergyDoor,
@@ -21,6 +22,7 @@
 		deleteEnergyZone,
 		getEnergySetup,
 		saveEnergySite,
+		watchEnergySetup,
 	} from "#modules/energy/setup/setup.remote.ts";
 	import SiteFields from "#modules/energy/setup/site-fields.svelte";
 	import ZoneDialog from "#modules/energy/setup/zone-dialog.svelte";
@@ -29,6 +31,10 @@
 
 	const siteId = $derived(Number(params.site));
 	const setup = $derived(await getEnergySetup(siteId));
+	refreshOnChange(
+		() => watchEnergySetup(siteId),
+		() => getEnergySetup(siteId).refresh(),
+	);
 	const site = $derived(setup.site);
 	const siteHref = $derived(resolve("/(app)/(modules)/energy/[site]", { site: params.site }));
 
@@ -94,189 +100,116 @@
 		</Card.Content>
 	</Card.Root>
 
-	<Card.Root data-setup="zones">
-		<Card.Header>
-			<Card.Title>{m.energy_setup_zones_title()}</Card.Title>
-			<Card.Description>
-				{m.energy_setup_zones_description()}
-				<a
-					class="underline underline-offset-4"
-					href={resolve("/(app)/(modules)/energy/[site]/thresholds", { site: params.site })}
-					>{m.energy_thresholds_title()}</a
-				>
-			</Card.Description>
-			<Card.Action><ZoneDialog siteId={site.id} /></Card.Action>
-		</Card.Header>
-		<Card.Content>
-			{#if setup.zones.length}
-				<div class="overflow-x-auto">
-					<Table.Root>
-						<Table.Header>
-							<Table.Row>
-								<Table.Head>{m.energy_setup_code()}</Table.Head>
-								<Table.Head>{m.energy_setup_name()}</Table.Head>
-								<Table.Head>{m.energy_setup_floor()}</Table.Head>
-								<Table.Head class="text-right">{m.energy_setup_area()}</Table.Head>
-								<Table.Head class="w-0"
-									><span class="sr-only">{m.energy_setup_actions()}</span></Table.Head
-								>
-							</Table.Row>
-						</Table.Header>
-						<Table.Body>
-							{#each setup.zones as zone (zone.id)}
-								<Table.Row data-setup-zone={zone.code}>
-									<Table.Cell class="font-mono">{zone.code}</Table.Cell>
-									<Table.Cell>{zone.name}</Table.Cell>
-									<Table.Cell>{zone.floor ?? "—"}</Table.Cell>
-									<Table.Cell class="text-right tabular-nums"
-										>{formatNumber(zone.areaM2)}</Table.Cell
-									>
-									<Table.Cell>
-										<div class="flex justify-end gap-1">
-											<ZoneDialog siteId={site.id} {zone} />
-											<DeletePart
-												form={deleteEnergyZone}
-												siteId={site.id}
-												id={zone.id}
-												title={m.energy_setup_zone_delete({ code: zone.code })}
-												description={m.energy_setup_zone_delete_description()}
-												deleted={m.energy_setup_deleted({ name: zone.code })}
-											/>
-										</div>
-									</Table.Cell>
-								</Table.Row>
-							{/each}
-						</Table.Body>
-					</Table.Root>
-				</div>
-			{:else}
-				<p class="text-sm text-muted-foreground">{m.energy_setup_zones_none()}</p>
-			{/if}
-		</Card.Content>
-	</Card.Root>
+	<PartsCard
+		kind="zone"
+		siteId={site.id}
+		title={m.energy_setup_zones_title()}
+		parts={setup.zones}
+		name={(zone) => zone.code}
+		empty={m.energy_setup_zones_none()}
+		remove={{
+			form: deleteEnergyZone,
+			title: (zone) => m.energy_setup_zone_delete({ code: zone.code }),
+			description: m.energy_setup_zone_delete_description(),
+		}}
+	>
+		{#snippet description()}
+			{m.energy_setup_zones_description()}
+			<a
+				class="underline underline-offset-4"
+				href={resolve("/(app)/(modules)/energy/[site]/thresholds", { site: params.site })}
+				>{m.energy_thresholds_title()}</a
+			>
+		{/snippet}
+		{#snippet add()}<ZoneDialog siteId={site.id} />{/snippet}
+		{#snippet heads()}
+			<Table.Head>{m.energy_setup_code()}</Table.Head>
+			<Table.Head>{m.energy_setup_name()}</Table.Head>
+			<Table.Head>{m.energy_setup_floor()}</Table.Head>
+			<Table.Head class="text-right">{m.energy_setup_area()}</Table.Head>
+		{/snippet}
+		{#snippet cells(zone)}
+			<Table.Cell class="font-mono">{zone.code}</Table.Cell>
+			<Table.Cell>{zone.name}</Table.Cell>
+			<Table.Cell>{zone.floor ?? "—"}</Table.Cell>
+			<Table.Cell class="text-right tabular-nums">{formatNumber(zone.areaM2)}</Table.Cell>
+		{/snippet}
+		{#snippet edit(zone)}<ZoneDialog siteId={site.id} {zone} />{/snippet}
+	</PartsCard>
 
-	<Card.Root data-setup="consumers">
-		<Card.Header>
-			<Card.Title>{m.energy_consumers_title()}</Card.Title>
-			<Card.Description>{m.energy_setup_consumers_description()}</Card.Description>
-			<Card.Action>
-				<ConsumerDialog siteId={site.id} zones={zoneOptions} units={unitOptions} />
-			</Card.Action>
-		</Card.Header>
-		<Card.Content>
-			{#if setup.consumers.length}
-				<div class="overflow-x-auto">
-					<Table.Root>
-						<Table.Header>
-							<Table.Row>
-								<Table.Head>{m.energy_setup_zone()}</Table.Head>
-								<Table.Head>{m.energy_column_consumer()}</Table.Head>
-								<Table.Head class="text-right">{m.energy_column_rated()}</Table.Head>
-								<Table.Head>{m.energy_column_unit()}</Table.Head>
-								<Table.Head class="w-0"
-									><span class="sr-only">{m.energy_setup_actions()}</span></Table.Head
-								>
-							</Table.Row>
-						</Table.Header>
-						<Table.Body>
-							{#each setup.consumers as consumer (consumer.id)}
-								<Table.Row data-setup-consumer={consumer.name}>
-									<Table.Cell class="font-mono">{zoneCode(consumer.zoneId)}</Table.Cell>
-									<Table.Cell>{consumer.name}</Table.Cell>
-									<Table.Cell class="text-right tabular-nums"
-										>{formatKw(consumer.ratedKw)}</Table.Cell
-									>
-									<Table.Cell>{unitName(consumer.equipmentId)}</Table.Cell>
-									<Table.Cell>
-										<div class="flex justify-end gap-1">
-											<ConsumerDialog
-												siteId={site.id}
-												zones={zoneOptions}
-												units={unitOptions}
-												{consumer}
-											/>
-											<DeletePart
-												form={deleteEnergyConsumer}
-												siteId={site.id}
-												id={consumer.id}
-												title={m.energy_setup_consumer_delete({ name: consumer.name })}
-												description={m.energy_setup_consumer_delete_description()}
-												deleted={m.energy_setup_deleted({ name: consumer.name })}
-											/>
-										</div>
-									</Table.Cell>
-								</Table.Row>
-							{/each}
-						</Table.Body>
-					</Table.Root>
-				</div>
-			{:else}
-				<p class="text-sm text-muted-foreground">{m.energy_consumers_none()}</p>
-			{/if}
-		</Card.Content>
-	</Card.Root>
+	<PartsCard
+		kind="consumer"
+		siteId={site.id}
+		title={m.energy_consumers_title()}
+		description={m.energy_setup_consumers_description()}
+		parts={setup.consumers}
+		name={(consumer) => consumer.name}
+		empty={m.energy_consumers_none()}
+		remove={{
+			form: deleteEnergyConsumer,
+			title: (consumer) => m.energy_setup_consumer_delete({ name: consumer.name }),
+			description: m.energy_setup_consumer_delete_description(),
+		}}
+	>
+		{#snippet add()}
+			<ConsumerDialog siteId={site.id} zones={zoneOptions} units={unitOptions} />
+		{/snippet}
+		{#snippet heads()}
+			<Table.Head>{m.energy_setup_zone()}</Table.Head>
+			<Table.Head>{m.energy_column_consumer()}</Table.Head>
+			<Table.Head class="text-right">{m.energy_column_rated()}</Table.Head>
+			<Table.Head>{m.energy_column_unit()}</Table.Head>
+		{/snippet}
+		{#snippet cells(consumer)}
+			<Table.Cell class="font-mono">{zoneCode(consumer.zoneId)}</Table.Cell>
+			<Table.Cell>{consumer.name}</Table.Cell>
+			<Table.Cell class="text-right tabular-nums">{formatKw(consumer.ratedKw)}</Table.Cell>
+			<Table.Cell>{unitName(consumer.equipmentId)}</Table.Cell>
+		{/snippet}
+		{#snippet edit(consumer)}
+			<ConsumerDialog siteId={site.id} zones={zoneOptions} units={unitOptions} {consumer} />
+		{/snippet}
+	</PartsCard>
 
-	<Card.Root data-setup="doors">
-		<Card.Header>
-			<Card.Title>{m.energy_doors_title()}</Card.Title>
-			<Card.Description>{m.energy_setup_doors_description()}</Card.Description>
-			<Card.Action>
-				<DoorDialog siteId={site.id} zones={zoneOptions} units={unitOptions} />
-			</Card.Action>
-		</Card.Header>
-		<Card.Content>
-			{#if setup.doors.length}
-				<div class="overflow-x-auto">
-					<Table.Root>
-						<Table.Header>
-							<Table.Row>
-								<Table.Head>{m.energy_setup_code()}</Table.Head>
-								<Table.Head>{m.energy_setup_name()}</Table.Head>
-								<Table.Head>{m.energy_setup_zone()}</Table.Head>
-								<Table.Head>{m.energy_setup_kind()}</Table.Head>
-								<Table.Head class="text-right">{m.energy_setup_loss()}</Table.Head>
-								<Table.Head class="text-right">{m.energy_setup_minutes()}</Table.Head>
-								<Table.Head>{m.energy_column_unit()}</Table.Head>
-								<Table.Head class="w-0"
-									><span class="sr-only">{m.energy_setup_actions()}</span></Table.Head
-								>
-							</Table.Row>
-						</Table.Header>
-						<Table.Body>
-							{#each setup.doors as door (door.id)}
-								<Table.Row data-setup-door={door.code}>
-									<Table.Cell class="font-mono">{door.code}</Table.Cell>
-									<Table.Cell>{door.name}</Table.Cell>
-									<Table.Cell class="font-mono">{zoneCode(door.zoneId)}</Table.Cell>
-									<Table.Cell>{energyLabels.label("doorKind", door.kind)}</Table.Cell>
-									<Table.Cell class="text-right tabular-nums">{formatKw(door.lossKw)}</Table.Cell>
-									<Table.Cell class="text-right tabular-nums">
-										{formatNumber(door.thresholdMinutes)}
-									</Table.Cell>
-									<Table.Cell>{unitName(door.equipmentId)}</Table.Cell>
-									<Table.Cell>
-										<div class="flex justify-end gap-1">
-											<DoorDialog siteId={site.id} zones={zoneOptions} units={unitOptions} {door} />
-											<DeletePart
-												form={deleteEnergyDoor}
-												siteId={site.id}
-												id={door.id}
-												title={m.energy_setup_door_delete({ code: door.code })}
-												description={m.energy_setup_door_delete_description()}
-												deleted={m.energy_setup_deleted({ name: door.code })}
-											/>
-										</div>
-									</Table.Cell>
-								</Table.Row>
-							{/each}
-						</Table.Body>
-					</Table.Root>
-				</div>
-			{:else}
-				<p class="text-sm text-muted-foreground">{m.energy_setup_doors_none()}</p>
-			{/if}
-		</Card.Content>
-	</Card.Root>
+	<PartsCard
+		kind="door"
+		siteId={site.id}
+		title={m.energy_doors_title()}
+		description={m.energy_setup_doors_description()}
+		parts={setup.doors}
+		name={(door) => door.code}
+		empty={m.energy_setup_doors_none()}
+		remove={{
+			form: deleteEnergyDoor,
+			title: (door) => m.energy_setup_door_delete({ code: door.code }),
+			description: m.energy_setup_door_delete_description(),
+		}}
+	>
+		{#snippet add()}
+			<DoorDialog siteId={site.id} zones={zoneOptions} units={unitOptions} />
+		{/snippet}
+		{#snippet heads()}
+			<Table.Head>{m.energy_setup_code()}</Table.Head>
+			<Table.Head>{m.energy_setup_name()}</Table.Head>
+			<Table.Head>{m.energy_setup_zone()}</Table.Head>
+			<Table.Head>{m.energy_setup_kind()}</Table.Head>
+			<Table.Head class="text-right">{m.energy_setup_loss()}</Table.Head>
+			<Table.Head class="text-right">{m.energy_setup_minutes()}</Table.Head>
+			<Table.Head>{m.energy_column_unit()}</Table.Head>
+		{/snippet}
+		{#snippet cells(door)}
+			<Table.Cell class="font-mono">{door.code}</Table.Cell>
+			<Table.Cell>{door.name}</Table.Cell>
+			<Table.Cell class="font-mono">{zoneCode(door.zoneId)}</Table.Cell>
+			<Table.Cell>{energyLabels.label("doorKind", door.kind)}</Table.Cell>
+			<Table.Cell class="text-right tabular-nums">{formatKw(door.lossKw)}</Table.Cell>
+			<Table.Cell class="text-right tabular-nums">{formatNumber(door.thresholdMinutes)}</Table.Cell>
+			<Table.Cell>{unitName(door.equipmentId)}</Table.Cell>
+		{/snippet}
+		{#snippet edit(door)}
+			<DoorDialog siteId={site.id} zones={zoneOptions} units={unitOptions} {door} />
+		{/snippet}
+	</PartsCard>
 
 	<ActivityCard type="energy_site" id={site.id} />
 </div>

@@ -164,7 +164,6 @@ describe("refusals", () => {
 			"src/lib/orders/list/order-bulk.remote.ts",
 			"src/lib/orders/list/order-status.remote.ts",
 			"src/lib/orders/order.remote.ts",
-			"src/modules/energy/thresholds.remote.ts",
 			"src/modules/invoices/credit-notes.remote.ts",
 			"src/modules/invoices/detail/credit-note.remote.ts",
 			"src/modules/invoices/detail/draft.remote.ts",

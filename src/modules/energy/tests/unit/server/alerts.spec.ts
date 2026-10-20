@@ -214,13 +214,12 @@ describe("an alert dealt with twice at once", () => {
 
 describe("a zone's thresholds", () => {
 	test("a manager changes them; logged", async () => {
-		const { siteId, zone } = await riedel();
+		const { zone } = await riedel();
 		const kv = zone("Z-KV");
 		const answer = await as(shltr.owner, () =>
 			submit(saveEnergyThreshold, { zoneId: String(kv.id), enabled: true, maxKw: 55, maxKwh: 300 }),
 		);
 		expect(answer.status).toBe(200);
-		expect(answer.refreshed).toContain("getEnergyThresholds");
 		expect(
 			await rows(`select enabled, max_kw, max_kwh from energy_threshold where zone_id = ?`, [
 				kv.id,

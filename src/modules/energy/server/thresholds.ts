@@ -1,19 +1,23 @@
 /**
- * A zone set up in the office starts without thresholds (`setup.ts`): it raises no alerts until a
+ * A zone set up in the office starts without thresholds (`parts.ts`): it raises no alerts until a
  * manager sets them, or until its readings span a day, when a batch (`ingest.ts`, in its
  * transaction, before the alerts are evaluated) gives it §2.5's defaults from that day
  * (`firstDayThreshold()` in `../model.ts`), logged as the system's. Thresholds a manager set, or
  * switched off, are never replaced.
  */
 import { and, desc, eq, gte, isNull } from "drizzle-orm";
+import type * as v from "valibot";
 
 import { recordActivity } from "#lib/server/activity/index.ts";
-import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
-import type { Transaction } from "#lib/server/db/index.ts";
+import { currentTenant, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import { db, type Transaction } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
+import { orNotFound } from "#lib/server/records.ts";
 
+import type { thresholdSchema } from "../form/threshold-schema.ts";
 import { firstDayThreshold, INTERVAL_MINUTES } from "../model.ts";
-import { energyReading, energyThreshold, energyZone } from "./schema.ts";
+import { energyReading, energySite, energyThreshold, energyZone } from "./schema.ts";
+import { siteSubject } from "./sites.ts";
 
 /**
  * The arguments of a join from `energyZone` to its thresholds, kept in the tenant as `tenantJoin()`
@@ -81,10 +85,39 @@ export async function setFirstThresholds(
 		await recordActivity(tx, {
 			action: "created",
 			subject: { type: "energy_threshold", id: zone.id, label: zone.code },
-			parent: { type: "energy_site", id: site.id, label: site.name },
+			parent: siteSubject(site),
 			after: threshold,
 		});
 		set++;
 	}
 	return set;
+}
+
+/** Saves a zone's thresholds (a manager's, on the thresholds page; made with them if it had none). */
+export async function saveThreshold({ zoneId, ...after }: v.InferOutput<typeof thresholdSchema>) {
+	const zone = orNotFound(
+		await db
+			.select({ id: energyZone.id, code: energyZone.code, site: energySite })
+			.from(energyZone)
+			.innerJoin(...tenantJoin(energySite, energyZone.energySiteId))
+			.where(idInTenant(energyZone, zoneId)),
+		m.energy_zone_not_found(),
+	);
+	await db.transaction(async (tx) => {
+		const [before] = await tx
+			.select()
+			.from(energyThreshold)
+			.where(and(eq(energyThreshold.zoneId, zone.id), inTenant(energyThreshold)));
+		await tx
+			.insert(energyThreshold)
+			.values({ zoneId: zone.id, organizationId: currentTenant().organizationId, ...after })
+			.onConflictDoUpdate({ target: energyThreshold.zoneId, set: after });
+		await recordActivity(tx, {
+			action: before ? "updated" : "created",
+			subject: { type: "energy_threshold", id: zone.id, label: zone.code },
+			parent: siteSubject(zone.site),
+			before: before ?? null,
+			after,
+		});
+	});
 }

@@ -447,7 +447,7 @@ mockup's: a page banner (`overview/hero-banner.svelte`), the floor plan with the
 live meter, door cards with the animated door, and the chart with what's still to measure
 (`overview/`); the selection (`?scope=`) is a link that keeps the scroll position
 (`data-sveltekit-reset="false"`), and the zone pages are linked from it. Managers set a site up in the office
-(`server/setup.ts`, `setup/`, the page `/energy/<site>/setup`): an energy site for one of a
+(`server/sites.ts`, `server/parts.ts`, `setup/`, the page `/energy/<site>/setup`): an energy site for one of a
 customer's sites, from the customer page's card (`customers.detail.side`) or the sites page, and
 its zones, consumers and doors (zone and door codes unique per site, as the gateway names them; a
 consumer's or door's unit one of the site's). Measurements aren't deleted with what they measure:
