@@ -14,6 +14,7 @@ import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customer, order } from "#lib/server/db/schema.ts";
+import { readAt } from "#lib/server/live.ts";
 
 import { includedLabel, needsAttention, responseDeadline, waitingStatuses } from "./coverage.ts";
 import { query } from "./remote-functions.ts";
@@ -23,7 +24,10 @@ import { contract, contractEquipment } from "./server/schema.ts";
 /** How far ahead the dashboard looks for contracts that end. */
 const EXPIRING_DAYS = 60;
 
-/** The contract that covered an order and its response deadline, or `null` if none did. */
+/**
+ * The contract that covered an order and its response deadline (`null` if none did), and when the
+ * order last changed as it was read (`readAt()`, for its card's `refreshOnChange()`).
+ */
 export const getOrderCoverage = query(v.string(), async (number) => {
 	const found = await orderByNumber(number, {
 		id: order.id,
@@ -32,12 +36,17 @@ export const getOrderCoverage = query(v.string(), async (number) => {
 		createdAt: order.createdAt,
 	});
 
+	const readTime = readAt({ type: "order", id: found.id });
 	const coverage = (await coverageOf(await withUnitIds([found]))).get(found.id);
-	if (!coverage) return null;
 	return {
-		contract: coverage,
-		included: includedLabel(coverage.level),
-		response: responseDeadline(found, coverage.responseHours),
+		readAt: readTime,
+		covered: coverage
+			? {
+					contract: coverage,
+					included: includedLabel(coverage.level),
+					response: responseDeadline(found, coverage.responseHours),
+				}
+			: null,
 	};
 });
 

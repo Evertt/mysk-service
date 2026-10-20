@@ -9,6 +9,7 @@ import * as v from "valibot";
 import { unitBySerial } from "#lib/equipment/server/index.ts";
 import { orderByNumber } from "#lib/orders/server/index.ts";
 import { order } from "#lib/server/db/schema.ts";
+import { readAt } from "#lib/server/live.ts";
 import { orNotFound } from "#lib/server/records.ts";
 
 import { query } from "./remote-functions.ts";
@@ -20,12 +21,18 @@ import { loadWorkOrder } from "./server/work-order.ts";
 /** The tenant's order `number`'s id, or a 404. */
 const orderId = async (number: string) => (await orderByNumber(number)).id;
 
-/** The checklists of the tenant's order `number`, one per unit that has one, in the units' order. */
-export const getOrderChecklists = query(v.string(), async (number) => ({
-	checklists: await withPointArticles(
-		await checklistRecords(eq(checklist.orderId, await orderId(number))),
-	),
-}));
+/**
+ * The checklists of the tenant's order `number`, one per unit that has one, in the units' order,
+ * and when the order last changed as they were read (`readAt()`, for its card).
+ */
+export const getOrderChecklists = query(v.string(), async (number) => {
+	const id = await orderId(number);
+	const readTime = readAt({ type: "order", id });
+	return {
+		readAt: readTime,
+		checklists: await withPointArticles(await checklistRecords(eq(checklist.orderId, id))),
+	};
+});
 
 /**
  * The tenant's order `number` as its work order (werkbon) prints it: the order, its customer, the

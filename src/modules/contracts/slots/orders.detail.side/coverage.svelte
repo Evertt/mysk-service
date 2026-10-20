@@ -16,11 +16,14 @@
 
 	let { number, id }: { number: string; id: number } = $props();
 
-	const coverage = $derived(await getOrderCoverage(number));
+	const data = $derived(await getOrderCoverage(number));
+	const coverage = $derived(data.covered);
 	// The order saved with other units or another type.
 	refreshOnChange(
 		() => watchRecord({ type: "order", id }),
 		() => getOrderCoverage(number).refresh(),
+		// Changed since it was read: saved on its edit page, whose redirect brings it back cached.
+		() => data.readAt,
 	);
 
 	// The message around the link to the contract, e.g. ["Covered by ", " (Premium)"].

@@ -86,6 +86,26 @@ describe("live(types)", () => {
 	});
 });
 
+describe("live(record)", () => {
+	beforeEach(() => signIn("org-record"));
+
+	test("answers when the record last changed, then again on each change but its deletion", async () => {
+		vi.useFakeTimers({ now: 1_000_000 });
+		expect((await live({ type: "order", id: 3 }).next()).value).toBe(0);
+		announceChange("org-record", "order", { id: "3", action: "updated" });
+		announceChange("org-record", "order", { id: "4", action: "updated" });
+		const answers = live({ type: "order", id: 3 });
+		expect((await answers.next()).value).toBe(1_000_000);
+
+		vi.setSystemTime(1_000_010);
+		announceChange("org-record", "order", { id: "3", action: "deleted" });
+		expect((await answers.next()).value).toBe(1_000_000);
+		vi.setSystemTime(1_000_020);
+		announceChange("org-record", "order", { id: "3", action: "updated" });
+		expect((await answers.next()).value).toBe(1_000_020);
+	});
+});
+
 describe("live(watched, answer)", () => {
 	beforeEach(() => signIn("org-answer"));
 
@@ -156,5 +176,13 @@ describe("readAt", () => {
 		expect(readAt(["order", "customer"])).toBe(999_999);
 		vi.setSystemTime(1_000_005);
 		expect(readAt(["order"])).toBe(1_000_000);
+	});
+
+	test("is when one record last changed, by its id", () => {
+		vi.useFakeTimers({ now: 2_000_000 });
+		announceChange("org-read", "order", { id: "9" });
+		vi.setSystemTime(2_000_005);
+		expect(readAt({ type: "order", id: 9 })).toBe(2_000_000);
+		expect(readAt({ type: "order", id: 10 })).toBe(0);
 	});
 });

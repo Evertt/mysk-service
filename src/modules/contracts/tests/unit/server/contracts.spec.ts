@@ -226,7 +226,7 @@ describe("a contract's orders", () => {
 			unitCount: 2,
 		});
 		for (const order of orders) {
-			const coverage = await as(north.member, () => data(getOrderCoverage, order.number));
+			const coverage = (await as(north.member, () => data(getOrderCoverage, order.number))).covered;
 			expect(coverage?.contract.number, order.number).toBe(term.number);
 		}
 	});
@@ -236,7 +236,7 @@ describe("a contract's orders", () => {
 		const numbers = orders.map((order) => order.number);
 		expect(numbers).not.toContain(made.mixed);
 		expect(numbers).not.toContain(made.installation);
-		expect(await as(north.member, () => data(getOrderCoverage, made.mixed))).toBeNull();
+		expect((await as(north.member, () => data(getOrderCoverage, made.mixed))).covered).toBeNull();
 	});
 });
 

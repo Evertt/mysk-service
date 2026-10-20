@@ -14,7 +14,13 @@ import { getRequestEvent } from "$app/server";
 
 import type { ChangeType, LoggedType } from "#lib/activity/index.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
-import { type Change, changedAt, watchChanges, watchSubject } from "#lib/server/changes.ts";
+import {
+	type Change,
+	changedAt,
+	recordChangedAt,
+	watchChanges,
+	watchSubject,
+} from "#lib/server/changes.ts";
 import { inThisRequest } from "#lib/server/db/index.ts";
 import { timeLiveStream } from "#lib/server/logs/timing.ts";
 
@@ -24,9 +30,10 @@ type Watched = readonly ChangeType[] | { type: LoggedType; id: string | number }
 /**
  * When the tenant's records of `types` last changed (epoch ms, 0 if not since the server started),
  * answered again after each change (once for a burst). Call it in the live query's function. For
- * one record (and its parts, which are logged with it as their parent), when it last changed since
- * the query opened (0 until then): a page that shows one record watches it alone,
- * `live({ type: "energy_site", id })`.
+ * one record (and its parts, which are logged with it as their parent), when it last changed: a
+ * page that shows one record watches it alone, `live({ type: "energy_site", id })`. Its deletion
+ * doesn't count: the page that deleted it goes elsewhere, and another's says so
+ * (`<ChangedElsewhere>`).
  */
 export function live(watched: Watched): AsyncGenerator<number, void>;
 /**
@@ -52,11 +59,7 @@ export function live(
 	// How long the stream was open, with `TIMING_LOGS` (`#lib/server/logs/timing.ts`).
 	const closed = timeLiveStream(event);
 	const again = inThisRequest();
-	const respond =
-		answer ??
-		("type" in watched
-			? (change: Change | null) => change?.at ?? 0
-			: () => changedAt(organizationId, watched));
+	const respond = answer ?? answerWhen(organizationId, watched);
 	return (async function* () {
 		try {
 			yield await respond(null);
@@ -68,14 +71,29 @@ export function live(
 	})();
 }
 
+/** What `live()` answers without an `answer`: when the watched records last changed. */
+function answerWhen(organizationId: string, watched: Watched) {
+	if (!("type" in watched)) return () => changedAt(organizationId, watched);
+	const record = { type: watched.type, id: String(watched.id) };
+	let at = recordChangedAt(organizationId, record);
+	return (change: Change | null) => {
+		if (change && change.action !== "deleted" && change.action !== "removed") at = change.at;
+		return at;
+	};
+}
+
 /**
- * When the tenant's records of `types` last changed, for a query's data to carry, so its page can
+ * When the tenant's records of `types` (or one record) last changed, for a query's data to carry, so its page can
  * tell whether its live query's first answer is newer than the data (`refreshOnChange()`'s read
  * time). Changes are timed in milliseconds, so one in this millisecond reads a millisecond earlier:
  * another change in the same millisecond, after the read, still counts as newer. That asks once
  * too many when there's none, which takes reading in the millisecond of a change.
  */
-export function readAt(types: readonly ChangeType[]) {
-	const changed = changedAt(currentTenant().organizationId, types);
+export function readAt(watched: Watched) {
+	const { organizationId } = currentTenant();
+	const changed =
+		"type" in watched
+			? recordChangedAt(organizationId, { type: watched.type, id: String(watched.id) })
+			: changedAt(organizationId, watched);
 	return changed && changed >= Date.now() ? changed - 1 : changed;
 }

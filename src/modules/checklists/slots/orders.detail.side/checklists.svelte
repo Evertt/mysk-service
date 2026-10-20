@@ -31,6 +31,8 @@
 	refreshOnChange(
 		() => watchRecord({ type: "order", id }),
 		() => getOrderChecklists(number).refresh(),
+		// Changed since it was read: saved on its edit page, whose redirect brings it back cached.
+		() => data.readAt,
 	);
 	/** The checklists' rejected points, for the modules that suggest what they need. */
 	const rejected = $derived(

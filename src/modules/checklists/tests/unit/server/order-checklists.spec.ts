@@ -154,7 +154,7 @@ describe("a done inspection with rejected points, in SHLTR's office", () => {
 			[shltrId],
 		);
 		await as(shltr.member, async () => {
-			expect(await data(getOrderChecklists, number)).toEqual({ checklists: [] });
+			expect(await data(getOrderChecklists, number)).toMatchObject({ checklists: [] });
 			expect(await call(getOrderChecklists, "ORD-99999")).toMatchObject({ status: 404 });
 			expect(await call(getWorkOrder, "ORD-99999")).toMatchObject({ status: 404 });
 		});
