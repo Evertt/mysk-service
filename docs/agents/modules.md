@@ -358,6 +358,13 @@ filter, optionLabel, cell })` (isomorphic; the id is namespaced, `maintenance.ne
   `createOrders(tx, drafts)` (`src/lib/orders/server/creation.ts`), through which maintenance turns
   due plans into orders. A module's own `api/` offers such services to the
   modules that require it.
+- **Kinds of one document share one model**: when a module has several kinds of the same record
+  (the invoices module's invoices and credit notes), one model says what each kind shows
+  (`document.ts`: `BillingDocument`, `documentView()`), and its page (`detail/billing-document.svelte`)
+  and its PDF (`server/document-pdf.ts`, answered by `pdfResponse(doc)`) both lay it out, so they
+  can't drift; what's done the same way to each kind takes the kind (`server/documents.ts`:
+  `changing(tx, kind, id, to)`, `draftById()`, `addDraftLine()`, `removeDraftLine()`, and one
+  `addLine`/`removeLine` form with a `kind` field). Only what differs is the kind's own.
 
 Checklists, condition, contracts, docks, energy, invoices, maintenance, materials, the partner programme, the parts shop and the schedule are the modules
 (`src/modules/checklists/`, `src/modules/condition/`, `src/modules/contracts/`, `src/modules/docks/`, `src/modules/energy/`, `src/modules/invoices/`,

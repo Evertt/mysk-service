@@ -6,7 +6,6 @@
 <script lang="ts">
 	import { toast } from "svelte-sonner";
 
-	import MoneyField from "#lib/components/form/money-field.svelte";
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
@@ -14,7 +13,8 @@
 
 	import BillablePicker from "../form/billable-picker.svelte";
 	import { getBillable, type getInvoice } from "../invoices.remote.ts";
-	import { addLine, addToInvoice, updateTerms } from "./draft.remote.ts";
+	import AddLineCard from "./add-line-card.svelte";
+	import { addToInvoice, updateTerms } from "./draft.remote.ts";
 
 	let { invoice }: { invoice: Awaited<ReturnType<typeof getInvoice>>["invoice"] } = $props();
 
@@ -53,43 +53,7 @@
 	</Card.Content>
 </Card.Root>
 
-<Card.Root>
-	<Card.Header>
-		<Card.Title>{m.invoices_add_line_title()}</Card.Title>
-		<Card.Description>{m.invoices_add_line_description()}</Card.Description>
-	</Card.Header>
-	<Card.Content>
-		<form
-			{...addLine.enhance(async ({ element, submit }) => {
-				if (await submitted(submit)) {
-					element.reset();
-					toast.success(m.invoices_line_added());
-				}
-			})}
-			class="flex flex-col gap-4"
-		>
-			<input {...addLine.fields.id.as("hidden", String(invoice.id))} />
-			<Field.FieldGroup class="grid gap-4 sm:grid-cols-2">
-				<TextField
-					field={addLine.fields.description}
-					label={m.invoices_description_column()}
-					class="sm:col-span-2"
-				/>
-				<NumberField
-					field={addLine.fields.quantity}
-					label={m.invoices_quantity()}
-					value={1}
-					min={0.01}
-					step={0.01}
-				/>
-				<MoneyField field={addLine.fields.unitPrice} label={m.invoices_unit_price()} />
-			</Field.FieldGroup>
-			<SubmitButton variant="outline" class="self-end" pending={addLine.pending}>
-				{m.invoices_add_line_submit()}
-			</SubmitButton>
-		</form>
-	</Card.Content>
-</Card.Root>
+<AddLineCard kind="invoice" id={invoice.id} />
 
 <Card.Root>
 	<Card.Header>

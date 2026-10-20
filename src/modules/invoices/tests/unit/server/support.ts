@@ -1,5 +1,5 @@
 /**
- * What the invoicing module's server specs share: reading invoices, credit notes and their log
+ * What the invoices module's server specs share: reading invoices, credit notes and their log
  * from the spec file's database, in SQL (so a check doesn't share the code it checks), and today
  * as the app has it.
  */

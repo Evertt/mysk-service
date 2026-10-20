@@ -12,12 +12,8 @@ import { idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { Refused } from "#lib/server/refused.ts";
 
-import {
-	changingCredit,
-	creditNoteSubject,
-	creditParent,
-	remainingOfInvoice,
-} from "./credit-notes.ts";
+import { creditNoteSubject, creditParent, remainingOfInvoice } from "./credit-notes.ts";
+import { changing } from "./documents.ts";
 import { invoiceSubject } from "./invoices.ts";
 import { creditNote, invoice } from "./schema.ts";
 import { settingsOf } from "./settings.ts";
@@ -70,7 +66,7 @@ export async function recordPayment(
 export async function issueCredit(id: number) {
 	const settings = await settingsOf();
 	return db.transaction(async (tx) => {
-		const found = await changingCredit(tx, id, "sent");
+		const found = await changing(tx, "creditNote", id, "sent");
 		if (found.lines.reduce((sum, line) => sum + line.amount, 0) >= 0) {
 			throw new Refused(m.invoices_credit_nothing());
 		}

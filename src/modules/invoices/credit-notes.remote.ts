@@ -3,16 +3,15 @@
  * making one, against an invoice or standalone. Its status changes and draft edits are in
  * `detail/credit-note.remote.ts`. The rules are in `./credit-note.ts`.
  */
-import { redirect, invalid } from "@sveltejs/kit";
+import { redirect } from "@sveltejs/kit";
 import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
+import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { customer } from "#lib/server/db/schema.ts";
 import { orNotFound } from "#lib/server/records.ts";
 
-import { canCredit, leftOf, typedCreditLine } from "./credit-note.ts";
+import { canCredit, leftOf } from "./credit-note.ts";
 import { creditInvoiceFields, standaloneCreditFields } from "./form/credit-note-schema.ts";
 import { invoiceTotals } from "./invoice.ts";
 import { getInvoice, getInvoices } from "./invoices.remote.ts";
@@ -20,11 +19,12 @@ import { form, query } from "./remote-functions.ts";
 import {
 	creditableLines,
 	creditInvoice,
-	createStandalone,
+	createTypedCredit,
 	creditsOf,
 	creditSummary,
 	listCreditNotes,
 	loadCreditNote,
+	remainingOfInvoice,
 } from "./server/credit-notes.ts";
 import { invoice } from "./server/schema.ts";
 
@@ -39,17 +39,7 @@ export const getCreditNote = query(v.string(), async (number) => {
 	const tenant = currentTenant();
 	const loaded = await loadCreditNote(number);
 	const credited = loaded.creditNote.invoice;
-	let remaining: number | null = null;
-	if (credited) {
-		const found = await db.query.invoice.findFirst({
-			where: idInTenant(invoice, credited.id),
-			with: { lines: { columns: { amount: true } } },
-		});
-		if (found) {
-			const totals = invoiceTotals(found.lines, found.vatRate);
-			remaining = creditSummary(totals, await creditsOf(db, [found.id]), found.status).remaining;
-		}
-	}
+	const remaining = credited ? (await remainingOfInvoice(db, credited.id)).remaining : null;
 	return { ...loaded, organization: tenant.name, remaining };
 });
 
@@ -98,21 +88,8 @@ export const createInvoiceCredit = form(v.object(creditInvoiceFields), async (in
 });
 
 /** Makes a draft standalone credit note for a customer with one line, then shows it. */
-export const createCreditNote = form(v.object(standaloneCreditFields), async (input, issue) => {
-	const owner = await db.query.customer.findFirst({
-		columns: { id: true },
-		where: idInTenant(customer, input.customerId),
-	});
-	if (!owner) invalid(issue.customerId(m.invoices_unknown_customer()));
-	const made = await db.transaction((tx) =>
-		createStandalone(tx, {
-			customerId: input.customerId,
-			reason: input.reason,
-			lines: [
-				typedCreditLine({ description: input.description, quantity: 1, unitPrice: input.amount }),
-			],
-		}),
-	);
+export const createCreditNote = form(v.object(standaloneCreditFields), async (input) => {
+	const made = await createTypedCredit(input);
 	void getCreditNotes().refresh();
 	redirect(303, `/invoices/credit-notes/${made.number}`);
 });

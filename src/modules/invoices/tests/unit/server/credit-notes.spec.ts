@@ -19,13 +19,11 @@ import {
 	getCreditNotes,
 } from "#modules/invoices/credit-notes.remote.ts";
 import {
-	addCreditLine,
 	issueCreditNote,
-	removeCreditLine,
 	settleCreditNote,
-	updateCreditReason,
 	voidCreditNote,
 } from "#modules/invoices/detail/credit-note.remote.ts";
+import { addLine, removeLine, updateCreditReason } from "#modules/invoices/detail/draft.remote.ts";
 import { markPaid, voidInvoice } from "#modules/invoices/invoice-status.remote.ts";
 import { getInvoice, getInvoices } from "#modules/invoices/invoices.remote.ts";
 import { GET as creditNotePdf } from "#modules/invoices/routes/(app)/credit-notes/[number]/pdf/+server.ts";
@@ -207,7 +205,8 @@ describe("crediting a paid invoice in part, in North", () => {
 		// A draft takes no typed-in lines: it credits the invoice's.
 		expect(
 			await as(north.owner, () =>
-				submit(addCreditLine, {
+				submit(addLine, {
+					kind: "creditNote",
 					id: String(stored.id),
 					description: "More",
 					quantity: 1,
@@ -408,7 +407,8 @@ describe("a standalone credit note, in North", () => {
 		number = stored.number;
 		expect(stored).toMatchObject({ invoice_id: null, status: "draft" });
 		const add = await as(north.owner, () =>
-			submit(addCreditLine, {
+			submit(addLine, {
+				kind: "creditNote",
 				id: String(stored.id),
 				description: "Travel costs back",
 				quantity: 2,
@@ -423,7 +423,8 @@ describe("a standalone credit note, in North", () => {
 		]);
 
 		const extra = await as(north.owner, () =>
-			submit(addCreditLine, {
+			submit(addLine, {
+				kind: "creditNote",
 				id: String(stored.id),
 				description: "Oops",
 				quantity: 1,
@@ -433,7 +434,7 @@ describe("a standalone credit note, in North", () => {
 		expect(extra).toMatchObject({ status: 200 });
 		const oops = (await creditLinesOf(stored.id)).at(-1)!;
 		expect(
-			await as(north.owner, () => submit(removeCreditLine, { id: String(oops.id) })),
+			await as(north.owner, () => submit(removeLine, { kind: "creditNote", id: String(oops.id) })),
 		).toMatchObject({
 			status: 200,
 		});
@@ -529,14 +530,15 @@ describe("a credit note another module made, in North", () => {
 				],
 			});
 			expect(
-				await submit(addCreditLine, {
+				await submit(addLine, {
+					kind: "creditNote",
 					id: String(stored.id),
 					description: "Bonus",
 					quantity: 1,
 					unitPrice: 500,
 				}),
 			).toMatchObject({ status: 400, issues: [{ message: refused }] });
-			expect(await submit(removeCreditLine, { id: String(line.id) })).toMatchObject({
+			expect(await submit(removeLine, { kind: "creditNote", id: String(line.id) })).toMatchObject({
 				status: 400,
 				issues: [{ message: refused }],
 			});
@@ -622,8 +624,17 @@ describe("in South", () => {
 				["void", await submit(voidCreditNote, { id })],
 				["settle", await submit(settleCreditNote, { id })],
 				["reason", await submit(updateCreditReason, { id, reason: "Tampered" })],
-				["line", await submit(addCreditLine, { id, description: "x", quantity: 1, unitPrice: 1 })],
-				["remove", await submit(removeCreditLine, { id: String(northLine.id) })],
+				[
+					"line",
+					await submit(addLine, {
+						kind: "creditNote",
+						id,
+						description: "x",
+						quantity: 1,
+						unitPrice: 1,
+					}),
+				],
+				["remove", await submit(removeLine, { kind: "creditNote", id: String(northLine.id) })],
 			] as const) {
 				expect(answer, name).toMatchObject({ status: 404 });
 			}

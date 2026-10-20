@@ -11,7 +11,7 @@ import { formatCents } from "#lib/i18n/index.ts";
 import { creditNoteStates, creditSettlements } from "../credit-note.ts";
 import type { getCreditNotes } from "../credit-notes.remote.ts";
 import { creditNoteStateDisplay } from "../display.ts";
-import { invoicingLabels } from "../labels.ts";
+import { invoicesLabels } from "../labels.ts";
 import CreditNoteLink from "../ui/credit-note-link.svelte";
 import { creditNotesList } from "./credit-notes-list.ts";
 
@@ -63,7 +63,7 @@ export const creditNoteColumns = withListColumns(creditNotesList, {
 	// unless asked for; the dashboard links to the ones to refund (`?settlement=refund`).
 	settlement: column.enum("settlement", {
 		values: creditSettlements,
-		label: (settlement) => invoicingLabels.label("creditSettlement", settlement),
+		label: (settlement) => invoicesLabels.label("creditSettlement", settlement),
 		enableGlobalFilter: false,
 		meta: { label: m.invoices_credit_column_settlement },
 	}),

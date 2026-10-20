@@ -1,6 +1,6 @@
 <!--
 	@component
-	The invoicing module's cards on the dashboard (`dashboard.cards`, `#lib/dashboard/extensions.ts`):
+	The invoices module's cards on the dashboard (`dashboard.cards`, `#lib/dashboard/extensions.ts`):
 	what customers owe (less what's credited) and how much of it is overdue, what's to refund on
 	credit notes, and the most overdue invoices.
 -->
@@ -11,7 +11,7 @@
 	import StatTile from "#lib/components/stat-tile.svelte";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 
-	import { getReceivables } from "../../invoicing.remote.ts";
+	import { getReceivables } from "../../invoices.remote.ts";
 	import InvoiceLink from "../../ui/invoice-link.svelte";
 
 	const data = $derived(await getReceivables());

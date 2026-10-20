@@ -1,5 +1,5 @@
 /**
- * The invoicing module's domain enums, shared by its database tables, the seed script and the UI.
+ * The invoices module's domain enums, shared by its database tables, the seed script and the UI.
  * Kept out of `server/` so client code (filters, badges) can import them.
  */
 import type { NumberFormat } from "#lib/numbering.ts";
@@ -10,7 +10,11 @@ export const invoiceNumberFormat: NumberFormat = { prefix: "INV-", digits: 5, ye
 /**
  * Where an invoice is: a draft (still editable), sent to the customer, paid, or void (cancelled;
  * it keeps its number, so the numbers have no gaps). Overdue isn't stored: it's a sent invoice
- * past its due date, see `invoiceState` in `./invoice.ts`.
+ * past its due date, see `invoiceState` in `./invoice.ts`. A credit note's statuses are the same.
+ * Labelled as what a document is (`invoiceIs`, "… is a draft") and what can't be done to it
+ * (`invoiceChange`, "… can't be issued"), a credit note's (`creditNoteIs`, `creditNoteChange`)
+ * saying settled for paid.
+ * @labels invoiceIs invoiceChange creditNoteIs creditNoteChange
  */
 export const invoiceStatuses = ["draft", "sent", "paid", "void"] as const;
 export type InvoiceStatus = (typeof invoiceStatuses)[number];

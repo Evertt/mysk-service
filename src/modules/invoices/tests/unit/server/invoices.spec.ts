@@ -35,11 +35,13 @@ import {
 	getInvoice,
 	getInvoiceCustomers,
 	getInvoices,
+	getOrderInvoice,
+	getReceivables,
 } from "#modules/invoices/invoices.remote.ts";
-import { getOrderInvoice, getReceivables } from "#modules/invoices/invoicing.remote.ts";
 import { creditNoteColumns } from "#modules/invoices/list/credit-note-columns.ts";
-import { GET as invoicePdf } from "#modules/invoices/routes/(app)/[number]/pdf/+server.ts";
 import { getInvoicingSettings, saveSettings } from "#modules/invoices/settings.remote.ts";
+// The route as SvelteKit has it: the module's handler behind its guard.
+import { GET as invoicePdf } from "#routes/(app)/(modules)/invoices/[number]/pdf/+server.ts";
 import {
 	as,
 	call,
@@ -101,9 +103,12 @@ const numberIn = (location: string | undefined) => decodeURIComponent(location!.
 
 /** What the PDF route answers `actor` for `number`: its status and headers, or the error's. */
 const pdfOf = (number: string) =>
-	(invoicePdf as (event: { params: { number: string } }) => Promise<Response>)({
-		params: { number },
-	}).then(
+	// The guard refuses before the handler makes a promise.
+	Promise.try(() =>
+		(invoicePdf as (event: { params: { number: string } }) => Promise<Response>)({
+			params: { number },
+		}),
+	).then(
 		(response) => ({
 			status: response.status,
 			type: response.headers.get("content-type"),
@@ -323,6 +328,7 @@ describe("a new invoice, in North", () => {
 		const { id } = await invoiceOf(number, northId);
 		const answer = await as(north.owner, () =>
 			submit(addLine, {
+				kind: "invoice",
 				id: String(id),
 				description: "Call-out surcharge",
 				quantity: 2,
@@ -356,7 +362,7 @@ describe("a new invoice, in North", () => {
 		expect(lineCount).toBeGreaterThan(1);
 
 		expect(
-			await as(north.owner, () => submit(removeLine, { id: String(covered.id) })),
+			await as(north.owner, () => submit(removeLine, { kind: "invoice", id: String(covered.id) })),
 		).toMatchObject({ status: 200 });
 		expect((await linesOf(id)).filter((l) => l.order_id === orderId)).toEqual([]);
 		const removed = (await activityAbout("invoice", id, northId)).filter(
@@ -442,9 +448,17 @@ describe("a new invoice, in North", () => {
 		};
 		await as(north.owner, async () => {
 			// The draft's remove button, with the sent invoice's line.
-			expect(await submit(removeLine, { id: String(line.id) })).toMatchObject(refused);
+			expect(await submit(removeLine, { kind: "invoice", id: String(line.id) })).toMatchObject(
+				refused,
+			);
 			expect(
-				await submit(addLine, { id: String(id), description: "More", quantity: 1, unitPrice: 1 }),
+				await submit(addLine, {
+					kind: "invoice",
+					id: String(id),
+					description: "More",
+					quantity: 1,
+					unitPrice: 1,
+				}),
 			).toMatchObject(refused);
 			expect(
 				await submit(updateTerms, { id: String(id), paymentTermDays: 7, notes: "" }),
@@ -510,7 +524,7 @@ describe("a new invoice, in North", () => {
 		);
 		const empty = await invoiceOf(numberIn(made.location), northId);
 		const [line] = await linesOf(empty.id);
-		await as(north.owner, () => submit(removeLine, { id: String(line.id) }));
+		await as(north.owner, () => submit(removeLine, { kind: "invoice", id: String(line.id) }));
 		expect(
 			await as(north.owner, () => submit(issueInvoice, { id: String(empty.id) })),
 		).toMatchObject({
@@ -729,9 +743,18 @@ describe("in South, which has invoicing but no contracts", () => {
 				["void", await submit(voidInvoice, { id })],
 				["pay", await submit(markPaid, { id })],
 				["terms", await submit(updateTerms, { id, paymentTermDays: 1, notes: "" })],
-				["line", await submit(addLine, { id, description: "x", quantity: 1, unitPrice: 1 })],
+				[
+					"line",
+					await submit(addLine, {
+						kind: "invoice",
+						id,
+						description: "x",
+						quantity: 1,
+						unitPrice: 1,
+					}),
+				],
 				["add", await submit(addToInvoice, { id, orderIds: [] })],
-				["remove", await submit(removeLine, { id: String(northLine.id) })],
+				["remove", await submit(removeLine, { kind: "invoice", id: String(northLine.id) })],
 			] as const) {
 				expect(answer, name).toMatchObject({ status: 404 });
 			}

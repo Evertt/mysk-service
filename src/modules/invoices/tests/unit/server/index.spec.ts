@@ -13,11 +13,11 @@ vi.mock("#lib/server/modules/hooks.gen.ts", () => ({
 	generatedServerModules: () => registry.modules,
 }));
 const refreshed = vi.hoisted(() => [] as string[]);
-vi.mock("#modules/invoices/invoicing.remote.ts", () => ({
+vi.mock("#modules/invoices/invoices.remote.ts", () => ({
 	getOrderInvoice: (number: string) => ({ refresh: async () => void refreshed.push(number) }),
 }));
 
-test("the invoicing module refreshes the invoice card of a saved order", async () => {
+test("the invoices module refreshes the invoice card of a saved order", async () => {
 	registry.modules = [invoicing];
 	emit(committed, { number: "ORD-2026-00003" }, ["invoices"]);
 	await new Promise((resolve) => setTimeout(resolve));

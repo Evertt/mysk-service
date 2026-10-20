@@ -5,7 +5,7 @@ import { organizations, rows, useApp } from "#e2e/app.ts";
 const { north } = organizations;
 const app = useApp();
 
-/** What the invoicing module adds to the orders list's bulk actions, in North. */
+/** What the invoices module adds to the orders list's bulk actions, in North. */
 describe("bulk actions on selected orders, in North", () => {
 	/** Ticks the row of an order on the shown page. */
 	const select = (number: string) =>

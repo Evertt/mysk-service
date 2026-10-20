@@ -9,7 +9,7 @@ import type { Locale } from "#lib/paraglide/runtime.js";
 
 import type { CreditNoteState } from "./credit-note.ts";
 import type { InvoiceState } from "./invoice.ts";
-import { invoicingLabels } from "./labels.ts";
+import { invoicesLabels } from "./labels.ts";
 
 const stateDetails: Record<InvoiceState, BadgeDisplay> = {
 	draft: { icon: FilePenLineIcon, tone: "neutral" },
@@ -20,7 +20,7 @@ const stateDetails: Record<InvoiceState, BadgeDisplay> = {
 };
 
 /** An invoice's status as shown (overdue for sent ones past their due date), translated. */
-export const invoiceStateDisplay = invoicingLabels.withLabels("invoiceState", stateDetails);
+export const invoiceStateDisplay = invoicesLabels.withLabels("invoiceState", stateDetails);
 
 const creditStateDetails: Record<CreditNoteState, BadgeDisplay> = {
 	draft: stateDetails.draft,
@@ -30,7 +30,7 @@ const creditStateDetails: Record<CreditNoteState, BadgeDisplay> = {
 };
 
 /** A credit note's status as shown (paid as settled), translated. */
-export const creditNoteStateDisplay = invoicingLabels.withLabels(
+export const creditNoteStateDisplay = invoicesLabels.withLabels(
 	"creditNoteState",
 	creditStateDetails,
 );

@@ -1,5 +1,5 @@
 /**
- * The invoicing module's demo data for the seeds of the modules that require it: a standalone
+ * The invoices module's demo data for the seeds of the modules that require it: a standalone
  * credit note that another module's demo pays out with (the partner programme's cash bonus), next
  * in the tenant's series after the ones invoicing seeded (its seed runs first, see
  * `#lib/server/db/seed/module-seed.ts`). Plain Node, like the seed.

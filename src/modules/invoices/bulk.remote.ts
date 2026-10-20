@@ -1,5 +1,5 @@
 /**
- * What the invoicing module adds to the orders list's selection (see
+ * What the invoices module adds to the orders list's selection (see
  * `bulk-actions/orders.list.bulk.ts`).
  */
 import { error } from "@sveltejs/kit";
@@ -10,7 +10,7 @@ import { db } from "#lib/server/db/index.ts";
 import { order } from "#lib/server/db/schema.ts";
 import { idsTarget, targetIds } from "#lib/server/lists/index.ts";
 
-import { getOrderInvoice } from "./invoicing.remote.ts";
+import { getOrderInvoice } from "./invoices.remote.ts";
 import { command } from "./remote-functions.ts";
 import { billableFor } from "./server/billable.ts";
 import { createDraft } from "./server/invoices.ts";

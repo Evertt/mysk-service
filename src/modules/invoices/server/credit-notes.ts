@@ -26,11 +26,14 @@ import {
 	creditTotals,
 	holdsCredit,
 	isIssued,
+	isMadeElsewhere,
 	remainingOf,
 	settlementOf,
+	typedCreditLine,
 } from "../credit-note.ts";
-import { canChange, invoiceTotals } from "../invoice.ts";
+import { invoiceTotals } from "../invoice.ts";
 import { creditNoteNumberFormat, type InvoiceStatus } from "../model.ts";
+import { changing, draftById } from "./documents.ts";
 import { invoiceSubject } from "./invoices.ts";
 import { creditNote, creditNoteLine, invoice, invoiceLine } from "./schema.ts";
 import { settingsOf } from "./settings.ts";
@@ -287,6 +290,28 @@ export async function createStandalone(
 	);
 }
 
+/** Makes a draft standalone credit note for one of the tenant's customers with one line typed in. */
+export async function createTypedCredit(input: {
+	customerId: number;
+	reason: string;
+	description: string;
+	amount: number;
+}) {
+	const owner = await db.query.customer.findFirst({
+		columns: { id: true },
+		where: idInTenant(customer, input.customerId),
+	});
+	if (!owner) throw new Refused({ path: ["customerId"], message: m.invoices_unknown_customer() });
+	const line = typedCreditLine({
+		description: input.description,
+		quantity: 1,
+		unitPrice: input.amount,
+	});
+	return db.transaction((tx) =>
+		createStandalone(tx, { customerId: input.customerId, reason: input.reason, lines: [line] }),
+	);
+}
+
 // --- Reading them ------------------------------------------------------------------------------
 
 /** One of the tenant's credit notes with its customer, invoice, lines and totals, or a 404. */
@@ -366,37 +391,6 @@ export async function creditNoteById(tx: Transaction, id: number) {
 
 // --- Changing them -----------------------------------------------------------------------------
 
-/** What a credit note is, as in "… is a draft". */
-const statusLabel: Record<InvoiceStatus, () => string> = {
-	draft: m.invoices_is_draft,
-	sent: m.invoices_is_sent,
-	paid: m.invoices_credit_is_settled,
-	void: m.invoices_is_void,
-};
-
-/** What can't be done to it, as in "… can't be issued". */
-const changeLabel: Record<InvoiceStatus, () => string> = {
-	draft: m.invoices_change_draft,
-	sent: m.invoices_change_sent,
-	paid: m.invoices_credit_change_settled,
-	void: m.invoices_change_void,
-};
-
-/** The tenant's credit note by id, if it can go to `to`; refuses otherwise. */
-export async function changingCredit(tx: Transaction, id: number, to: InvoiceStatus) {
-	const found = await creditNoteById(tx, id);
-	if (!canChange(found.status, to)) {
-		throw new Refused(
-			m.invoices_cannot_change({
-				number: found.number,
-				status: statusLabel[found.status](),
-				change: changeLabel[to](),
-			}),
-		);
-	}
-	return found;
-}
-
 /** The parent a credit note's entries also show on: its invoice's card. */
 export const creditParent = (found: { invoice: { id: number; number: string } | null }) =>
 	found.invoice ? invoiceSubject(found.invoice) : undefined;
@@ -404,7 +398,7 @@ export const creditParent = (found: { invoice: { id: number; number: string } | 
 /** Voids a draft or a sent credit note: it keeps its number, and no longer credits anything. */
 export async function voidCredit(id: number) {
 	return db.transaction(async (tx) => {
-		const found = await changingCredit(tx, id, "void");
+		const found = await changing(tx, "creditNote", id, "void");
 		await tx
 			.update(creditNote)
 			.set({ status: "void", voidedAt: Temporal.Now.instant() })
@@ -424,7 +418,7 @@ export async function voidCredit(id: number) {
  */
 export async function settleCredit(id: number) {
 	return db.transaction(async (tx) => {
-		const found = await changingCredit(tx, id, "paid");
+		const found = await changing(tx, "creditNote", id, "paid");
 		if (found.invoice?.status === "sent") {
 			throw new Refused(m.invoices_credit_settled_with_invoice({ number: found.invoice.number }));
 		}
@@ -441,8 +435,28 @@ export async function settleCredit(id: number) {
 	});
 }
 
+/** Changes a draft's reason: not another module's, whose reason is that module's too. */
+export async function updateReason(input: { id: number; reason: string }) {
+	return db.transaction(async (tx) => {
+		const draft = await draftById(tx, "creditNote", input.id);
+		if (isMadeElsewhere(draft)) {
+			throw new Refused(m.invoices_credit_reason_elsewhere({ number: draft.number }));
+		}
+		const after = { reason: input.reason };
+		await tx.update(creditNote).set(after).where(idInTenant(creditNote, draft.id));
+		await recordActivity(tx, {
+			action: "updated",
+			subject: creditNoteSubject(draft),
+			parent: creditParent(draft),
+			before: draft,
+			after,
+		});
+		return draft;
+	});
+}
+
 /** A sent invoice's remaining amount, after its issued credit notes. */
-export async function remainingOfInvoice(tx: Transaction, invoiceId: number) {
+export async function remainingOfInvoice(tx: Transaction | typeof db, invoiceId: number) {
 	const found = orNotFound(
 		await tx.query.invoice.findFirst({
 			where: idInTenant(invoice, invoiceId),

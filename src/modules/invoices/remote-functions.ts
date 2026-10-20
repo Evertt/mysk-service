@@ -1,5 +1,5 @@
 /**
- * What the invoicing module's remote functions are made with: refused with a 404 for a tenant
+ * What the invoices module's remote functions are made with: refused with a 404 for a tenant
  * without the module (see `moduleRemote()`). Its settings' are `defineTenantSettings()`'s.
  */
 import { moduleRemote } from "#lib/server/remote-functions.ts";
