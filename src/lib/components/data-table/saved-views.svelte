@@ -20,7 +20,7 @@
 	import { toast } from "svelte-sonner";
 
 	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
-	import { errorMessage } from "#lib/utils.ts";
+	import { ran } from "#lib/components/form/submitted.ts";
 
 	import RenameViewDialog from "./rename-view-dialog.svelte";
 	import SaveViewDialog from "./save-view-dialog.svelte";
@@ -75,16 +75,10 @@
 	/** Runs a command on the current view, then says it's done, or why it failed. */
 	async function run(action: () => Promise<unknown>, done: string) {
 		busy = true;
-		try {
-			await action();
-			toast.success(done);
-			return true;
-		} catch (error) {
-			toast.error(errorMessage(error, m.common_error_generic()));
-			return false;
-		} finally {
-			busy = false;
-		}
+		const succeeded = await ran(action);
+		if (succeeded) toast.success(done);
+		busy = false;
+		return succeeded;
 	}
 </script>
 

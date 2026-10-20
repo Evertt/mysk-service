@@ -14,9 +14,9 @@
 	import { toast } from "svelte-sonner";
 
 	import { canManage } from "#lib/auth/can-manage.ts";
+	import { ran } from "#lib/components/form/submitted.ts";
 	import type { ModuleId } from "#lib/modules/ids.ts";
 	import { simulationSpeeds } from "#lib/simulation/extensions.ts";
-	import { errorMessage } from "#lib/utils.ts";
 
 	import SimulationBadge from "./simulation-badge.svelte";
 	import {
@@ -68,14 +68,8 @@
 
 	async function act(work: () => Promise<unknown>, done?: string) {
 		busy = true;
-		try {
-			await work();
-			if (done) toast.success(done);
-		} catch (error) {
-			toast.error(errorMessage(error, m.common_error_generic()));
-		} finally {
-			busy = false;
-		}
+		if ((await ran(work)) && done) toast.success(done);
+		busy = false;
 	}
 </script>
 

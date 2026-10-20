@@ -13,7 +13,8 @@
 	import SearchIcon from "@lucide/svelte/icons/search";
 	import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
 	import WalletCardsIcon from "@lucide/svelte/icons/wallet-cards";
-	import { untrack } from "svelte";
+	import { IsMounted, PersistedState } from "runed";
+	import { onMount } from "svelte";
 
 	import Callout from "#lib/components/callout.svelte";
 	import FilterChips from "#lib/components/filter-chips.svelte";
@@ -28,29 +29,41 @@
 
 	const shop = $derived(await getClientShop());
 
-	/** The cart: how many of each product, in the order they were added. */
-	let cart = $state<{ productId: number; quantity: number }[]>([]);
+	/**
+	 * The cart: how many of each product, in the order they were added. It's kept for the tab's
+	 * session, so it's still there after going to another page, and shown once mounted: the server
+	 * renders it empty, as it can't read it.
+	 */
+	const stored = new PersistedState<{ productId: number; quantity: number }[]>(
+		"parts-shop:cart",
+		[],
+		{ storage: "session" },
+	);
+	const mounted = new IsMounted();
+	const cart = $derived(mounted.current ? stored.current : []);
 	let search = $state("");
 	let category = $state<number | null>(null);
 
-	// A product a checklist's rejected point needs, put in the cart once.
-	const toAdd = Number(untrack(() => page.url.searchParams.get("add")));
-	if (toAdd) {
-		const product = untrack(() => shop.products.find((each) => each.id === toAdd));
-		if (product && isOrderable(product) && product.availability !== "on_request") {
-			cart.push({ productId: toAdd, quantity: 1 });
+	// A product a checklist's rejected point needs, put in the cart once (not again on a reload).
+	onMount(() => {
+		const toAdd = Number(page.url.searchParams.get("add"));
+		const product = shop.products.find((each) => each.id === toAdd);
+		const inCart = stored.current.some((line) => line.productId === toAdd);
+		if (product && isOrderable(product) && product.availability !== "on_request" && !inCart) {
+			setQuantity(toAdd, 1);
 		}
-	}
+	});
 
 	const quantityOf = (productId: number) =>
 		cart.find((line) => line.productId === productId)?.quantity ?? 0;
 
 	function setQuantity(productId: number, quantity: number) {
-		const index = cart.findIndex((line) => line.productId === productId);
+		const lines = stored.current;
+		const index = lines.findIndex((line) => line.productId === productId);
 		if (quantity <= 0) {
-			if (index >= 0) cart.splice(index, 1);
-		} else if (index >= 0) cart[index].quantity = quantity;
-		else cart.push({ productId, quantity });
+			if (index >= 0) lines.splice(index, 1);
+		} else if (index >= 0) lines[index].quantity = quantity;
+		else lines.push({ productId, quantity });
 	}
 
 	const shown = $derived.by(() => {
@@ -185,6 +198,7 @@
 			available={shop.available}
 			partner={shop.partner}
 			onremove={(productId) => setQuantity(productId, 0)}
+			onplaced={() => (stored.current = [])}
 		/>
 	</div>
 </div>
