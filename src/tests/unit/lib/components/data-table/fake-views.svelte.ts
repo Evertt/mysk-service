@@ -42,12 +42,16 @@ function fakeForm(name: string) {
 		return {
 			...attributes,
 			enhance: () => attributes,
-			fields: Object.fromEntries(
-				["id", "tableKey", "query", "columns", "name", "shared"].map((field) => [
-					field,
-					fakeField(field),
-				]),
-			),
+			fields: {
+				...Object.fromEntries(
+					["id", "tableKey", "query", "columns", "name", "shared"].map((field) => [
+						field,
+						fakeField(field),
+					]),
+				),
+				issues: () => undefined,
+				allIssues: () => undefined,
+			},
 			pending: 0,
 			result: undefined,
 		};

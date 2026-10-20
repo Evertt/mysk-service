@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
+import { resetHistoryDialogs } from "#unit/lib/components/fake-history-dialog.svelte.ts";
+
 import { lastSearch, visit, visits } from "./fake-navigation.svelte.ts";
 import { reset, sent, type TableView } from "./fake-views.svelte.ts";
 import Harness, { type Item } from "./table.test-harness.svelte";
@@ -11,6 +13,11 @@ vi.mock("$app/navigation", async () => ({
 	goto: (await import("./fake-navigation.svelte.ts")).goto,
 }));
 vi.mock("#lib/components/data-table/views.remote.ts", () => import("./fake-views.svelte.ts"));
+// The views' dialogs open with history entries of their own, through SvelteKit's router.
+vi.mock(
+	"#lib/components/history-dialog.svelte.ts",
+	() => import("#unit/lib/components/fake-history-dialog.svelte.ts"),
+);
 vi.mock(
 	"#lib/components/data-table/table-memory.remote.ts",
 	() => import("./fake-table-memory.ts"),
@@ -64,6 +71,7 @@ const headers = () =>
 beforeEach(() => {
 	visit("/items");
 	reset();
+	resetHistoryDialogs();
 });
 
 describe("the saved views menu", () => {

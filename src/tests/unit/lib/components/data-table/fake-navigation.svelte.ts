@@ -14,6 +14,7 @@ export const page = $state({
 	url: new URL("http://localhost/items"),
 	route: { id: "/items" as string | null },
 	data: {} as App.PageData,
+	state: {} as App.PageState,
 });
 
 /** A navigation under way (`leaveFor()`), or none. */

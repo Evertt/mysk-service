@@ -19,9 +19,9 @@
 	import UsersIcon from "@lucide/svelte/icons/users";
 	import { toast } from "svelte-sonner";
 
+	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
 	import { errorMessage } from "#lib/utils.ts";
 
-	import DeleteViewDialog from "./delete-view-dialog.svelte";
 	import RenameViewDialog from "./rename-view-dialog.svelte";
 	import SaveViewDialog from "./save-view-dialog.svelte";
 	import type { TableUrlSync } from "./url-sync.svelte.ts";
@@ -84,13 +84,6 @@
 			return false;
 		} finally {
 			busy = false;
-		}
-	}
-
-	async function remove(view: TableView) {
-		if (await run(() => deleteView(view.id), m.common_views_deleted())) {
-			deleting = false;
-			if (sync.viewId === view.id) sync.viewId = undefined;
 		}
 	}
 </script>
@@ -235,5 +228,19 @@
 {#if current}
 	{@const view = current}
 	<RenameViewDialog bind:open={renaming} {view} />
-	<DeleteViewDialog bind:open={deleting} {view} {busy} onconfirm={() => remove(view)} />
+	<!-- A view is deleted by a command, not a form. -->
+	<ConfirmDialog
+		title={m.common_views_delete_title({ name: view.name })}
+		description={view.shared
+			? m.common_views_delete_shared_description()
+			: m.common_views_delete_description()}
+		confirmLabel={m.common_delete()}
+		destructive
+		onconfirm={() => deleteView(view.id)}
+		ondone={() => {
+			if (sync.viewId === view.id) sync.viewId = undefined;
+		}}
+		done={m.common_views_deleted()}
+		bind:open={deleting}
+	/>
 {/if}
