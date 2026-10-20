@@ -41,6 +41,7 @@
 <FormDialog
 	{form}
 	title={m.energy_setup_add_site()}
+	submitLabel={m.energy_setup_add_site()}
 	description={site ? `${site.customer} · ${site.name}` : m.energy_setup_add_site_description()}
 	class="max-h-[90dvh] overflow-y-auto sm:max-w-xl"
 >
