@@ -21,6 +21,12 @@ describe("rerunsOn", () => {
 	test("reruns when contribution files come or go, and when extension points change", () => {
 		expect(rerunsOn("add", "src/modules/sample/slots/orders.detail.side/card.svelte")).toBe(true);
 		expect(rerunsOn("unlink", "src/modules/sample/bulk-actions/orders.list.ts")).toBe(true);
+		expect(rerunsOn("add", "src/modules/sample/form-parts/orders.form.ts")).toBe(true);
+		expect(rerunsOn("unlink", "src/modules/sample/server/columns/equipment.list.columns.ts")).toBe(
+			true,
+		);
+		expect(rerunsOn("add", "src/modules/sample/server")).toBe(true);
+		expect(rerunsOn("add", "src/modules/sample/server/other.ts")).toBe(false);
 		expect(rerunsOn("change", "src/modules/sample/slots/orders.detail.side/card.svelte")).toBe(
 			false,
 		);

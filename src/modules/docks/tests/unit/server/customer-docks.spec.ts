@@ -72,10 +72,9 @@ const dockForm = (customer: string, siteId: number, fields: Record<string, strin
 });
 
 describe("Weggemans' docks", () => {
-	test("are on its page, which a manager may manage and a planner may not", async () => {
+	test("are on its page, a planner's too", async () => {
 		const weggemans = await customerNamed("Weggemans Logistiek");
 		const asPlanner = await as(shltr.member, () => data(getCustomerDocks, weggemans.code));
-		expect(asPlanner.canManage).toBe(false);
 		const stored = await value<number>(
 			`select count(*) from dock_position d join customer_site s on s.id = d.site_id
 			 where s.customer_id = ?`,
@@ -83,9 +82,6 @@ describe("Weggemans' docks", () => {
 		);
 		expect(stored).toBe(8);
 		expect(JSON.stringify(asPlanner)).toContain("DOCK 05");
-		expect((await as(shltr.owner, () => data(getCustomerDocks, weggemans.code))).canManage).toBe(
-			true,
-		);
 	});
 
 	test("a manager adds one; logged against the customer", async () => {

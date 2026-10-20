@@ -3,6 +3,7 @@
 	import PlusIcon from "@lucide/svelte/icons/plus";
 	import WrenchIcon from "@lucide/svelte/icons/wrench";
 
+	import { getTenantModules } from "#lib/auth/session.remote.ts";
 	import { extendList } from "#lib/components/data-table/list-definition.ts";
 	import { listQueries } from "#lib/components/data-table/server-table.svelte.ts";
 	import ToolbarBand, { bandButton } from "#lib/components/toolbar-band.svelte";
@@ -14,11 +15,20 @@
 		getEquipmentFacets,
 		getEquipmentList,
 	} from "#lib/equipment/remotes.ts";
-	import { loadListColumns } from "#lib/extensions/list-columns.ts";
+	import { columnContributions } from "#lib/extensions/contributions.gen.ts";
+	import { loadContributions } from "#lib/extensions/define.ts";
 
 	// The list with the columns of the tenant's modules (e.g. the next maintenance), whose
 	// parameters the URL may hold.
-	const list = $derived(extendList(equipmentList, await loadListColumns(points.list.columns)));
+	const columns = $derived(
+		await loadContributions(columnContributions, points.list.columns, await getTenantModules()),
+	);
+	const list = $derived(
+		extendList(
+			equipmentList,
+			columns.flatMap(({ value }) => value ?? []),
+		),
+	);
 	// The server filters, sorts and pages the units, as the URL says (see the orders page).
 	const equipment = listQueries(() => list, getEquipmentList, getEquipmentFacets);
 	const categories = getEquipmentCategories();

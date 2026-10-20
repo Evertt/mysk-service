@@ -510,11 +510,9 @@ describe("a contract's covered units, in North", () => {
 describe("the settings", () => {
 	test("are a manager's to change, logged", async () => {
 		const fields = { autoCreate: true, leadDays: 30, remindCustomers: false };
-		expect((await as(north.member, () => data(getMaintenanceSettings))).canManage).toBe(false);
 		expect(await as(north.member, () => submit(saveMaintenanceSettings, fields))).toMatchObject({
 			status: 403,
 		});
-		expect((await as(north.owner, () => data(getMaintenanceSettings))).canManage).toBe(true);
 		expect(await as(north.owner, () => submit(saveMaintenanceSettings, fields))).toMatchObject({
 			status: 303,
 			location: "/maintenance",

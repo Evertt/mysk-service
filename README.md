@@ -126,8 +126,7 @@ anyone else. Without the flag the buttons and the switch aren't there and the se
 whatever is posted. The flag is set for staging (`wrangler.jsonc`'s `env.staging.vars`) and by the
 end-to-end tests' servers; for local development, set `DEMO_SIGN_IN=true` in your `.env` before
 `pnpm dev` (`.env.example` has it commented out, so a `.env` copied from it leaves it off). Never
-set it in production (`wrangler.jsonc`'s top-level vars, or a Vercel project's environment
-variables), where it would let anyone in as these users if they existed.
+set it in production (`wrangler.jsonc`'s top-level vars), where it would let anyone in as these users if they existed.
 
 ## Members and invitations
 
@@ -178,51 +177,33 @@ The browser tests use Playwright's own Chromium, which `pnpm install` downloads 
 
 ## Deploying
 
-The app deploys to [Vercel](https://vercel.com) or to Cloudflare Workers. `pnpm build` builds with
-[`adapter-auto`](https://svelte.dev/docs/kit/adapter-auto), which uses the adapter of the platform
-it builds on: Vercel's in a Vercel build (installing it then). `ADAPTER=cloudflare` builds with
-`adapter-cloudflare` instead, for Cloudflare (see "On Cloudflare"). Anywhere else, `pnpm build`
-makes no server to deploy; `pnpm preview` tries the build locally.
+The app deploys to Cloudflare Workers: `ADAPTER=cloudflare` builds with `adapter-cloudflare` (see
+"On Cloudflare"). `pnpm build` builds with
+[`adapter-auto`](https://svelte.dev/docs/kit/adapter-auto), which makes no server to deploy here;
+`pnpm preview` tries the build locally (as the end-to-end tests do).
 
-Environment variables (see `.env.example` and `src/env.ts`). On Vercel they're the project's
-environment variables; on Cloudflare `wrangler.jsonc`'s `vars`, or secrets
+Environment variables (see `.env.example` and `src/env.ts`). On Cloudflare `wrangler.jsonc`'s `vars`, or secrets
 (`wrangler secret put`); locally `.env` (`.dev.vars` for `pnpm dev:cloudflare`).
 
-| Variable              | Required      | What for                                                                                             |
-| --------------------- | ------------- | ---------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`        | on Vercel     | The database: a Turso database (`libsql://<name>.turso.io`), or a file locally; unused on Cloudflare |
-| `DATABASE_AUTH_TOKEN` | with Turso    | The Turso database's access token                                                                    |
-| `ORIGIN`              | yes           | The public URL, e.g. `https://fieldworks.example.com`: sign-in and links in emails                   |
-| `VERCEL_BRANCH_URL`   | no            | Set by Vercel: without `ORIGIN`, the origin is `https://` and this domain                            |
-| `BETTER_AUTH_SECRET`  | yes           | Signs sessions; 32+ random characters, e.g. from `openssl rand -base64 32`                           |
-| `SMTP_URL`            | no            | Sends mail, e.g. `smtp://user:password@smtp.example.com:587`; otherwise it's logged                  |
-| `MAIL_FROM`           | no            | The sender, e.g. `Fieldworks <noreply@example.com>`                                                  |
-| `CRON_SECRET`         | on Vercel     | Lets a cron start the daily jobs (see "Daily jobs"); Vercel Cron sends it itself                     |
-| `OPS_TOKEN`           | on Cloudflare | Also starts the daily jobs; on Cloudflare it also guards `/_ops/import`                              |
-| `DEMO_SIGN_IN`        | no            | `true` for the login page's demo buttons (see "Demo login"); never in production                     |
-| `BUG_REPORT_EMAIL`    | no            | Gets a mail for each bug report (the headers' record button); otherwise it's logged                  |
-| `DEVELOPER_EMAILS`    | no            | Comma-separated: the accounts that may open the bug reports at `/ops/bug-reports`                    |
-| `BUG_REPORTS_DIR`     | no            | Where bug reports' recordings go (`.bug-reports`); on Cloudflare the `BUG_REPORTS` R2 bucket         |
+| Variable              | Required      | What for                                                                                     |
+| --------------------- | ------------- | -------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`        | locally       | The database: a file, or a Turso database (`libsql://<name>.turso.io`); unused on Cloudflare |
+| `DATABASE_AUTH_TOKEN` | with Turso    | The Turso database's access token                                                            |
+| `ORIGIN`              | yes           | The public URL, e.g. `https://fieldworks.example.com`: sign-in and links in emails           |
+| `BETTER_AUTH_SECRET`  | yes           | Signs sessions; 32+ random characters, e.g. from `openssl rand -base64 32`                   |
+| `SMTP_URL`            | no            | Sends mail, e.g. `smtp://user:password@smtp.example.com:587`; otherwise it's logged          |
+| `MAIL_FROM`           | no            | The sender, e.g. `Fieldworks <noreply@example.com>`                                          |
+| `OPS_TOKEN`           | on Cloudflare | Also starts the daily jobs; on Cloudflare it also guards `/_ops/import`                      |
+| `DEMO_SIGN_IN`        | no            | `true` for the login page's demo buttons (see "Demo login"); never in production             |
+| `BUG_REPORT_EMAIL`    | no            | Gets a mail for each bug report (the headers' record button); otherwise it's logged          |
+| `DEVELOPER_EMAILS`    | no            | Comma-separated: the accounts that may open the bug reports at `/ops/bug-reports`            |
+| `BUG_REPORTS_DIR`     | no            | Where bug reports' recordings go (`.bug-reports`); on Cloudflare the `BUG_REPORTS` R2 bucket |
 
-### On Vercel
+### The first organization
 
-Vercel builds the app from the repository itself (`pnpm install`, whose `prepare` skips
-Playwright's browser there, and `pnpm build`), and runs it as functions, with no disk that lasts:
-the database is a Turso database. Set `DATABASE_URL`, `DATABASE_AUTH_TOKEN`, `BETTER_AUTH_SECRET`
-and `CRON_SECRET` in the project's environment variables, and `ORIGIN` to the production domain
-(without it, each deployment's origin is its branch's domain, `VERCEL_BRANCH_URL`).
-
-The build doesn't migrate the database. Create its tables, and update them with every new version,
-from a checkout:
-
-```sh
-DATABASE_URL=libsql://<name>.turso.io DATABASE_AUTH_TOKEN=<token> pnpm db:migrate
-```
-
-It applies the migrations in `drizzle/` that the database doesn't have yet (and does nothing if
-it's up to date). Then create the first organization and its owner, from the same checkout and
-with the same `DATABASE_URL` and `DATABASE_AUTH_TOKEN` (on Cloudflare, make it in a local file and
-import that: see "On Cloudflare"):
+A new database has no organization. Create the first one and its owner from a checkout, with the
+database's `DATABASE_URL` (on Cloudflare, make it in a local file and import that: see "On
+Cloudflare"):
 
 ```sh
 pnpm run org:create -- --org "Acme Service" --slug acme \
@@ -243,18 +224,13 @@ and its data, and puts demo data and demo users in their place.
 
 Once a day the app does some work by itself, organization by organization: for now, the
 maintenance module turns the plans that are due into orders, for organizations that switched that
-on (Maintenance plans → Settings). A cron starts it with `POST /_ops/daily` (or `GET`, as Vercel
-Cron sends), with `Authorization: Bearer <CRON_SECRET or OPS_TOKEN>`; running it more than once a
-day does no harm. Without either variable set, nothing can start it.
+on (Maintenance plans → Settings). On Cloudflare the Worker's Cron Trigger
+(`triggers.crons` in `wrangler.jsonc`) starts it inside the Durable Object, with `OPS_TOKEN`;
+anything else can with `POST /_ops/daily` (a JSON body, `{}`) and
+`Authorization: Bearer <OPS_TOKEN>`. Running it more than once a day does no harm. Without
+`OPS_TOKEN` set, nothing can start it.
 
-- **Vercel**: `vercel.json` schedules it at 04:00 UTC; set `CRON_SECRET` in the project's
-  environment variables, and Vercel Cron sends it.
-- **Cloudflare**: the Worker's Cron Trigger (`triggers.crons` in `wrangler.jsonc`) starts it inside
-  the Durable Object, with `OPS_TOKEN`.
-- **By hand** (or from a cron of your own): `pnpm jobs:daily` posts to `ORIGIN` (or the URL it's
-  given) with the token from `.env`.
-
-The run's day is the server's (UTC on Vercel and Cloudflare), and its mail (customer reminders) is
+The run's day is the server's (UTC on Cloudflare), and its mail (customer reminders) is
 in English: the cron's request has no user's time zone or language.
 
 ### The demo's simulations
@@ -262,7 +238,7 @@ in English: the cron's request has no user's time zone or language.
 A demo organization can have a module whose real feed isn't connected yet simulated (SHLTR's
 Salvo docks and P1 meters; the seed gives it the rows in `simulation`, real tenants never have
 one). While it runs, the module makes its data up over each interval of real time, through its own
-ingest path. `POST /_ops/tick` (or `GET`), with the same token as the daily jobs, moves every
+ingest path. `POST /_ops/tick`, with the same token as the daily jobs, moves every
 running simulation on to now; the bar on the module's page (Start/Pause, speed, reset, for
 managers) does it every 15 seconds while the page is open, so a cron is only needed to keep it
 going while no one looks. A tick covers up to 20 minutes (`tickCap`), so a cron every 15 minutes
@@ -270,9 +246,6 @@ leaves no gap, and the modules make up what's missing since their latest data.
 
 - **Cloudflare**: the Worker's Cron Trigger every 15 minutes (`*/15 * * * *`, next to the daily
   one) does it, asking nothing of the app while no simulation runs.
-- **Vercel**: `vercel.json` schedules the daily jobs only, so the simulations move while the page
-  is open; a cron elsewhere posting to `/_ops/tick` every 15 minutes, with `CRON_SECRET`, keeps them
-  going.
 
 ### On Cloudflare
 

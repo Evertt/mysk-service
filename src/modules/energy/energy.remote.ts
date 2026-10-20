@@ -7,7 +7,7 @@ import { error } from "@sveltejs/kit";
 import { and, asc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
-import { isManager } from "#lib/auth/index.ts";
+import { momentSeconds } from "#lib/dates.ts";
 import { recordId } from "#lib/schema.ts";
 import { currentTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -32,8 +32,7 @@ import { energyAlert, energyConsumer, energyZone } from "./server/schema.ts";
 const siteId = recordId();
 
 /**
- * The tenant's energy sites, each with its live power, today's consumption and open alerts, and
- * whether the user may change the module's settings.
+ * The tenant's energy sites, each with its live power, today's consumption and open alerts.
  */
 export const getEnergySites = query(async () => {
 	const sites = await loadSites();
@@ -61,14 +60,13 @@ export const getEnergySites = query(async () => {
 				openAlerts: openAlerts.get(site.id) ?? 0,
 			};
 		}),
-		canManage: isManager(currentTenant().roles),
 	};
 });
 
 /** A site with its customer, for the pages that show no figures. */
 export const getEnergySite = query(siteId, (id) => loadSite(id));
 
-/** A site's figures for a period, as of now (see `server/figures.ts`), and whether the user sets it up. */
+/** A site's figures for a period, as of now (see `server/figures.ts`). */
 export const getEnergyOverview = query(
 	v.object({ site: siteId, period: v.picklist(periods) }),
 	async ({ site: id, period }) => {
@@ -90,7 +88,6 @@ export const getEnergyOverview = query(
 			doors,
 			consumers,
 			openAlerts: await openAlertCount(id),
-			canManage: isManager(currentTenant().roles),
 		};
 	},
 );
@@ -185,8 +182,8 @@ export const getEnergyReport = query(
 					and(
 						inTenant(energyAlert),
 						eq(energyAlert.energySiteId, site.id),
-						sql`${energyAlert.at} >= ${Math.floor(ranges.from.epochMilliseconds / 1000)}`,
-						sql`${energyAlert.at} < ${Math.floor(ranges.to.epochMilliseconds / 1000)}`,
+						sql`${energyAlert.at} >= ${momentSeconds(ranges.from)}`,
+						sql`${energyAlert.at} < ${momentSeconds(ranges.to)}`,
 					),
 				)
 				.groupBy(energyAlert.metric, energyAlert.severity, energyAlert.status),

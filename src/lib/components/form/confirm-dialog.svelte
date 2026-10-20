@@ -16,10 +16,7 @@
 <script lang="ts" generics="Form extends DialogForm = never, Confirmed = never">
 	import type { RemoteQueryUpdate } from "$app/server";
 	import type { Component, Snippet } from "svelte";
-	import { toast } from "svelte-sonner";
 	import type { HTMLInputAttributes } from "svelte/elements";
-
-	import { errorMessage } from "#lib/utils.ts";
 
 	import {
 		type DialogDone,
@@ -30,7 +27,7 @@
 		type HiddenInputs,
 	} from "./dialogs.svelte.ts";
 	import SubmitButton from "./submit-button.svelte";
-	import { submitted } from "./submitted.ts";
+	import { ran, submitted } from "./submitted.ts";
 
 	let {
 		title,
@@ -98,15 +95,11 @@
 	let running = $state(false);
 	async function confirm() {
 		running = true;
-		try {
+		await ran(async () => {
 			const result = await onconfirm!();
-			if (result === false) return;
-			await finish<FormResult<Form> | Confirmed>(dialog(), result, finished);
-		} catch (error) {
-			toast.error(errorMessage(error, m.common_error_generic()));
-		} finally {
-			running = false;
-		}
+			if (result !== false) await finish<FormResult<Form> | Confirmed>(dialog(), result, finished);
+		});
+		running = false;
 	}
 </script>
 

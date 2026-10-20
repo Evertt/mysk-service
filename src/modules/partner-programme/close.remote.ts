@@ -4,18 +4,14 @@
  */
 import * as v from "valibot";
 
-import { isManager } from "#lib/auth/index.ts";
-import { currentTenant } from "#lib/server/auth/index.ts";
+import { year } from "#lib/schema.ts";
 
 import { yearField } from "./form/wallet-schema.ts";
 import { forManagers, query } from "./remote-functions.ts";
 import { closePreview, closeYear } from "./server/close.ts";
 
 /** What closing the year would freeze: each partner's figures now, or as closed. */
-export const getClosePreview = query(
-	v.pipe(v.number(), v.integer(), v.minValue(2000), v.maxValue(2100)),
-	async (year) => ({ ...(await closePreview(year)), canManage: isManager(currentTenant().roles) }),
-);
+export const getClosePreview = query(year(), (year) => closePreview(year));
 
 /** Closes the year for every partner it isn't closed for yet. Answers how many. */
 export const closeProgrammeYear = forManagers.form(v.object({ year: yearField }), async (input) => {

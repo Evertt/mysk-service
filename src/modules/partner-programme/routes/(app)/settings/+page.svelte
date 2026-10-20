@@ -3,6 +3,7 @@
 	import type { RouteParams } from "$app/types";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 
+	import { canManage } from "#lib/auth/can-manage.ts";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { formatNumber } from "#lib/i18n/index.ts";
@@ -23,7 +24,7 @@
 	]}
 >
 	{#snippet actions()}
-		{#if data.canManage}
+		{#if await canManage()}
 			<form {...addProgrammeYear}>
 				<input {...addProgrammeYear.fields.year.as("hidden", String(data.next))} />
 				<SubmitButton icon={PlusIcon} pending={addProgrammeYear.pending}>

@@ -27,9 +27,6 @@ export const formatCo2 = (kg: number) =>
 export const formatChange = (change: number | null) =>
 	change === null ? "—" : `${signed(change)}%`;
 
-/** A share in percent, e.g. `12.8%`. */
-export const formatPercent = (percent: number) => `${oneDecimal(percent)}%`;
-
 /** A factor or tariff as it's set, e.g. `0.375`. */
 export const formatFactor = (value: number) => precise(value);
 

@@ -7,7 +7,6 @@
 import { error } from "@sveltejs/kit";
 import * as v from "valibot";
 
-import { isManager } from "#lib/auth/index.ts";
 import { moduleIds } from "#lib/modules/ids.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
 import { live } from "#lib/server/live.ts";
@@ -30,7 +29,6 @@ const view = (row: SimulationRow | null) =>
 		running: row.running,
 		speed: row.speed,
 		startedAt: row.startedAt,
-		canManage: isManager(currentTenant().roles),
 	};
 
 /**

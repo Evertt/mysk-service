@@ -5,20 +5,17 @@
 
 	import FilterChips from "#lib/components/filter-chips.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
+	import { isOneOf } from "#lib/one-of.ts";
 	import { getEnergySite } from "#modules/energy/energy.remote.ts";
 	import { energyLabels } from "#modules/energy/labels.ts";
-	import { type AlertStatus, alertStatuses } from "#modules/energy/model.ts";
+	import { alertStatuses } from "#modules/energy/model.ts";
 	import AlertsList from "#modules/energy/overview/alerts-list.svelte";
 
 	let { params }: { params: RouteParams<"/(app)/(modules)/energy/[site]/alerts"> } = $props();
 
 	const siteId = $derived(Number(params.site));
-	const status = $derived.by((): AlertStatus | null => {
-		const value = page.url.searchParams.get("status");
-		return (alertStatuses as readonly string[]).includes(value ?? "")
-			? (value as AlertStatus)
-			: null;
-	});
+	const asked = $derived(page.url.searchParams.get("status"));
+	const status = $derived(isOneOf(alertStatuses, asked) ? asked : null);
 	const site = $derived(await getEnergySite(siteId));
 
 	const here = $derived(resolve("/(app)/(modules)/energy/[site]/alerts", { site: params.site }));

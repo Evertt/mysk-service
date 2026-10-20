@@ -5,7 +5,7 @@
  */
 import * as v from "valibot";
 
-import { text } from "#lib/schema.ts";
+import { numberIn, text, wholeIn } from "#lib/schema.ts";
 
 import { categoryRuleValues, levelColours, revenueCategories, ruleLimits } from "../model.ts";
 import { yearField } from "./wallet-schema.ts";
@@ -13,18 +13,23 @@ import { yearField } from "./wallet-schema.ts";
 /** A percentage with at most two decimals, as basis points (3.8 → 380). */
 const rate = () =>
 	v.pipe(
-		v.number(m.partners_rate_required),
-		v.minValue(0, m.validation_not_negative),
-		v.maxValue(100, m.partners_rate_max),
+		numberIn({
+			max: 100,
+			message: m.partners_rate_required,
+			tooLow: m.validation_not_negative,
+			tooHigh: m.partners_rate_max,
+		}),
 		v.transform((percent) => Math.round(percent * 100)),
 	);
 
 const tier = v.object({
 	level: v.pipe(text(m.partners_level_required), v.maxLength(40)),
 	threshold: v.pipe(
-		v.number(m.partners_threshold_required),
-		v.integer(m.partners_threshold_whole),
-		v.minValue(0, m.validation_not_negative),
+		wholeIn({
+			message: m.partners_threshold_required,
+			fraction: m.partners_threshold_whole,
+			tooLow: m.validation_not_negative,
+		}),
 		v.transform((euros) => euros * 100),
 	),
 	cashRate: rate(),
@@ -64,10 +69,8 @@ export const rulesSchema = v.object({
 		v.array(categoryRule),
 		v.check((rules) => unique(rules.map((rule) => rule.category)), m.partners_categories_unique),
 	),
-	creditValidYears: v.pipe(
-		v.number(m.partners_valid_years_required),
-		v.integer(m.partners_valid_years_required),
-		v.minValue(ruleLimits.creditValidYears.min, m.partners_valid_years_required),
-		v.maxValue(ruleLimits.creditValidYears.max, m.partners_valid_years_required),
-	),
+	creditValidYears: wholeIn({
+		...ruleLimits.creditValidYears,
+		message: m.partners_valid_years_required,
+	}),
 });

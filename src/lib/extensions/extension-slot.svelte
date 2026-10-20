@@ -33,7 +33,7 @@
 	import { crashSwitches } from "#lib/errors/crash-switch.ts";
 	import ErrorBoundary from "#lib/errors/error-boundary.svelte";
 	import { slotContributions } from "#lib/extensions/contributions.gen.ts";
-	import type { FormSlotPoint, SlotContribution, SlotPoint } from "#lib/extensions/define.ts";
+	import { type FormSlotPoint, loadContributions, type SlotPoint } from "#lib/extensions/define.ts";
 	import { formPartKey } from "#lib/extensions/form-part-key.ts";
 	import { type ModuleId, modules } from "#lib/modules/manifests.ts";
 
@@ -59,21 +59,14 @@
 	const attempts = $state<Record<string, number>>({});
 
 	const enabled = $derived(await getTenantModules());
-	const parts = $derived(
-		await Promise.all(
-			slotContributions
-				.filter((entry) => entry.point === point.id && enabled.includes(entry.module))
-				.map(({ id, module, load }) => {
-					const attempt = attempts[id] ?? 0;
-					// A contribution to this point takes this point's props (`slotContribution()`), and at a
-					// form slot its part's fields (`formSlotContribution()`).
-					return (load as SlotContribution<Props & { fields?: unknown }>["load"])().then(
-						({ default: Slot }) => ({ id, module, attempt, Slot, error: undefined }),
-						(error: unknown) => ({ id, module, attempt, Slot: undefined, error }),
-					);
-				}),
-		),
-	);
+	/** The contributions, loaded with how often each was tried (read before the `await`, so a try reloads). */
+	const load = async (tried: Record<string, number>) =>
+		(await loadContributions(slotContributions, point, enabled)).map(({ value, ...part }) => ({
+			...part,
+			attempt: tried[part.id] ?? 0,
+			Slot: value,
+		}));
+	const parts = $derived(await load({ ...attempts }));
 
 	const labelOf = (id: ModuleId) => modules.find((module) => module.id === id)?.label ?? id;
 

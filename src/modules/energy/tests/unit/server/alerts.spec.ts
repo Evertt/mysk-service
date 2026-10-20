@@ -233,8 +233,6 @@ describe("a zone's thresholds", () => {
 				[shltrId, String(kv.id)],
 			),
 		).toBe(1);
-		const page = await as(shltr.owner, () => data(getEnergyThresholds, siteId));
-		expect(page.canManage).toBe(true);
 	});
 
 	test("switched off, raise nothing however far over", async () => {
@@ -255,7 +253,7 @@ describe("a zone's thresholds", () => {
 		const lab = zone("Z-LAB");
 		const before = await rows(`select * from energy_threshold where zone_id = ?`, [lab.id]);
 		await as(shltr.member, async () => {
-			expect((await data(getEnergyThresholds, siteId)).canManage).toBe(false);
+			expect((await data(getEnergyThresholds, siteId)).zones.length).toBeGreaterThan(0);
 			expect(
 				await submit(saveEnergyThreshold, {
 					zoneId: String(lab.id),

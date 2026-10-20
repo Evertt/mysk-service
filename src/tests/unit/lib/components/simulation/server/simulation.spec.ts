@@ -53,16 +53,12 @@ const logOf = (module: Simulated) =>
 const nowSeconds = () => Math.floor(Date.now() / 1000);
 
 describe.each(modules)("SHLTR's %s simulation", (module) => {
-	test("shows its state to the office's members, and whether they may manage it", async () => {
+	test("shows its state to the office's members", async () => {
 		const stored = await simulation(module);
 		expect(stored.running).toBe(0);
 		expect(await as(shltr.member, () => data(getSimulation, module))).toMatchObject({
 			running: false,
 			speed: stored.speed,
-			canManage: false,
-		});
-		expect(await as(shltr.owner, () => data(getSimulation, module))).toMatchObject({
-			canManage: true,
 		});
 	});
 

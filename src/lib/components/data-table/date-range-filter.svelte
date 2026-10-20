@@ -36,7 +36,7 @@
 
 <script lang="ts">
 	import { isDay } from "#lib/dates.ts";
-	import { dateFormatter, formatDate } from "#lib/i18n/format.ts";
+	import { formatDate, formatShortDay } from "#lib/i18n/format.ts";
 
 	import { filterColumn } from "./filters.svelte.ts";
 	import RangeFilter from "./range-filter.svelte";
@@ -78,8 +78,6 @@
 	}));
 	const title = $derived(filter.title);
 	const none = $derived(filter.none);
-
-	const shortDay = dateFormatter({ day: "numeric", month: "short" });
 
 	/** An end of a range in words: a day, or a preset's name. */
 	const endLabel = (end: string, format: typeof formatDate) =>
@@ -182,7 +180,7 @@
 	presets={presets.map((preset) => ({
 		token: preset,
 		label: presetLabels[preset](),
-		hint: describe(presetRange(preset), shortDay),
+		hint: describe(presetRange(preset), formatShortDay),
 	}))}
 	heading={m.common_table_range_custom()}
 	{ends}

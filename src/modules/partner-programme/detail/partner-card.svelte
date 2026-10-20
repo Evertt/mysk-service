@@ -9,12 +9,12 @@
 	import { resolve } from "$app/paths";
 	import WalletCardsIcon from "@lucide/svelte/icons/wallet-cards";
 
+	import { canManage } from "#lib/auth/can-manage.ts";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
-	import { formatCents, formatDate } from "#lib/i18n/index.ts";
+	import { formatCents, formatDate, formatWholeEuros } from "#lib/i18n/index.ts";
 
-	import { formatEuros } from "../display.ts";
 	import { partnerLabels } from "../labels.ts";
 	import { closePartnerYear, type getPartnerCard } from "../partners.remote.ts";
 	import DarkPanel from "../ui/dark-panel.svelte";
@@ -29,6 +29,7 @@
 	type PartnerCardData = Extract<Awaited<ReturnType<typeof getPartnerCard>>, { year: number }>;
 
 	let { card }: { card: PartnerCardData } = $props();
+	const manager = $derived(await canManage());
 
 	const figures = $derived(card.figures);
 	const wallet = $derived(card.wallet);
@@ -62,16 +63,16 @@
 		{#if figures}
 			<dl class="grid grid-cols-2 gap-3">
 				<KeyFigure label={m.partners_partner_revenue()}>
-					<span data-partner-revenue>{formatEuros(figures.partnerRevenue)}</span>
+					<span data-partner-revenue>{formatWholeEuros(figures.partnerRevenue)}</span>
 				</KeyFigure>
 				<KeyFigure
 					label={sameBonusRevenue ? m.partners_bonus_revenue() : m.partners_bonus_revenue_cash()}
 				>
-					<span data-bonus-revenue>{formatEuros(figures.bonusRevenue.cash)}</span>
+					<span data-bonus-revenue>{formatWholeEuros(figures.bonusRevenue.cash)}</span>
 				</KeyFigure>
 				{#if !sameBonusRevenue}
 					<KeyFigure label={m.partners_bonus_revenue_credit()} class="col-span-2">
-						{formatEuros(figures.bonusRevenue.credit)}
+						{formatWholeEuros(figures.bonusRevenue.credit)}
 					</KeyFigure>
 				{/if}
 			</dl>
@@ -127,8 +128,8 @@
 				</div>
 				<p class="text-xs text-muted-foreground tabular-nums">
 					{m.partners_closed_figures({
-						revenue: formatEuros(closed.partnerRevenue),
-						bonus: formatEuros(closed.bonusRevenueCash),
+						revenue: formatWholeEuros(closed.partnerRevenue),
+						bonus: formatWholeEuros(closed.bonusRevenueCash),
 					})}
 				</p>
 				{#if closed.choice}
@@ -145,11 +146,10 @@
 							code={card.customer.code}
 							year={closed.year}
 							creditNote={closed.creditNote}
-							canManage={card.canManage}
 						/>
 					{/if}
 				{:else if closed.cashAmount || closed.creditAmount}
-					{#if card.canManage}
+					{#if manager}
 						<div class="flex flex-wrap gap-2">
 							<ChoiceDialog
 								code={card.customer.code}
@@ -201,7 +201,7 @@
 			]}
 			data-wallet
 		>
-			{#if card.canManage}
+			{#if manager}
 				<div class="text-foreground">
 					<WalletEntryDialog code={card.customer.code} validUntil={card.validUntil} />
 				</div>

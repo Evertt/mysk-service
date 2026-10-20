@@ -154,7 +154,6 @@ describe("North's engineers", () => {
 			[northId],
 		);
 		const account = await as(north.owner, () => data(getEngineerAccount, free));
-		expect(account.canManage).toBe(true);
 		const offered = new Set(account.members.map((member) => member.userId));
 		for (const { user_id } of linkedTo) expect(offered.has(user_id)).toBe(false);
 		const members = await rows<{ user_id: string }>(

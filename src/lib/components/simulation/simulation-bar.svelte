@@ -13,9 +13,10 @@
 	import RefreshCcwIcon from "@lucide/svelte/icons/refresh-ccw";
 	import { toast } from "svelte-sonner";
 
+	import { canManage } from "#lib/auth/can-manage.ts";
+	import { ran } from "#lib/components/form/submitted.ts";
 	import type { ModuleId } from "#lib/modules/ids.ts";
 	import { simulationSpeeds } from "#lib/simulation/extensions.ts";
-	import { errorMessage } from "#lib/utils.ts";
 
 	import SimulationBadge from "./simulation-badge.svelte";
 	import {
@@ -67,14 +68,8 @@
 
 	async function act(work: () => Promise<unknown>, done?: string) {
 		busy = true;
-		try {
-			await work();
-			if (done) toast.success(done);
-		} catch (error) {
-			toast.error(errorMessage(error, m.common_error_generic()));
-		} finally {
-			busy = false;
-		}
+		if ((await ran(work)) && done) toast.success(done);
+		busy = false;
 	}
 </script>
 
@@ -90,7 +85,7 @@
 			<ActivityIcon class="size-4 text-primary" aria-hidden="true" />
 			{label ?? m.simulation_title()}
 		</span>
-		{#if simulation.canManage}
+		{#if await canManage()}
 			<Button
 				size="sm"
 				variant={simulation.running ? "outline" : "default"}

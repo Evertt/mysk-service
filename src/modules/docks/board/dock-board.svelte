@@ -18,10 +18,10 @@
 	import StatTile from "#lib/components/stat-tile.svelte";
 	import { Clock } from "#lib/hooks/clock.svelte.ts";
 	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
-	import { formatNumber, formatTime } from "#lib/i18n/index.ts";
+	import { formatNumber, formatStopwatch, formatTime } from "#lib/i18n/index.ts";
 
 	import { watchDocks } from "../docks.remote.ts";
-	import { dockFigures, formatDuration } from "../model.ts";
+	import { dockFigures } from "../model.ts";
 	import { getDockBoard } from "./board.remote.ts";
 	import { type DockBoard, dockView } from "./board.ts";
 	import ComponentsCard from "./components-card.svelte";
@@ -96,7 +96,7 @@
 	/>
 	<StatTile
 		label={m.docks_kpi_longest_open()}
-		value={formatDuration(figures.longestOpen)}
+		value={formatStopwatch(figures.longestOpen * 1000, { hours: true })}
 		icon={TimerIcon}
 		tone="warning"
 	/>

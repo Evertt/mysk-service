@@ -111,7 +111,7 @@ const lastActivity = async () => Number(await value(`select coalesce(max(id), 0)
 
 describe("North's templates, to its owner", () => {
 	test("are listed in their order, with their categories and points, and the categories none is for", async () => {
-		const { templates, uncovered, canManage } = await as(north.owner, () => data(getTemplates));
+		const { templates, uncovered } = await as(north.owner, () => data(getTemplates));
 		expect(templates.map((template) => template.name)).toEqual([
 			"Stookinstallatie",
 			"Koelmachine",
@@ -127,7 +127,6 @@ describe("North's templates, to its owner", () => {
 			categories: [{ name: "Koelmachine" }],
 		});
 		expect(uncovered.map((category) => category.name).toSorted()).toEqual(["Compressor", "Pomp"]);
-		expect(canManage).toBe(true);
 	});
 
 	test("a unit is offered its category's template", async () => {
@@ -172,7 +171,7 @@ describe("North's templates, to its owner", () => {
 			{ action: "created", subject_type: "checklistTemplate", subject_label: "Compressor" },
 		]);
 		const page = await as(north.owner, () => data(getTemplate, String(added.id)));
-		expect(page).toMatchObject({ template: { name: "Compressor" }, points: [], canManage: true });
+		expect(page).toMatchObject({ template: { name: "Compressor" }, points: [] });
 	});
 
 	test("its categories: one another template is for is refused, naming it", async () => {
@@ -273,9 +272,7 @@ describe("a member, in North", () => {
 			points: await pointsOf(koelmachine.id),
 		};
 		await as(north.member, async () => {
-			expect((await data(getTemplates)).canManage).toBe(false);
 			const page = await data(getTemplate, id);
-			expect(page.canManage).toBe(false);
 			expect(page.points.map((point) => point.text)).toContain("Lekdichtheidscontrole uitgevoerd");
 
 			const [first] = page.points;

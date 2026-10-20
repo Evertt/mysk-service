@@ -3,24 +3,21 @@
 	import type { RouteParams } from "$app/types";
 	import { toast } from "svelte-sonner";
 
+	import { canManage } from "#lib/auth/can-manage.ts";
 	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import CheckboxField from "#lib/components/form/checkbox-field.svelte";
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
-	import { formatOnOff } from "#lib/i18n/index.ts";
-	import {
-		formatKw,
-		formatKwh,
-		formatPercent,
-		thresholdStateDisplay,
-	} from "#modules/energy/display.ts";
+	import { formatOnOff, formatPercent } from "#lib/i18n/index.ts";
+	import { formatKw, formatKwh, thresholdStateDisplay } from "#modules/energy/display.ts";
 	import { getEnergyThresholds, saveEnergyThreshold } from "#modules/energy/thresholds.remote.ts";
 
 	let { params }: { params: RouteParams<"/(app)/(modules)/energy/[site]/thresholds"> } = $props();
 
 	const data = $derived(await getEnergyThresholds(Number(params.site)));
+	const manager = $derived(await canManage());
 	const siteHref = $derived(resolve("/(app)/(modules)/energy/[site]", { site: params.site }));
 </script>
 
@@ -35,7 +32,7 @@
 		]}
 	/>
 
-	{#if !data.canManage}
+	{#if !manager}
 		<p class="text-sm text-muted-foreground" data-managers-only>{m.energy_thresholds_managers()}</p>
 	{/if}
 
@@ -53,7 +50,7 @@
 							{m.energy_thresholds_now({
 								kw: formatKw(zone.liveKw),
 								kwh: formatKwh(zone.kwhToday),
-								share: formatPercent(zone.ratio * 100),
+								share: formatPercent(zone.ratio * 100, { basis: "percent" }),
 							})}
 						</Card.Description>
 						<Card.Action>
@@ -65,7 +62,7 @@
 						</Card.Action>
 					</Card.Header>
 					<Card.Content>
-						{#if data.canManage}
+						{#if manager}
 							<form
 								{...form.enhance(async ({ submit }) => {
 									if (await submitted(submit)) toast.success(m.energy_thresholds_saved());

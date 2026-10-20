@@ -71,6 +71,33 @@ const euros = numberFormatter({ style: "currency", currency: "EUR" });
 /** Formats an amount in cents, e.g. `123456` → `€1,234.56`, in Dutch `€ 1.234,56`. */
 export const formatCents = (cents: number, locale?: Locale) => euros(cents / 100, locale);
 
+const wholeEuros = numberFormatter({
+	style: "currency",
+	currency: "EUR",
+	maximumFractionDigits: 0,
+});
+
+/**
+ * Formats an amount in cents in whole euros, rounded (or `round: "floor"` or `"ceil"`), e.g.
+ * `20000000` → `€200,000`, in Dutch `€ 200.000`.
+ */
+export const formatWholeEuros = (
+	cents: number,
+	{ round = "round", locale }: { round?: "round" | "floor" | "ceil"; locale?: Locale } = {},
+) => wholeEuros(Math[round](cents / 100), locale);
+
+const percent = numberFormatter({ style: "percent", maximumFractionDigits: 2 });
+const percentBases = { percent: 100, basisPoints: 10_000 };
+
+/**
+ * Formats a rate stored in `basis` units, with at most two decimals: in percent (`21` → `21%`, a
+ * VAT rate) or in basis points (`380` → `3.8%`); in Dutch `3,8%`.
+ */
+export const formatPercent = (
+	value: number,
+	{ basis, locale }: { basis: keyof typeof percentBases; locale?: Locale },
+) => percent(value / percentBases[basis], locale);
+
 /** Formats a day, e.g. `7 Oct 2026`, in Dutch `7 okt 2026`. */
 export const formatDate = dateFormatter({ day: "numeric", month: "short", year: "numeric" });
 
@@ -82,6 +109,15 @@ export const formatDateTime = dateFormatter({
 	hour: "2-digit",
 	minute: "2-digit",
 });
+
+/** Formats a day without the year, e.g. `7 Oct`, in Dutch `7 okt`. */
+export const formatShortDay = dateFormatter({ day: "numeric", month: "short" });
+
+/** Formats a day in full without the year, e.g. `Monday 5 October`, in Dutch `maandag 5 oktober`. */
+export const formatLongDay = dateFormatter({ weekday: "long", day: "numeric", month: "long" });
+
+/** Formats a month, e.g. `October 2026`, in Dutch `oktober 2026`. */
+export const formatMonth = dateFormatter({ month: "long", year: "numeric" });
 
 /**
  * Formats a day stored as text, e.g. in the activity log: `yyyy-mm-dd`, or, as logged before days
@@ -128,13 +164,18 @@ export function formatTimeAgo(
 	return format.format(-Math.floor(minutes / 60 / 24), "day");
 }
 
+const twoDigits = (value: number) => String(value).padStart(2, "0");
+
 /**
- * Formats a stopwatch's time, in minutes and seconds: `0:07`, `12:30` (the same in every language
- * the app has), e.g. how long a bug report has been recording.
+ * Formats a stopwatch's time in minutes and seconds, `00:07`, `72:30` (the same in every language
+ * the app has), e.g. how long a bug report recorded; with `hours`, from an hour on as `1:12:30`,
+ * e.g. how long a dock's door has been open.
  */
-export function formatStopwatch(milliseconds: number) {
+export function formatStopwatch(milliseconds: number, { hours = false } = {}) {
 	const seconds = Math.max(0, Math.floor(milliseconds / 1000));
-	return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+	const h = hours ? Math.floor(seconds / 3600) : 0;
+	const time = `${twoDigits(Math.floor(seconds / 60) - h * 60)}:${twoDigits(seconds % 60)}`;
+	return h ? `${h}:${time}` : time;
 }
 
 /**

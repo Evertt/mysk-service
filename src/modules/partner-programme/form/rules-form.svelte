@@ -9,6 +9,7 @@
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 	import { toast } from "svelte-sonner";
 
+	import { lineItems, withoutValue } from "#lib/components/form/line-items.svelte.ts";
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
@@ -29,7 +30,6 @@
 
 	/** A level as it's typed: in euros and percentages, a number empty while its field is. */
 	interface TypedTier {
-		key: string;
 		level: string;
 		threshold: number | null;
 		cashRate: number | null;
@@ -37,30 +37,21 @@
 		colour: LevelColour | "";
 	}
 
-	// Kept here so levels can be added and removed.
-	const initialTiers = (): TypedTier[] =>
+	// The numbers are bound (`bind:value`), which keeps what's typed: an empty field stays empty
+	// (the form refuses it on save), and "3." on the way to "3.5" isn't written back as a number.
+	const tiers = lineItems<TypedTier>(() =>
 		rules.tiers.map((tier) => ({
-			key: crypto.randomUUID(),
 			level: tier.level,
 			threshold: tier.threshold / 100,
 			cashRate: tier.cashRate / 100,
 			creditRate: tier.creditRate / 100,
 			colour: tier.colour ?? "",
-		}));
-	let tiers = $state(initialTiers());
-
-	// Inputs take their value from `tiers` (rows can be removed, which shifts the indexes), so only
-	// the name and validation attributes come from the form field. The numbers are bound
-	// (`bind:value`), which keeps what's typed: an empty field stays empty (the form refuses it on
-	// save), and "3." on the way to "3.5" isn't written back as a number.
-	function withoutValue<T extends { value?: unknown }>({ value: _value, ...attributes }: T) {
-		return attributes;
-	}
+		})),
+	);
 
 	function addTier() {
-		const last = tiers.at(-1);
-		tiers.push({
-			key: crypto.randomUUID(),
+		const last = tiers.rows.at(-1);
+		tiers.add({
 			level: "",
 			threshold: last?.threshold == null ? 50_000 : last.threshold * 2,
 			cashRate: last?.cashRate ?? 2.5,
@@ -92,7 +83,7 @@
 					variant="outline"
 					size="sm"
 					onclick={addTier}
-					disabled={tiers.length >= ruleLimits.tiers.max}
+					disabled={tiers.rows.length >= ruleLimits.tiers.max}
 				>
 					<PlusIcon data-icon="inline-start" />
 					{m.partners_rules_add_level()}
@@ -114,7 +105,7 @@
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>
-					{#each tiers as tier, index (tier.key)}
+					{#each tiers.rows as tier, index (tier.key)}
 						{@const fields = form.fields.tiers[index]}
 						<Table.Row data-tier={index}>
 							<Table.Cell>
@@ -192,8 +183,8 @@
 									variant="ghost"
 									size="icon-sm"
 									aria-label={m.partners_rules_remove_level()}
-									disabled={tiers.length <= ruleLimits.tiers.min}
-									onclick={() => tiers.splice(index, 1)}
+									disabled={tiers.rows.length <= ruleLimits.tiers.min}
+									onclick={() => tiers.remove(index)}
 								>
 									<Trash2Icon />
 								</Button>

@@ -35,7 +35,8 @@ its branch after the task, then `git worktreeinclude apply` (`.env`) and `pnpm i
   hand-built `/login?redirectTo` (`src/tests/unit/lib/auth/shells.spec.ts`).
 - **Generic code**: `src/lib/components/`, `activity/`, `auth/`, `i18n/`, `modules/`, `extensions/`,
   `themes/`, `errors/`; server infrastructure in `src/lib/server/`. Any `server/` folder or `*.server.ts` is
-  server-only: database code and secrets go there.
+  server-only: database code and secrets go there. A kebab-case or dotted name in camelCase is
+  `camelCase()` (`#lib/camel-case.ts`, shared with `scripts/`; `src/tests/unit/camel-case.spec.ts`).
 - A file sits in the nearest folder that holds all its users; move it when its users move.
 - Outside a domain, import it through its **barrels** (`#lib/orders/index.ts`, `components.ts`,
   `remotes.ts`, `server/index.ts`); inside, import siblings relatively.
@@ -49,6 +50,14 @@ its branch after the task, then `git worktreeinclude apply` (`.env`) and `pnpm i
   its delete button), from `#lib/components/form/`: they submit, toast, close, show the server's
   refusal and give the dialog a history entry, so back closes it. Never `Dialog.Root` or
   `AlertDialog.Root` outside `src/lib/components/` (`src/tests/unit/dialogs.spec.ts`).
+- A command a button runs is `ran(cmd(), fallback)`, a form's `enhance` awaits `submitted(submit)`
+  (`#lib/components/form/submitted.ts`): they toast the error's own message (`errorMessage()`) or
+  the fallback, and answer whether it went through. Never its own try/catch toast
+  (`src/tests/unit/command-toasts.spec.ts`).
+- A form's rows that can be added and removed are `lineItems(() => initial)`
+  (`#lib/components/form/line-items.svelte.ts`: keyed `rows`, `add`, `remove`); their inputs take
+  the field's attributes with `withoutValue(field.as(…))` and the value from the row
+  (`src/tests/unit/line-items.spec.ts`).
 - A record's page is a `<RecordPage>` (`#lib/components/record-page.svelte`): header, trail,
   Edit/Delete, `<ChangedElsewhere>`, the two columns (`main`, `side`), the modules' slots and the
   activity card; its cards live in the domain's `detail/`. Its form is a `<RecordForm>` with
@@ -57,7 +66,10 @@ its branch after the task, then `git worktreeinclude apply` (`.env`) and `pnpm i
   `PageHeader` titles the tab: no `<title>` beside it (`src/tests/unit/record-pages.spec.ts`).
 - A record's extension points are one `defineRecordPoints("<domain>", { detail, listColumns, bulk })`
   in its `extensions.ts` (`<domain>.detail.main`/`.side`, `.list.columns`, `.list.bulk`), passed
-  to `RecordPage` as `slots={points.detail}`.
+  to `RecordPage` as `slots={points.detail}`. A point's contributions (slots, bulk actions, list
+  columns) load with `$derived(await loadContributions(registry, point, await getTenantModules()))`
+  (`#lib/extensions/define.ts`), never by filtering `contributions.gen.ts` by hand
+  (`src/tests/unit/load-contributions.spec.ts`).
 - A single choice among a few options is `FilterChips` (chips; each with an `href` when the choice
   is kept in the URL) or `SegmentedNav` (a page's views), from `#lib/components/`, never a
   hand-made row of buttons or links (`src/tests/unit/choice-controls.spec.ts` refuses
@@ -85,6 +97,10 @@ Organizations own all business data.
   `await engineerOrder(ref)`, `engineerOrderNotFound(ref)` in `src/lib/server/auth/engineer.ts`),
   the customer portal's queries to the customer (`ofCustomer()`, `customerOrders()`, `atSites()`
   in `src/lib/server/auth/customer.ts`).
+- An office page hides manager-only controls with `await canManage()` (`#lib/auth/can-manage.ts`,
+  from `getCurrentTenant()`'s roles); a query never sends a `canManage` flag
+  (`can-manage.spec.ts`). It only hides: the gate (`forManagers`) still refuses the others. Never
+  in a portal: `getCurrentTenant()` sends anyone outside the office to their own home.
 - Every select, update and delete on a tenant table is scoped: `inTenant(table)`,
   `idInTenant(table, id)`, `idsInTenant(table, ids)`, and joins through `tenantJoin()` (or
   `sameTenant(a, b)`). Ids come from the client.
@@ -103,7 +119,8 @@ Server code has one way per recurring problem (`docs/agents/tenancy.md`, "One wa
 (`gated()` turns it into the form's issues or a 400), and remote files hold no transactions; a
 record is looked up with `unitBySerial()`, `customerByCode()` or `orderByNumber()`, deleted with
 `deleteAndLog()` or `defineRemoval()`, ordered with `nextPosition()`/`reorder()`, and its name
-checked with `nameTaken()` (`src/lib/server/records.ts`).
+checked with `nameTaken()` (`src/lib/server/records.ts`). A lookup done once per request is
+`perRequest(find)` (`#lib/server/per-request.ts`).
 
 Details and the shared server helpers: `docs/agents/tenancy.md`.
 
@@ -129,11 +146,22 @@ Before you change the schema, add a migration, or log a new subject or action: r
 - Every user-facing text is a Paraglide message (`m.orders_title()`), added to `en` and `nl`
   together. Call messages where they're read (component, `$derived`, function body), and pass the
   message function itself where a module-scope value needs a label.
-- Format through `#lib/i18n/format.ts`, and show enum values with `label(kind, value)`: as a badge
-  with `<EnumBadge display={…Display} value />`, as a table column with `column.enum()`.
+- Format through `#lib/i18n/format.ts`, by its named formats where one fits (`formatShortDay`,
+  `formatLongDay`, `formatMonth`, `formatWholeEuros`, `formatPercent(value, { basis })`,
+  `formatStopwatch(ms, { hours })`; `named-formats.spec.ts` refuses a copy), and show enum values
+  with `label(kind, value)`: as a badge with `<EnumBadge display={…Display} value />`, as a table
+  column with `column.enum()`.
+- Ask whether a value is one of a list's with `isOneOf(values, value)` (`#lib/one-of.ts`, which
+  narrows it), never a cast `.includes()` (`is-one-of.spec.ts`).
+- A schema takes its fields from `#lib/schema.ts`: a number in bounds is
+  `numberIn({ min, max, above, message })` or `wholeIn()`, from a hidden field `hiddenInt()`, a
+  year `year()`, an id `id()` (a command's `recordId()`), an email address `email()`; never hand-built from
+  `v.minValue()`, `v.integer()` and the like (`schema-helpers.spec.ts`).
 - Days are `Temporal.PlainDate` and moments are `Temporal.Instant`. Compare them with `compare()` or
   `.equals()`. Ask the user's time zone through `#lib/dates.ts`: `currentDay()` (today), `dayOf(moment)`,
   `startOfDay(day)` and `mondayOf(day)`, not `Temporal.Now.plainDateISO(getTimeZone())` and the like.
+  The earlier or later of two moments is `earlier(a, b)`/`later(a, b)`, a moment's whole seconds as
+  the database keeps them `momentSeconds(moment)` (back: `fromMomentSeconds(seconds)`).
 
 Before you add a message file, an enum kind, a plural or a format, or write Dutch copy: read
 `docs/agents/i18n.md`.
@@ -171,5 +199,10 @@ Before you add a message file, an enum kind, a plural or a format, or write Dutc
 - **Svelte and SvelteKit**: use the Svelte MCP. Fetch the docs sections a task needs
   (`list-sections`, then `get-documentation`), and run `svelte-autofixer` on Svelte code you write
   until it reports nothing.
+- **Reactive utilities**: runed (`runed`) first (debounce, resource, observers, persisted state,
+  idle, state machines): `useDebounce` (a value: `Debounced`), a search `resource()` on a
+  `Debounced` term (dropping a stale answer with `signal.throwIfAborted()`), `IsIdle`; never a
+  hand-rolled `setTimeout` debounce or observer. A context is `createContext()`, a time that moves
+  on `Clock` (`#lib/hooks/clock.svelte.ts`) (`src/tests/unit/runed.spec.ts`).
 - **Vite+**: `vp <command>` is a built-in, and `vp run <name>` runs a `package.json` script; the docs
   are in `node_modules/vite-plus/docs`.

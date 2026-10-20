@@ -6,6 +6,7 @@
  * from the facts (`dockState()`, `beaconOf()`), the door-open bands (`doorBand()`) and the board's
  * figures (`dockFigures()`). The event feed itself is described in `docs/salvo-events.md`.
  */
+import { later } from "#lib/dates.ts";
 
 /**
  * What the Salvo integration reports, see `docs/salvo-events.md`.
@@ -147,8 +148,7 @@ const seconds = (from: Temporal.Instant, to: Temporal.Instant) =>
  */
 function closeDoor(session: SessionFacts | null, since: Temporal.Instant, at: Temporal.Instant) {
 	if (!session) return null;
-	const from =
-		Temporal.Instant.compare(since, session.checkedInAt) < 0 ? session.checkedInAt : since;
+	const from = later(since, session.checkedInAt);
 	return {
 		...session,
 		doorClosedAt: at,
@@ -317,15 +317,6 @@ export function dockFigures(
 		doorsOpen: docks.filter((dock) => dock.doorOpenSince).length,
 		longestOpen: Math.max(0, ...docks.map((dock) => doorOpenFor(dock.doorOpenSince, now))),
 	};
-}
-
-/** A duration in seconds as the board's timer reads it: `mm:ss` below an hour, else `h:mm:ss`. */
-export function formatDuration(total: number) {
-	const whole = Math.max(0, Math.floor(total));
-	const h = Math.floor(whole / 3600);
-	const mm = String(Math.floor((whole % 3600) / 60)).padStart(2, "0");
-	const ss = String(whole % 60).padStart(2, "0");
-	return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
 /** A dock's code as Salvo sends it and the board shows it, e.g. `DOCK 05`. */

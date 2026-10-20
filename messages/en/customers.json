@@ -215,7 +215,6 @@
 	"customers_portal_invite": "Send invitation",
 	"customers_portal_invited": "Invitation sent to {email}",
 	"customers_portal_email_required": "Enter their email address.",
-	"customers_portal_email_invalid": "Enter a valid email address.",
 	"customers_portal_already_member": "{email} is a member of the organization already.",
 	"customers_portal_already_invited": "{email} has been invited already.",
 	"customers_portal_unknown_site": "Choose sites of this customer.",

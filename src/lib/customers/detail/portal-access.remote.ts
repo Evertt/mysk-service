@@ -12,8 +12,8 @@ import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { customerSubject } from "#lib/activity/index.ts";
-import { invitationState, isManager } from "#lib/auth/index.ts";
-import { id } from "#lib/schema.ts";
+import { invitationState } from "#lib/auth/index.ts";
+import { email, id } from "#lib/schema.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { auth, currentTenant, idInTenant, idsInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -72,7 +72,6 @@ export const getPortalAccess = forMembers.query(v.string(), async (code) => {
 	const siteName = new Map(sites.map((site) => [site.id, site.name]));
 	return {
 		customer: owner,
-		canManage: isManager(currentTenant().roles),
 		sites,
 		contacts: contacts.map((contact) => {
 			const sent = contact.invitationId ? invitationOf.get(contact.invitationId) : undefined;
@@ -110,16 +109,7 @@ async function asUser<T>(call: (headers: Headers) => Promise<T>) {
 	}
 }
 
-const emailSchema = v.config(
-	v.pipe(
-		v.string(),
-		v.trim(),
-		v.nonEmpty(m.customers_portal_email_required),
-		v.email(m.customers_portal_email_invalid),
-		v.toLowerCase(),
-	),
-	{ abortPipeEarly: true },
-);
+const emailSchema = email(m.customers_portal_email_required);
 
 /**
  * Invites a contact of the customer to its portal by email, for all of its sites or only

@@ -15,6 +15,8 @@
  * `handleError`), and the hooks see what was thrown, so `classify()` reads both. It never matches
  * the message of an `unknown` one: each browser words "undefined" differently.
  */
+import { isOneOf } from "#lib/one-of.ts";
+
 export const errorKinds = ["http", "session", "offline", "updated", "unknown"] as const;
 
 export type ErrorKind = (typeof errorKinds)[number];
@@ -49,9 +51,7 @@ export function classify(
 	if (status === 401) return "session";
 	if (status !== undefined && status >= 400 && status < 500) return "http";
 	// An `App.Error` the client's `handleError` classified, when it still had the thrown error.
-	if (isObject(error) && errorKinds.includes(error.kind as ErrorKind)) {
-		return error.kind as ErrorKind;
-	}
+	if (isObject(error) && isOneOf(errorKinds, error.kind)) return error.kind;
 	if (error instanceof TypeError && !online) return "offline";
 	const message = isObject(error) && typeof error.message === "string" ? error.message : "";
 	if (failedImport.test(message) || updated) return "updated";

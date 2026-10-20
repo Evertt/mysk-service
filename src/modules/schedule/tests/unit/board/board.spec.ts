@@ -7,7 +7,6 @@ import {
 	byPriorityThenAge,
 	cellKey,
 	formatDay,
-	formatLongDay,
 	formatWeek,
 	groupByCell,
 	load,
@@ -40,7 +39,6 @@ describe("days and weeks", () => {
 
 	test("formatting", () => {
 		expect(formatDay(day("2026-10-05"))).toBe("Mon 5 Oct");
-		expect(formatLongDay(day("2026-10-11"))).toBe("Sunday 11 October");
 		expect(formatWeek(day("2026-10-05"))).toMatch(/^5\s?–\s?11 Oct 2026$/);
 	});
 });

@@ -30,6 +30,7 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
+import { fromMomentSeconds, momentSeconds } from "../../dates.ts";
 import { organization } from "./auth.schema.ts";
 
 /**
@@ -237,8 +238,8 @@ export function tenantOne<
  */
 export const moment = customType<{ data: Temporal.Instant; driverData: number }>({
 	dataType: () => "integer",
-	toDriver: (instant) => Math.floor(instant.epochMilliseconds / 1000),
-	fromDriver: (seconds) => Temporal.Instant.fromEpochMilliseconds(Number(seconds) * 1000),
+	toDriver: momentSeconds,
+	fromDriver: (seconds) => fromMomentSeconds(Number(seconds)),
 });
 
 /**

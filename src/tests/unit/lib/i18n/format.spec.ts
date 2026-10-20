@@ -6,10 +6,16 @@ import {
 	formatCents,
 	formatDate,
 	formatDateTime,
+	formatLongDay,
+	formatMonth,
 	formatNumber,
+	formatPercent,
+	formatShortDay,
+	formatStopwatch,
 	formatTime,
 	formatTimeAgo,
 	formatTimeSlot,
+	formatWholeEuros,
 	intlLocale,
 	numberFormatter,
 } from "#lib/i18n/format.ts";
@@ -55,6 +61,72 @@ describe("formatCents", () => {
 		expect(plain(formatCents(123456, "nl"))).toBe("€ 1.234,56");
 		expect(plain(formatCents(5, "nl"))).toBe("€ 0,05");
 		expect(plain(formatCents(-1250, "nl"))).toBe("€ -12,50");
+	});
+});
+
+describe("formatWholeEuros", () => {
+	test("rounds to whole euros, or down or up", () => {
+		expect(formatWholeEuros(20_000_000)).toBe("€200,000");
+		expect(formatWholeEuros(4_999_950)).toBe("€50,000");
+		expect(formatWholeEuros(4_999_950, { round: "floor" })).toBe("€49,999");
+		expect(formatWholeEuros(50, { round: "ceil" })).toBe("€1");
+	});
+
+	test("in Dutch", () => {
+		expect(plain(formatWholeEuros(20_000_000, { locale: "nl" }))).toBe("€ 200.000");
+	});
+});
+
+describe("formatPercent", () => {
+	test("reads a rate in percent, without trailing zeros", () => {
+		expect(formatPercent(21, { basis: "percent" })).toBe("21%");
+		expect(formatPercent(5.5, { basis: "percent" })).toBe("5.5%");
+	});
+
+	test("reads a rate in basis points", () => {
+		expect(formatPercent(380, { basis: "basisPoints" })).toBe("3.8%");
+		expect(formatPercent(250, { basis: "basisPoints" })).toBe("2.5%");
+	});
+
+	test("in Dutch", () => {
+		expect(formatPercent(5.5, { basis: "percent", locale: "nl" })).toBe("5,5%");
+		expect(formatPercent(380, { basis: "basisPoints", locale: "nl" })).toBe("3,8%");
+	});
+});
+
+describe("formatStopwatch", () => {
+	const time = (minutes: number, seconds = 0, hours = 0) =>
+		((hours * 60 + minutes) * 60 + seconds) * 1000;
+
+	test("reads minutes and seconds, the minutes past the hour too", () => {
+		expect(formatStopwatch(0)).toBe("00:00");
+		expect(formatStopwatch(time(0, 7) + 999)).toBe("00:07");
+		expect(formatStopwatch(time(72, 30))).toBe("72:30");
+		expect(formatStopwatch(-500)).toBe("00:00");
+	});
+
+	test("with hours, reads mm:ss below an hour, as the docks' timers, else h:mm:ss", () => {
+		expect(formatStopwatch(time(23, 40), { hours: true })).toBe("23:40");
+		expect(formatStopwatch(time(41, 7), { hours: true })).toBe("41:07");
+		expect(formatStopwatch(time(27, 20, 1), { hours: true })).toBe("1:27:20");
+		expect(formatStopwatch(time(0, 5, 3), { hours: true })).toBe("3:00:05");
+	});
+});
+
+describe("named day formats", () => {
+	test("formatShortDay shows the day and the short month", () => {
+		expect(formatShortDay(day("2026-10-07"))).toBe("7 Oct");
+		expect(formatShortDay(day("2026-10-07"), "nl")).toBe("7 okt");
+	});
+
+	test("formatLongDay shows the weekday, the day and the month in full", () => {
+		expect(formatLongDay(day("2026-10-11"))).toBe("Sunday 11 October");
+		expect(formatLongDay(day("2026-10-05"), "nl")).toBe("maandag 5 oktober");
+	});
+
+	test("formatMonth shows the month and the year", () => {
+		expect(formatMonth(day("2026-08-01"))).toBe("August 2026");
+		expect(formatMonth(day("2026-08-01"), "nl")).toBe("augustus 2026");
 	});
 });
 

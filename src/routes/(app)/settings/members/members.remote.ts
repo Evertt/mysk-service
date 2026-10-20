@@ -17,6 +17,7 @@ import {
 	teamRoles,
 } from "#lib/auth/index.ts";
 import { label } from "#lib/i18n/index.ts";
+import { email } from "#lib/schema.ts";
 import { recordActivityAfter, type Subject } from "#lib/server/activity/index.ts";
 import { auth, currentTenant, inTenant, idInTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -39,7 +40,7 @@ const isCustomerRole = (role: typeof member.role | typeof invitation.role) =>
  */
 export const getMembers = forMembers.query(async () => {
 	const tenant = currentTenant();
-	const canManage = isManager(tenant.roles);
+	const manager = isManager(tenant.roles);
 	const inviter = alias(user, "inviter");
 	const [members, invitations] = await Promise.all([
 		db
@@ -55,7 +56,7 @@ export const getMembers = forMembers.query(async () => {
 			.innerJoin(user, eq(member.userId, user.id))
 			.where(and(inTenant(member), not(isCustomerRole(member.role))))
 			.orderBy(asc(user.name)),
-		canManage
+		manager
 			? db
 					.select({
 						id: invitation.id,
@@ -83,7 +84,6 @@ export const getMembers = forMembers.query(async () => {
 	const actor = { userId: tenant.user.id, roles: tenant.roles };
 	return {
 		name: tenant.name,
-		canManage,
 		/** The roles the signed-in user can invite people with. */
 		inviteRoles: assignableRoles(tenant.roles),
 		members: members.map((m) => {
@@ -97,8 +97,8 @@ export const getMembers = forMembers.query(async () => {
 				...m,
 				roles,
 				isYou: m.userId === tenant.user.id,
-				roleOptions: canManage && roleOptions.length > 1 ? roleOptions : [],
-				canRemove: canManage && removalRefusal(change) === null,
+				roleOptions: manager && roleOptions.length > 1 ? roleOptions : [],
+				canRemove: manager && removalRefusal(change) === null,
 			};
 		}),
 		invitations: invitations.map((i) => ({
@@ -221,16 +221,7 @@ export const removeMember = forManagers.form(v.object({ id: v.string() }), async
 
 export const invite = forManagers.form(
 	v.object({
-		email: v.config(
-			v.pipe(
-				v.string(),
-				v.trim(),
-				v.nonEmpty(m.settings_email_required),
-				v.email(m.settings_email_invalid),
-				v.toLowerCase(),
-			),
-			{ abortPipeEarly: true },
-		),
+		email: email(m.settings_email_required),
 		role: v.picklist(teamRoles, m.settings_role_required),
 	}),
 	async ({ email, role }, issue) => {

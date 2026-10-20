@@ -2,6 +2,7 @@
 	import { browser } from "$app/env";
 	import { beforeNavigate } from "$app/navigation";
 	import { navigating, page, updated } from "$app/state";
+	import { IsIdle } from "runed";
 	import { onMount } from "svelte";
 	import { toast } from "svelte-sonner";
 
@@ -16,7 +17,6 @@
 	import AppToaster from "./app-toaster.svelte";
 
 	import "./layout.css";
-	import { watchActivity, whenIdle } from "./idle.ts";
 	import { takeNewVersion, tookNewVersion } from "./new-version.ts";
 
 	let { children }: LayoutProps = $props();
@@ -41,10 +41,17 @@
 	// A tab nobody has touched for an hour takes a new deployment without waiting for a navigation:
 	// a reload interrupts nothing then. (SvelteKit also checks for one hourly, and when the tab is
 	// shown or focused.)
-	const idleFor = 60 * 60 * 1000;
-	const lastActive = browser ? watchActivity() : undefined;
+	// `IsIdle` listens on `window`, which hears no scrolling inside the page: wheel, keys and touches
+	// count too.
+	const idle = browser
+		? new IsIdle({
+				timeout: 60 * 60 * 1000,
+				events: ["pointerdown", "pointermove", "keydown", "wheel", "scroll", "touchstart"],
+				trackLastActive: false,
+			})
+		: undefined;
 	$effect(() => {
-		if (updated.current && lastActive) return whenIdle(lastActive, idleFor, () => takeNewVersion());
+		if (updated.current && idle?.current) takeNewVersion();
 	});
 </script>
 

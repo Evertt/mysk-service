@@ -4,7 +4,7 @@
  * printed once. Refuses if the slug or the owner's email address is taken.
  *
  * Run with `pnpm run org:create -- --org "Acme Service" --slug acme --owner-email … --owner-name …`
- * (after `pnpm db:push`); `--help` says more.
+ * (after `pnpm db:migrate`); `--help` says more.
  */
 import { randomBytes } from "node:crypto";
 

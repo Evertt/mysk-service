@@ -4,7 +4,6 @@ import { overwriteGetTimeZone, runtimeTimeZone } from "#lib/dates.ts";
 import {
 	cellEntries,
 	focusDay,
-	formatMonth,
 	formatWeekday,
 	groupByDay,
 	initials,
@@ -139,8 +138,6 @@ describe("a month's calendar", () => {
 	});
 
 	test("formatting", () => {
-		expect(formatMonth(day("2026-08-01"))).toBe("August 2026");
-		expect(formatMonth(day("2026-08-01"), "nl")).toBe("augustus 2026");
 		expect(formatWeekday(day("2026-08-03"))).toBe("Mon");
 		expect(formatWeekday(day("2026-08-03"), "nl")).toBe("ma");
 		expect(initials("Jan de Vries")).toBe("JV");

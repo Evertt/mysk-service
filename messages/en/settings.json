@@ -68,7 +68,6 @@
 	"settings_invitation_not_found": "Invitation not found",
 	"settings_not_possible": "That isn't possible.",
 	"settings_email_required": "Enter their email address.",
-	"settings_email_invalid": "Enter a valid email address.",
 	"settings_role_required": "Choose a role",
 	"settings_only_owners_invite_owners": "Only owners can invite owners.",
 	"settings_already_member": "{email} is already a member.",

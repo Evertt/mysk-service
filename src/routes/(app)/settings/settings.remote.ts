@@ -2,7 +2,7 @@ import { getRequestEvent } from "$app/server";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { isManager, parseRoles } from "#lib/auth/index.ts";
+import { parseRoles } from "#lib/auth/index.ts";
 import { getCurrentTenant, getTenantModules } from "#lib/auth/session.remote.ts";
 import { changeModules, effectiveModules } from "#lib/modules/graph.ts";
 import { moduleGraph, moduleIds } from "#lib/modules/ids.ts";
@@ -16,7 +16,6 @@ import { Refused } from "#lib/server/refused.ts";
 import { forManagers, forMembers } from "#lib/server/remote-functions.ts";
 
 export const getOrganizationSettings = forMembers.query(async () => {
-	const tenant = currentTenant();
 	const [members, enabled] = await Promise.all([
 		db
 			.select({ id: member.id, name: user.name, email: user.email, role: member.role })
@@ -32,8 +31,7 @@ export const getOrganizationSettings = forMembers.query(async () => {
 	const enabledAt = new Map(enabled.map((row) => [row.moduleId, row.enabledAt]));
 	const on = new Set(effectiveModules(enabled.map((row) => row.moduleId)));
 	return {
-		name: tenant.name,
-		canManage: isManager(tenant.roles),
+		name: currentTenant().name,
 		members: members.map((m) => ({ ...m, roles: parseRoles(m.role) })),
 		modules: modules.map(({ id, label, description }) => ({
 			id,

@@ -4,6 +4,7 @@ import { isAPIError } from "better-auth/api";
 import * as v from "valibot";
 
 import { shellOf } from "#lib/auth/index.ts";
+import { email } from "#lib/schema.ts";
 import { auth, loadTenant } from "#lib/server/auth/index.ts";
 import { Refused } from "#lib/server/refused.ts";
 import { forAnyone } from "#lib/server/remote-functions.ts";
@@ -12,16 +13,7 @@ import { safeRedirect } from "./redirect.ts";
 
 export const login = forAnyone.form(
 	v.object({
-		// One message at a time: "valid email" means nothing while the field is still empty.
-		email: v.config(
-			v.pipe(
-				v.string(),
-				v.trim(),
-				v.nonEmpty(m.auth_email_required),
-				v.email(m.auth_email_invalid),
-			),
-			{ abortPipeEarly: true },
-		),
+		email: email(m.auth_email_required),
 		// The leading underscore keeps the password out of the page after a failed submission.
 		_password: v.pipe(v.string(), v.nonEmpty(m.auth_password_required)),
 		redirectTo: v.optional(v.string()),

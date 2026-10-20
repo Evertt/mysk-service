@@ -18,11 +18,10 @@
 	import type { Snippet } from "svelte";
 
 	import EnumBadge from "#lib/components/enum-badge.svelte";
-	import { formatDateTime, formatTime } from "#lib/i18n/index.ts";
+	import { formatDateTime, formatStopwatch, formatTime } from "#lib/i18n/index.ts";
 
 	import { timerClass, dockStateDisplay } from "../display.ts";
 	import { dockLabels } from "../labels.ts";
-	import { formatDuration } from "../model.ts";
 	import BeaconLight from "../ui/beacon-light.svelte";
 	import { type BoardDock, dockView } from "./board.ts";
 	import DockDrawing from "./dock-drawing.svelte";
@@ -122,7 +121,9 @@
 						data-door-timer={doorOpen ? view.openSeconds : undefined}
 						data-door-band={view.band ?? undefined}
 					>
-						{doorOpen ? formatDuration(view.openSeconds) : m.docks_closed()}
+						{doorOpen
+							? formatStopwatch(view.openSeconds * 1000, { hours: true })
+							: m.docks_closed()}
 					</span>
 				{/snippet}
 				{@render tile(m.docks_tile_door(), doorIcon, doorValue)}
@@ -262,7 +263,9 @@
 								{each.plate ?? ""}
 								·
 								{each.checkedOutAt
-									? m.docks_session_door_open({ time: formatDuration(each.doorOpenSeconds) })
+									? m.docks_session_door_open({
+											time: formatStopwatch(each.doorOpenSeconds * 1000, { hours: true }),
+										})
 									: m.docks_session_open()}
 							</span>
 						</li>

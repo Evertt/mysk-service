@@ -6,6 +6,7 @@
 <script lang="ts">
 	import { toast } from "svelte-sonner";
 
+	import { canManage } from "#lib/auth/can-manage.ts";
 	import { parseRoles } from "#lib/auth/index.ts";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
@@ -31,7 +32,7 @@
 			{/if}
 		</Card.Description>
 	</Card.Header>
-	{#if account.canManage}
+	{#if await canManage()}
 		<Card.Content>
 			<form
 				{...linkEngineerAccount.enhance(async ({ submit }) => {

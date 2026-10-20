@@ -1,3 +1,4 @@
+import { later } from "#lib/dates.ts";
 import type { SimulationTick } from "#lib/simulation/extensions.ts";
 
 /**
@@ -96,9 +97,6 @@ interface Step {
 	due: Temporal.Instant;
 	events: StepEvent[];
 }
-
-const later = (a: Temporal.Instant, b: Temporal.Instant) =>
-	Temporal.Instant.compare(a, b) >= 0 ? a : b;
 
 /**
  * The dock's next step after its facts, at `speed`. Its steps count from its last event, or from

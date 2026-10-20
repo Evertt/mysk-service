@@ -5,9 +5,7 @@
 import { redirect } from "@sveltejs/kit";
 import * as v from "valibot";
 
-import { isManager } from "#lib/auth/index.ts";
 import { id, moveSchema } from "#lib/schema.ts";
-import { currentTenant } from "#lib/server/auth/index.ts";
 
 import {
 	moveGroupSchema,
@@ -32,22 +30,14 @@ import {
 	updateTemplate,
 } from "./server/templates.ts";
 
-const canManage = () => isManager(currentTenant().roles);
-
 /**
  * The tenant's templates in their order (the retired ones too) with their categories and number of
- * points, the categories without a template, and whether the user may change them.
+ * points, and the categories without a template.
  */
-export const getTemplates = query(async () => ({
-	...(await templateList()),
-	canManage: canManage(),
-}));
+export const getTemplates = query(() => templateList());
 
 /** The tenant's template `id` with its points and the tenant's categories, or a 404. */
-export const getTemplate = query(id(), async (templateId) => ({
-	...(await templateDetail(templateId)),
-	canManage: canManage(),
-}));
+export const getTemplate = query(id(), (templateId) => templateDetail(templateId));
 
 /** The tenant's unit (by serial number) with its category and the template it's inspected by. */
 export const getUnitTemplate = query(v.string(), (serialNumber) => unitTemplate(serialNumber));

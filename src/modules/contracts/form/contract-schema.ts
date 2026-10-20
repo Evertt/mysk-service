@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import { cents, date, id } from "#lib/schema.ts";
+import { cents, date, id, wholeIn } from "#lib/schema.ts";
 
 import { contractLevels } from "../model.ts";
 
@@ -11,11 +11,12 @@ export const contractFields = {
 	startsOn: date(m.contracts_starts_required),
 	endsOn: date(m.contracts_ends_required),
 	monthlyFee: cents(m.contracts_fee_required),
-	responseHours: v.pipe(
-		v.number(m.contracts_hours_required),
-		v.integer(m.contracts_hours_whole),
-		v.minValue(1, m.contracts_hours_min),
-	),
+	responseHours: wholeIn({
+		min: 1,
+		message: m.contracts_hours_required,
+		fraction: m.contracts_hours_whole,
+		tooLow: m.contracts_hours_min,
+	}),
 	notes: v.pipe(
 		v.string(),
 		v.trim(),

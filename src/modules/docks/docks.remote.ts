@@ -6,9 +6,7 @@
  */
 import * as v from "valibot";
 
-import { isManager } from "#lib/auth/index.ts";
-import { customerCode, recordId } from "#lib/schema.ts";
-import { currentTenant } from "#lib/server/auth/index.ts";
+import { customerCode, id, recordId } from "#lib/schema.ts";
 import { live } from "#lib/server/live.ts";
 
 import { dockSchema } from "./form/dock-schema.ts";
@@ -18,10 +16,7 @@ import { customerDocks, deleteDock, doorDock, dockUsage, saveDock } from "./serv
 const code = customerCode();
 
 /** The customer's docks and what they can be given (its sites, locations and units). */
-export const getCustomerDocks = query(code, async (customerCode) => ({
-	...(await customerDocks(customerCode)),
-	canManage: isManager(currentTenant().roles),
-}));
+export const getCustomerDocks = query(code, (customerCode) => customerDocks(customerCode));
 
 /** Adds or saves a dock at one of the customer's sites. */
 export const saveCustomerDock = forManagers.form(
@@ -35,7 +30,7 @@ export const saveCustomerDock = forManagers.form(
 
 /** Deletes one of the customer's docks. */
 export const deleteCustomerDock = forManagers.form(
-	v.object({ customer: code, id: v.pipe(v.string(), v.transform(Number), v.integer()) }),
+	v.object({ customer: code, id: id() }),
 	async (input) => {
 		const deleted = await deleteDock(input.customer, input.id);
 		void getCustomerDocks(input.customer).refresh();

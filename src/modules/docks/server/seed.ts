@@ -5,12 +5,13 @@
  * Salvo, in the states of the mockup's sample (`mockupDocks()`: DOCK 05 Laden, DOCK 06 Bezet with
  * its door open 44 minutes, DOCK 07 Vrij, DOCK 08 Storing with its door open over an hour), with a
  * week of sessions behind them, which the app's simulation moves on from. And an integration token
- * for the script `scripts/docks-simulator.ts`, printed at the end: demo data only. North and South
+ * for posting to the feed by hand, printed at the end: demo data only. North and South
  * don't have the module. With a faker of its own, so the rest of the demo data stays the same.
  */
 import { en, Faker, nl } from "@faker-js/faker";
 import { and, eq } from "drizzle-orm";
 
+import { isOneOf } from "#lib/one-of.ts";
 import { withTenantRefs } from "#lib/server/db/columns.ts";
 import { customer, customerSite, equipment, equipmentLocation } from "#lib/server/db/schema.ts";
 import { DAY, MINUTE, now } from "#lib/server/db/seed/clock.ts";
@@ -101,9 +102,7 @@ export default defineSeed({
 			const sessions: (typeof dockSession.$inferInsert)[] = [];
 			const states: (typeof dockState.$inferInsert)[] = [];
 			const current = mockupDocks(toMoment(now));
-			const salvoDocks = docks.filter((each) =>
-				(demoSalvoDocks as readonly string[]).includes(each.code),
-			);
+			const salvoDocks = docks.filter((each) => isOneOf(demoSalvoDocks, each.code));
 			for (const dock of salvoDocks) {
 				const { facts, session } = current[dock.code as DemoDock];
 				// The history ends a while before the truck at it now arrived (or before now).
@@ -171,9 +170,7 @@ export default defineSeed({
 				token: demoDockToken,
 				createdAt: toMoment(new Date(now.getTime() - 30 * DAY)),
 			});
-			console.log(
-				`Docks: the Salvo simulator's token for ${tenant.slug} (demo only): ${demoDockToken}`,
-			);
+			console.log(`Docks: the Salvo feed's token for ${tenant.slug} (demo only): ${demoDockToken}`);
 		}
 	},
 });

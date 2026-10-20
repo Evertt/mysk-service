@@ -24,6 +24,7 @@
  * (`toListQuery()`) has it as the days it means on the day it's built, in the user's time zone.
  */
 import { currentDay, dayOf, isDay, mondayOf } from "#lib/dates.ts";
+import { isOneOf } from "#lib/one-of.ts";
 
 /** How a range filter is written in the URL, besides a set of values (`"set"`). */
 export type RangeGrammar = "dateRange" | "numberRange" | "moneyRange";
@@ -66,8 +67,7 @@ export const datePresets = [
 
 export type DatePreset = (typeof datePresets)[number];
 
-export const isDatePreset = (token: string): token is DatePreset =>
-	(datePresets as readonly string[]).includes(token);
+export const isDatePreset = (token: string) => isOneOf(datePresets, token);
 
 /** Between the ends in the URL. */
 const separator = "..";

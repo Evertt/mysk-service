@@ -140,7 +140,7 @@ const BROWSER_LOCALE = "en-GB";
  * The options of every test browser context (`newContext`). Besides the language, without the
  * app's service worker (`src/service-worker/index.ts`): the tests check what the server answers,
  * and `page.route()`, which they tamper with and slow down requests with, doesn't see the requests
- * a worker answers. The worker has its own checks (`scripts/sw-check.ts`).
+ * a worker answers.
  */
 const BROWSER_OPTIONS = {
 	locale: BROWSER_LOCALE,

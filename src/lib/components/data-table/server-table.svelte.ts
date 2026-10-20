@@ -10,7 +10,7 @@
 import type { RemoteQuery } from "$app/server";
 import { navigating, page } from "$app/state";
 import type { RowData, SvelteTable } from "@tanstack/svelte-table";
-import { getContext, setContext, untrack } from "svelte";
+import { createContext, untrack } from "svelte";
 
 import type { Features } from "./features.ts";
 import type { PageGroups } from "./grouping.ts";
@@ -370,18 +370,14 @@ export function scrollPages<Page extends ListPage<{ id: unknown }, ListQuery<any
 	return scroll;
 }
 
-const whereKey = Symbol("list-where");
+const [getWhere, setWhere] = createContext<() => ListWhere<unknown>>();
 
 /**
  * Which rows a server-side list's table shows, its first page's `where` (`createServerTable()`
  * sets it), for the filters inside it that count under the list's search and other filters
  * (`ListToolbar`'s record filters). Call it while a component inside the table initializes.
  */
-export function listWhere<C>(): () => ListWhere<C> {
-	const where = getContext<(() => ListWhere<C>) | undefined>(whereKey);
-	if (!where) throw new Error("A list's record filter needs to be inside a server-side table");
-	return where;
-}
+export const listWhere = <C>() => getWhere() as () => ListWhere<C>;
 
 /** A server-side list's table: see `createServerTable()`. */
 export interface ServerTable<
@@ -438,7 +434,7 @@ export function createServerTable<C, Page extends ListPage<{ id: unknown }, List
 	});
 	const loading = serverTableLoading(table, list, () => pages.key);
 	const where = () => whereOf(first().query);
-	setContext(whereKey, where);
+	setWhere(where);
 	return {
 		table,
 		list,

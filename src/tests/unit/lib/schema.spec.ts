@@ -7,7 +7,9 @@ import {
 	customerCode,
 	date,
 	email,
+	hiddenInt,
 	id,
+	numberIn,
 	optionalDate,
 	optionalId,
 	optionalText,
@@ -16,6 +18,9 @@ import {
 	recordId,
 	text,
 	time,
+	wholeIn,
+	year,
+	yearBounds,
 } from "#lib/schema.ts";
 
 const englishByDefault = getLocale;
@@ -150,4 +155,20 @@ describe("email", () => {
 test("phone numbers allow the usual punctuation", () => {
 	expect(parse(phone(), "+31 (0)20-123.4567")).toEqual({ value: "+31 (0)20-123.4567" });
 	expect(parse(phone(), "call me")).toEqual({ issue: "Enter a valid phone number" });
+});
+
+describe("numbers in bounds", () => {
+	test("numberIn says its message, or the bound's own", () => {
+		const share = numberIn({ above: true, max: 10, message: "Enter it", tooHigh: "Too much" });
+		expect(parse(share, 2.5)).toEqual({ value: 2.5 });
+		expect(parse(share, undefined)).toEqual({ issue: "Enter it" });
+		expect(parse(share, 0)).toEqual({ issue: "Enter it" });
+		expect(parse(share, 11)).toEqual({ issue: "Too much" });
+	});
+
+	test("wholeIn, hiddenInt and year take whole numbers only", () => {
+		expect(parse(wholeIn({ min: 1, fraction: "Whole" }), 1.5)).toEqual({ issue: "Whole" });
+		expect(parse(hiddenInt(yearBounds), "2026")).toEqual({ value: 2026 });
+		expect(v.safeParse(year(), 1999).success).toBe(false);
+	});
 });

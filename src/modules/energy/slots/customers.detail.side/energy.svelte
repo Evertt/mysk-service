@@ -9,6 +9,7 @@
 	import { resolve } from "$app/paths";
 	import SettingsIcon from "@lucide/svelte/icons/settings";
 
+	import { canManage } from "#lib/auth/can-manage.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
 
 	import NewSiteDialog from "../../setup/new-site-dialog.svelte";
@@ -17,12 +18,13 @@
 	let { code }: { code: string } = $props();
 
 	const data = $derived(await getCustomerEnergy(code));
+	const manager = $derived(await canManage());
 	const monitored = $derived(data.sites.filter((site) => site.energy));
 	const unmonitored = $derived(data.sites.filter((site) => !site.energy));
 	const sitePage = (id: number) => resolve("/(app)/(modules)/energy/[site]", { site: String(id) });
 </script>
 
-{#if monitored.length || (data.canManage && unmonitored.length)}
+{#if monitored.length || (manager && unmonitored.length)}
 	<Card.Root data-energy-card>
 		<Card.Header>
 			<Card.Title>{m.energy_card_title()}</Card.Title>
@@ -44,7 +46,7 @@
 								})}
 							</span>
 						</span>
-						{#if data.canManage}
+						{#if manager}
 							<Button
 								variant="ghost"
 								size="icon-sm"
@@ -59,7 +61,7 @@
 					</div>
 				{/if}
 			{/each}
-			{#if data.canManage}
+			{#if manager}
 				{#each unmonitored as site (site.id)}
 					<div class="flex items-center justify-between gap-2" data-energy-card-site={site.id}>
 						<span class="flex min-w-0 flex-col">

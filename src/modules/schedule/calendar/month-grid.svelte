@@ -7,10 +7,9 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
-	import { formatNumber } from "#lib/i18n/index.ts";
+	import { formatLongDay, formatNumber } from "#lib/i18n/index.ts";
 	import { cn } from "#lib/utils.ts";
 
-	import { formatLongDay } from "../board/board.ts";
 	import {
 		cellEntries,
 		formatWeekday,

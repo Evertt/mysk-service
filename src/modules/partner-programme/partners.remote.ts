@@ -1,6 +1,5 @@
 import * as v from "valibot";
 
-import { isManager } from "#lib/auth/index.ts";
 /**
  * A partner's figures and wallet, and what managers do with them: accept a customer into the
  * programme, close its last year, record its bonus choice and add to or take from its wallet.
@@ -8,7 +7,6 @@ import { isManager } from "#lib/auth/index.ts";
  */
 import { currentDay } from "#lib/dates.ts";
 import { customerCode } from "#lib/schema.ts";
-import { currentTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 
 import { walletEntrySchema, yearField } from "./form/wallet-schema.ts";
@@ -27,9 +25,8 @@ const code = customerCode();
  */
 export const getPartnerCard = query(code, async (customerCode) => {
 	const found = await partnerByCode(customerCode);
-	const canManage = isManager(currentTenant().roles);
 	const customer = { id: found.id, code: found.code, name: found.name };
-	if (!found.partner) return { customer, partner: null, canManage };
+	if (!found.partner) return { customer, partner: null };
 
 	const now = currentDay();
 	const rules = await rulesFor(now.year);
@@ -48,7 +45,6 @@ export const getPartnerCard = query(code, async (customerCode) => {
 	return {
 		customer,
 		partner: found.partner,
-		canManage,
 		year: now.year,
 		tiers: rules?.tiers ?? [],
 		figures,

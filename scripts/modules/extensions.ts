@@ -1,35 +1,47 @@
 /**
  * The extension points their owners declare (core's in `src/lib/<domain>/extensions.ts`, a module's
  * in its `api/extensions.ts`, see `#lib/extensions/define.ts`) and what the modules contribute to
- * them by file: a component at a slot (`slots/<point id>/<name>.svelte`), bulk actions for a
- * table (`bulk-actions/<point id>.ts`), a list's columns (`columns/<point id>.ts` and their SQL) and
- * a part of a form (its components at the form slot, and its schema in `form-parts/<point id>.ts`). Read from the source, without running it: a point's id is
- * a string literal. Hooks are contributed in code (`server/index.ts`), so only their points are
- * read here.
+ * them by file, as `contributionKinds` lists them: a component at a slot, bulk actions for a table,
+ * a list's columns (and their SQL) and a part of a form (its components at the form slot, and its
+ * schema). Read from the source's syntax, without running it: a point's id is a string literal.
+ * Hooks are contributed in code (`server/index.ts`), so only their points are read here.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { camelCase } from "#lib/camel-case.ts";
 import { formPartKey } from "#lib/extensions/form-part-key.ts";
 
-import { byName, GENERATED, type ModuleFolder } from "./shared.ts";
+import {
+	byName,
+	GENERATED,
+	type ModuleFolder,
+	parseProgram,
+	propertiesOf,
+	stringOf,
+	walk,
+} from "./shared.ts";
 
-const kinds = {
-	Slot: "slot",
-	FormSlot: "form",
-	BulkTable: "bulk",
-	Collector: "collector",
-	Event: "event",
-	Vote: "vote",
-	SaveHook: "save",
+/** The kinds of extension point: the function that declares one, and how a problem names it. */
+const pointKinds = {
+	slot: { define: "defineSlot", name: "a slot" },
+	form: { define: "defineFormSlot", name: "a form slot" },
+	bulk: { define: "defineBulkTable", name: "a bulk table" },
+	// Only a record's list takes columns (`defineRecordPoints()`).
+	columns: { define: undefined, name: "a list that takes columns" },
+	collector: { define: "defineCollector", name: "a collector" },
+	event: { define: "defineEvent", name: "an event" },
+	vote: { define: "defineVote", name: "a vote" },
+	save: { define: "defineSaveHook", name: "a save hook" },
 } as const;
+
+type PointKind = keyof typeof pointKinds;
 
 /** An extension point as its owner's `extensions.ts` declares it. */
 export interface ExtensionPoint {
 	/** E.g. `orders.detail.side`: its owner's id, a dot, and a name. */
 	id: string;
-	/** Its kind; a list that takes columns is always a record's (`defineRecordPoints()`). */
-	kind: (typeof kinds)[keyof typeof kinds] | "columns";
+	kind: PointKind;
 	/** Core's domain folder (`orders`) or the module's id (`invoices`). */
 	owner: string;
 	/** The file that declares it, relative to the root, with `/`. */
@@ -43,97 +55,147 @@ export interface ExtensionPoint {
 	member?: string;
 }
 
-const kindNames: Record<ExtensionPoint["kind"], string> = {
-	slot: "a slot",
-	form: "a form slot",
-	bulk: "a bulk table",
-	columns: "a list that takes columns",
-	collector: "a collector",
-	event: "an event",
-	vote: "a vote",
-	save: "a save hook",
-};
+/**
+ * The kinds of file a module contributes with, in the order the generator checks and lists them.
+ * Each is a file in `folder` (in the module's), named after its point (`<point id><extension>`, or
+ * `<point id>/<name><extension>` for a slot's components), listed in the module's `field`; it goes
+ * to a point of a kind in `to`, and comes with its `pair`'s file for the same point, if it has one.
+ * `list` is its registry in `contributions.gen.ts`, made with its constructor (`call`) from
+ * `#lib/extensions/define.ts`. A new kind is a row here.
+ */
+const contributionKinds = {
+	slot: {
+		field: "slotFiles",
+		folder: "slots",
+		extension: ".svelte",
+		named: true,
+		is: "a slot's component is",
+		to: ["slot", "form"],
+		list: { name: "slotContributions", type: "AnySlotContribution", call: "slotContribution" },
+		what: "The components the modules add at slots",
+	},
+	bulk: {
+		field: "bulkFiles",
+		folder: "bulk-actions",
+		extension: ".ts",
+		is: "a table's bulk actions are",
+		to: ["bulk"],
+		list: { name: "bulkContributions", type: "AnyBulkContribution", call: "bulkContribution" },
+		what: "The bulk actions the modules add to tables",
+	},
+	columns: {
+		field: "columnFiles",
+		folder: "columns",
+		extension: ".ts",
+		is: "a list's columns are",
+		to: ["columns"],
+		pair: { kind: "sql", missing: "its columns' SQL is missing" },
+		list: { name: "columnContributions", type: "ColumnsContribution", call: "columnsContribution" },
+		what: "The columns the modules add to lists (their definitions and cells)",
+	},
+	// The other half of a list's columns, for the server (`renderColumnSql()`).
+	sql: {
+		field: "serverColumnFiles",
+		folder: "server/columns",
+		extension: ".ts",
+		is: "a list's columns' SQL is",
+		pair: { kind: "columns", missing: "the columns it's the SQL of are missing" },
+	},
+	// The schema of a module's part of a form, which its components at the form slot render
+	// (`renderFormParts()`).
+	part: {
+		field: "formPartFiles",
+		folder: "form-parts",
+		extension: ".ts",
+		is: "a form's part's schema is",
+		to: ["form"],
+	},
+} as const;
 
-/** `export const <name> = define<Kind>`, before the type arguments and the id. */
-const declaration = new RegExp(
-	String.raw`\bexport\s+const\s+([\w$]+)\s*=\s*define(${Object.keys(kinds).join("|")})\b`,
-	"g",
-);
+type ContributionKind = keyof typeof contributionKinds;
+type KindRow = (typeof contributionKinds)[ContributionKind];
 
-/** `export const <name> = defineRecordPoints`, before the owner. */
-const recordDeclaration = /\bexport\s+const\s+([\w$]+)\s*=\s*defineRecordPoints\b/g;
+/** A module's contribution files of each kind, relative to its folder, with `/`, sorted. */
+export type ContributionFiles = Record<KindRow["field"], string[]>;
 
-/** The text without its comments (block comments, and line comments that start a line). */
-const withoutComments = (source: string) =>
-	source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+const kindRows = Object.entries(contributionKinds) as [ContributionKind, KindRow][];
+
+/** The point and name of a contribution file of `row`'s kind, if it is where that kind's are. */
+function placeOf(row: KindRow, file: string) {
+	const prefix = `${row.folder}/`;
+	if (!file.startsWith(prefix) || !file.endsWith(row.extension)) return undefined;
+	const parts = file.slice(prefix.length, -row.extension.length).split("/");
+	if (parts.length !== ("named" in row ? 2 : 1)) return undefined;
+	return { point: parts[0], name: parts.at(-1)! };
+}
+
+/** Where a contribution of `row`'s kind to `point` is, relative to the module's folder. */
+const fileOf = (row: KindRow, point: string, name = "<name>") =>
+	`${row.folder}/${point}${"named" in row ? `/${name}` : ""}${row.extension}`;
+
+/** The contribution files of each kind under a module's folder `dir` (see `walk()`). */
+export function findContributionFiles(dir: string) {
+	return Object.fromEntries(
+		kindRows.map(([, row]) => [
+			row.field,
+			walk(join(dir, row.folder))
+				.filter((file) => file.endsWith(row.extension) && !file.endsWith(".spec.ts"))
+				.map((file) => `${row.folder}/${file}`),
+		]),
+	) as ContributionFiles;
+}
+
+/** The folders of a module that hold contribution files, for the watcher. */
+export const contributionFolders = kindRows.map(([, row]) => row.folder);
 
 /**
- * The string literal that `source` has at `index`, after optional type arguments, `(` and
- * whitespace, or `undefined` if it doesn't have one there.
+ * The points declared in `file` (relative to `root`), owned by `owner`, in their order: each
+ * `export const <name> = define<Kind>("<id>", …)`, and a record's (`defineRecordPoints("<owner>",
+ * options)`: the two detail slots always, the list's columns and bulk table if its options name
+ * them, `listColumns: true`, `bulk: …`).
  */
-function literalIdAt(source: string, index: number) {
-	let at = index;
-	while (/\s/.test(source[at] ?? "")) at++;
-	if (source[at] === "<") {
-		// Skip the type arguments, which nest (`Map<number, X[]>`) and may hold arrows (`=>`).
-		let depth = 0;
-		for (; at < source.length; at++) {
-			if (source[at] === "<") depth++;
-			else if (source[at] === ">" && source[at - 1] !== "=" && --depth === 0) break;
-		}
-		at++;
-	}
-	return /^\s*\(\s*(["'`])([^"'`$]+)\1/.exec(source.slice(at))?.[2];
-}
-
-/** The text of the call's arguments that starts at `index` (just after its `(`), up to its `)`. */
-function argumentsAt(source: string, index: number) {
-	let depth = 1;
-	for (let at = index; at < source.length; at++) {
-		if ("([{".includes(source[at])) depth++;
-		else if (")]}".includes(source[at]) && --depth === 0) return source.slice(index, at);
-	}
-	return source.slice(index);
-}
-
-/**
- * The points of a record that `defineRecordPoints(<owner>, options)` declares at `index` (after
- * its name): the two detail slots always, the list's columns and bulk table if its options name
- * them (`listColumns: true`, `bulk: …`).
- */
-function recordPointsAt(source: string, index: number, file: string, owner: string, name: string) {
-	const record = literalIdAt(source, index);
-	if (!record) return [];
-	const options = argumentsAt(source, source.indexOf("(", index) + 1);
-	const point = (member: string, kind: ExtensionPoint["kind"]): ExtensionPoint => ({
-		id: `${record}.${member}`,
-		kind,
-		owner,
-		file,
-		exportName: name,
-		member,
-	});
-	return [
-		point("detail.main", "slot"),
-		point("detail.side", "slot"),
-		...(/\blistColumns\s*:\s*true\b/.test(options) ? [point("list.columns", "columns")] : []),
-		...(/\bbulk\s*:/.test(options) ? [point("list.bulk", "bulk")] : []),
-	];
-}
-
-/** The points declared in `file` (relative to `root`), owned by `owner`. */
 function pointsIn(root: string, file: string, owner: string): ExtensionPoint[] {
-	const source = withoutComments(readFileSync(join(root, file), "utf8"));
-	const declared = [...source.matchAll(declaration)].map((match) => {
-		const id = literalIdAt(source, match.index + match[0].length);
-		const kind = kinds[match[2] as keyof typeof kinds];
-		return { at: match.index, points: id ? [{ id, kind, owner, file, exportName: match[1] }] : [] };
+	const program = parseProgram(file, readFileSync(join(root, file), "utf8"));
+	return program.body.flatMap((statement) => {
+		const declaration = statement.type === "ExportNamedDeclaration" && statement.declaration;
+		if (
+			!declaration ||
+			declaration.type !== "VariableDeclaration" ||
+			declaration.kind !== "const"
+		) {
+			return [];
+		}
+		return declaration.declarations.flatMap(({ id: binding, init }): ExtensionPoint[] => {
+			if (binding.type !== "Identifier" || init?.type !== "CallExpression") return [];
+			const callee = init.callee.type === "Identifier" ? init.callee.name : undefined;
+			const [first, options] = init.arguments;
+			const id = stringOf(first);
+			if (!callee || !id) return [];
+			const point = { owner, file, exportName: binding.name };
+			if (callee === "defineRecordPoints") {
+				const asked = propertiesOf(options);
+				const listColumns = asked?.get("listColumns");
+				const member = (name: string, kind: PointKind) => ({
+					...point,
+					id: `${id}.${name}`,
+					kind,
+					member: name,
+				});
+				return [
+					member("detail.main", "slot"),
+					member("detail.side", "slot"),
+					...(listColumns?.type === "Literal" && listColumns.value === true
+						? [member("list.columns", "columns")]
+						: []),
+					...(asked?.has("bulk") ? [member("list.bulk", "bulk")] : []),
+				];
+			}
+			const kind = (Object.keys(pointKinds) as PointKind[]).find(
+				(kind) => pointKinds[kind].define === callee,
+			);
+			return kind ? [{ id, kind, ...point }] : [];
+		});
 	});
-	const records = [...source.matchAll(recordDeclaration)].map((match) => ({
-		at: match.index,
-		points: recordPointsAt(source, match.index + match[0].length, file, owner, match[1]),
-	}));
-	return [...declared, ...records].toSorted((a, b) => a.at - b.at).flatMap(({ points }) => points);
 }
 
 const folders = (dir: string) =>
@@ -164,83 +226,42 @@ export function findPoints(root: string): ExtensionPoint[] {
 		.flatMap(({ owner, file }) => pointsIn(root, file, owner));
 }
 
-/** A module's contribution, as its file says: to which point, of which kind, and its name. */
+/** A module's contribution, as its file says: of which kind, to which point, and its name. */
 interface FileContribution {
 	/** Relative to the module's folder. */
 	file: string;
-	/** `slot` for a component at a slot or a form slot; `part` for a form part's schema. */
-	kind: "slot" | "bulk" | "columns" | "part";
+	kind: ContributionKind;
 	point: string;
-	/** A slot component's name: its file name. */
+	/** A slot component's name: its file name; else the point's id. */
 	name: string;
 }
 
-const slotFile = /^slots\/([^/]+)\/([^/]+)\.svelte$/;
-const bulkFile = /^bulk-actions\/([^/]+)\.ts$/;
-const columnsFile = /^columns\/([^/]+)\.ts$/;
-const serverColumnsFile = /^server\/columns\/([^/]+)\.ts$/;
-const formPartFile = /^form-parts\/([^/]+)\.ts$/;
-
-/** The module's contributions, and its contribution files that are in the wrong place. */
+/**
+ * The module's contributions, and its contribution files that are in the wrong place or without
+ * their pair's.
+ */
 function contributionsOf(module: ModuleFolder) {
 	const contributions: FileContribution[] = [];
 	const misplaced: string[] = [];
-	for (const file of module.slotFiles) {
-		const match = slotFile.exec(file);
-		if (match) contributions.push({ file, kind: "slot", point: match[1], name: match[2] });
-		else misplaced.push(`${file}: a slot's component is slots/<point id>/<name>.svelte.`);
-	}
-	for (const file of module.bulkFiles) {
-		const match = bulkFile.exec(file);
-		if (match) contributions.push({ file, kind: "bulk", point: match[1], name: match[1] });
-		else misplaced.push(`${file}: a table's bulk actions are bulk-actions/<point id>.ts.`);
-	}
-	// A list's columns come in two halves, the definitions and their SQL, which go together.
-	const serverHalves = new Set(module.serverColumnFiles);
-	for (const file of module.columnFiles) {
-		const match = columnsFile.exec(file);
-		if (!match) {
-			misplaced.push(`${file}: a list's columns are columns/<point id>.ts.`);
-			continue;
+	for (const [kind, row] of kindRows) {
+		for (const file of module[row.field]) {
+			const place = placeOf(row, file);
+			if (!place) {
+				misplaced.push(`${file}: ${row.is} ${fileOf(row, "<point id>")}.`);
+				continue;
+			}
+			if ("pair" in row) {
+				const pair = contributionKinds[row.pair.kind];
+				const other = fileOf(pair, place.point);
+				if (!module[pair.field].includes(other)) {
+					misplaced.push(`${file}: ${row.pair.missing}, in ${other}.`);
+				}
+			}
+			if ("to" in row) contributions.push({ file, kind, ...place });
 		}
-		contributions.push({ file, kind: "columns", point: match[1], name: match[1] });
-		if (!serverHalves.has(`server/${file}`)) {
-			misplaced.push(`${file}: its columns' SQL is missing, in server/${file}.`);
-		}
-	}
-	const halves = new Set(module.columnFiles);
-	for (const file of module.serverColumnFiles) {
-		const match = serverColumnsFile.exec(file);
-		if (!match) misplaced.push(`${file}: a list's columns' SQL is server/columns/<point id>.ts.`);
-		else if (!halves.has(`columns/${match[1]}.ts`)) {
-			misplaced.push(
-				`${file}: the columns it's the SQL of are missing, in columns/${match[1]}.ts.`,
-			);
-		}
-	}
-	for (const file of module.formPartFiles) {
-		const match = formPartFile.exec(file);
-		if (match) contributions.push({ file, kind: "part", point: match[1], name: match[1] });
-		else misplaced.push(`${file}: a form's part's schema is form-parts/<point id>.ts.`);
 	}
 	return { contributions, misplaced };
 }
-
-/** The kinds of point a contribution of `kind` may go to. */
-const pointKinds: Record<FileContribution["kind"], ExtensionPoint["kind"][]> = {
-	slot: ["slot", "form"],
-	bulk: ["bulk"],
-	columns: ["columns"],
-	part: ["form"],
-};
-
-/** The kind of point a contribution of `kind` is named after in a problem. */
-const contributionKinds: Record<FileContribution["kind"], ExtensionPoint["kind"]> = {
-	slot: "slot",
-	bulk: "bulk",
-	columns: "columns",
-	part: "form",
-};
 
 /**
  * What's wrong with the points and the modules' contributions to them: a point's id must start
@@ -272,31 +293,31 @@ export function extensionProblems(points: ExtensionPoint[], modules: ModuleFolde
 	for (const module of modules) {
 		const { contributions, misplaced } = contributionsOf(module);
 		const at = (file: string) => `src/modules/${module.id}/${file}`;
-		problems.push(...misplaced.map((problem) => `src/modules/${module.id}/${problem}`));
+		problems.push(...misplaced.map(at));
 		// A form slot's components and the schema of their part go together.
-		const parts = new Set(
-			contributions.filter(({ kind }) => kind === "part").map(({ point }) => point),
-		);
-		const rendered = new Set(
-			contributions.filter(({ kind }) => kind === "slot").map(({ point }) => point),
-		);
+		const pointsOf = (kind: ContributionKind) =>
+			new Set(contributions.filter((c) => c.kind === kind).map(({ point }) => point));
+		const parts = pointsOf("part");
+		const rendered = pointsOf("slot");
 		for (const contribution of contributions) {
 			const point = byId.get(contribution.point);
+			const row = contributionKinds[contribution.kind];
+			const to: readonly PointKind[] = "to" in row ? row.to : [];
 			if (!point) {
 				problems.push(
 					`${at(contribution.file)}: there is no extension point ${contribution.point}.`,
 				);
-			} else if (!pointKinds[contribution.kind].includes(point.kind)) {
+			} else if (!to.includes(point.kind)) {
 				problems.push(
-					`${at(contribution.file)}: ${point.id} is ${kindNames[point.kind]}, not ${kindNames[contributionKinds[contribution.kind]]}.`,
+					`${at(contribution.file)}: ${point.id} is ${pointKinds[point.kind].name}, not ${pointKinds[to[0]].name}.`,
 				);
 			} else if (point.kind === "form" && contribution.kind === "slot" && !parts.has(point.id)) {
 				problems.push(
-					`${at(contribution.file)}: its part's schema is missing, in form-parts/${point.id}.ts.`,
+					`${at(contribution.file)}: its part's schema is missing, in ${fileOf(contributionKinds.part, point.id)}.`,
 				);
 			} else if (contribution.kind === "part" && !rendered.has(point.id)) {
 				problems.push(
-					`${at(contribution.file)}: no component renders the part, in slots/${point.id}/<name>.svelte.`,
+					`${at(contribution.file)}: no component renders the part, in ${fileOf(contributionKinds.slot, point.id)}.`,
 				);
 			} else if (
 				moduleIds.has(point.owner) &&
@@ -313,15 +334,12 @@ export function extensionProblems(points: ExtensionPoint[], modules: ModuleFolde
 	return problems;
 }
 
-/** `orders.detail.side` → `ordersDetailSide`. */
-const localName = (id: string) => id.replace(/[.-](\w)/g, (_, c: string) => c.toUpperCase());
-
 /**
  * The name a point's export is imported as: the point's own name (`ordersForm`), or for a record's
  * points the export's, with its owner (`ordersPoints`).
  */
 const bindingName = (point: ExtensionPoint) =>
-	localName(point.member ? `${point.owner}.${point.exportName}` : point.id);
+	camelCase(point.member ? `${point.owner}.${point.exportName}` : point.id);
 
 /** How the generated code names a point: `ordersForm`, `ordersPoints.detail.side`. */
 const pointRef = (point: ExtensionPoint) =>
@@ -329,19 +347,23 @@ const pointRef = (point: ExtensionPoint) =>
 
 /** `materials` and `orders.form` → `materialsOrdersFormPart`: the name a part's schema is imported as. */
 const partName = (module: ModuleFolder, point: string) =>
-	`${module.id.replace(/-(\w)/g, (_, c: string) => c.toUpperCase())}${localName(`.${point}`)}Part`;
+	`${camelCase(`${module.id}.${point}`)}Part`;
 
 /** `src/lib/orders/extensions.ts` → `#lib/orders/extensions.ts`. */
 const specifier = (file: string) =>
 	file.replace(/^src\/lib\//, "#lib/").replace(/^src\/modules\//, "#modules/");
 
-/** The modules' contributions by file, in registry order, with the points they go to. */
-function allContributions(points: ExtensionPoint[], modules: ModuleFolder[]) {
+/** The modules' contributions of `kind`, in registry order, with the points they go to. */
+function allContributions(
+	points: ExtensionPoint[],
+	modules: ModuleFolder[],
+	kind: ContributionKind,
+) {
 	const byId = new Map(points.map((point) => [point.id, point]));
 	return modules.flatMap((module) =>
 		contributionsOf(module).contributions.flatMap((contribution) => {
 			const point = byId.get(contribution.point);
-			return point ? [{ module, contribution, point }] : [];
+			return point && contribution.kind === kind ? [{ module, contribution, point }] : [];
 		}),
 	);
 }
@@ -368,70 +390,72 @@ function pointImports(points: ExtensionPoint[]) {
 const listOf = (entries: string[]) =>
 	entries.length ? `[\n${entries.map((entry) => `\t${entry},`).join("\n")}\n]` : "[]";
 
+/** `a`, `a and b`, `a, b and c`. */
+const inWords = (items: string[]) =>
+	items.length > 1 ? `${items.slice(0, -1).join(", ")} and ${items.at(-1)}` : items.join("");
+
 /**
  * `src/lib/extensions/contributions.gen.ts`: the modules' contributions by file, in registry order
  * (`modules` is), each a typed call, so the type check holds a component to its slot's props and
  * bulk actions to their table's rows. Expects `extensionProblems()` to have found nothing.
  */
 export function renderContributions(points: ExtensionPoint[], modules: ModuleFolder[]): string {
-	const all = allContributions(points, modules).filter(
-		({ contribution }) => contribution.kind !== "part",
+	const listed = kindRows.flatMap(([kind, row]) =>
+		"list" in row ? [{ row, list: row.list, all: allContributions(points, modules, kind) }] : [],
 	);
-	const of = (kind: FileContribution["kind"]) =>
-		all.filter(({ contribution }) => contribution.kind === kind);
-	const load = (module: ModuleFolder, file: string) =>
-		`() => import("#modules/${module.id}/${file}")`;
 	// A component at a form slot is held to its module's part's schema, imported only as a type.
-	const atForms = of("slot").filter(({ point }) => point.kind === "form");
+	const atForms = allContributions(points, modules, "slot").filter(
+		({ point }) => point.kind === "form",
+	);
 	const partImports = [
 		...new Set(
 			atForms.map(
 				({ module, point }) =>
-					`import type ${partName(module, point.id)} from "#modules/${module.id}/form-parts/${point.id}.ts";`,
+					`import type ${partName(module, point.id)} from "#modules/${module.id}/${fileOf(contributionKinds.part, point.id)}";`,
 			),
 		),
 	];
-	const slotCall = ({ module, contribution, point }: (typeof all)[number]) => {
-		const args = `${pointRef(point)}, ${JSON.stringify(module.id)}, ${JSON.stringify(contribution.name)}, ${load(module, contribution.file)}`;
+	const names = [
+		...listed.flatMap(({ list }) => [`type ${list.type}`, list.call]),
+		...(atForms.length ? ["formSlotContribution"] : []),
+	];
+	const bare = (name: string) => name.replace(/^type /, "");
+	const call = (
+		{ row, list }: (typeof listed)[number],
+		{ module, contribution, point }: (typeof listed)[number]["all"][number],
+	) => {
+		const args = [
+			pointRef(point),
+			JSON.stringify(module.id),
+			...("named" in row ? [JSON.stringify(contribution.name)] : []),
+			`() => import("#modules/${module.id}/${contribution.file}")`,
+		].join(", ");
 		return point.kind === "form"
 			? `formSlotContribution<typeof ${pointRef(point)}, typeof ${partName(module, point.id)}>(${args})`
-			: `slotContribution(${args})`;
+			: `${list.call}(${args})`;
 	};
+	const sources = kindRows
+		.filter(([, row]) => !row.folder.startsWith("server/"))
+		.map(([, row]) => `src/modules/*/${row.folder}`);
 
 	return [
-		`// ${GENERATED} from src/modules/*/slots, src/modules/*/bulk-actions, src/modules/*/columns and src/modules/*/form-parts. Don't edit.`,
+		`// ${GENERATED} from ${inWords(sources)}. Don't edit.`,
 		`import {`,
-		`\ttype AnyBulkContribution,`,
-		`\ttype AnySlotContribution,`,
-		`\tbulkContribution,`,
-		`\ttype ColumnsContribution,`,
-		`\tcolumnsContribution,`,
-		...(atForms.length ? [`\tformSlotContribution,`] : []),
-		`\tslotContribution,`,
+		...names
+			.toSorted(
+				(a, b) => byName(bare(a).toLowerCase(), bare(b).toLowerCase()) || byName(bare(a), bare(b)),
+			)
+			.map((name) => `\t${name},`),
 		`} from "#lib/extensions/define.ts";`,
-		...pointImports(all.map(({ point }) => point)),
+		...pointImports(listed.flatMap(({ all }) => all.map(({ point }) => point))),
 		...partImports,
-		"",
-		`/** The components the modules add at slots, in registry order. */`,
-		`export const slotContributions: readonly AnySlotContribution[] = ${listOf(
-			of("slot").map(slotCall),
-		)};`,
-		"",
-		`/** The bulk actions the modules add to tables, in registry order. */`,
-		`export const bulkContributions: readonly AnyBulkContribution[] = ${listOf(
-			of("bulk").map(
-				({ module, contribution, point }) =>
-					`bulkContribution(${pointRef(point)}, ${JSON.stringify(module.id)}, ${load(module, contribution.file)})`,
-			),
-		)};`,
-		"",
-		`/** The columns the modules add to lists (their definitions and cells), in registry order. */`,
-		`export const columnContributions: readonly ColumnsContribution[] = ${listOf(
-			of("columns").map(
-				({ module, contribution, point }) =>
-					`columnsContribution(${pointRef(point)}, ${JSON.stringify(module.id)}, ${load(module, contribution.file)})`,
-			),
-		)};`,
+		...listed.flatMap((kind) => [
+			"",
+			`/** ${kind.row.what}, in registry order. */`,
+			`export const ${kind.list.name}: readonly ${kind.list.type}[] = ${listOf(
+				kind.all.map((entry) => call(kind, entry)),
+			)};`,
+		]),
 		"",
 	].join("\n");
 }
@@ -442,18 +466,15 @@ export function renderContributions(points: ExtensionPoint[], modules: ModuleFol
  * imported statically: the server merges a tenant's columns while it plans the list.
  */
 export function renderColumnSql(points: ExtensionPoint[], modules: ModuleFolder[]): string {
-	const columns = allContributions(points, modules).filter(
-		({ contribution }) => contribution.kind === "columns",
-	);
-	const sqlName = (module: ModuleFolder, point: string) =>
-		`${module.id.replace(/-(\w)/g, (_, c: string) => c.toUpperCase())}${localName(`.${point}`)}`;
+	const columns = allContributions(points, modules, "columns");
+	const sqlName = (module: ModuleFolder, point: string) => camelCase(`${module.id}.${point}`);
 	return [
-		`// ${GENERATED} from src/modules/*/server/columns. Don't edit.`,
+		`// ${GENERATED} from src/modules/*/${contributionKinds.sql.folder}. Don't edit.`,
 		`import type { ColumnSqlContribution } from "./column-sql.ts";`,
 		...pointImports(columns.map(({ point }) => point)),
 		...columns.map(
 			({ module, contribution }) =>
-				`import ${sqlName(module, contribution.point)} from "#modules/${module.id}/server/${contribution.file}";`,
+				`import ${sqlName(module, contribution.point)} from "#modules/${module.id}/${fileOf(contributionKinds.sql, contribution.point)}";`,
 		),
 		"",
 		`/**`,
@@ -479,9 +500,7 @@ export function renderColumnSql(points: ExtensionPoint[], modules: ModuleFolder[
  * an entry, an empty one without parts. Isomorphic.
  */
 export function renderFormParts(points: ExtensionPoint[], modules: ModuleFolder[]): string {
-	const parts = allContributions(points, modules).filter(
-		({ contribution }) => contribution.kind === "part",
-	);
+	const parts = allContributions(points, modules, "part");
 	const entries = points
 		.filter((point) => point.kind === "form")
 		.map((point) => {
@@ -494,7 +513,7 @@ export function renderFormParts(points: ExtensionPoint[], modules: ModuleFolder[
 			return `${JSON.stringify(point.id)}: ${named.length ? `{ ${named.join(", ")} }` : "{}"},`;
 		});
 	return [
-		`// ${GENERATED} from src/modules/*/form-parts. Don't edit.`,
+		`// ${GENERATED} from src/modules/*/${contributionKinds.part.folder}. Don't edit.`,
 		...parts.map(
 			({ module, point, contribution }) =>
 				`import ${partName(module, point.id)} from "#modules/${module.id}/${contribution.file}";`,

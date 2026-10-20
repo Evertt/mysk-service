@@ -1,8 +1,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { fixture, organizations, quiet, rows, useApp, users, value } from "#e2e/app.ts";
-import { formatCents } from "#lib/i18n/index.ts";
-import { formatEuros } from "#modules/partner-programme/display.ts";
+import { formatCents, formatWholeEuros } from "#lib/i18n/index.ts";
 import { creditValidUntil, figuresFrom } from "#modules/partner-programme/model.ts";
 
 import {
@@ -168,7 +167,7 @@ describe("in SHLTR, a partner's cash bonus", () => {
 			.poll(() => year.locator(`[data-bonus-credit-note="${made.number}"]`).innerText())
 			.toContain(`settled · ${formatCents(-(cash + Math.round((cash * 21) / 100)))}`);
 		expect(await card().locator("[data-partner-revenue]").innerText()).toBe(
-			formatEuros(revenue.partnerRevenue),
+			formatWholeEuros(revenue.partnerRevenue),
 		);
 	});
 });

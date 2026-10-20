@@ -6,11 +6,10 @@
 -->
 <script lang="ts">
 	import DetailItem from "#lib/components/detail-item.svelte";
-	import { formatNumber } from "#lib/i18n/index.ts";
+	import { formatNumber, formatStopwatch } from "#lib/i18n/index.ts";
 	import { OrderLink } from "#lib/orders/components.ts";
 
 	import { getDockUsage } from "../../docks.remote.ts";
-	import { formatDuration } from "../../model.ts";
 
 	let { serialNumber }: { serialNumber: string } = $props();
 
@@ -35,7 +34,9 @@
 				</DetailItem>
 				<DetailItem label={m.docks_usage_average_open()}>
 					<span class="text-lg font-semibold tabular-nums" data-average-open>
-						{usage.averageOpenSeconds === null ? "—" : formatDuration(usage.averageOpenSeconds)}
+						{usage.averageOpenSeconds === null
+							? "—"
+							: formatStopwatch(usage.averageOpenSeconds * 1000, { hours: true })}
 					</span>
 				</DetailItem>
 			</dl>

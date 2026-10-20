@@ -42,8 +42,7 @@ describe.each(integrationModules)("%s's tokens", (module) => {
 		expect(stored.token_hash).not.toContain(token.slice(4));
 		expect(token.startsWith(stored.prefix)).toBe(true);
 		const listed = await as(shltr.owner, () => data(getIntegrationTokens, module));
-		expect(listed.canManage).toBe(true);
-		expect(JSON.stringify(listed.tokens)).not.toContain(token);
+		expect(JSON.stringify(listed)).not.toContain(token);
 
 		const revoked = await as(shltr.owner, () =>
 			submit(revokeIntegrationToken, { module, id: String(stored.id) }),
@@ -63,10 +62,9 @@ describe.each(integrationModules)("%s's tokens", (module) => {
 			[shltrId, module],
 		);
 		await as(shltr.member, async () => {
-			const settings = await data(getIntegrationTokens, module);
-			expect(settings.canManage).toBe(false);
-			expect(settings.tokens.map((token) => token.id)).toContain(demo.id);
-			expect(Object.keys(settings.tokens[0]).toSorted()).toEqual(
+			const tokens = await data(getIntegrationTokens, module);
+			expect(tokens.map((token) => token.id)).toContain(demo.id);
+			expect(Object.keys(tokens[0]).toSorted()).toEqual(
 				["createdAt", "createdBy", "id", "lastUsedAt", "name", "prefix", "revokedAt"].toSorted(),
 			);
 			expect(await submit(createIntegrationToken, { module, name: "Planner's" })).toMatchObject({
@@ -102,7 +100,7 @@ describe.each(integrationModules)("%s's tokens", (module) => {
 		try {
 			await as(north.owner, async () => {
 				const listed = await data(getIntegrationTokens, module);
-				expect(listed.tokens.map((token) => token.id)).not.toContain(demo.id);
+				expect(listed.map((token) => token.id)).not.toContain(demo.id);
 				expect(await submit(revokeIntegrationToken, { module, id: String(demo.id) })).toMatchObject(
 					{ status: 404 },
 				);

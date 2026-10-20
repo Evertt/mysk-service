@@ -1,13 +1,12 @@
 import { redirect } from "@sveltejs/kit";
 import * as v from "valibot";
 
-import { isManager } from "#lib/auth/index.ts";
 /**
  * The programme's years and their rules: every member may read them, managers set up a year (a
  * copy of the one before) and change its rules. Closing a year is in `close.remote.ts`.
  */
 import { currentDay } from "#lib/dates.ts";
-import { currentTenant } from "#lib/server/auth/index.ts";
+import { year } from "#lib/schema.ts";
 import { db } from "#lib/server/db/index.ts";
 
 import { rulesSchema } from "./form/rules-schema.ts";
@@ -15,9 +14,6 @@ import { yearField } from "./form/wallet-schema.ts";
 import { defaultCategoryRules, defaultTiers } from "./model.ts";
 import { forManagers, query } from "./remote-functions.ts";
 import { addYear, programmeYears, rulesFor, saveRules, storedRules } from "./server/rules.ts";
-
-/** A year as the client asks for it. */
-const year = v.pipe(v.number(), v.integer(), v.minValue(2000), v.maxValue(2100));
 
 /** The years set up, latest first, and the one to add next. */
 export const getProgrammeYears = query(async () => {
@@ -28,7 +24,6 @@ export const getProgrammeYears = query(async () => {
 		years: years.map((each) => ({ year: each.year, levels: each.tiers.length })),
 		current,
 		next,
-		canManage: isManager(currentTenant().roles),
 	};
 });
 
@@ -36,7 +31,7 @@ export const getProgrammeYears = query(async () => {
  * A year's rules: its own if it's set up (`setUp`), else the ones it goes by (the latest year's
  * before it, `from`), else the ones a first year starts with.
  */
-export const getYearRules = query(year, async (wanted) => {
+export const getYearRules = query(year(), async (wanted) => {
 	const own = await storedRules(wanted);
 	const before = own ? undefined : await rulesFor(wanted);
 	const fallback = {
@@ -52,7 +47,6 @@ export const getYearRules = query(year, async (wanted) => {
 		from: before
 			? ((await programmeYears()).find((each) => each.year <= wanted)?.year ?? null)
 			: null,
-		canManage: isManager(currentTenant().roles),
 	};
 });
 

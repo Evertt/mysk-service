@@ -6,17 +6,11 @@
 -->
 <script lang="ts">
 	import { EngineerLink } from "#lib/engineers/components.ts";
+	import { formatLongDay } from "#lib/i18n/index.ts";
 	import { cn } from "#lib/utils.ts";
 
 	import type { createBoardDrag } from "./board-drag.svelte.ts";
-	import {
-		type BoardRow,
-		cellKey,
-		formatDay,
-		formatLongDay,
-		load,
-		type ScheduleOrder,
-	} from "./board.ts";
+	import { type BoardRow, cellKey, formatDay, load, type ScheduleOrder } from "./board.ts";
 	import OrderCard from "./order-card.svelte";
 
 	let {

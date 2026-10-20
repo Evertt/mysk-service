@@ -24,6 +24,8 @@
 import { browser } from "$app/env";
 import { page } from "$app/state";
 import { redirect } from "@sveltejs/kit";
+import { useDebounce } from "runed";
+import { untrack } from "svelte";
 
 import { changedVisibility, currentVisibility, defaultVisibility } from "./column-visibility.ts";
 import {
@@ -115,11 +117,8 @@ export function rememberTable(
 		viewId: sync.viewId ?? null,
 	});
 	let saved = JSON.stringify(memory ?? { columns: null, query: "", viewId: null });
-	let timer: ReturnType<typeof setTimeout> | undefined;
 
-	function save() {
-		clearTimeout(timer);
-		timer = undefined;
+	const save = useDebounce(() => {
 		const next = unsaved.get(pending);
 		if (!next) return;
 		remember({ owner, tableKey: key, ...next })
@@ -129,7 +128,7 @@ export function rememberTable(
 			.finally(() => {
 				if (unsaved.get(pending) === next) unsaved.delete(pending);
 			});
-	}
+	}, saveDelay);
 
 	$effect(() => {
 		const next = $state.snapshot(now);
@@ -137,11 +136,8 @@ export function rememberTable(
 		if (json === saved) return;
 		saved = json;
 		unsaved.set(pending, next);
-		clearTimeout(timer);
-		timer = setTimeout(save, saveDelay);
+		void untrack(save);
 	});
 	// Leaving the page: now.
-	$effect(() => () => {
-		if (timer !== undefined) save();
-	});
+	$effect(() => () => void save.runScheduledNow());
 }

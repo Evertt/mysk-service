@@ -9,27 +9,21 @@
  * `sessionStorage` to the delay they want, in milliseconds, which the links read once. That's all
  * the key does.
  */
-import { getContext, setContext } from "svelte";
+import { createContext } from "svelte";
 import { MediaQuery } from "svelte/reactivity";
 
 import { previewDelayKey } from "./preview-delay.ts";
 
-const contextKey = Symbol("record previews");
+const [previewsShown, setPreviewsShown, previewsSet] = createContext<boolean>();
 
 /** Turns record links' hover cards on for the component's children (the office shell). */
-export function showRecordPreviews() {
-	setContext(contextKey, true);
-}
+export const showRecordPreviews = () => setPreviewsShown(true);
 
 /** Turns them off for the component's children: a card's content, which a card isn't nested in. */
-export function hideRecordPreviews() {
-	setContext(contextKey, false);
-}
+export const hideRecordPreviews = () => setPreviewsShown(false);
 
 /** Whether a record link in this component shows a hover card. */
-export function recordPreviewsShown(): boolean {
-	return getContext<boolean | undefined>(contextKey) ?? false;
-}
+export const recordPreviewsShown = () => previewsSet() && previewsShown();
 
 /** Whether the device's pointer hovers and points finely: a mouse or trackpad, not a finger. */
 export const finePointer = new MediaQuery("(hover: hover) and (pointer: fine)", false);

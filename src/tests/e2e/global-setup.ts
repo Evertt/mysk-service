@@ -49,8 +49,8 @@ declare module "vitest" {
 
 const dev = !!process.env.E2E_DEV;
 
-/** The token the servers take to start the daily jobs (`CRON_SECRET`, see `jobs.ts`). */
-export const cronSecret = "e2e-cron-secret";
+/** The token the servers take to start the daily jobs (`OPS_TOKEN`, see `jobs.ts`). */
+export const opsToken = "e2e-ops-token";
 
 /** Where the servers mail bug reports (`BUG_REPORT_EMAIL`). */
 export const bugReportEmail = "bugs@fieldworks.test";
@@ -117,7 +117,7 @@ export async function startServer(
 				DATABASE_URL: databaseURL,
 				ORIGIN: baseURL,
 				MAIL_OUTBOX: outbox,
-				CRON_SECRET: cronSecret,
+				OPS_TOKEN: opsToken,
 				BUG_REPORT_EMAIL: bugReportEmail,
 				DEVELOPER_EMAILS: developerEmail,
 				BUG_REPORTS_DIR: bugReportsFolder(outbox),

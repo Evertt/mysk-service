@@ -1,7 +1,7 @@
+import { camelCase } from "#lib/camel-case.ts";
+
 import { isIntegrationRoute, modulePages } from "./routes.ts";
 import { GENERATED, type ModuleFolder } from "./shared.ts";
-
-const camel = (id: string) => id.replace(/-(\w)/g, (_, c: string) => c.toUpperCase());
 
 const registryHeader = (what: string) => `// ${GENERATED} from ${what}. Don't edit.\n`;
 
@@ -68,16 +68,16 @@ export function renderRegistries(modules: ModuleFolder[]): Record<string, string
 
 		"src/lib/modules/manifests.gen.ts": [
 			registryHeader("src/modules/*/module.ts"),
-			...modules.map((m) => `import ${camel(m.id)}Module from "#modules/${m.id}/module.ts";`),
+			...modules.map((m) => `import ${camelCase(m.id)}Module from "#modules/${m.id}/module.ts";`),
 			...(modules.length ? [""] : []),
-			`export const manifests = ${list(modules.map((m) => `${camel(m.id)}Module`))} as const;`,
+			`export const manifests = ${list(modules.map((m) => `${camelCase(m.id)}Module`))} as const;`,
 			"",
 		].join("\n"),
 
 		"src/lib/server/modules/hooks.gen.ts": [
 			registryHeader("src/modules/*/server/index.ts"),
 			...withServer.map(
-				(m) => `import ${camel(m.id)}Server from "#modules/${m.id}/server/index.ts";`,
+				(m) => `import ${camelCase(m.id)}Server from "#modules/${m.id}/server/index.ts";`,
 			),
 			...(withServer.length ? [""] : []),
 			`/**`,
@@ -85,7 +85,7 @@ export function renderRegistries(modules: ModuleFolder[]): Record<string, string
 			` * \`#lib/server/extensions.ts\`, which imports this, so one of them is always evaluated first.`,
 			` */`,
 			`export function generatedServerModules() {`,
-			`\treturn ${list(withServer.map((m) => `${camel(m.id)}Server`))} as const;`,
+			`\treturn ${list(withServer.map((m) => `${camelCase(m.id)}Server`))} as const;`,
 			`}`,
 			"",
 		].join("\n"),
@@ -101,13 +101,13 @@ export function renderRegistries(modules: ModuleFolder[]): Record<string, string
 		"src/lib/server/db/module-schemas.gen.ts": [
 			registryHeader("src/modules/*/server/schema.ts"),
 			...withSchema.map(
-				(m) => `import * as ${camel(m.id)}Schema from "#modules/${m.id}/server/schema.ts";`,
+				(m) => `import * as ${camelCase(m.id)}Schema from "#modules/${m.id}/server/schema.ts";`,
 			),
 			...(withSchema.length ? [""] : []),
 			`/** Each module's tables by module id, for the check that they reference only what they may. */`,
 			`export const moduleSchemas = ${
 				withSchema.length
-					? `{\n${withSchema.map((m) => `\t${JSON.stringify(m.id)}: ${camel(m.id)}Schema,`).join("\n")}\n}`
+					? `{\n${withSchema.map((m) => `\t${JSON.stringify(m.id)}: ${camelCase(m.id)}Schema,`).join("\n")}\n}`
 					: "{}"
 			};`,
 			"",
@@ -116,11 +116,13 @@ export function renderRegistries(modules: ModuleFolder[]): Record<string, string
 		"src/lib/server/db/module-seeds.gen.ts": [
 			registryHeader("src/modules/*/server/seed.ts"),
 			`import type { ModuleSeed } from "./seed/module-seed.ts";`,
-			...withSeed.map((m) => `import ${camel(m.id)}Seed from "#modules/${m.id}/server/seed.ts";`),
+			...withSeed.map(
+				(m) => `import ${camelCase(m.id)}Seed from "#modules/${m.id}/server/seed.ts";`,
+			),
 			"",
 			`export const moduleSeeds: { id: string; seed: ModuleSeed }[] = ${
 				withSeed.length
-					? `[\n${withSeed.map((m) => `\t{ id: ${JSON.stringify(m.id)}, seed: ${camel(m.id)}Seed },`).join("\n")}\n]`
+					? `[\n${withSeed.map((m) => `\t{ id: ${JSON.stringify(m.id)}, seed: ${camelCase(m.id)}Seed },`).join("\n")}\n]`
 					: "[]"
 			};`,
 			"",

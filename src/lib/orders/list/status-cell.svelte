@@ -26,12 +26,10 @@
 </script>
 
 <script lang="ts">
-	import { toast } from "svelte-sonner";
-
 	import BadgeSelect, { type BadgeOption } from "#lib/components/badge-select.svelte";
 	import { cellFilter } from "#lib/components/data-table/cell-filter.svelte.ts";
+	import { ran } from "#lib/components/form/submitted.ts";
 	import type { OrderStatus } from "#lib/models.ts";
-	import { errorMessage } from "#lib/utils.ts";
 
 	import { orderStatusDisplay } from "../display.ts";
 	import type { OrderTag } from "../extensions.ts";
@@ -69,17 +67,16 @@
 	async function change(to: OrderStatus) {
 		// `statusChoices()` offers only these; the server checks again.
 		if (to === "invoiced" || to === "awaiting_acceptance") return;
-		try {
-			await setOrderStatus({ id, status: to }).updates(
+		await ran(
+			setOrderStatus({ id, status: to }).updates(
 				getOrders(query(id)).withOverride((current) => ({
 					...current,
 					rows: current.rows.map((row) => (row.id === id ? { ...row, status: to } : row)),
 				})),
 				getOrderFacets,
-			);
-		} catch (error) {
-			toast.error(errorMessage(error, m.orders_status_change_failed({ number })));
-		}
+			),
+			m.orders_status_change_failed({ number }),
+		);
 	}
 </script>
 

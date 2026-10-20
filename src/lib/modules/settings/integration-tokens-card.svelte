@@ -10,6 +10,7 @@
 	import KeyRoundIcon from "@lucide/svelte/icons/key-round";
 	import { toast } from "svelte-sonner";
 
+	import { canManage } from "#lib/auth/can-manage.ts";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
@@ -25,7 +26,8 @@
 	let { module: moduleId, placeholder }: { module: IntegrationModuleId; placeholder?: string } =
 		$props();
 
-	const { tokens, canManage } = $derived(await getIntegrationTokens(moduleId));
+	const tokens = $derived(await getIntegrationTokens(moduleId));
+	const manager = $derived(await canManage());
 
 	/** The token just made: shown until the page is left. */
 	let made = $state<string>();
@@ -42,7 +44,7 @@
 		<Card.Title>{m.common_tokens_title()}</Card.Title>
 	</Card.Header>
 	<Card.Content class="flex flex-col gap-6">
-		{#if canManage}
+		{#if manager}
 			<form
 				{...createIntegrationToken.enhance(async ({ element, submit }) => {
 					if (!(await submitted(submit))) return;
@@ -116,7 +118,7 @@
 								<Table.Cell class="text-right">
 									{#if token.revokedAt}
 										<Badge variant="neutral">{m.common_token_revoked()}</Badge>
-									{:else if canManage}
+									{:else if manager}
 										<form {...revoke}>
 											<input {...revoke.fields.module.as("hidden", moduleId)} />
 											<input {...revoke.fields.id.as("hidden", String(token.id))} />

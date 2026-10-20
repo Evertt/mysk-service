@@ -3,6 +3,7 @@
 	import type { RouteParams } from "$app/types";
 	import PlusIcon from "@lucide/svelte/icons/plus";
 
+	import { canManage } from "#lib/auth/can-manage.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import TemplateDialog from "#modules/checklists/form/template-dialog.svelte";
 	import TemplatesTable from "#modules/checklists/list/templates-table.svelte";
@@ -12,6 +13,7 @@
 	const _props: { params: RouteParams<"/(app)/(modules)/checklists/settings"> } = $props();
 
 	const data = $derived(await getTemplates());
+	const manager = $derived(await canManage());
 	const active = $derived(data.templates.filter((template) => !template.archived));
 	const retired = $derived(data.templates.filter((template) => template.archived));
 	let adding = $state(false);
@@ -26,7 +28,7 @@
 	]}
 >
 	{#snippet actions()}
-		{#if data.canManage}
+		{#if manager}
 			<Button onclick={() => (adding = true)}>
 				<PlusIcon data-icon="inline-start" />
 				{m.checklists_add_template()}
@@ -42,7 +44,7 @@
 				<Card.Title>{m.checklists_gaps_title()}</Card.Title>
 				<Card.Description>
 					{m.checklists_gaps_description()}
-					{#if !data.canManage}{m.checklists_managers_change_these()}{/if}
+					{#if !manager}{m.checklists_managers_change_these()}{/if}
 				</Card.Description>
 			</Card.Header>
 			<Card.Content>
@@ -83,6 +85,6 @@
 	{/if}
 </div>
 
-{#if data.canManage}
+{#if manager}
 	<TemplateDialog bind:open={adding} />
 {/if}

@@ -6,6 +6,7 @@
 	import PencilIcon from "@lucide/svelte/icons/pencil";
 	import { toast } from "svelte-sonner";
 
+	import { canManage } from "#lib/auth/can-manage.ts";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
@@ -20,8 +21,9 @@
 
 	const data = $derived(await getTemplate(params.id));
 	const template = $derived(data.template);
+	const manager = $derived(await canManage());
 	/** Managers change an active template; a retired one is restored first. */
-	const canChange = $derived(data.canManage && !template.archived);
+	const canChange = $derived(manager && !template.archived);
 
 	let editing = $state(false);
 	let retiring = $state(false);
@@ -56,7 +58,7 @@
 				<ArchiveIcon data-icon="inline-start" />
 				{m.checklists_retire()}
 			</Button>
-		{:else if data.canManage}
+		{:else if manager}
 			<form
 				{...restoreForm.enhance(async ({ submit }) => {
 					if (await submitted(submit)) toast.success(m.checklists_restored());

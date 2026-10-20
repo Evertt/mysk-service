@@ -11,13 +11,12 @@
 	import AwardIcon from "@lucide/svelte/icons/award";
 
 	import PageBanner from "#lib/components/page-banner.svelte";
-	import { formatCents } from "#lib/i18n/index.ts";
+	import { formatCents, formatWholeEuros } from "#lib/i18n/index.ts";
 	import ClientChoice from "#modules/partner-programme/client/client-choice.svelte";
 	import { getClientPartner } from "#modules/partner-programme/client/client-partner.remote.ts";
 	import ClientProgramme from "#modules/partner-programme/client/client-programme.svelte";
 	import ClientStatus from "#modules/partner-programme/client/client-status.svelte";
 	import ClientWallet from "#modules/partner-programme/client/client-wallet.svelte";
-	import { formatEuros } from "#modules/partner-programme/display.ts";
 	import { partnerLabels } from "#modules/partner-programme/labels.ts";
 	import LevelBadge from "#modules/partner-programme/ui/level-badge.svelte";
 
@@ -89,8 +88,8 @@
 						</div>
 						<span class="text-xs text-muted-foreground tabular-nums">
 							{m.partners_closed_figures({
-								revenue: formatEuros(closed.partnerRevenue),
-								bonus: formatEuros(closed.bonusRevenue),
+								revenue: formatWholeEuros(closed.partnerRevenue),
+								bonus: formatWholeEuros(closed.bonusRevenue),
 							})}
 						</span>
 						{#if closed.choice}

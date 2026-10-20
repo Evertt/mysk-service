@@ -9,6 +9,7 @@
 	import MailIcon from "@lucide/svelte/icons/mail";
 	import { toast } from "svelte-sonner";
 
+	import { canManage } from "#lib/auth/can-manage.ts";
 	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
@@ -26,6 +27,7 @@
 	let { code }: { code: string } = $props();
 
 	const access = $derived(await getPortalAccess(code));
+	const manager = $derived(await canManage());
 	const form = $derived(invitePortalContact.for(`customer-${access.customer.id}`));
 
 	const stateDisplay = labelled({
@@ -64,7 +66,7 @@
 						</div>
 						<div class="flex items-center gap-2">
 							<EnumBadge display={stateDisplay} value={contact.state} />
-							{#if access.canManage}
+							{#if manager}
 								<DeleteDialog
 									form={revokePortalContact.for(String(contact.id))}
 									id={String(contact.id)}
@@ -81,7 +83,7 @@
 			<p class="text-sm text-muted-foreground">{m.customers_portal_none()}</p>
 		{/if}
 
-		{#if access.canManage}
+		{#if manager}
 			<form
 				{...form.enhance(async ({ element, submit }) => {
 					if (!(await submitted(submit))) return;

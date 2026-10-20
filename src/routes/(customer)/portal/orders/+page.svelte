@@ -10,6 +10,7 @@
 	import FilterChips from "#lib/components/filter-chips.svelte";
 	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { isDoneOrder, type OrderStatus, pendingOrderStatuses } from "#lib/models.ts";
+	import { isOneOf } from "#lib/one-of.ts";
 
 	import { getPortalOrders, watchPortal } from "../client.remote.ts";
 	import OrderList from "../order-list.svelte";
@@ -21,8 +22,7 @@
 	const tabs = {
 		open: {
 			label: m.client_orders_open,
-			keep: (status: OrderStatus) =>
-				(pendingOrderStatuses as readonly OrderStatus[]).includes(status),
+			keep: (status: OrderStatus) => isOneOf(pendingOrderStatuses, status),
 		},
 		done: { label: m.client_orders_done, keep: isDoneOrder },
 		all: { label: m.client_orders_all, keep: () => true },

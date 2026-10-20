@@ -148,8 +148,5 @@ export function initials(name: string) {
 	return (first + last).toUpperCase();
 }
 
-/** A month, e.g. `August 2026` (in Dutch `augustus 2026`). */
-export const formatMonth = dateFormatter({ month: "long", year: "numeric" });
-
 /** A weekday's short name, e.g. `Mon` (in Dutch `ma`), for the calendar's header. */
 export const formatWeekday = dateFormatter({ weekday: "short" });

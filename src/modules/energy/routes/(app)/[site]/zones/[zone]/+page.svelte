@@ -7,13 +7,12 @@
 	import { EquipmentLink } from "#lib/equipment/components.ts";
 	import { Clock } from "#lib/hooks/clock.svelte.ts";
 	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
-	import { formatNumber } from "#lib/i18n/index.ts";
+	import { formatNumber, formatPercent } from "#lib/i18n/index.ts";
 	import {
 		changeClass,
 		formatChange,
 		formatKw,
 		formatKwh,
-		formatPercent,
 		thresholdStateDisplay,
 		zoneToneDisplay,
 	} from "#modules/energy/display.ts";
@@ -83,7 +82,9 @@
 		<Card.Root size="sm" data-kpi="threshold">
 			<Card.Header>
 				<Card.Description>{m.energy_zone_threshold()}</Card.Description>
-				<Card.Title class="text-2xl tabular-nums">{formatPercent(zone.ratio * 100)}</Card.Title>
+				<Card.Title class="text-2xl tabular-nums"
+					>{formatPercent(zone.ratio * 100, { basis: "percent" })}</Card.Title
+				>
 			</Card.Header>
 			<Card.Content class="flex flex-col gap-1 text-xs">
 				<EnumBadge display={thresholdStateDisplay} value={zone.state} />

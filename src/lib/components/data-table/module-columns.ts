@@ -7,7 +7,7 @@
  * - `src/modules/<id>/columns/<point id>.ts`: default export, the columns' definitions, each a
  *   `listColumn()`: its namespaced id (`maintenance.nextDue`), its name in the URL, its label,
  *   whether it sorts, its filter's kind and the cell that shows its value. Isomorphic, and loaded
- *   only for the tenants with the module (`loadListColumns()`, `#lib/extensions/list-columns.ts`).
+ *   only for the tenants with the module (`loadContributions()`, `#lib/extensions/define.ts`).
  * - `src/modules/<id>/server/columns/<point id>.ts`: default export, their SQL, each a
  *   `columnSql(column, …)` (`#lib/server/lists/module-columns.ts`): what the column shows, sorts
  *   by, filters by and counts under in the filter, over the list's joined tables, tenant-scoped.

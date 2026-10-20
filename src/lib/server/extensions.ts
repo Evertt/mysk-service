@@ -46,6 +46,7 @@ import type {
 	VotePoint,
 } from "#lib/extensions/define.ts";
 import { type ModuleId, moduleIds } from "#lib/modules/ids.ts";
+import { isOneOf } from "#lib/one-of.ts";
 import { requireTenant } from "#lib/server/auth/session.ts";
 import { afterCommit } from "#lib/server/db/serialize.ts";
 
@@ -121,7 +122,7 @@ export function defineServerModule(id: ModuleId, contributions: Contribution[]):
  */
 function ownerIsOff(point: AnyPoint, enabled: readonly string[]) {
 	const owner = point.id.split(".")[0];
-	return (moduleIds as readonly string[]).includes(owner) && !enabled.includes(owner);
+	return isOneOf(moduleIds, owner) && !enabled.includes(owner);
 }
 
 /**

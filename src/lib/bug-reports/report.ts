@@ -6,6 +6,8 @@
  */
 import * as v from "valibot";
 
+import { wholeIn } from "#lib/schema.ts";
+
 /** The longest recording: it stops by itself then, and asks for a note. */
 export const maxRecordingMs = 10 * 60 * 1000;
 
@@ -41,8 +43,8 @@ export type ClientContext = v.InferOutput<typeof clientContextSchema>;
 export const reportSummarySchema = v.object({
 	note: v.pipe(v.string(), v.trim(), v.maxLength(5000)),
 	/** When the recording started, in milliseconds since 1970. */
-	startedAt: v.pipe(v.number(), v.integer(), v.minValue(0)),
-	durationMs: v.pipe(v.number(), v.integer(), v.minValue(0)),
+	startedAt: wholeIn(),
+	durationMs: wholeIn(),
 	context: clientContextSchema,
 	/** The console's errors and warnings, as text, for the mail (the replay page reads the events). */
 	errors: v.pipe(v.array(v.pipe(v.string(), v.maxLength(2000))), v.maxLength(50)),

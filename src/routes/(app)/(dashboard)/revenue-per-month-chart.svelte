@@ -7,7 +7,13 @@
 	import { BarChart } from "layerchart";
 
 	import type { ChartConfig } from "#lib/components/ui/chart/index.ts";
-	import { dateFormatter, formatCents, formatNumber, numberFormatter } from "#lib/i18n/index.ts";
+	import {
+		dateFormatter,
+		formatCents,
+		formatMonth,
+		formatNumber,
+		numberFormatter,
+	} from "#lib/i18n/index.ts";
 
 	import ChartTable from "./chart-table.svelte";
 	import type { RevenueInMonth } from "./dashboard-charts.ts";
@@ -20,7 +26,6 @@
 	const first = (month: string) => Temporal.PlainDate.from(month);
 
 	const tick = dateFormatter({ month: "short" });
-	const monthLabel = dateFormatter({ month: "long", year: "numeric" });
 	/** Short amounts for the axis, e.g. `€12K`. */
 	const compactEuros = numberFormatter({
 		style: "currency",
@@ -58,7 +63,7 @@
 				{#snippet tooltip()}
 					<Chart.Tooltip
 						class="min-w-44"
-						labelFormatter={(month: string) => monthLabel(first(month))}
+						labelFormatter={(month: string) => formatMonth(first(month))}
 						valueFormatter={formatCents}
 					/>
 				{/snippet}
@@ -72,7 +77,7 @@
 				m.dashboard_column_completed_orders(),
 			]}
 			rows={data.map((month) => [
-				monthLabel(month.month),
+				formatMonth(month.month),
 				formatCents(month.total),
 				formatNumber(month.orders),
 			])}
