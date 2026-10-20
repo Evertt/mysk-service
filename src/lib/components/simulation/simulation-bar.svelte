@@ -13,7 +13,7 @@
 	import RefreshCcwIcon from "@lucide/svelte/icons/refresh-ccw";
 	import { toast } from "svelte-sonner";
 
-	import { errorMessage } from "#lib/errors/messages.ts";
+	import { ran } from "#lib/components/form/submitted.ts";
 	import type { ModuleId } from "#lib/modules/ids.ts";
 	import { simulationSpeeds } from "#lib/simulation/extensions.ts";
 
@@ -67,14 +67,8 @@
 
 	async function act(work: () => Promise<unknown>, done?: string) {
 		busy = true;
-		try {
-			await work();
-			if (done) toast.success(done);
-		} catch (error) {
-			toast.error(errorMessage(error, m.common_error_generic()));
-		} finally {
-			busy = false;
-		}
+		if ((await ran(work)) && done) toast.success(done);
+		busy = false;
 	}
 </script>
 

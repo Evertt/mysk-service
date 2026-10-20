@@ -12,7 +12,7 @@
 	import { toast } from "svelte-sonner";
 
 	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
-	import { errorMessage } from "#lib/errors/messages.ts";
+	import { ran } from "#lib/components/form/submitted.ts";
 	import { label } from "#lib/i18n/index.ts";
 	import { OrderLink } from "#lib/orders/components.ts";
 
@@ -42,11 +42,8 @@
 	const remove = $derived(deletePlan.for(String(plan.id)));
 
 	async function togglePause() {
-		try {
-			await pausePlan({ id: plan.id, paused: !plan.paused });
+		if (await ran(pausePlan({ id: plan.id, paused: !plan.paused }))) {
 			toast.success(m.maintenance_plan_saved());
-		} catch (error) {
-			toast.error(errorMessage(error, m.common_error_generic()));
 		}
 	}
 </script>

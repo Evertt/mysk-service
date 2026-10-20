@@ -1,8 +1,8 @@
 import { toast } from "svelte-sonner";
 import { SvelteSet } from "svelte/reactivity";
 
+import { ran } from "#lib/components/form/submitted.ts";
 import { getTimeZone } from "#lib/dates.ts";
-import { errorMessage } from "#lib/errors/messages.ts";
 
 import { getSchedule, moveOrder } from "../schedule.remote.ts";
 import { applyMove, DEFAULT_TIME, formatDay, type RowId, type ScheduleOrder } from "./board.ts";
@@ -36,20 +36,20 @@ export function createBoardDrag(options: {
 
 		moving.add(order.id);
 		started++;
-		try {
-			await moveOrder({ id: order.id, engineerId, day: day.toString(), time }).updates(
+		const moved = await ran(
+			moveOrder({ id: order.id, engineerId, day: day.toString(), time }).updates(
 				getSchedule(options.week()).withOverride((current) =>
 					applyMove(current, { id: order.id, engineerId, scheduledFor }),
 				),
-			);
+			),
+			m.schedule_move_failed({ number: order.number }),
+		);
+		if (moved) {
 			const who = (engineerId && options.names().get(engineerId)) || m.schedule_nobody();
 			toast.success(m.schedule_moved({ number: order.number, who, day: formatDay(day), time }));
-		} catch (error) {
-			toast.error(errorMessage(error, m.schedule_move_failed({ number: order.number })));
-		} finally {
-			moving.delete(order.id);
-			if (!moving.size) options.settled?.();
 		}
+		moving.delete(order.id);
+		if (!moving.size) options.settled?.();
 	}
 
 	return {

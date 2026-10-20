@@ -6,11 +6,9 @@
 	once; if it fails, a toast says why and the badge goes back.
 -->
 <script lang="ts">
-	import { toast } from "svelte-sonner";
-
 	import BadgeSelect, { type BadgeOption } from "#lib/components/badge-select.svelte";
 	import { cellFilter } from "#lib/components/data-table/cell-filter.svelte.ts";
-	import { errorMessage } from "#lib/errors/messages.ts";
+	import { ran } from "#lib/components/form/submitted.ts";
 
 	import { getEngineers, setEngineerActive } from "../engineers.remote.ts";
 
@@ -39,17 +37,16 @@
 	// Clicking the badge filters the table by the status; its arrow changes it.
 	const filter = cellFilter(() => ({ value: status, label: option(status).label }));
 
-	async function change(to: Status) {
+	function change(to: Status) {
 		const value = to === "active";
-		try {
-			await setEngineerActive({ id, active: value }).updates(
+		return ran(
+			setEngineerActive({ id, active: value }).updates(
 				getEngineers().withOverride((current) =>
 					current.map((row) => (row.id === id ? { ...row, active: value } : row)),
 				),
-			);
-		} catch (error) {
-			toast.error(errorMessage(error, m.engineers_status_change_failed({ name })));
-		}
+			),
+			m.engineers_status_change_failed({ name }),
+		);
 	}
 </script>
 

@@ -26,7 +26,7 @@
 	import type { RowData } from "@tanstack/svelte-table";
 	import { toast } from "svelte-sonner";
 
-	import { errorMessage } from "#lib/errors/messages.ts";
+	import { ran } from "#lib/components/form/submitted.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
 
 	import BulkActionDialog from "./bulk-action-dialog.svelte";
@@ -132,14 +132,12 @@
 	}
 
 	/** Runs an action that doesn't ask first (its dialog runs one that does), then opens its page. */
-	async function run(action: BulkAction<TData, Where>, row?: BulkRow) {
-		try {
+	function run(action: BulkAction<TData, Where>, row?: BulkRow) {
+		return ran(async () => {
 			const result = await perform(action, undefined, row);
 			report(action, result, row);
 			if (result.href) await goto(result.href);
-		} catch (error) {
-			toast.error(errorMessage(error, m.common_error_generic()));
-		}
+		});
 	}
 
 	/** Runs `action` with `value` on the selection, or on `row` alone. */

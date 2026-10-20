@@ -6,6 +6,7 @@ import { version } from "$app/env";
 import { page } from "$app/state";
 import { toast } from "svelte-sonner";
 
+import { ran } from "#lib/components/form/submitted.ts";
 import { getTimeZone } from "#lib/dates.ts";
 import { m } from "#lib/paraglide/messages.js";
 import { getLocale } from "#lib/paraglide/runtime.js";
@@ -18,10 +19,7 @@ export async function startBugReport() {
 		{ url: page.url.href, routeId: page.route.id },
 		{ version, locale: getLocale(), timeZone: getTimeZone() },
 	);
-	try {
-		await bugRecorder().start(context);
+	if (await ran(() => bugRecorder().start(context), m.bugs_recording_failed())) {
 		toast.info(m.bugs_recording_started());
-	} catch {
-		toast.error(m.bugs_recording_failed());
 	}
 }

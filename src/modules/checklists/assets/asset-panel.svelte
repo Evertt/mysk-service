@@ -14,9 +14,9 @@
 	import { toast } from "svelte-sonner";
 
 	import { type ListQuery, whereOf } from "#lib/components/data-table/list-definition.ts";
+	import { ran } from "#lib/components/form/submitted.ts";
 	import { getTimeZone } from "#lib/dates.ts";
 	import { EquipmentLink } from "#lib/equipment/components.ts";
-	import { errorMessage } from "#lib/errors/messages.ts";
 	import { isOpenOrder } from "#lib/models.ts";
 
 	import ChecklistHistory from "../detail/checklist-history.svelte";
@@ -78,7 +78,7 @@
 	let starting = $state<ChecklistKind>();
 	async function start(kind: ChecklistKind) {
 		starting = kind;
-		try {
+		await ran(async () => {
 			const started = await startOrder({ serialNumber, kind }).updates(...updates());
 			toast.success(
 				started.created
@@ -90,11 +90,8 @@
 					reset: false,
 				});
 			}
-		} catch (error) {
-			toast.error(errorMessage(error, m.common_error_generic()));
-		} finally {
-			starting = undefined;
-		}
+		});
+		starting = undefined;
 	}
 </script>
 

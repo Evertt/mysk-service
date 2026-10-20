@@ -7,9 +7,8 @@
  * is taken back to the server's, and said so, unless a newer one has replaced it by then.
  */
 import { untrack } from "svelte";
-import { toast } from "svelte-sonner";
 
-import { errorMessage } from "#lib/errors/messages.ts";
+import { ran } from "#lib/components/form/submitted.ts";
 
 import { canComplete, completionProblems, type PointResult, progress } from "../model.ts";
 
@@ -55,14 +54,13 @@ export function checklistDraft<Point extends DraftPoint>(
 	let failures = 0;
 	function enqueue(save: () => Promise<unknown>, undo: () => void) {
 		saving++;
-		queue = queue
-			.then(save)
-			.catch((error) => {
+		queue = queue.then(async () => {
+			if (!(await ran(save, m.checklists_save_failed()))) {
 				failures++;
 				undo();
-				toast.error(errorMessage(error, m.checklists_save_failed()));
-			})
-			.finally(() => saving--);
+			}
+			saving--;
+		});
 	}
 	/** Waits until every save is done, also those given while it waits. */
 	async function settled() {
@@ -199,18 +197,14 @@ export function checklistDraft<Point extends DraftPoint>(
 			for (const point of points) saveRemark(point);
 			saveRemarks();
 			completing = true;
-			try {
-				await settled();
-				// The server hasn't all that's shown, or an answer was taken back.
-				if (failures !== failed || !ready) return false;
-				await saves.complete({ id: untrack(checklist).id });
-				return true;
-			} catch (error) {
-				toast.error(errorMessage(error, m.checklists_save_failed()));
-				return false;
-			} finally {
-				completing = false;
-			}
+			await settled();
+			// Not if the server hasn't all that's shown, or an answer was taken back.
+			const done =
+				failures === failed &&
+				ready &&
+				(await ran(saves.complete({ id: untrack(checklist).id }), m.checklists_save_failed()));
+			completing = false;
+			return done;
 		},
 	};
 }
