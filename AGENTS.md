@@ -103,7 +103,8 @@ Server code has one way per recurring problem (`docs/agents/tenancy.md`, "One wa
 (`gated()` turns it into the form's issues or a 400), and remote files hold no transactions; a
 record is looked up with `unitBySerial()`, `customerByCode()` or `orderByNumber()`, deleted with
 `deleteAndLog()` or `defineRemoval()`, ordered with `nextPosition()`/`reorder()`, and its name
-checked with `nameTaken()` (`src/lib/server/records.ts`).
+checked with `nameTaken()` (`src/lib/server/records.ts`). A lookup done once per request is
+`perRequest(find)` (`#lib/server/per-request.ts`).
 
 Details and the shared server helpers: `docs/agents/tenancy.md`.
 

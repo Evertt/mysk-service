@@ -18,6 +18,7 @@ import {
 	portalContact,
 	portalContactSite,
 } from "#lib/server/db/schema.ts";
+import { perRequest } from "#lib/server/per-request.ts";
 
 import { systemTenant, systemUser } from "./system.ts";
 
@@ -136,33 +137,20 @@ export function requireMember() {
 	return tenant;
 }
 
-/** The engineer lookups of the requests in progress, so the gate and the handler share one. */
-const engineers = new WeakMap<object, ReturnType<typeof findEngineer>>();
-
-async function findEngineer() {
-	const tenant = requireTenant();
-	const linked = await db.query.engineer.findFirst({
-		where: and(eq(engineer.userId, tenant.user.id), inTenant(engineer)),
-	});
-	if (!linked) error(403, m.common_error_not_linked());
-	return { ...tenant, engineer: linked };
-}
-
 /**
  * The signed-in user, their current tenant and the engineer record linked to their account there
  * (`engineer.userId`), or a 401/403. The gate of `forEngineers` in `#lib/server/remote-functions.ts`, the
  * engineer portal's remote functions, which scope their queries to `engineer.id` as well as the
  * tenant. Looked up once per request.
  */
-export function requireEngineer() {
-	const event = getRequestEvent();
-	let found = engineers.get(event);
-	if (!found) engineers.set(event, (found = findEngineer()));
-	return found;
-}
-
-/** The customer lookups of the requests in progress, so the gate and the handler share one. */
-const customers = new WeakMap<object, ReturnType<typeof findCustomer>>();
+export const requireEngineer = perRequest(async () => {
+	const tenant = requireTenant();
+	const linked = await db.query.engineer.findFirst({
+		where: and(eq(engineer.userId, tenant.user.id), inTenant(engineer)),
+	});
+	if (!linked) error(403, m.common_error_not_linked());
+	return { ...tenant, engineer: linked };
+});
 
 /** What a customer contact may see: their customer, and its sites they're limited to, if any. */
 export interface CustomerAccess {
@@ -173,7 +161,14 @@ export interface CustomerAccess {
 	siteIds: number[] | null;
 }
 
-async function findCustomer() {
+/**
+ * The signed-in user, their current tenant and the customer their account is a contact of there
+ * (`portal_contact`), with the sites they may see, or a 401/403. The gate of `forCustomers` in
+ * `#lib/server/remote-functions.ts`, the customer portal's remote functions, which scope their
+ * queries to the customer (and its sites, see `#lib/server/auth/customer.ts`) as well as the
+ * tenant. Looked up once per request.
+ */
+export const requireCustomer = perRequest(async () => {
 	const tenant = requireTenant();
 	// A customer contact only: an office member or engineer isn't one, even if linked.
 	if (!isCustomerContact(tenant.roles)) error(403, m.common_error_not_customer());
@@ -193,21 +188,7 @@ async function findCustomer() {
 			).map((row) => row.id);
 	const access: CustomerAccess = { contactId: linked.id, customer: linked.customer, siteIds };
 	return { ...tenant, ...access };
-}
-
-/**
- * The signed-in user, their current tenant and the customer their account is a contact of there
- * (`portal_contact`), with the sites they may see, or a 401/403. The gate of `forCustomers` in
- * `#lib/server/remote-functions.ts`, the customer portal's remote functions, which scope their
- * queries to the customer (and its sites, see `#lib/server/auth/customer.ts`) as well as the
- * tenant. Looked up once per request.
- */
-export function requireCustomer() {
-	const event = getRequestEvent();
-	let found = customers.get(event);
-	if (!found) customers.set(event, (found = findCustomer()));
-	return found;
-}
+});
 
 /**
  * Scopes a query to the current tenant: `.where(and(inTenant(customer), …))`. Every query on a
@@ -301,7 +282,7 @@ export const currentEngineer = async (): Promise<Omit<LinkedEngineer, "id" | "us
 };
 
 /** The engineer record linked to the signed-in user, as `requireEngineer()` finds it. */
-type LinkedEngineer = Awaited<ReturnType<typeof findEngineer>>["engineer"];
+type LinkedEngineer = Awaited<ReturnType<typeof requireEngineer>>["engineer"];
 
 /**
  * The customer the signed-in contact sees, and its sites they're limited to (`siteIds`, `null` for
