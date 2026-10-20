@@ -183,7 +183,7 @@ describe("setting a site up", () => {
 		await page.locator('[data-zone="Z-DOCK"]').click();
 		await page.waitForURL((url) => url.searchParams.get("scope") === "zone:Z-DOCK");
 		await expect.poll(() => page.locator("[data-comparison] [data-zone-row]").count()).toBe(1);
-		await page.locator('[data-period="month"]').click();
+		await page.getByRole("link", { name: "Month vs last month", exact: true }).click();
 		await page.waitForURL((url) => url.searchParams.get("period") === "month");
 		await page.locator('[data-kpi="consumption"]').getByText("Consumption this month").waitFor();
 		await page.locator('[data-door="D-21"]').waitFor();

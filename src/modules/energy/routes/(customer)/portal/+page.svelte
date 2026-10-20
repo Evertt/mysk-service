@@ -12,6 +12,7 @@
 	import TrendingUpIcon from "@lucide/svelte/icons/trending-up";
 	import ZapIcon from "@lucide/svelte/icons/zap";
 
+	import SegmentedNav from "#lib/components/segmented-nav.svelte";
 	import { formatCents, formatNumber, formatTime } from "#lib/i18n/index.ts";
 	import { getClientEnergy } from "#modules/energy/client/client-energy.remote.ts";
 	import { formatCo2, formatKw, formatKwh, formatMinutes } from "#modules/energy/display.ts";
@@ -38,6 +39,13 @@
 	const compared = $derived(
 		period === "day" ? m.energy_compared_yesterday() : m.energy_compared_last_month(),
 	);
+	const periodItems = $derived(
+		periods.map((option) => ({
+			label: energyLabels.label("period", option),
+			href: option === "day" ? "?" : `?period=${option}`,
+			current: option === period,
+		})),
+	);
 </script>
 
 <svelte:head>
@@ -50,17 +58,7 @@
 		<p class="text-sm text-muted-foreground">{m.energy_portal_description()}</p>
 	</div>
 
-	<nav class="flex flex-wrap gap-2" aria-label={m.energy_period_label()}>
-		{#each periods as option (option)}
-			<Button
-				size="sm"
-				variant={option === period ? "default" : "outline"}
-				href={option === "day" ? "?" : `?period=${option}`}
-				aria-current={option === period ? "page" : undefined}
-				data-period={option}>{energyLabels.label("period", option)}</Button
-			>
-		{/each}
-	</nav>
+	<SegmentedNav label={m.energy_period_label()} items={periodItems} class="self-start" />
 
 	{#each data.sites as entry (entry.site.id)}
 		{@const kpis = kpisOf(entry.zones, entry.doors, entry.site, entry.previousComplete)}
