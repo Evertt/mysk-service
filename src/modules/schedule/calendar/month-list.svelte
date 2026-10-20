@@ -6,7 +6,8 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
-	import { formatLongDay } from "../board/board.ts";
+	import { formatLongDay } from "#lib/i18n/index.ts";
+
 	import { inMonth, monthWeeks, type ScheduleMonthOrder, viewSearch } from "./calendar.ts";
 	import MonthEntry from "./month-entry.svelte";
 

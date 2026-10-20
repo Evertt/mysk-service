@@ -110,6 +110,15 @@ export const formatDateTime = dateFormatter({
 	minute: "2-digit",
 });
 
+/** Formats a day without the year, e.g. `7 Oct`, in Dutch `7 okt`. */
+export const formatShortDay = dateFormatter({ day: "numeric", month: "short" });
+
+/** Formats a day in full without the year, e.g. `Monday 5 October`, in Dutch `maandag 5 oktober`. */
+export const formatLongDay = dateFormatter({ weekday: "long", day: "numeric", month: "long" });
+
+/** Formats a month, e.g. `October 2026`, in Dutch `oktober 2026`. */
+export const formatMonth = dateFormatter({ month: "long", year: "numeric" });
+
 /**
  * Formats a day stored as text, e.g. in the activity log: `yyyy-mm-dd`, or, as logged before days
  * were days (`Temporal.PlainDate`), the moment of its midnight, e.g. `2026-10-11T22:00:00.000Z`.
