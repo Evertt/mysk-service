@@ -23,9 +23,9 @@ const timers: Record<string, string> = {
 	"src/lib/components/record-link/record-link.svelte":
 		"the pointer's rest and away timers, in an attachment that lives with the link",
 	"src/lib/components/data-table/url-sync.svelte.ts":
-		"the search's pause, which skips writing once a navigation elsewhere is under way; to do",
+		"the search's pause, which skips writing once a navigation elsewhere is under way: a timer per effect run, cleared with it; `useDebounce` outlives the effect, so it would need a `cancel()` and a caught rejection",
 	"src/lib/components/data-table/scroll-position.svelte.ts":
-		"the resize and scroll pauses, which must not fire once the table is gone; to do",
+		"the resize and scroll pauses, which must not fire once the table is gone: timers cleared with their effect; `useDebounce` would outlive it",
 };
 
 /** The app's components and modules, but the kit's (`ui/`) and the tests. */
