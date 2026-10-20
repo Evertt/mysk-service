@@ -4,6 +4,7 @@ import { render } from "vitest-browser-svelte";
 
 import type { ModuleId } from "#lib/modules/ids.ts";
 import ModuleCard from "#routes/(app)/settings/module-card.svelte";
+import { resetHistoryDialogs } from "#unit/lib/components/fake-history-dialog.svelte.ts";
 import { fakeForm } from "#unit/lib/components/form/fake-form.ts";
 import { at } from "#unit/temporal-support.ts";
 
@@ -13,6 +14,13 @@ vi.mock("#lib/modules/ids.ts", async (importOriginal) => ({
 	...(await importOriginal<typeof import("#lib/modules/ids.ts")>()),
 	moduleGraph: (await import("#unit/lib/modules/fakes.ts")).fakeGraph,
 }));
+
+// The dialog opens with a history entry of its own, through SvelteKit's router, which a component
+// test hasn't got.
+vi.mock(
+	"#lib/components/history-dialog.svelte.ts",
+	() => import("#unit/lib/components/fake-history-dialog.svelte.ts"),
+);
 
 /** What the next form the card makes is like, and what it submitted. */
 const form = vi.hoisted(() => ({
@@ -30,6 +38,7 @@ vi.mock("#routes/(app)/settings/settings.remote.ts", () => ({
 }));
 
 beforeEach(() => {
+	resetHistoryDialogs();
 	form.issues = [];
 	form.submitted = [];
 });
