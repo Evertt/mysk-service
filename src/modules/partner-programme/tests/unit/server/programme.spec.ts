@@ -40,10 +40,12 @@ import {
 } from "#modules/partner-programme/server/wallet.ts";
 
 // No request: the system makes the changes (`asSystem()`), so nothing may ask for one.
-vi.mock("$app/server", () => ({
+// The invoices' settings remote functions (`defineTenantSettings()`) are made when imported.
+vi.mock("$app/server", async () => ({
 	getRequestEvent: () => {
 		throw new Error("Asked for a request");
 	},
+	...(await import("#unit/lib/server/harness/stand-ins.ts")).remoteStandIns,
 }));
 vi.mock("#lib/server/modules/hooks.gen.ts", () => ({ generatedServerModules: () => [] }));
 

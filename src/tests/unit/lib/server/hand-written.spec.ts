@@ -193,11 +193,12 @@ describe("modules' settings and integrations", () => {
 	const moduleFiles = appFiles.filter((file) => file.startsWith("src/modules/"));
 
 	it("keeps a tenant's settings row with defineTenantSettings()", () => {
-		// A table keyed by the organization alone is a tenant's settings singleton.
+		// A table keyed by the organization alone is a tenant's settings singleton: a `tenantTable()`
+		// with `key: "tenant"` (`#lib/server/db/columns.ts`).
 		const singletons = globSync(["src/modules/*/server/schema.ts"], { cwd: root }).flatMap((file) =>
 			[
 				...code(file).matchAll(
-					/export const (\w+) = sqliteTable\(\s*"[^"]+",\s*\{\s*organizationId: organizationId\(\)\.primaryKey\(\)/g,
+					/export const (\w+) = tenantTable\(\s*"[^"]+",[^;]*?\{\s*key: "tenant"\s*\},?\s*\);/g,
 				),
 			].map(([, name]) => `${file}: ${name}`),
 		);
