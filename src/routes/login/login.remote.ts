@@ -3,7 +3,7 @@ import { redirect } from "@sveltejs/kit";
 import { isAPIError } from "better-auth/api";
 import * as v from "valibot";
 
-import { isCustomerContact, isFieldEngineer } from "#lib/auth/index.ts";
+import { shellOf } from "#lib/auth/index.ts";
 import { auth, loadTenant } from "#lib/server/auth/index.ts";
 import { Refused } from "#lib/server/refused.ts";
 import { forAnyone } from "#lib/server/remote-functions.ts";
@@ -41,27 +41,13 @@ export const login = forAnyone.form(
 			if (isAPIError(e) && e.statusCode < 500) throw new Refused(e.message || m.auth_failed());
 			throw e;
 		}
-		// Field engineers start in their portal; the office app isn't theirs. A QR code they
-		// scanned (`/q/<token>`) leads them into it.
-		const tenant = await loadTenant(userId, null);
+		// Back to the page they came for. Where it's another shell's than theirs, that sends them
+		// home: the office shell an engineer or contact (`getCurrentTenant`), as the page loads
+		// client-side; a page loaded in full the guard (`handleGuard` in `hooks.server.ts`).
 		const target = safeRedirect(redirectTo);
-		if (
-			tenant &&
-			isFieldEngineer(tenant.roles) &&
-			!target.startsWith("/my") &&
-			!target.startsWith("/q/")
-		) {
-			redirect(303, "/my");
-		}
-		// Customers' contacts likewise start in the customer portal, or where a QR code leads them.
-		if (
-			tenant &&
-			isCustomerContact(tenant.roles) &&
-			!target.startsWith("/portal") &&
-			!target.startsWith("/q/")
-		) {
-			redirect(303, "/portal");
-		}
-		redirect(303, target);
+		if (target !== "/") redirect(303, target);
+		// No page asked for: straight to their shell's home (`shellOf()`), not through the office's.
+		const tenant = await loadTenant(userId, null);
+		redirect(303, shellOf(tenant?.roles ?? []).home);
 	},
 );

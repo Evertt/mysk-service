@@ -3,7 +3,7 @@ import { error, redirect } from "@sveltejs/kit";
 import { and, asc, eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { isCustomerContact, isFieldEngineer } from "#lib/auth/index.ts";
+import { shellOf } from "#lib/auth/index.ts";
 import {
 	auth,
 	currentCustomer,
@@ -23,9 +23,10 @@ import { forAnyone, forAnyRole, forUsers } from "#lib/server/remote-functions.ts
  */
 export const getCurrentUser = forAnyRole.query(async () => {
 	const { user, roles, name: organization } = currentTenant();
+	const shell = shellOf(roles).name;
 	const [engineer, access] = await Promise.all([
-		isFieldEngineer(roles) ? currentEngineer() : null,
-		isCustomerContact(roles) ? currentCustomer() : null,
+		shell === "engineer" ? currentEngineer() : null,
+		shell === "customer" ? currentCustomer() : null,
 	]);
 	return {
 		name: engineer?.name ?? user.name,
@@ -42,10 +43,10 @@ export const getCurrentUser = forAnyRole.query(async () => {
  */
 export const getCurrentTenant = forAnyRole.query(async () => {
 	const tenant = currentTenant();
-	// The app shell awaits this, so field engineers and customers' contacts who navigate here go to
-	// their portal instead.
-	if (isFieldEngineer(tenant.roles)) redirect(303, "/my");
-	if (isCustomerContact(tenant.roles)) redirect(303, "/portal");
+	// The office shell awaits this, so field engineers and customers' contacts who navigate here
+	// (client-side, which the guard in `hooks.server.ts` doesn't see) go to their portal instead.
+	const shell = shellOf(tenant.roles);
+	if (shell.name !== "office") redirect(303, shell.home);
 	const organizations = await db
 		.select({ id: organization.id, name: organization.name })
 		.from(member)

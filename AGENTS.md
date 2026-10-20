@@ -29,6 +29,10 @@ its branch after the task, then `git worktreeinclude apply` (`.env`) and `pnpm i
 - **`src/routes`** holds `+` files, plus the files of the app shell, dashboard, auth pages,
   engineer portal (`(field)/my`) and customer portal (`(customer)/portal`), which belong to no
   domain.
+- Where a role lands and which pages are its shell's is `shellOf(roles)` (`#lib/auth/shells.ts`:
+  `{ name, home, owns(routeId) }`, which the guard in `hooks.server.ts` goes by), and the link to
+  the login page and back is `loginUrl(target)`: never a role check for a home path or a
+  hand-built `/login?redirectTo` (`src/tests/unit/lib/auth/shells.spec.ts`).
 - **Generic code**: `src/lib/components/`, `activity/`, `auth/`, `i18n/`, `modules/`, `extensions/`,
   `themes/`, `errors/`; server infrastructure in `src/lib/server/`. Any `server/` folder or `*.server.ts` is
   server-only: database code and secrets go there.

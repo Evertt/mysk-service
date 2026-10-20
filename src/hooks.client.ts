@@ -3,12 +3,11 @@ import type { ClientInit, HandleClientError } from "@sveltejs/kit/hooks";
 
 import { classify } from "#lib/errors/classify.ts";
 import { newErrorId, report } from "#lib/errors/report.ts";
-
-import { stylesheetsLoaded } from "./routes/splash.ts";
+import { stylesheetsLoaded } from "#lib/splash.ts";
 
 /**
  * Before the app hydrates: its stylesheets, which no longer block the first paint so the splash
- * shows at once (`deferStylesheets()`, `src/routes/splash.ts`), must be in, so that it never runs
+ * shows at once (`deferStylesheets()`, `src/lib/splash.ts`), must be in, so that it never runs
  * or is seen without them. And the errors nothing else catches (in an event handler, a timer, a
  * promise nobody awaits) are reported too (`#lib/errors/report.ts`).
  */
