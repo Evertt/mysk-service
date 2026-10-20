@@ -21,7 +21,7 @@
 
 <div
 	class={cn(
-		"mx-auto w-full max-w-[210mm] rounded-lg border bg-card p-6 print:max-w-none print:border-0 print:p-0",
+		"mx-auto w-full max-w-[210mm] rounded-lg border bg-card p-6 print:max-w-none print:border-0 print:p-0 print:[page:sheet]",
 		className,
 	)}
 	data-print-sheet
@@ -31,8 +31,10 @@
 </div>
 
 <style>
+	/* A named page (`page: sheet` above), so these margins apply to the sheet only: a component's CSS
+	   stays loaded once its chunk is, and an unnamed @page would apply to whatever is printed after. */
 	@media print {
-		@page {
+		@page sheet {
 			size: A4;
 			margin: 14mm;
 		}

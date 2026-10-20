@@ -109,13 +109,16 @@
 	}
 
 	@media print {
-		/* On A4 sticker sheets of 3 × 8, from the sheet's top left corner. */
-		@page {
+		/* On A4 sticker sheets of 3 × 8, from the sheet's top left corner. A named page, so these
+		   margins stay with the labels: a component's CSS stays loaded once its chunk is, and an
+		   unnamed @page would apply to whatever is printed after. */
+		@page labels {
 			size: A4;
 			margin: 0;
 		}
 
 		.label-sheet {
+			page: labels;
 			grid-template-columns: repeat(3, 70mm);
 			grid-auto-rows: 37.125mm;
 			gap: 0;

@@ -32,8 +32,8 @@
 	const [me, , viewAs] = $derived(await Promise.all([getPortalMe(), orderTypes, getViewAs()]));
 </script>
 
-<!-- On paper only the page: no navigation, no header, and no flex layout (e.g. a work order to
-	print). -->
+<!-- On paper only the page (e.g. a work order to print): no navigation, no header, and no flex
+	layout, which would keep a sheet's named @page (`<PrintSheet>`) from applying. -->
 <Sidebar.Provider
 	data-customer-portal
 	class="print:block print:min-h-0 print:[&>[data-slot=sidebar]]:hidden"
@@ -70,7 +70,7 @@
 			</div>
 		</header>
 		<div
-			class="relative mx-auto flex w-full max-w-[1400px] min-w-0 flex-1 flex-col gap-6 p-4 pb-12 md:p-6"
+			class="relative mx-auto flex w-full max-w-[1400px] min-w-0 flex-1 flex-col gap-6 p-4 pb-12 md:p-6 print:block"
 		>
 			{@render children()}
 			<NavigationSkeleton group="/(customer)" class="flex flex-col gap-4 p-4 md:p-6">

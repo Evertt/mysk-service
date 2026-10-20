@@ -8,6 +8,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { organizations, rows, useApp, value } from "./app.ts";
 import { equipmentPage } from "./equipment-helpers.ts";
+import { printedSheet } from "./print.ts";
 
 const { north } = organizations;
 const app = useApp();
@@ -219,6 +220,8 @@ describe("in North", () => {
 		);
 		expect(codes.map((each) => each.token).sort()).toEqual(tokens.sort());
 		expect(codes.every((each) => each.drawn)).toBe(true);
+		// On A4 sticker sheets.
+		expect(await printedSheet(app.page)).toEqual({ width: 210, height: 297 });
 	});
 
 	test("a unit's page prints its own label", async () => {

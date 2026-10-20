@@ -52,7 +52,8 @@
 
 <!-- A list page whose table fills the viewport (see `data-table.svelte`) is as high as the screen,
 	and scrolls itself only if it can't shrink enough. On paper only the page: no sidebar, no header
-	(see `app-header.svelte`), and no flex layout, which breaks pages badly. -->
+	(see `app-header.svelte`), and no flex layout, which breaks pages badly and keeps a sheet's named
+	@page (`<PrintSheet>`) from applying. -->
 <Sidebar.Provider
 	class="print:block print:min-h-0 desktop:has-data-fill-viewport:h-svh print:[&>[data-slot=sidebar]]:hidden"
 >
@@ -64,7 +65,7 @@
 			fills the viewport counts as only its minimum height), so the page scrolls instead and keeps
 			its padding under the table. -->
 		<div
-			class="relative flex min-h-0 flex-1 flex-col gap-6 p-4 md:p-6 desktop:has-[[data-slot=data-table][data-fill-viewport]]:min-h-auto"
+			class="relative flex min-h-0 flex-1 flex-col gap-6 p-4 md:p-6 print:block desktop:has-[[data-slot=data-table][data-fill-viewport]]:min-h-auto"
 		>
 			{@render children()}
 			<NavigationSkeleton group="/(app)" class="p-4 md:p-6">
