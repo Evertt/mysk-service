@@ -61,29 +61,33 @@ describe("the customer portal", () => {
 		expect(app.path()).toBe("/portal");
 		await expect.poll(() => app.page.locator("header").innerText()).toContain("Riedel B.V.");
 		const open = await cardsIn("Open orders");
-		const seeded = await reports();
-		const rejected = seeded.find((report) => report.rejection_reason)!;
-		const accepted = seeded.find((report) => report.status === "quote")!;
-		const awaiting = seeded.filter((report) => report.status === "awaiting_acceptance");
-		expect(awaiting).toHaveLength(2);
-		// The two not accepted yet, the accepted one, and the one rejected lately.
-		for (const report of seeded) expect(open).toContain(report.number);
+		// The seed has two not accepted yet, one accepted and one rejected lately; another file on
+		// this worker may have accepted, rejected or reported some meanwhile (`client.acceptance`,
+		// `notifications`), so the page is held to the reports as stored now.
+		const reported = await reports();
+		const rejected = reported.filter((report) => report.rejection_reason);
+		const accepted = reported.filter((report) => report.status === "quote");
+		const awaiting = reported.filter((report) => report.status === "awaiting_acceptance");
+		expect(rejected.length).toBeGreaterThan(0);
+		expect(awaiting.length + accepted.length).toBeGreaterThan(0);
 		const pending = await rows<{ number: string }>(
 			`select number from "order" where customer_id = ? and status in
 			 ('awaiting_acceptance', 'quote', 'scheduled', 'in_progress')`,
 			[await customerId("Riedel B.V.")],
 		);
 		expect(open.toSorted()).toEqual(
-			[...pending.map((row) => row.number), rejected.number].toSorted(),
+			[...pending, ...rejected].map((report) => report.number).toSorted(),
 		);
 		const status = (number: string) =>
 			app.page.locator(`[data-order="${number}"] [data-client-status]`).innerText();
-		expect(await status(awaiting[0].number)).toBe("Not accepted yet");
-		expect(await status(accepted.number)).toBe("Accepted");
-		expect(await status(rejected.number)).toBe("Rejected");
-		expect(await app.page.locator(`[data-order="${rejected.number}"]`).innerText()).toContain(
-			`Rejected: ${rejected.rejection_reason}`,
-		);
+		for (const report of awaiting) expect(await status(report.number)).toBe("Not accepted yet");
+		for (const report of accepted) expect(await status(report.number)).toBe("Accepted");
+		for (const report of rejected) {
+			expect(await status(report.number)).toBe("Rejected");
+			expect(await app.page.locator(`[data-order="${report.number}"]`).innerText()).toContain(
+				`Rejected: ${report.rejection_reason}`,
+			);
+		}
 		expect(await fitsWidth(app.page)).toBe(true);
 	});
 
