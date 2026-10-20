@@ -8,6 +8,7 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
 import { isManager } from "#lib/auth/index.ts";
+import { momentSeconds } from "#lib/dates.ts";
 import { recordId } from "#lib/schema.ts";
 import { currentTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -185,8 +186,8 @@ export const getEnergyReport = query(
 					and(
 						inTenant(energyAlert),
 						eq(energyAlert.energySiteId, site.id),
-						sql`${energyAlert.at} >= ${Math.floor(ranges.from.epochMilliseconds / 1000)}`,
-						sql`${energyAlert.at} < ${Math.floor(ranges.to.epochMilliseconds / 1000)}`,
+						sql`${energyAlert.at} >= ${momentSeconds(ranges.from)}`,
+						sql`${energyAlert.at} < ${momentSeconds(ranges.to)}`,
 					),
 				)
 				.groupBy(energyAlert.metric, energyAlert.severity, energyAlert.status),

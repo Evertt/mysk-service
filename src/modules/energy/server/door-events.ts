@@ -8,13 +8,12 @@
  */
 import { and, eq, gte, lt, sql } from "drizzle-orm";
 
+import { momentSeconds } from "#lib/dates.ts";
 import { inTenant } from "#lib/server/auth/index.ts";
 import type { db, Transaction } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 
 import { energyDoorEvent } from "./schema.ts";
-
-const seconds = (instant: Temporal.Instant) => Math.floor(instant.epochMilliseconds / 1000);
 
 /** The current tenant's events of doors `doorIds` from `from` (up to `to`), as above. */
 export async function doorEvents(
@@ -32,7 +31,7 @@ export async function doorEvents(
 	// outer row. In a select's columns it writes them bare, and they would name `c`'s.
 	const closed = sql`(select max(c.at) from energy_door_event c
 		where c.organization_id = ${energyDoorEvent.organizationId} and c.door_id = ${doorId}
-			and c.open = 0 and c.at < ${seconds(from)})`;
+			and c.open = 0 and c.at < ${momentSeconds(from)})`;
 	const [opened, events] = await Promise.all([
 		tx
 			.select({ doorId, at: sql<Temporal.Instant>`min(${at})`.mapWith(at) })

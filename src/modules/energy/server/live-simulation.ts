@@ -22,6 +22,7 @@
  */
 import { and, eq, getTableName, gte, sql } from "drizzle-orm";
 
+import { earlier, later } from "#lib/dates.ts";
 import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
 import { announceChange } from "#lib/server/changes.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -227,15 +228,10 @@ async function post(siteId: number, { readings, doorEvents }: Posted, now: Tempo
 	}
 }
 
-const earlier = (a: Temporal.Instant, b: Temporal.Instant) =>
-	Temporal.Instant.compare(a, b) <= 0 ? a : b;
-const laterOf = (a: Temporal.Instant, b: Temporal.Instant) =>
-	Temporal.Instant.compare(a, b) >= 0 ? a : b;
-
 /** Moves the tenant's sites on over `(from, to]` (see above). */
 async function tickEnergy({ from, to, speed }: SimulationTick) {
 	for (const site of await simulatedSites()) {
-		const fillFrom = laterOf(site.readingsUntil ?? from, to.subtract({ hours: FILL_HOURS }));
+		const fillFrom = later(site.readingsUntil ?? from, to.subtract({ hours: FILL_HOURS }));
 		const readings = simulateReadings({
 			zones: site.zones,
 			from: earlier(from, fillFrom),

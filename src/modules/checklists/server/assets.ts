@@ -7,7 +7,7 @@
 import { and, eq, ne, type SQL, sql } from "drizzle-orm";
 import type { SQLiteSelect } from "drizzle-orm/sqlite-core";
 
-import { currentDay, getTimeZone } from "#lib/dates.ts";
+import { currentDay, getTimeZone, momentSeconds } from "#lib/dates.ts";
 import { unitTitle } from "#lib/equipment/index.ts";
 import { unitBySerial } from "#lib/equipment/server/index.ts";
 import { openOrderStatuses } from "#lib/models.ts";
@@ -35,9 +35,6 @@ import { unitInspection } from "./unit-inspection.ts";
 /** This year, in the user's time zone. */
 export const currentYear = () => currentDay().year;
 
-/** A moment as the database stores it: seconds. */
-const seconds = (instant: Temporal.Instant) => Math.floor(instant.epochMilliseconds / 1000);
-
 /**
  * Where the unit of the query's `equipment` row stands in `year` (see `yearStates`): correlated
  * subqueries in its own tenant, binding no parameters (the list repeats it in its select, filter
@@ -49,8 +46,8 @@ export function yearStateSql(year = currentYear()): SQL<YearState> {
 	const completed = sql`exists (select 1 from ${checklist} where ${and(
 		ofUnit,
 		sql`${checklist.status} = 'completed'`,
-		sql`${checklist.completedAt} >= ${literal(seconds(start))}`,
-		sql`${checklist.completedAt} < ${literal(seconds(end))}`,
+		sql`${checklist.completedAt} >= ${literal(momentSeconds(start))}`,
+		sql`${checklist.completedAt} < ${literal(momentSeconds(end))}`,
 	)})`;
 	const draft = sql`exists (select 1 from ${checklist} inner join ${order} on ${and(
 		sameTenant(order, checklist),

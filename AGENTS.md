@@ -137,6 +137,8 @@ Before you change the schema, add a migration, or log a new subject or action: r
 - Days are `Temporal.PlainDate` and moments are `Temporal.Instant`. Compare them with `compare()` or
   `.equals()`. Ask the user's time zone through `#lib/dates.ts`: `currentDay()` (today), `dayOf(moment)`,
   `startOfDay(day)` and `mondayOf(day)`, not `Temporal.Now.plainDateISO(getTimeZone())` and the like.
+  The earlier or later of two moments is `earlier(a, b)`/`later(a, b)`, a moment's whole seconds as
+  the database keeps them `momentSeconds(moment)` (back: `fromMomentSeconds(seconds)`).
 
 Before you add a message file, an enum kind, a plural or a format, or write Dutch copy: read
 `docs/agents/i18n.md`.

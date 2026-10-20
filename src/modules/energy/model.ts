@@ -7,6 +7,7 @@
  * the server works out the pages' figures and the ingest's alerts with these, and the specs hold
  * them to §2.5.
  */
+import { earlier, later } from "#lib/dates.ts";
 
 /** A reading's interval. */
 export const INTERVAL_MINUTES = 15;
@@ -241,9 +242,8 @@ export function minutesOpenBetween(
 ) {
 	let minutes = 0;
 	for (const opening of doorOpenings) {
-		const start = Temporal.Instant.compare(opening.openedAt, from) > 0 ? opening.openedAt : from;
-		const close = opening.closedAt ?? to;
-		const end = Temporal.Instant.compare(close, to) < 0 ? close : to;
+		const start = later(opening.openedAt, from);
+		const end = earlier(opening.closedAt ?? to, to);
 		if (Temporal.Instant.compare(end, start) > 0) minutes += end.since(start).total("minutes");
 	}
 	return minutes;

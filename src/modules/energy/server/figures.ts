@@ -9,6 +9,7 @@
  */
 import { and, asc, eq, getTableName, type SQL, sql } from "drizzle-orm";
 
+import { earlier, fromMomentSeconds, later, momentSeconds } from "#lib/dates.ts";
 import { inTenant, idInTenant, tenantJoin, sameTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
@@ -109,9 +110,6 @@ interface Ranges {
 
 const startOf = (day: Temporal.PlainDate, timeZone: string) =>
 	day.toZonedDateTime({ timeZone }).toInstant();
-
-const earlier = (a: Temporal.Instant, b: Temporal.Instant) =>
-	Temporal.Instant.compare(a, b) <= 0 ? a : b;
 
 /**
  * Today against yesterday, or this month against last month, at `now` in `timeZone`. The previous
@@ -233,8 +231,6 @@ export interface DoorFigures {
 	openingsToday: number;
 }
 
-const seconds = (instant: Temporal.Instant) => Math.floor(instant.epochMilliseconds / 1000);
-
 /** Which bucket of a period a moment is in: its local hour, or its day since `from`. */
 function bucketOf(
 	at: Temporal.Instant,
@@ -276,7 +272,7 @@ const boundsOf = (bounds: Map<number, Record<string, Temporal.Instant>>) =>
 		Object.fromEntries(
 			[...bounds].map(([siteId, moments]) => [
 				siteId,
-				Object.fromEntries(Object.entries(moments).map(([name, at]) => [name, seconds(at)])),
+				Object.fromEntries(Object.entries(moments).map(([name, at]) => [name, momentSeconds(at)])),
 			]),
 		),
 	);
@@ -309,11 +305,6 @@ function ofZone<T>(aggregate: string, range?: [bounds: string, from: Bound, to: 
 const latestKwOfZone = sql<number | null>`(select r.avg_kw from energy_reading r
 	where r.organization_id = ${zoneTable}.organization_id and r.zone_id = ${zoneTable}.id
 	order by r.start desc limit 1)`;
-
-const fromSeconds = (value: number) => Temporal.Instant.fromEpochMilliseconds(value * 1000);
-
-const later = (a: Temporal.Instant, b: Temporal.Instant) =>
-	Temporal.Instant.compare(a, b) >= 0 ? a : b;
 
 /**
  * What `siteFigures()` answers for each of `sites`, each over its own ranges (its own time zone's
@@ -362,7 +353,7 @@ export async function sitesFigures(
 			const starts = zones.filter((zone) => zone.siteId === site.id).map((zone) => zone.last);
 			const last = Math.max(...starts.filter((start) => start !== null));
 			const readTo = Number.isFinite(last)
-				? earlier(fromSeconds(last).add({ minutes: INTERVAL_MINUTES }), until(ranges))
+				? earlier(fromMomentSeconds(last).add({ minutes: INTERVAL_MINUTES }), until(ranges))
 				: ranges.from;
 			const previousTo = earlier(ranges.previousAt(readTo), ranges.previousTo);
 			return [
@@ -439,7 +430,7 @@ export async function sitesFigures(
 		// The readings go back to the previous period's first hour: else it's no comparison (a site
 		// whose readings start in the middle of last month).
 		const first = Math.min(...own.map((zone) => zone.first).filter((start) => start !== null));
-		const previousComplete = first <= seconds(previousFrom.add({ hours: 1 }));
+		const previousComplete = first <= momentSeconds(previousFrom.add({ hours: 1 }));
 
 		const zoneFigures: ZoneFigures[] = own.map((zone) => {
 			const sum = sumOf.get(zone.id);
@@ -459,7 +450,7 @@ export async function sitesFigures(
 			const series = Array.from({ length: ranges.buckets }, () => 0);
 			const previousSeries = Array.from({ length: ranges.buckets }, () => 0);
 			for (const row of hoursOf.get(zone.id) ?? []) {
-				const at = fromSeconds(row.hour * 3600);
+				const at = fromMomentSeconds(row.hour * 3600);
 				const current = Temporal.Instant.compare(at, from) >= 0;
 				const bucket = bucketOf(at, current ? from : previousFrom, ranges, site.timeZone);
 				const target = current ? series : previousSeries;
