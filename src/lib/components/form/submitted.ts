@@ -26,7 +26,7 @@ import { m } from "#lib/paraglide/messages.js";
 /** Whether `run` (a command's promise, or a function doing the work) went through; else a toast. */
 export async function ran(
 	run: PromiseLike<unknown> | (() => unknown),
-	fallback = m.common_error_generic(),
+	fallback: string = m.common_error_generic(),
 ): Promise<boolean> {
 	try {
 		await (typeof run === "function" ? run() : run);
