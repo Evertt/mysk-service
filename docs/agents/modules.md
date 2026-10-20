@@ -248,7 +248,10 @@ migration committed.
   `<RecordPage slots={points.detail} slotProps={{ number }}>` (the main column's after its own
   cards, the side column's before the activity card); any other page with
   `<ExtensionSlot point={…} props={…} />`. A table gets its contributed actions with
-  `extensionBulkActions(points.list.bulk)` (`src/lib/extensions/bulk-actions.svelte.ts`), which its action bar
+  `$derived(await loadContributions(bulkContributions, points.list.bulk, await getTenantModules()))`
+  (`#lib/extensions/define.ts`, which loads every kind of contribution, slots' and columns' too: a
+  contribution whose chunk doesn't load is logged and comes with its `error`, which a table or list
+  leaves out and a slot shows as a notice), which its action bar
   also offers in each row's menu, for that row alone (an action that makes no sense for one row
   says `row: false`; see `#lib/components/data-table/bulk-actions.ts`); both show only
   the contributions of the modules the tenant has, in registry order, and key a contribution by its
@@ -308,7 +311,7 @@ e2e src/tests/e2e/skeletons.repro.test.ts`; it counts page errors, and the race 
   owner): `columns/<point id>.ts`, default export an array of `listColumn({ id, param, label, sort,
 filter, optionLabel, cell })` (isomorphic; the id is namespaced, `maintenance.nextDue`; the cell
   takes `{ value }`), listed in `contributions.gen.ts` and loaded per tenant
-  (`loadListColumns(point)`, `#lib/extensions/list-columns.ts`); and `server/columns/<point id>.ts`,
+  (`loadContributions(columnContributions, point, modules)`); and `server/columns/<point id>.ts`,
   default export an array of `columnSql(column, () => ({ value, sort, nullsLast, filter, facet }))`
   (`#lib/server/lists/column-sql.ts`; built per request, typed by the column it imports), listed in
   the server's `columns.gen.ts`. The merge is per tenant: the page merges the tenant's columns into

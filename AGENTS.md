@@ -57,7 +57,10 @@ its branch after the task, then `git worktreeinclude apply` (`.env`) and `pnpm i
   `PageHeader` titles the tab: no `<title>` beside it (`src/tests/unit/record-pages.spec.ts`).
 - A record's extension points are one `defineRecordPoints("<domain>", { detail, listColumns, bulk })`
   in its `extensions.ts` (`<domain>.detail.main`/`.side`, `.list.columns`, `.list.bulk`), passed
-  to `RecordPage` as `slots={points.detail}`.
+  to `RecordPage` as `slots={points.detail}`. A point's contributions (slots, bulk actions, list
+  columns) load with `$derived(await loadContributions(registry, point, await getTenantModules()))`
+  (`#lib/extensions/define.ts`), never by filtering `contributions.gen.ts` by hand
+  (`src/tests/unit/load-contributions.spec.ts`).
 - A single choice among a few options is `FilterChips` (chips; each with an `href` when the choice
   is kept in the URL) or `SegmentedNav` (a page's views), from `#lib/components/`, never a
   hand-made row of buttons or links (`src/tests/unit/choice-controls.spec.ts` refuses

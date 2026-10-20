@@ -258,57 +258,107 @@ export function defineRecordPoints<
 	};
 }
 
-/** A module's columns for a list (their definitions and cells), loaded like a slot's component. */
-export interface ColumnsContribution {
-	/** `<module>/<point id>`, for error reports. */
+/**
+ * A module's contribution to a point by file, as `contributions.gen.ts` lists it: the file's default
+ * export is `Loaded` (a slot's component, a table's bulk actions, a list's columns), loaded when used
+ * (`loadContributions()`), so a tenant without the module doesn't download it. Its constructors
+ * (`slotContribution()`, …) hold `Loaded` to the point's types.
+ */
+export interface Contribution<Loaded> {
+	/** `<module>/<point id>`, and `/<name>` for a slot's component: its key, for error reports. */
 	readonly id: string;
 	readonly module: ModuleId;
-	/** The list's id. */
+	/** The point's id. */
 	readonly point: string;
-	readonly load: () => Promise<{ default: readonly ModuleListColumn[] }>;
+	readonly load: () => Promise<{ default: Loaded }>;
 }
+
+/** A point modules contribute to by file: a slot, a form slot, a bulk table, a list's columns. */
+interface FilePoint {
+	readonly id: string;
+	readonly kind: "slot" | "form" | "bulk" | "columns";
+}
+
+/** What a contribution to `Point` loads (at a form slot, a component also gets its part's fields). */
+type Loads<Point> =
+	Point extends BulkTable<infer Row>
+		? BulkAction<Row, AnyListWhere>[]
+		: Point extends ListColumnsPoint
+			? readonly ModuleListColumn[]
+			: Point extends SlotPoint<infer Props> | FormSlotPoint<infer Props>
+				? Component<Props & { fields?: unknown }>
+				: never;
+
+/** A contribution, loaded: its file's default export, or the `error` it failed to load with. */
+type Loaded<Value> = { readonly id: string; readonly module: ModuleId } & (
+	| { readonly value: Value; readonly error?: undefined }
+	| { readonly value?: undefined; readonly error: unknown }
+);
+
+/**
+ * The contributions in `registry` to `point` of the `modules` (the tenant's, `getTenantModules()`),
+ * in registry order, loaded. Never rejects: one whose file doesn't load (its chunk fails) is logged
+ * and comes with its `error` instead of a `value`, which the caller leaves out
+ * (`value ?? []`), or `<ExtensionSlot>` shows as a notice.
+ */
+export async function loadContributions<Point extends FilePoint>(
+	registry: readonly Contribution<unknown>[],
+	point: Point,
+	modules: readonly string[],
+): Promise<Loaded<Loads<Point>>[]> {
+	return Promise.all(
+		registry
+			.filter((entry) => entry.point === point.id && modules.includes(entry.module))
+			.map(({ id, module, load }) =>
+				load().then(
+					// A contribution to this point loads what this point takes (`slotContribution()`, …).
+					(file) => ({ id, module, value: file.default as Loads<Point> }),
+					(error: unknown) => {
+						console.error(`The contribution ${id} didn't load.`, error);
+						return { id, module, error };
+					},
+				),
+			),
+	);
+}
+
+/** A module's columns for a list (their definitions and cells). */
+export type ColumnsContribution = Contribution<readonly ModuleListColumn[]>;
+
+/**
+ * A contribution to some slot, as the registry lists them. A component takes at least its slot's
+ * props, so this is the widest: `loadContributions()` narrows it by its point.
+ *
+ * @public Only the generated `contributions.gen.ts` imports it, which knip doesn't see.
+ */
+export type AnySlotContribution = Contribution<Component<never>>;
+
+/**
+ * A contribution to some table, as the registry lists them; `loadContributions()` narrows it.
+ *
+ * @public Only the generated `contributions.gen.ts` imports it, which knip doesn't see.
+ */
+export type AnyBulkContribution = Contribution<BulkAction<never, AnyListWhere>[]>;
+
+/** The `module`'s contribution to `point` (`name`, a slot's component's), loaded with `load`. */
+const contribution = <Loaded>(
+	point: { readonly id: string },
+	module: ModuleId,
+	load: () => Promise<{ default: Loaded }>,
+	name?: string,
+): Contribution<Loaded> => ({
+	id: name ? `${module}/${point.id}/${name}` : `${module}/${point.id}`,
+	module,
+	point: point.id,
+	load,
+});
 
 /** The module's columns for `list`, as `contributions.gen.ts` lists them. */
 export const columnsContribution = (
 	list: ListColumnsPoint,
 	module: ModuleId,
 	load: () => Promise<{ default: readonly ModuleListColumn[] }>,
-): ColumnsContribution => ({ id: `${module}/${list.id}`, module, point: list.id, load });
-
-/** A module's component at a slot. Loaded when shown, so a tenant without the module doesn't download it. */
-export interface SlotContribution<Props extends Record<string, unknown>> {
-	/** `<module>/<point id>/<name>`, for error reports. */
-	readonly id: string;
-	readonly module: ModuleId;
-	/** The slot's id. */
-	readonly point: string;
-	readonly load: () => Promise<{ default: Component<Props> }>;
-}
-
-/** A module's bulk actions for a table, loaded like a slot's component. */
-export interface BulkContribution<Row> {
-	/** `<module>/<point id>`, for error reports. */
-	readonly id: string;
-	readonly module: ModuleId;
-	/** The table's id. */
-	readonly point: string;
-	readonly load: () => Promise<{ default: BulkAction<Row, AnyListWhere>[] }>;
-}
-
-/**
- * A contribution to some slot, as the registry lists them. A component takes at least its slot's
- * props, so this is the widest: narrow it by its `point` before rendering it.
- *
- * @public Only the generated `contributions.gen.ts` imports it, which knip doesn't see.
- */
-export type AnySlotContribution = SlotContribution<never>;
-
-/**
- * A contribution to some table, as the registry lists them; narrow it by its `point`.
- *
- * @public Only the generated `contributions.gen.ts` imports it, which knip doesn't see.
- */
-export type AnyBulkContribution = BulkContribution<never>;
+): ColumnsContribution => contribution(list, module, load);
 
 /**
  * The module's component `name` at `point`, as `contributions.gen.ts` lists it (the generator
@@ -320,12 +370,7 @@ export const slotContribution = <Props extends Record<string, unknown>>(
 	module: ModuleId,
 	name: string,
 	load: () => Promise<{ default: Component<NoInfer<Props>> }>,
-): SlotContribution<Props> => ({
-	id: `${module}/${point.id}/${name}`,
-	module,
-	point: point.id,
-	load,
-});
+) => contribution(point, module, load, name);
 
 /** The props of a form slot's components, given their module's part's schema. */
 type FormSlotProps<Point, Part extends FormPartSchema> =
@@ -347,16 +392,11 @@ export const formSlotContribution = <
 	module: ModuleId,
 	name: string,
 	load: () => Promise<{ default: Component<FormSlotProps<Point, Part>> }>,
-): SlotContribution<FormSlotProps<Point, Part>> => ({
-	id: `${module}/${point.id}/${name}`,
-	module,
-	point: point.id,
-	load,
-});
+) => contribution(point, module, load, name);
 
 /** The module's bulk actions for `table`, as `contributions.gen.ts` lists them, checked against its rows. */
 export const bulkContribution = <Row>(
 	table: BulkTable<Row>,
 	module: ModuleId,
 	load: () => Promise<{ default: BulkAction<NoInfer<Row>, AnyListWhere>[] }>,
-): BulkContribution<Row> => ({ id: `${module}/${table.id}`, module, point: table.id, load });
+) => contribution(table, module, load);

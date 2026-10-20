@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { getTenantModules } from "#lib/auth/session.remote.ts";
 	import ListLayout from "#lib/components/data-table/list-layout.svelte";
 	import { createServerTable } from "#lib/components/data-table/server-table.svelte.ts";
-	import { extensionBulkActions } from "#lib/extensions/bulk-actions.svelte.ts";
+	import { bulkContributions } from "#lib/extensions/contributions.gen.ts";
+	import { loadContributions } from "#lib/extensions/define.ts";
 
 	import { points } from "../extensions.ts";
 	import { assignEngineer, changeStatus, deleteOrders } from "./bulk-actions.ts";
@@ -44,8 +46,15 @@
 	setStatusCellQuery((id) => table.pages.queryOf(id));
 
 	// The tenant's modules add theirs (e.g. "Create invoice") before the delete.
-	const moduleActions = extensionBulkActions(points.list.bulk);
-	const actions = $derived([assignEngineer, changeStatus, ...moduleActions.current, deleteOrders]);
+	const moduleActions = $derived(
+		await loadContributions(bulkContributions, points.list.bulk, await getTenantModules()),
+	);
+	const actions = $derived([
+		assignEngineer,
+		changeStatus,
+		...moduleActions.flatMap(({ value }) => value ?? []),
+		deleteOrders,
+	]);
 </script>
 
 <ListLayout

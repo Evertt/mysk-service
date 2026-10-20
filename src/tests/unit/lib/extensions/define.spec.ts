@@ -1,17 +1,26 @@
 import type { Component } from "svelte";
-import { expect, test } from "vite-plus/test";
+import { expect, test, vi } from "vite-plus/test";
 
 import type { AnyListWhere, BulkAction } from "#lib/components/data-table/bulk-actions.ts";
+import { points as equipmentPoints } from "#lib/equipment/extensions.ts";
 import {
 	bulkContribution,
 	bulkRows,
 	defineBulkTable,
 	defineRecordPoints,
 	defineSlot,
+	loadContributions,
 	slotContribution,
 	slotProps,
 } from "#lib/extensions/define.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
+import {
+	fakeColumnContributions,
+	gadgetsRating,
+	gizmos,
+	gizmosOrderCard,
+	widgetsNote,
+} from "#unit/lib/modules/fakes.ts";
 
 // Made-up points and modules: the type check (svelte-check) runs the `@ts-expect-error`s below.
 const side = defineSlot<{ number: string }>("orders.detail.side");
@@ -92,4 +101,26 @@ test("a record's points are named alike for every domain, with the list's it ask
 	expect(engineers.list.bulk).toBeUndefined();
 	// @ts-expect-error a list without `listColumns` takes no columns
 	expect(orders.list.columns).toBeUndefined();
+});
+
+test("contributions load for the modules that are on, in registry order", async () => {
+	const load = (modules: string[]) =>
+		loadContributions(fakeColumnContributions, equipmentPoints.list.columns, modules);
+	expect(await load(["widgets", "gadgets"])).toEqual([
+		{ id: "gadgets/equipment.list.columns", module: "gadgets", value: [gadgetsRating] },
+		{ id: "widgets/equipment.list.columns", module: "widgets", value: [widgetsNote] },
+	]);
+	expect(await load(["widgets"])).toMatchObject([{ value: [widgetsNote] }]);
+	expect(await load([])).toEqual([]);
+	const other = { id: "orders.list.columns", kind: "columns" } as const;
+	expect(await loadContributions(fakeColumnContributions, other, ["gadgets"])).toEqual([]);
+});
+
+test("a contribution that doesn't load is logged and comes with its error, never rejects", async () => {
+	const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+	expect(await loadContributions([gizmosOrderCard], side, [gizmos.id])).toEqual([
+		{ id: "gizmos/orders.detail.side/card", module: "gizmos", error: expect.any(Error) },
+	]);
+	expect(logged).toHaveBeenCalledOnce();
+	logged.mockRestore();
 });
