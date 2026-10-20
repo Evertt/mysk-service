@@ -1,7 +1,20 @@
-/** What `module.ts` says about the module's place among the others. */
-export interface ManifestGraph {
+import type { ESTree } from "vite-plus";
+
+import { parseProgram, propertiesOf, stringOf } from "./shared.ts";
+
+/** What the generator reads from `module.ts`. */
+export interface Manifest {
+	/** The `id:` it states, if it states one as a string, to check against the folder. */
+	declaredId?: string;
+	/** Whether it has a `portal:` entry (its label and icon in the portal's navigation). */
+	declaresPortal?: boolean;
+	/** The keys that name a page of the module's (`route:`, `settings:`), which `routes/` has instead. */
+	declaredPages?: string[];
+	/** The ids in `requires`: modules that must be on for this one to be. */
 	requires: string[];
+	/** The ids in `enhances`: modules this one adds to when they're on, but doesn't need. */
 	enhances: string[];
+	/** Whether it says `alwaysOn: true`. */
 	alwaysOn: boolean;
 	/** The sidebar entry (a core one or a module) its own goes after: `nav: { after }`. */
 	navAfter: string | null;
@@ -9,50 +22,75 @@ export interface ManifestGraph {
 	problems: string[];
 }
 
-const LITERAL = /^(["'`])([^"'`]*)\1$/;
-
-/** The ids in the list the key `key:` opens, if the key is there and its value is `[...]` of literals. */
-function literalList(source: string, key: "requires" | "enhances") {
-	if (!new RegExp(`\\b${key}:`).test(source)) return { ids: [] };
-	const body = new RegExp(`\\b${key}:\\s*\\[([^\\]]*)\\]`).exec(source)?.[1];
-	if (body === undefined) return { ids: [], problem: `${key} must be a list of string literals` };
-	const items = body
-		.split(",")
-		.map((item) => item.trim())
-		.filter(Boolean);
-	const ids = items.map((item) => LITERAL.exec(item)?.[2]);
-	if (ids.some((id) => id === undefined)) {
-		return { ids: [], problem: `${key} must be a list of string literals` };
-	}
-	return { ids: ids as string[] };
-}
-
-/** What `nav: { after: "<id>" }` names, if the key is there and its value is that literal. */
-function navAfter(source: string) {
-	if (!/\bnav:/.test(source)) return { id: null };
-	const id = /\bnav:\s*\{\s*after:\s*(["'`])([^"'`]*)\1\s*,?\s*\}/.exec(source)?.[2];
-	return id === undefined
-		? { id: null, problem: 'nav must be { after: "<id>" } with a string literal' }
-		: { id };
+/** The ids in `node`, if it's a list of string literals. */
+function literalList(node: ESTree.Expression) {
+	const ids = node.type === "ArrayExpression" ? node.elements.map((id) => stringOf(id)) : [];
+	return node.type === "ArrayExpression" && ids.every((id) => id !== undefined) ? ids : undefined;
 }
 
 /**
- * Reads `requires`, `enhances`, `alwaysOn` and `nav` out of a `module.ts` with patterns, like its `id:`
- * (the generator can't import the manifest: it imports components and messages). So they must be
- * literals in the `defineModule()` call.
+ * The keys of the manifest in `source`: the object `defineModule()` is called with (in the default
+ * export or a statement of its own), or the default export's object.
  */
-export function readManifestGraph(source: string): ManifestGraph {
-	const problems: string[] = [];
-	const requires = literalList(source, "requires");
-	const enhances = literalList(source, "enhances");
-	for (const list of [requires, enhances]) if (list.problem) problems.push(list.problem);
-
-	let alwaysOn = false;
-	if (/\balwaysOn:/.test(source)) {
-		if (/\balwaysOn:\s*true\b/.test(source)) alwaysOn = true;
-		else problems.push("alwaysOn must be true or left out");
+function manifestObject(source: string) {
+	for (const statement of parseProgram("module.ts", source).body) {
+		const expression =
+			statement.type === "ExportDefaultDeclaration"
+				? statement.declaration
+				: statement.type === "ExpressionStatement"
+					? statement.expression
+					: undefined;
+		const keys = propertiesOf(
+			expression?.type === "CallExpression" ? expression.arguments[0] : expression,
+		);
+		if (keys) return keys;
 	}
-	const nav = navAfter(source);
-	if (nav.problem) problems.push(nav.problem);
-	return { requires: requires.ids, enhances: enhances.ids, alwaysOn, navAfter: nav.id, problems };
+}
+
+/**
+ * Reads the keys of the `defineModule({ … })` call in a `module.ts` from its syntax (the generator
+ * can't import the manifest: it imports components and messages). So `id`, `requires`, `enhances`,
+ * `alwaysOn` and `nav` must be literals there.
+ */
+export function readManifest(source: string): Manifest {
+	const problems: string[] = [];
+	let keys = new Map<string, ESTree.Expression>();
+	try {
+		keys = manifestObject(source) ?? keys;
+	} catch (error) {
+		problems.push((error as Error).message);
+	}
+	/** The value of `key` as `read` reads it; `problem` when it's there but can't be read. */
+	const read = <T>(
+		key: string,
+		empty: T,
+		value: (node: ESTree.Expression) => T | undefined,
+		problem: string,
+	) => {
+		const node = keys.get(key);
+		const result = node && value(node);
+		if (node && result === undefined) problems.push(problem);
+		return result ?? empty;
+	};
+	const literals = "must be a list of string literals";
+	return {
+		declaredId: stringOf(keys.get("id")),
+		declaresPortal: keys.has("portal"),
+		declaredPages: ["route", "settings"].filter((key) => keys.has(key)),
+		requires: read("requires", [], literalList, `requires ${literals}`),
+		enhances: read("enhances", [], literalList, `enhances ${literals}`),
+		alwaysOn: read(
+			"alwaysOn",
+			false,
+			(node) => (node.type === "Literal" && node.value === true) || undefined,
+			"alwaysOn must be true or left out",
+		),
+		navAfter: read(
+			"nav",
+			null,
+			(node) => stringOf(propertiesOf(node)?.get("after")),
+			'nav must be { after: "<id>" } with a string literal',
+		),
+		problems,
+	};
 }

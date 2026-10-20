@@ -12,8 +12,7 @@ import {
 import { checkModuleColumn, listColumn } from "#lib/components/data-table/module-columns.ts";
 import { parseTableUrl } from "#lib/components/data-table/url-state.ts";
 import { points } from "#lib/equipment/extensions.ts";
-import { loadListColumns } from "#lib/extensions/list-columns.ts";
-import { fakeColumnContributions, gadgetsRating, widgetsNote } from "#unit/lib/modules/fakes.ts";
+import { gadgetsRating, widgetsNote } from "#unit/lib/modules/fakes.ts";
 
 const units = defineList({
 	columns: {
@@ -136,20 +135,5 @@ describe("module columns", () => {
 		expect(() => checkModuleColumn(gadgetsRating, "widgets")).toThrow(
 			`The widgets module's column "gadgets.rating" must be called "widgets.<name>".`,
 		);
-	});
-
-	test("load for the modules that are on, in registry order", async () => {
-		const load = (modules: string[]) =>
-			loadListColumns(points.list.columns, modules, fakeColumnContributions);
-		expect(await load(["widgets", "gadgets"])).toEqual([gadgetsRating, widgetsNote]);
-		expect(await load(["widgets"])).toEqual([widgetsNote]);
-		expect(await load([])).toEqual([]);
-		expect(
-			await loadListColumns(
-				{ id: "orders.list.columns", kind: "columns" },
-				["gadgets"],
-				fakeColumnContributions,
-			),
-		).toEqual([]);
 	});
 });

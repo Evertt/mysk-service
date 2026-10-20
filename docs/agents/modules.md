@@ -157,8 +157,8 @@ migration committed.
   didn't write, or message sections are missing in a language or not unique.
 - **Dependencies**: `module.ts` may list `requires` (modules it can't work without) and `enhances`
   (modules it only adds to when they're on) as string-literal arrays, and `alwaysOn: true`; the
-  generator reads them with a pattern, and `manifests.spec.ts` compares them with the runtime
-  values. A module whose requirement is off is off everywhere (`effectiveModules()` in
+  generator reads them from the syntax (oxc's AST, `readManifest()` in `scripts/modules/manifest.ts`),
+  and `manifests.spec.ts` compares them with the runtime values. A module whose requirement is off is off everywhere (`effectiveModules()` in
   `loadTenant()`), and the registries (hooks, slots, bulk actions, seeds) run in dependency order.
   The settings page switches a module on together with its requirements and off together with its
   dependents (`setModules`, `changeModules()` in `#lib/modules/graph.ts`), and refuses a change
@@ -241,14 +241,21 @@ migration committed.
   (an array of `BulkAction`s). The generator lists them in `src/lib/extensions/contributions.gen.ts`
   with `slotContribution()` and `bulkContribution()`, which hold each to its point's types, and
   checks that the point exists and that its owner is core, the module itself, or a module it
-  `requires` or `enhances`. Every `.svelte` directly in `slots/<point id>/` is a contribution, so a
+  `requires` or `enhances`. Each kind of contribution file (its folder, the kinds of point it goes
+  to, the file it comes with, its registry) is one row of `contributionKinds` in
+  `scripts/modules/extensions.ts`, which drives the generator's discovery, checks, registries and
+  watcher: a new kind is a row there, its constructor in `#lib/extensions/define.ts`, and
+  `loadContributions()` loads it. Every `.svelte` directly in `slots/<point id>/` is a contribution, so a
   contribution's helper components live outside `slots/` (next to the module's other components). A
   slot's component must declare the slot's props (optional is fine): a component without them is
   refused by the type check at a slot that passes props. A record's page renders its slots through
   `<RecordPage slots={points.detail} slotProps={{ number }}>` (the main column's after its own
   cards, the side column's before the activity card); any other page with
   `<ExtensionSlot point={…} props={…} />`. A table gets its contributed actions with
-  `extensionBulkActions(points.list.bulk)` (`src/lib/extensions/bulk-actions.svelte.ts`), which its action bar
+  `$derived(await loadContributions(bulkContributions, points.list.bulk, await getTenantModules()))`
+  (`#lib/extensions/define.ts`, which loads every kind of contribution, slots' and columns' too: a
+  contribution whose chunk doesn't load is logged and comes with its `error`, which a table or list
+  leaves out and a slot shows as a notice), which its action bar
   also offers in each row's menu, for that row alone (an action that makes no sense for one row
   says `row: false`; see `#lib/components/data-table/bulk-actions.ts`); both show only
   the contributions of the modules the tenant has, in registry order, and key a contribution by its
@@ -308,7 +315,7 @@ e2e src/tests/e2e/skeletons.repro.test.ts`; it counts page errors, and the race 
   owner): `columns/<point id>.ts`, default export an array of `listColumn({ id, param, label, sort,
 filter, optionLabel, cell })` (isomorphic; the id is namespaced, `maintenance.nextDue`; the cell
   takes `{ value }`), listed in `contributions.gen.ts` and loaded per tenant
-  (`loadListColumns(point)`, `#lib/extensions/list-columns.ts`); and `server/columns/<point id>.ts`,
+  (`loadContributions(columnContributions, point, modules)`); and `server/columns/<point id>.ts`,
   default export an array of `columnSql(column, () => ({ value, sort, nullsLast, filter, facet }))`
   (`#lib/server/lists/column-sql.ts`; built per request, typed by the column it imports), listed in
   the server's `columns.gen.ts`. The merge is per tenant: the page merges the tenant's columns into
