@@ -349,5 +349,12 @@
 	"partners_client_hero_intro": "Working with {organization} pays off. Follow your Partner revenue, your Bonus revenue and the parts credit you have to spend in one place.",
 	"partners_client_progress": "Your progress",
 	"partners_client_level": "Partner level",
-	"partners_client_programme_label": "The programme"
+	"partners_client_programme_label": "The programme",
+	"partners_enum_level_colour_bronze": "Bronze",
+	"partners_enum_level_colour_silver": "Silver",
+	"partners_enum_level_colour_gold": "Gold",
+	"partners_enum_level_colour_platinum": "Platinum",
+	"partners_enum_level_colour_diamond": "Diamond",
+	"partners_column_colour": "Colour",
+	"partners_rules_colour_by_name": "By its name"
 }

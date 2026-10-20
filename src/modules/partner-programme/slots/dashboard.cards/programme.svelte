@@ -46,7 +46,7 @@
 						class="flex items-center justify-between gap-3 py-1.5"
 						data-level-count={each.level ?? ""}
 					>
-						<LevelBadge level={each.level} />
+						<LevelBadge level={each.level} colour={each.colour} />
 						<span class="tabular-nums">{formatNumber(each.count)}</span>
 					</li>
 				{/each}

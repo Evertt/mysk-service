@@ -27,7 +27,8 @@ export const columns = column.columns([
 	}),
 	column.accessor((row) => row.level ?? undefined, {
 		id: "level",
-		cell: ({ row }) => renderComponent(LevelBadge, { level: row.original.level }),
+		cell: ({ row }) =>
+			renderComponent(LevelBadge, { level: row.original.level, colour: row.original.colour }),
 		enableSorting: false,
 		// By the level's name; `none` keeps the partners below the first.
 		filterFn: (row, _id, levels: string[]) => levels.includes(row.original.level ?? noneToken),

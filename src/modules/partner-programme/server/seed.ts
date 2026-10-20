@@ -46,9 +46,9 @@ import {
 
 /** North's simple programme: three levels, in euros' cents and basis points. */
 const northTiers: Tier[] = [
-	{ threshold: 100_000, level: "BRONS", cashRate: 200, creditRate: 250 },
-	{ threshold: 500_000, level: "ZILVER", cashRate: 300, creditRate: 350 },
-	{ threshold: 1_500_000, level: "GOUD", cashRate: 400, creditRate: 500 },
+	{ threshold: 100_000, level: "BRONS", cashRate: 200, creditRate: 250, colour: "bronze" },
+	{ threshold: 500_000, level: "ZILVER", cashRate: 300, creditRate: 350, colour: "silver" },
+	{ threshold: 1_500_000, level: "GOUD", cashRate: 400, creditRate: 500, colour: "gold" },
 ];
 
 /** Each partner's entries (in order) with what's left of its credit, as `addEntry()` keeps it. */

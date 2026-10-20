@@ -30,7 +30,7 @@
 	<div class="@container flex flex-col gap-6" data-client-status>
 		<dl class="grid gap-3 @md:grid-cols-3">
 			<KeyFigure label={m.partners_client_level()}>
-				<LevelBadge level={figures.level?.level ?? null} />
+				<LevelBadge level={figures.level?.level ?? null} colour={figures.level?.colour} />
 			</KeyFigure>
 			<KeyFigure label={m.partners_partner_revenue()}>
 				<span data-partner-revenue>{formatEuros(figures.partnerRevenue)}</span>

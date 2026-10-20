@@ -5,7 +5,7 @@ import { db } from "#lib/server/db/index.ts";
 import { customer } from "#lib/server/db/schema.ts";
 import { planList } from "#lib/server/lists/index.ts";
 
-import { levelFor, progressFor } from "../model.ts";
+import { levelColour, levelFor, progressFor } from "../model.ts";
 import { query } from "../remote-functions.ts";
 import { partnersSql } from "../server/list-sql.ts";
 import { rulesFor } from "../server/rules.ts";
@@ -49,11 +49,15 @@ export const getPartners = query(partnersList.query, async (input) => {
 	]);
 	const tiers = rules?.tiers ?? [];
 	return {
-		rows: rows.map((row) => ({
-			...row,
-			level: levelFor(tiers, row.revenue)?.level ?? null,
-			progress: progressFor(tiers, row.revenue),
-		})),
+		rows: rows.map((row) => {
+			const level = levelFor(tiers, row.revenue);
+			return {
+				...row,
+				level: level?.level ?? null,
+				colour: level ? levelColour(level) : undefined,
+				progress: progressFor(tiers, row.revenue),
+			};
+		}),
 		rowCount,
 		query: input,
 		key: queryKey(input),

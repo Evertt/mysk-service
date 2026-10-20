@@ -85,7 +85,7 @@
 							<span class="font-medium"
 								>{m.partners_closed_title({ year: String(closed.year) })}</span
 							>
-							<LevelBadge level={closed.level} />
+							<LevelBadge level={closed.level} colour={closed.colour} />
 						</div>
 						<span class="text-xs text-muted-foreground tabular-nums">
 							{m.partners_closed_figures({

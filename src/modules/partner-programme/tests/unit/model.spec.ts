@@ -10,6 +10,7 @@ import {
 	defaultCategoryRules,
 	defaultTiers,
 	isClosable,
+	levelColour,
 	levelFor,
 	lineCategory,
 	type ProgrammeRules,
@@ -54,6 +55,23 @@ describe("the levels", () => {
 		expect(defaultTiers.map((tier) => atRate(tier.threshold, tier.creditRate) / 100)).toEqual([
 			1_500, 2_475, 3_800, 6_450, 9_600, 12_500, 18_900, 28_000,
 		]);
+	});
+});
+
+describe("a level's colour", () => {
+	test("is the one chosen for it", () => {
+		expect(levelColour({ level: "Starter", colour: "silver" })).toBe("silver");
+		expect(levelColour("Starter", [{ ...defaultTiers[0], level: "Starter", colour: "gold" }])).toBe(
+			"gold",
+		);
+	});
+
+	test("else the one its name says, in English or Dutch, else none", () => {
+		expect(levelColour("GOLD+")).toBe("gold");
+		expect(levelColour("Zilver")).toBe("silver");
+		expect(levelColour({ level: "PLATINA" })).toBe("platinum");
+		expect(levelColour("Diamant")).toBe("diamond");
+		expect(levelColour("Starter")).toBeUndefined();
 	});
 });
 

@@ -9,6 +9,7 @@
 	import { formatEuros, formatRate } from "../display.ts";
 	import { partnerLabels } from "../labels.ts";
 	import { atRate, type ProgrammeRules } from "../model.ts";
+	import LevelBadge from "../ui/level-badge.svelte";
 
 	let { rules }: { rules: ProgrammeRules } = $props();
 </script>
@@ -35,7 +36,7 @@
 					{#each rules.tiers as tier (tier.level)}
 						<Table.Row>
 							<Table.Cell class="tabular-nums">{formatEuros(tier.threshold)}</Table.Cell>
-							<Table.Cell class="font-medium">{tier.level}</Table.Cell>
+							<Table.Cell><LevelBadge level={tier.level} colour={tier.colour} /></Table.Cell>
 							<Table.Cell class="text-right tabular-nums">{formatRate(tier.cashRate)}</Table.Cell>
 							<Table.Cell class="text-right tabular-nums">
 								{formatCents(atRate(tier.threshold, tier.cashRate))}

@@ -349,5 +349,12 @@
 	"partners_client_hero_intro": "Je samenwerking met {organization} levert voordeel op. Volg je Partner Omzet, Bonus Omzet en beschikbare Parts Credit in één overzicht.",
 	"partners_client_progress": "Je voortgang",
 	"partners_client_level": "Partner Level",
-	"partners_client_programme_label": "Het programma"
+	"partners_client_programme_label": "Het programma",
+	"partners_enum_level_colour_bronze": "Brons",
+	"partners_enum_level_colour_silver": "Zilver",
+	"partners_enum_level_colour_gold": "Goud",
+	"partners_enum_level_colour_platinum": "Platina",
+	"partners_enum_level_colour_diamond": "Diamant",
+	"partners_column_colour": "Kleur",
+	"partners_rules_colour_by_name": "Naar de naam"
 }

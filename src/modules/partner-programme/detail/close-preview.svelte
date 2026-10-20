@@ -14,6 +14,7 @@
 
 	import { closeProgrammeYear, type getClosePreview } from "../close.remote.ts";
 	import { formatEuros } from "../display.ts";
+	import { levelColour } from "../model.ts";
 	import LevelBadge from "../ui/level-badge.svelte";
 
 	let { preview }: { preview: Awaited<ReturnType<typeof getClosePreview>> } = $props();
@@ -27,6 +28,9 @@
 				code: partner.code,
 				name: partner.name,
 				level: closed ? closed.level : (figures?.level?.level ?? null),
+				colour: closed
+					? closed.level && levelColour(closed.level, preview.rules?.tiers)
+					: figures?.level?.colour,
 				revenue: closed ? closed.partnerRevenue : (figures?.partnerRevenue ?? 0),
 				bonusRevenue: closed ? closed.bonusRevenueCash : (figures?.bonusRevenue.cash ?? 0),
 				cash: closed ? closed.cashAmount : (figures?.bonus.cash ?? 0),
@@ -124,7 +128,9 @@
 						{#each rows as row (row.id)}
 							<Table.Row data-partner={row.code}>
 								<Table.Cell><CustomerLink name={row.name} code={row.code} withCode /></Table.Cell>
-								<Table.Cell><LevelBadge level={row.level} /></Table.Cell>
+								<Table.Cell
+									><LevelBadge level={row.level} colour={row.colour || undefined} /></Table.Cell
+								>
 								<Table.Cell class="text-right tabular-nums">{formatEuros(row.revenue)}</Table.Cell>
 								<Table.Cell class="text-right tabular-nums"
 									>{formatEuros(row.bonusRevenue)}</Table.Cell

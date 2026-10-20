@@ -3,7 +3,7 @@ import { currentDay } from "#lib/dates.ts";
 import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 
-import { levelFor, sortedTiers } from "./model.ts";
+import { levelColour, levelFor, sortedTiers } from "./model.ts";
 import { query } from "./remote-functions.ts";
 import { partnerJoins } from "./server/list-sql.ts";
 import { rulesFor } from "./server/rules.ts";
@@ -31,10 +31,12 @@ export const getProgrammeOverview = query(async () => {
 		year: now.year,
 		partners: partners.length,
 		levels: [
-			...tiers
-				.toReversed()
-				.map((tier) => ({ level: tier.level, count: counts.get(tier.level) ?? 0 })),
-			{ level: null, count: counts.get(null) ?? 0 },
+			...tiers.toReversed().map((tier) => ({
+				level: tier.level,
+				colour: levelColour(tier),
+				count: counts.get(tier.level) ?? 0,
+			})),
+			{ level: null, colour: undefined, count: counts.get(null) ?? 0 },
 		],
 		credit: await outstandingCredit(now),
 	};

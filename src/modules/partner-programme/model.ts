@@ -73,12 +73,46 @@ export interface CategoryRule {
 	credit: CategoryRuleValue;
 }
 
+/**
+ * The colours a level's badge can have, as its name says: "Brons" in bronze, "Goud" in gold.
+ * @labels levelColour
+ */
+export const levelColours = ["bronze", "silver", "gold", "platinum", "diamond"] as const;
+export type LevelColour = (typeof levelColours)[number];
+
 /** A level of the programme: from `threshold` Partner Omzet on (cents), with its rates (bp). */
 export interface Tier {
 	threshold: number;
 	level: string;
 	cashRate: number;
 	creditRate: number;
+	/** Its badge's colour, if the manager chose one (else `levelColour()` reads it off the name). */
+	colour?: LevelColour;
+}
+
+/** The words that name each colour, in a level's name: `PLATINUM+`, `Goud`, `Elite`. */
+const colourWords: Record<LevelColour, readonly string[]> = {
+	bronze: ["bronze", "brons"],
+	silver: ["silver", "zilver"],
+	gold: ["gold", "goud"],
+	platinum: ["platinum", "platina"],
+	diamond: ["diamond", "diamant"],
+};
+
+/**
+ * A level's badge colour: the one chosen for it, else the colour its name says (`GOLD+` is gold),
+ * else none. `tiers` are the year's levels, for a level known by its name alone (a closed year's).
+ */
+export function levelColour(
+	level: { level: string; colour?: LevelColour } | string,
+	tiers: readonly Tier[] = [],
+): LevelColour | undefined {
+	const name = typeof level === "string" ? level : level.level;
+	const chosen =
+		typeof level === "string" ? tiers.find((tier) => tier.level === name)?.colour : level.colour;
+	if (chosen) return chosen;
+	const words = name.toLowerCase();
+	return levelColours.find((colour) => colourWords[colour].some((word) => words.includes(word)));
 }
 
 /** A year's rules, as a manager sets them. */
@@ -106,14 +140,14 @@ export const defaultCategoryRules: CategoryRule[] = revenueCategories.map((categ
  * (BRONZE, 2.5 % cash or 3 % credit) up to ELITE+ from € 500.000.
  */
 export const defaultTiers: Tier[] = [
-	{ threshold: 5_000_000, level: "BRONZE", cashRate: 250, creditRate: 300 },
-	{ threshold: 7_500_000, level: "SILVER", cashRate: 270, creditRate: 330 },
-	{ threshold: 10_000_000, level: "GOLD", cashRate: 300, creditRate: 380 },
-	{ threshold: 15_000_000, level: "GOLD+", cashRate: 350, creditRate: 430 },
-	{ threshold: 20_000_000, level: "PLATINUM", cashRate: 380, creditRate: 480 },
-	{ threshold: 25_000_000, level: "PLATINUM+", cashRate: 400, creditRate: 500 },
-	{ threshold: 35_000_000, level: "ELITE", cashRate: 430, creditRate: 540 },
-	{ threshold: 50_000_000, level: "ELITE+", cashRate: 450, creditRate: 560 },
+	{ threshold: 5_000_000, level: "BRONZE", cashRate: 250, creditRate: 300, colour: "bronze" },
+	{ threshold: 7_500_000, level: "SILVER", cashRate: 270, creditRate: 330, colour: "silver" },
+	{ threshold: 10_000_000, level: "GOLD", cashRate: 300, creditRate: 380, colour: "gold" },
+	{ threshold: 15_000_000, level: "GOLD+", cashRate: 350, creditRate: 430, colour: "gold" },
+	{ threshold: 20_000_000, level: "PLATINUM", cashRate: 380, creditRate: 480, colour: "platinum" },
+	{ threshold: 25_000_000, level: "PLATINUM+", cashRate: 400, creditRate: 500, colour: "platinum" },
+	{ threshold: 35_000_000, level: "ELITE", cashRate: 430, creditRate: 540, colour: "diamond" },
+	{ threshold: 50_000_000, level: "ELITE+", cashRate: 450, creditRate: 560, colour: "diamond" },
 ];
 
 /** Every category's rule, in `revenueCategories`' order: a missing one as `defaultCategoryRules` has it. */
@@ -221,11 +255,12 @@ export function bonusShare(rules: ProgrammeRules, line: RevenueLine, form: Bonus
 export const sortedTiers = (tiers: readonly Tier[]): Tier[] =>
 	tiers
 		.toSorted((a, b) => a.threshold - b.threshold)
-		.map(({ threshold, level, cashRate, creditRate }) => ({
+		.map(({ threshold, level, cashRate, creditRate, colour }) => ({
 			threshold,
 			level,
 			cashRate,
 			creditRate,
+			...(colour ? { colour } : {}),
 		}));
 
 /** The level reached with `revenue`: the highest tier at or below it, none below the first. */
