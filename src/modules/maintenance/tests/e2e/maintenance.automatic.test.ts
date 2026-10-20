@@ -43,6 +43,10 @@ async function addDuePlan(description: string) {
 describe("automatic orders", () => {
 	test("a manager turns them on, on the module's settings page", async () => {
 		const { page } = app;
+		// The organization's settings link to it, as to the module's own page.
+		await app.go("/settings");
+		await page.locator('[data-module="maintenance"]').getByRole("link", { name: "Set up" }).click();
+		await page.waitForURL((url) => url.pathname === "/maintenance/settings");
 		await app.go("/maintenance");
 		await page.getByRole("link", { name: "Settings" }).click();
 		await page.waitForURL((url) => url.pathname === "/maintenance/settings");

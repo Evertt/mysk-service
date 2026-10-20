@@ -302,6 +302,10 @@ describe("in South", () => {
 			await page.waitForURL((url) => url.pathname === "/invoices");
 			await quiet(page);
 		};
+		// The organization's settings link to them.
+		await app.go("/settings");
+		await page.locator('[data-module="invoices"]').getByRole("link", { name: "Set up" }).click();
+		await page.waitForURL((url) => url.pathname === "/invoices/settings");
 		const before = await stored();
 		await save("14");
 		expect(await stored()).toBe(14);

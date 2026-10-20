@@ -32,7 +32,7 @@ export interface Tenant {
 	/**
 	 * What the organization changed about the order types (its own names, the hidden ones), as
 	 * stored: `label("orderType", …)` reads the names from here on the server (see
-	 * `#lib/orders/types.ts`). None: all as standard (the daily jobs' tenant).
+	 * `#lib/orders/types.ts`). None: all as standard.
 	 */
 	orderTypes?: OrderTypeSettings;
 }
@@ -46,25 +46,35 @@ export async function loadTenant(
 	activeOrganizationId: string | null | undefined,
 ): Promise<Tenant | undefined> {
 	const memberships = await db
-		.select({
-			organizationId: member.organizationId,
-			role: member.role,
-			name: organization.name,
-			slug: organization.slug,
-		})
+		.select({ organizationId: member.organizationId, role: member.role })
 		.from(member)
-		.innerJoin(organization, eq(member.organizationId, organization.id))
 		.where(eq(member.userId, userId))
 		.orderBy(asc(member.createdAt));
 	const current =
 		memberships.find((row) => row.organizationId === activeOrganizationId) ?? memberships[0];
 	if (!current) return undefined;
+	return tenantOf(current.organizationId, { roles: parseRoles(current.role) });
+}
 
-	const [modules, typeSettings] = await Promise.all([
+/**
+ * The organization as a tenant, with `roles`: a member's (`loadTenant()`), or none for the system
+ * (`asSystem()`: the daily jobs, the simulations, an integration's request). Its modules that are
+ * on, and its order types' settings, so the system's work names them as its members see them.
+ * Undefined for an organization that isn't there.
+ */
+export async function tenantOf(
+	organizationId: string,
+	{ roles }: { roles: string[] },
+): Promise<Tenant | undefined> {
+	const [[found], modules, typeSettings] = await Promise.all([
+		db
+			.select({ name: organization.name, slug: organization.slug })
+			.from(organization)
+			.where(eq(organization.id, organizationId)),
 		db
 			.select({ id: organizationModule.moduleId })
 			.from(organizationModule)
-			.where(eq(organizationModule.organizationId, current.organizationId)),
+			.where(eq(organizationModule.organizationId, organizationId)),
 		db
 			.select({
 				type: orderTypeSetting.type,
@@ -72,13 +82,13 @@ export async function loadTenant(
 				hidden: orderTypeSetting.hidden,
 			})
 			.from(orderTypeSetting)
-			.where(eq(orderTypeSetting.organizationId, current.organizationId)),
+			.where(eq(orderTypeSetting.organizationId, organizationId)),
 	]);
+	if (!found) return undefined;
 	return {
-		organizationId: current.organizationId,
-		name: current.name,
-		slug: current.slug,
-		roles: parseRoles(current.role),
+		organizationId,
+		...found,
+		roles,
 		// A row for a module that's no longer there (removed from the app) does nothing, and neither
 		// does one whose requirements are off; the always-on modules need no row.
 		modules: effectiveModules(modules.map((row) => row.id)),

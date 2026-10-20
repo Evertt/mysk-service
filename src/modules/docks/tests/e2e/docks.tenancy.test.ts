@@ -1,15 +1,16 @@
 /**
  * The docks and tenants: SHLTR's manager makes a feed token on the settings page, which the feed
- * takes until it's revoked; North, without the module, has none of its pages and cards. What the
- * feed answers (a dock the tenant hasn't, a batch that isn't valid, a missing or revoked token),
- * how a token is stored, and that a planner may not manage them, is `tests/unit/server/feed.spec.ts`'s.
+ * takes until it's revoked, and a planner isn't offered that page; North, without the module, has
+ * none of its pages and cards. What the feed answers (a dock the tenant hasn't, a batch that isn't
+ * valid, a missing or revoked token), how a token is stored, and that a planner may not manage
+ * them, is `tests/unit/server/feed.spec.ts`'s.
  */
 import { describe, expect, test } from "vite-plus/test";
 
-import { organizations, rows, useApp } from "#e2e/app.ts";
+import { baseURL, organizations, rows, useApp } from "#e2e/app.ts";
 import { signedInPage } from "#e2e/portal-helpers.ts";
 
-import { postEvents, shltrOwner } from "./helpers.ts";
+import { postEvents, shltrOwner, shltrPlanner } from "./helpers.ts";
 
 const { north } = organizations;
 // North's admin: North doesn't have the module.
@@ -39,6 +40,22 @@ describe("SHLTR's integration tokens", () => {
 			await row.getByRole("button", { name: "Revoke" }).click();
 			await row.getByText("Revoked").waitFor();
 			expect((await postEvents([], token)).status).toBe(401);
+		} finally {
+			await page.context().close();
+		}
+	});
+
+	test("a planner, who's no manager, isn't offered them", async () => {
+		const { page } = await signedInPage(app, shltrPlanner);
+		try {
+			await page.goto(`${baseURL}/docks`);
+			await page.locator('[data-dock="DOCK 05"]').waitFor();
+			expect(await page.getByRole("link", { name: "Salvo feed" }).count()).toBe(0);
+			// Nor do the organization's settings link to them (the page is the managers').
+			await page.goto(`${baseURL}/settings`);
+			const card = page.locator('[data-module="docks"]');
+			await card.waitFor();
+			expect(await card.getByRole("link", { name: "Set up" }).count()).toBe(0);
 		} finally {
 			await page.context().close();
 		}

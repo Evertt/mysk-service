@@ -84,6 +84,14 @@ describe("checkModules", () => {
 		expect(problems.join("\n")).toMatch(/section "a" is also the a module's/);
 	});
 
+	test("refuses a settings page that module.ts doesn't name, which nothing would link to", () => {
+		const routeFiles = ["(app)/+page.svelte", "(app)/settings/+page.svelte"];
+		expect(check([module("a", { routeFiles })])).toEqual([
+			`src/modules/a/module.ts: the module has a settings page (routes/(app)/settings/+page.svelte), so it declares it, for the settings page to link to: settings: "/(app)/(modules)/a/settings".`,
+		]);
+		expect(check([module("a", { routeFiles, declaresSettings: true })])).toEqual([]);
+	});
+
 	test("refuses a manifest whose id isn't the folder's", () => {
 		expect(check([module("a", { declaredId: "b" })])).toEqual([
 			`src/modules/a/module.ts: its id is "b", but the folder is "a".`,

@@ -61,6 +61,11 @@ describe("SHLTR's integration tokens", () => {
 			await page.goto(`${baseURL}/energy`);
 			await page.locator(`[data-energy-site="${siteId}"]`).waitFor();
 			expect(await page.getByRole("link", { name: "Energy settings" }).count()).toBe(0);
+			// Nor do the organization's settings link to them (the page is the managers').
+			await page.goto(`${baseURL}/settings`);
+			const card = page.locator('[data-module="energy"]');
+			await card.waitFor();
+			expect(await card.getByRole("link", { name: "Set up" }).count()).toBe(0);
 			await page.goto(`${baseURL}/energy/${siteId}`);
 			await page.locator('[data-hero-chip="site"]').waitFor();
 			expect(await page.getByRole("link", { name: "Set up" }).count()).toBe(0);

@@ -9,6 +9,7 @@ export default defineModule({
 	label: m.maintenance_module_name,
 	description: m.maintenance_module_description,
 	route: "/(app)/(modules)/maintenance",
+	settings: "/(app)/(modules)/maintenance/settings",
 	icon: CalendarSyncIcon,
 	subjects: maintenanceSubjects,
 	// Adds the plans of a contract's covered units to its page, when the tenant has contracts, and

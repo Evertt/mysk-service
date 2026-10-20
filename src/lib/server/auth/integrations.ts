@@ -15,13 +15,12 @@
 import { error } from "@sveltejs/kit";
 import { and, desc, eq, isNull } from "drizzle-orm";
 
-import { effectiveModules } from "#lib/modules/graph.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
 import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { integrationToken, organization, organizationModule, user } from "#lib/server/db/schema.ts";
+import { integrationToken, user } from "#lib/server/db/schema.ts";
 
-import { currentTenant, idInTenant, inTenant, type Tenant } from "./session.ts";
+import { currentTenant, idInTenant, inTenant, type Tenant, tenantOf } from "./session.ts";
 import { isSystemUser } from "./system.ts";
 
 /** Every token starts with this, so it's recognised (in a leaked file, say). */
@@ -142,11 +141,8 @@ export async function integrationTenant(request: Request, moduleId: ModuleId): P
 			id: integrationToken.id,
 			organizationId: integrationToken.organizationId,
 			lastUsedAt: integrationToken.lastUsedAt,
-			name: organization.name,
-			slug: organization.slug,
 		})
 		.from(integrationToken)
-		.innerJoin(organization, eq(organization.id, integrationToken.organizationId))
 		.where(
 			and(
 				eq(integrationToken.tokenHash, await hashIntegrationToken(token)),
@@ -156,12 +152,9 @@ export async function integrationTenant(request: Request, moduleId: ModuleId): P
 		);
 	if (!found) error(401, m.common_error_invalid_token());
 
-	const stored = await db
-		.select({ id: organizationModule.moduleId })
-		.from(organizationModule)
-		.where(eq(organizationModule.organizationId, found.organizationId));
-	const modules = effectiveModules(stored.map((row) => row.id));
-	if (!modules.includes(moduleId)) error(404, m.common_error_not_found());
+	// The system has no role: it's no member, and only the endpoint's handler runs as it.
+	const tenant = await tenantOf(found.organizationId, { roles: [] });
+	if (!tenant?.modules.includes(moduleId)) error(404, m.common_error_not_found());
 
 	const now = Temporal.Now.instant();
 	if (!found.lastUsedAt || found.lastUsedAt.until(now).total("seconds") >= 60) {
@@ -175,12 +168,5 @@ export async function integrationTenant(request: Request, moduleId: ModuleId): P
 				),
 			);
 	}
-	// The system has no role: it's no member, and only the endpoint's handler runs as it.
-	return {
-		organizationId: found.organizationId,
-		name: found.name,
-		slug: found.slug,
-		roles: [],
-		modules,
-	};
+	return tenant;
 }

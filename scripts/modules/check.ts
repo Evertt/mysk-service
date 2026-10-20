@@ -16,6 +16,9 @@ import { byName, isGenerated, isLegacyStubFolder, type ModuleFolder, walk } from
 
 const SECTION = /^[a-z][a-z0-9]*$/;
 
+/** A module's settings page, which its `module.ts` names as `settings`. */
+const SETTINGS_PAGE = "(app)/settings/+page.svelte";
+
 /**
  * What's in `src/routes`, relative to it:
  *
@@ -147,6 +150,14 @@ export function checkModules(
 			} else {
 				sectionOwner.set(section, `the ${module.id} module`);
 			}
+		}
+
+		// The settings page links to a module's page of its own only when `module.ts` names it.
+		if (module.routeFiles.includes(SETTINGS_PAGE) && !module.declaresSettings) {
+			problems.push(
+				`${where}/module.ts: the module has a settings page (routes/${SETTINGS_PAGE}), so it ` +
+					`declares it, for the settings page to link to: settings: "/(app)/(modules)/${module.id}/settings".`,
+			);
 		}
 
 		if (module.declaredId && module.declaredId !== module.id) {

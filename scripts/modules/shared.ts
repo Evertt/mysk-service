@@ -31,6 +31,8 @@ export interface ModuleFolder {
 	id: string;
 	/** The `id:` that `module.ts` states, if it states one as a string, to check against the folder. */
 	declaredId?: string;
+	/** Whether `module.ts` names the page where the module is set up (`settings:`). */
+	declaresSettings?: boolean;
 	/** The ids in `requires` of `module.ts`: modules that must be on for this one to be. */
 	requires: string[];
 	/** The ids in `enhances`: modules this one adds to when they're on, but doesn't need. */

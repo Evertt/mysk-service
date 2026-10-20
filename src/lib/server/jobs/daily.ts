@@ -18,10 +18,9 @@ import { CRON_SECRET, OPS_TOKEN } from "$app/env/private";
 
 import { currentDay } from "#lib/dates.ts";
 import { daily, type DailyReport } from "#lib/jobs/extensions.ts";
-import { effectiveModules } from "#lib/modules/graph.ts";
-import { asSystem, type Tenant } from "#lib/server/auth/index.ts";
+import { asSystem, tenantOf } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { organization, organizationModule } from "#lib/server/db/schema.ts";
+import { organization } from "#lib/server/db/schema.ts";
 import { collect } from "#lib/server/extensions.ts";
 
 /** What the run did in an organization: its modules' reports, merged. */
@@ -37,28 +36,18 @@ export interface DailyResult {
  * are those it has on, as for its members; a job that fails is logged and the others go on.
  */
 export async function runDaily(today = currentDay()): Promise<DailyResult[]> {
-	const [organizations, stored] = await Promise.all([
-		db
-			.select({ id: organization.id, name: organization.name, slug: organization.slug })
-			.from(organization)
-			.orderBy(organization.createdAt),
-		db
-			.select({
-				organizationId: organizationModule.organizationId,
-				id: organizationModule.moduleId,
-			})
-			.from(organizationModule),
-	]);
+	const organizations = await db
+		.select({ id: organization.id })
+		.from(organization)
+		.orderBy(organization.createdAt);
 	const results: DailyResult[] = [];
-	for (const { id, name, slug } of organizations) {
-		const modules = effectiveModules(
-			stored.filter((row) => row.organizationId === id).map((row) => row.id),
-		);
+	for (const { id } of organizations) {
 		// The system has no role: it's no member, and only the jobs run as it.
-		const tenant: Tenant = { organizationId: id, name, slug, roles: [], modules };
-		const reports = await asSystem(tenant, () => collect(daily, { today }, modules));
+		const tenant = await tenantOf(id, { roles: [] });
+		if (!tenant) continue;
+		const reports = await asSystem(tenant, () => collect(daily, { today }, tenant.modules));
 		results.push({
-			organization: { id, slug },
+			organization: { id, slug: tenant.slug },
 			report: Object.assign({}, ...reports) as DailyReport,
 		});
 	}
