@@ -17,17 +17,33 @@ const coreNavIds = [
 
 export type CoreNavId = (typeof coreNavIds)[number];
 
-/** An entry in the sidebar: a core section's (`id` one of `coreNavIds`) or a module's (its id). */
+/**
+ * An entry in a shell's sidebar (`src/routes/nav-sidebar.svelte`): in the office's a core section's
+ * (`id` one of `coreNavIds`) or a module's (its id). It's the current page's on its `href` and the
+ * pages under it, or with `exact` only on its own (a home page's), and on those of `also`.
+ */
 export interface NavItem {
 	id: string;
 	title: string;
 	href: string;
 	icon: Component;
+	/** Current on its own page only, not on those under it: a home page's entry. */
+	exact?: boolean;
+	/** Other paths it's current on, and the pages under them, e.g. Equipment on a location's. */
+	also?: string[];
 }
 
-/** A group of entries in the sidebar, under a label. */
+/** Whether `item` is the entry of the page at `pathname` (see `NavItem`). */
+export function isCurrentAt(pathname: string, item: NavItem): boolean {
+	if (item.exact) return pathname === item.href;
+	return [item.href, ...(item.also ?? [])].some(
+		(path) => pathname === path || pathname.startsWith(`${path}/`),
+	);
+}
+
+/** A group of entries in the sidebar, under a label if it has one. */
 export interface NavGroup {
-	label: string;
+	label?: string;
 	items: NavItem[];
 }
 

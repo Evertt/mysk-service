@@ -205,15 +205,15 @@ describe("the core's gated sets refuse whoever they aren't for", () => {
 	});
 
 	test("forCustomers: anyone who's no customer's contact", async () => {
-		const { getPortalMe } = await import("#routes/(customer)/portal/client.remote.ts");
-		expect(await as(north.owner, () => call(getPortalMe))).toBe(403);
-		expect(await as(north.engineer, () => call(getPortalMe))).toBe(403);
+		const { getPortalHome } = await import("#routes/(customer)/portal/client.remote.ts");
+		expect(await as(north.owner, () => call(getPortalHome))).toBe(403);
+		expect(await as(north.engineer, () => call(getPortalHome))).toBe(403);
 	});
 
 	test("forAnyRole and forUsers: whoever isn't signed in", async () => {
-		const { getTenantModules, getCurrentUser } = await import("#lib/auth/session.remote.ts");
+		const { getTenantModules, switchOrganization } = await import("#lib/auth/session.remote.ts");
 		expect(await signedOut(() => call(getTenantModules))).toBe(401);
-		expect(await signedOut(() => call(getCurrentUser))).toBe(401);
+		expect(await signedOut(() => call(switchOrganization))).toBe(401);
 		// And the system, as in the daily jobs, isn't refused either.
 		expect(await asSystem("north", () => call(getTenantModules))).toBeUndefined();
 	});
