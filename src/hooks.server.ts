@@ -16,9 +16,8 @@ import { auth, loadTenant } from "#lib/server/auth/index.ts";
 import { logServerError } from "#lib/server/logs/log.ts";
 import { handleTiming } from "#lib/server/logs/timing.ts";
 import { handleTimeZone } from "#lib/server/time-zone.ts";
+import { deferStylesheets } from "#lib/splash.ts";
 import { MODE_COOKIE, parseMode, parseTheme, THEME_COOKIE } from "#lib/themes/index.ts";
-
-import { deferStylesheets } from "./routes/splash.ts";
 
 // The order types read as the request's tenant named them, wherever the server shows one.
 nameOrderTypesOnServer();

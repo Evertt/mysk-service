@@ -7,16 +7,16 @@
 
 	import favicon from "#lib/assets/favicon.svg";
 	import ProgressBar from "#lib/components/progress-bar.svelte";
+	import { dismissSplash } from "#lib/splash.ts";
 	import ThemeProvider from "#lib/themes/theme-provider.svelte";
 	import { getMode, getTheme } from "#lib/themes/theme.remote.ts";
 
 	import type { LayoutProps } from "./$types";
 	import AppToaster from "./app-toaster.svelte";
-	import { watchActivity, whenIdle } from "./idle.ts";
 
 	import "./layout.css";
+	import { watchActivity, whenIdle } from "./idle.ts";
 	import { takeNewVersion, tookNewVersion } from "./new-version.ts";
-	import { dismissSplash } from "./splash.ts";
 	import { keepTimeZone } from "./time-zone.ts";
 
 	let { children }: LayoutProps = $props();
