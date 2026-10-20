@@ -45,6 +45,11 @@ its branch after the task, then `git worktreeinclude apply` (`.env`) and `pnpm i
   its delete button), from `#lib/components/form/`: they submit, toast, close, show the server's
   refusal and give the dialog a history entry, so back closes it. Never `Dialog.Root` or
   `AlertDialog.Root` outside `src/lib/components/` (`src/tests/unit/dialogs.spec.ts`).
+- A shell's chrome is shared, never copied (`src/routes/`): `<BrandMark>` for the icon tile before
+  its name, `<AppearanceSwitchers>` for the language, theme and mode, `<SignOutButton>` (the one
+  `signOut`, in `#lib/auth/session.remote.ts`), `<NavSidebar>` for a sidebar's navigation, and in
+  `#lib/auth/session.remote.ts` `getCurrentUser` for who's signed in; a layout names the order
+  types with `useTenantOrderTypes()` (`src/tests/unit/shell-chrome.spec.ts`).
 
 Details: `docs/agents/structure.md`.
 
