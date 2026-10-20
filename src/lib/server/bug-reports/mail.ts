@@ -6,13 +6,7 @@
 import { contextLines } from "#lib/bug-reports/context-lines.ts";
 import type { ReportContext } from "#lib/bug-reports/report.ts";
 import { formatStopwatch } from "#lib/i18n/format.ts";
-import type { Mail } from "#lib/server/mail/index.ts";
-
-const escape = (text: string) =>
-	text.replace(
-		/[&<>"']/g,
-		(c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
-	);
+import { escapeHtml, type Mail } from "#lib/server/mail/index.ts";
 
 export interface ReportedBug {
 	user: string;
@@ -52,17 +46,17 @@ export function bugReportMail(to: string, bug: ReportedBug): Mail {
 		...(bug.errors.length ? bug.errors.map((error) => `- ${error}`) : [m.bugs_mail_no_console()]),
 	].join("\n");
 	const html = [
-		`<p>${escape(intro)}</p>`,
+		`<p>${escapeHtml(intro)}</p>`,
 		note
-			? `<p>${escape(m.bugs_mail_note())}</p><blockquote>${escape(note).replaceAll("\n", "<br>")}</blockquote>`
-			: `<p>${escape(m.bugs_mail_no_note())}</p>`,
-		`<p><a href="${escape(bug.url)}">${escape(m.bugs_mail_watch())}</a></p>`,
-		`<h3>${escape(m.bugs_mail_context())}</h3>`,
-		`<ul>${lines.map(([label, value]) => `<li>${escape(label)}: ${escape(value)}</li>`).join("")}</ul>`,
-		`<h3>${escape(m.bugs_mail_console())}</h3>`,
+			? `<p>${escapeHtml(m.bugs_mail_note())}</p><blockquote>${escapeHtml(note).replaceAll("\n", "<br>")}</blockquote>`
+			: `<p>${escapeHtml(m.bugs_mail_no_note())}</p>`,
+		`<p><a href="${escapeHtml(bug.url)}">${escapeHtml(m.bugs_mail_watch())}</a></p>`,
+		`<h3>${escapeHtml(m.bugs_mail_context())}</h3>`,
+		`<ul>${lines.map(([label, value]) => `<li>${escapeHtml(label)}: ${escapeHtml(value)}</li>`).join("")}</ul>`,
+		`<h3>${escapeHtml(m.bugs_mail_console())}</h3>`,
 		bug.errors.length
-			? `<ul>${bug.errors.map((error) => `<li><code>${escape(error)}</code></li>`).join("")}</ul>`
-			: `<p>${escape(m.bugs_mail_no_console())}</p>`,
+			? `<ul>${bug.errors.map((error) => `<li><code>${escapeHtml(error)}</code></li>`).join("")}</ul>`
+			: `<p>${escapeHtml(m.bugs_mail_no_console())}</p>`,
 	].join("\n");
 	return { to, subject, text, html };
 }
