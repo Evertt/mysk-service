@@ -10,6 +10,7 @@
 	import { goto } from "$app/navigation";
 	import { page } from "$app/state";
 	import SearchIcon from "@lucide/svelte/icons/search";
+	import { useDebounce } from "runed";
 	import { untrack } from "svelte";
 
 	import { scrollPages } from "#lib/components/data-table/server-table.svelte.ts";
@@ -54,12 +55,7 @@
 
 	// The search box, as the page opened: the URL follows a moment after typing stops.
 	let search = $state(untrack(() => page.url.searchParams.get("q") ?? ""));
-	let timer: ReturnType<typeof setTimeout> | undefined;
-	function searchFor(value: string) {
-		search = value;
-		clearTimeout(timer);
-		timer = setTimeout(() => change({ q: value.trim() || null }), 300);
-	}
+	const searchFor = useDebounce(() => change({ q: search.trim() || null }), 300);
 
 	const chips = $derived(
 		yearStates.map((state) => ({
@@ -95,8 +91,8 @@
 			</InputGroup.Addon>
 			<InputGroup.Input
 				type="search"
-				value={search}
-				oninput={(event) => searchFor(event.currentTarget.value)}
+				bind:value={search}
+				oninput={() => void searchFor()}
 				placeholder={m.checklists_assets_search()}
 				aria-label={m.checklists_assets_search_label()}
 			/>
