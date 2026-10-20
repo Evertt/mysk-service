@@ -16,6 +16,7 @@
 	import { untrack } from "svelte";
 
 	import Callout from "#lib/components/callout.svelte";
+	import FilterChips from "#lib/components/filter-chips.svelte";
 	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
 	import Checkout from "#modules/parts-shop/client/checkout.svelte";
 	import { getClientShop } from "#modules/parts-shop/client/client-shop.remote.ts";
@@ -140,27 +141,13 @@
 					bind:value={search}
 				/>
 			</InputGroup.Root>
-			<nav class="flex flex-wrap gap-2" aria-label={m.shop_field_category()}>
-				<Button
-					size="sm"
-					variant={category === null ? "default" : "outline"}
-					aria-pressed={category === null}
-					onclick={() => (category = null)}
-				>
-					{m.shop_categories_all()}
-				</Button>
-				{#each shop.categories as each (each.id)}
-					<Button
-						size="sm"
-						variant={category === each.id ? "default" : "outline"}
-						aria-pressed={category === each.id}
-						onclick={() => (category = each.id)}
-						data-category={each.name}
-					>
-						{each.name}
-					</Button>
-				{/each}
-			</nav>
+			<FilterChips
+				label={m.shop_field_category()}
+				options={shop.categories.map((each) => ({ value: String(each.id), label: each.name }))}
+				value={category === null ? null : String(category)}
+				all={{ label: m.shop_categories_all() }}
+				onchange={(chosen) => (category = chosen === null ? null : Number(chosen))}
+			/>
 		</div>
 
 		{#each byCategory as each (each.id)}

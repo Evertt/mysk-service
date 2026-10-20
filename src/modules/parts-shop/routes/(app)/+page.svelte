@@ -9,17 +9,24 @@
 	import type { RouteParams } from "$app/types";
 
 	import EnumBadge from "#lib/components/enum-badge.svelte";
+	import FilterChips from "#lib/components/filter-chips.svelte";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { CustomerLink } from "#lib/customers/components.ts";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 	import { shopOrderStatusDisplay } from "#modules/parts-shop/display.ts";
 	import { getShopOrders } from "#modules/parts-shop/orders.remote.ts";
+	import ShopOrderLink from "#modules/parts-shop/ui/shop-order-link.svelte";
 
 	// The props the route passes; this page needs none of them.
 	const _props: { params: RouteParams<"/(app)/(modules)/parts-shop"> } = $props();
 
 	const view = $derived(page.url.searchParams.get("view") === "all" ? "all" : "open");
 	const orders = $derived(await getShopOrders(view));
+	const here = resolve("/(app)/(modules)/parts-shop");
+	const views = $derived([
+		{ value: "open", label: m.shop_orders_open(), href: here },
+		{ value: "all", label: m.shop_orders_all(), href: `${here}?view=all` },
+	]);
 </script>
 
 <svelte:head>
@@ -34,24 +41,7 @@
 	{/snippet}
 </PageHeader>
 
-<nav class="flex flex-wrap gap-2" aria-label={m.shop_orders_view()}>
-	<Button
-		size="sm"
-		variant={view === "open" ? "default" : "outline"}
-		href="?"
-		aria-current={view === "open" ? "page" : undefined}
-	>
-		{m.shop_orders_open()}
-	</Button>
-	<Button
-		size="sm"
-		variant={view === "all" ? "default" : "outline"}
-		href="?view=all"
-		aria-current={view === "all" ? "page" : undefined}
-	>
-		{m.shop_orders_all()}
-	</Button>
-</nav>
+<FilterChips label={m.shop_orders_view()} options={views} value={view} />
 
 <Card.Root data-shop-orders>
 	<Card.Content>
@@ -69,16 +59,7 @@
 				<Table.Body>
 					{#each orders as order (order.id)}
 						<Table.Row data-shop-order={order.number}>
-							<Table.Cell class="font-medium">
-								<a
-									class="hover:underline"
-									href={resolve("/(app)/(modules)/parts-shop/orders/[number]", {
-										number: order.number,
-									})}
-								>
-									{order.number}
-								</a>
-							</Table.Cell>
+							<Table.Cell><ShopOrderLink number={order.number} /></Table.Cell>
 							<Table.Cell>
 								<CustomerLink
 									code={order.customer.code}
