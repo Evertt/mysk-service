@@ -16,8 +16,8 @@
 	import { type ListQuery, whereOf } from "#lib/components/data-table/list-definition.ts";
 	import { getTimeZone } from "#lib/dates.ts";
 	import { EquipmentLink } from "#lib/equipment/components.ts";
+	import { errorMessage } from "#lib/errors/messages.ts";
 	import { isOpenOrder } from "#lib/models.ts";
-	import { errorMessage } from "#lib/utils.ts";
 
 	import ChecklistHistory from "../detail/checklist-history.svelte";
 	import { checklistLabels } from "../labels.ts";

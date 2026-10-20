@@ -13,9 +13,9 @@
 	import RefreshCcwIcon from "@lucide/svelte/icons/refresh-ccw";
 	import { toast } from "svelte-sonner";
 
+	import { errorMessage } from "#lib/errors/messages.ts";
 	import type { ModuleId } from "#lib/modules/ids.ts";
 	import { simulationSpeeds } from "#lib/simulation/extensions.ts";
-	import { errorMessage } from "#lib/utils.ts";
 
 	import SimulationBadge from "./simulation-badge.svelte";
 	import {

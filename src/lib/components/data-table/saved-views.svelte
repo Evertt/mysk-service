@@ -20,7 +20,7 @@
 	import { toast } from "svelte-sonner";
 
 	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
-	import { errorMessage } from "#lib/utils.ts";
+	import { errorMessage } from "#lib/errors/messages.ts";
 
 	import RenameViewDialog from "./rename-view-dialog.svelte";
 	import SaveViewDialog from "./save-view-dialog.svelte";

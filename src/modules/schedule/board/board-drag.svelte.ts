@@ -2,7 +2,7 @@ import { toast } from "svelte-sonner";
 import { SvelteSet } from "svelte/reactivity";
 
 import { getTimeZone } from "#lib/dates.ts";
-import { errorMessage } from "#lib/utils.ts";
+import { errorMessage } from "#lib/errors/messages.ts";
 
 import { getSchedule, moveOrder } from "../schedule.remote.ts";
 import { applyMove, DEFAULT_TIME, formatDay, type RowId, type ScheduleOrder } from "./board.ts";

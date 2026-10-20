@@ -30,8 +30,8 @@
 
 	import BadgeSelect, { type BadgeOption } from "#lib/components/badge-select.svelte";
 	import { cellFilter } from "#lib/components/data-table/cell-filter.svelte.ts";
+	import { errorMessage } from "#lib/errors/messages.ts";
 	import type { OrderStatus } from "#lib/models.ts";
-	import { errorMessage } from "#lib/utils.ts";
 
 	import { orderStatusDisplay } from "../display.ts";
 	import type { OrderTag } from "../extensions.ts";

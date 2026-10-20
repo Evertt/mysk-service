@@ -17,8 +17,8 @@
  */
 import { toast } from "svelte-sonner";
 
+import { errorMessage } from "#lib/errors/messages.ts";
 import { m } from "#lib/paraglide/messages.js";
-import { errorMessage } from "#lib/utils.ts";
 
 /** Whether the form was accepted; a toast if submitting threw. `submit` may add `.updates(…)`. */
 export async function submitted(submit: () => Promise<boolean>): Promise<boolean> {

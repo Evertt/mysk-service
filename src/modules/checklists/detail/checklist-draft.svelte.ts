@@ -9,7 +9,7 @@
 import { untrack } from "svelte";
 import { toast } from "svelte-sonner";
 
-import { errorMessage } from "#lib/utils.ts";
+import { errorMessage } from "#lib/errors/messages.ts";
 
 import { canComplete, completionProblems, type PointResult, progress } from "../model.ts";
 

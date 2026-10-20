@@ -19,7 +19,7 @@
 	import { toast } from "svelte-sonner";
 	import type { HTMLInputAttributes } from "svelte/elements";
 
-	import { errorMessage } from "#lib/utils.ts";
+	import { errorMessage } from "#lib/errors/messages.ts";
 
 	import {
 		type DialogDone,

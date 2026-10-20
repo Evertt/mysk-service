@@ -12,9 +12,9 @@
 	import { toast } from "svelte-sonner";
 
 	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
+	import { errorMessage } from "#lib/errors/messages.ts";
 	import { label } from "#lib/i18n/index.ts";
 	import { OrderLink } from "#lib/orders/components.ts";
-	import { errorMessage } from "#lib/utils.ts";
 
 	import PlanDialog from "../form/plan-dialog.svelte";
 	import type { PlanOrderType } from "../model.ts";

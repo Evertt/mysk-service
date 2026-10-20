@@ -26,8 +26,8 @@
 	import type { RowData } from "@tanstack/svelte-table";
 	import { toast } from "svelte-sonner";
 
+	import { errorMessage } from "#lib/errors/messages.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
-	import { errorMessage } from "#lib/utils.ts";
 
 	import BulkActionDialog from "./bulk-action-dialog.svelte";
 	import {
