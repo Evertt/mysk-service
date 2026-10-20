@@ -1,11 +1,11 @@
-/** How the activity log reads for the invoicing module's records (see `#lib/activity/subjects.ts`). */
+/** How the activity log reads for the invoices module's records (see `#lib/activity/subjects.ts`). */
 import { resolve } from "$app/paths";
 
 // Only types from `#lib/activity/subjects.ts`: it imports the modules, and so this file, in turn.
 import type { FieldFormat, Sentence, SubjectType } from "#lib/activity/index.ts";
 import { formatCents, formatNumber, formatPercent, formatStoredDay } from "#lib/i18n/index.ts";
 
-import { invoicingLabels } from "./labels.ts";
+import { invoicesLabels } from "./labels.ts";
 
 const day = formatStoredDay;
 const days = (value: unknown) => m.invoices_activity_value_days({ count: Number(value) });
@@ -19,7 +19,7 @@ const paymentTermDays: FieldFormat = {
 const vatRate: FieldFormat = { label: m.invoices_activity_field_vat_rate, format: rate };
 
 /** What the user did to an invoice, as a sentence per verb (see `actionVerbs` in `#lib/activity/subjects.ts`). */
-export const invoicingActions = {
+export const invoicesActions = {
 	issued: m.invoices_action_issued,
 	paid: m.invoices_action_paid,
 	voided: m.invoices_action_voided,
@@ -27,12 +27,12 @@ export const invoicingActions = {
 	settled: m.invoices_action_settled,
 } satisfies Record<string, Sentence>;
 
-export const invoicingSubjects = {
+export const invoicesSubjects = {
 	invoice: {
 		noun: m.invoices_activity_subject,
 		href: ({ label }) => resolve("/(app)/(modules)/invoices/[number]", { number: label }),
 		fields: {
-			status: { format: (value) => invoicingLabels.labelOrValue("invoiceState", String(value)) },
+			status: { format: (value) => invoicesLabels.labelOrValue("invoiceState", String(value)) },
 			customerId: { ref: "customer" },
 			paymentTermDays,
 			vatRate,
@@ -50,7 +50,7 @@ export const invoicingSubjects = {
 			resolve("/(app)/(modules)/invoices/credit-notes/[number]", { number: label }),
 		fields: {
 			status: {
-				format: (value) => invoicingLabels.labelOrValue("creditNoteState", String(value)),
+				format: (value) => invoicesLabels.labelOrValue("creditNoteState", String(value)),
 			},
 			reason: { label: m.invoices_activity_field_reason },
 			vatRate,

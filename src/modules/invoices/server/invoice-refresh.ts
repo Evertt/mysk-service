@@ -1,10 +1,11 @@
+import { getSubjectActivity } from "#lib/components/activity/activity.remote.ts";
+
+import { getCreditNote, getCreditNotes } from "../credit-notes.remote.ts";
 /**
  * What shows a changed invoice or credit note, for the remote functions that change one
  * (`invoice-status.remote.ts`, `detail/draft.remote.ts`, `detail/credit-note.remote.ts`).
  */
-import { getSubjectActivity } from "#lib/components/activity/activity.remote.ts";
-
-import { getCreditNote, getCreditNotes } from "../credit-notes.remote.ts";
+import type { DocumentKind } from "../document.ts";
 import { getBillable, getInvoice, getInvoices } from "../invoices.remote.ts";
 
 /** Refreshes what shows a changed invoice. */
@@ -29,4 +30,18 @@ export function refreshCreditNote(found: {
 		void getInvoice(found.invoice.number).refresh();
 		void getSubjectActivity({ type: "invoice", id: String(found.invoice.id) }).refresh();
 	}
+}
+
+/** Refreshes what shows a changed document of `kind`. */
+export function refreshDocument(
+	kind: DocumentKind,
+	found: {
+		id: number;
+		number: string;
+		customerId: number;
+		invoice?: { id: number; number: string } | null;
+	},
+) {
+	if (kind === "invoice") refreshInvoice(found);
+	else refreshCreditNote(found);
 }

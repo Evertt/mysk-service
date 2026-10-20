@@ -13,12 +13,11 @@
 	import { formatCents, formatDate, formatDateTime } from "#lib/i18n/index.ts";
 	import { isMadeElsewhere } from "#modules/invoices/credit-note.ts";
 	import { getCreditNote } from "#modules/invoices/credit-notes.remote.ts";
+	import BillingDocument from "#modules/invoices/detail/billing-document.svelte";
 	import ConfirmButton from "#modules/invoices/detail/confirm-button.svelte";
-	import CreditNoteDocument from "#modules/invoices/detail/credit-note-document.svelte";
 	import CreditNoteEditor from "#modules/invoices/detail/credit-note-editor.svelte";
 	import {
 		issueCreditNote,
-		removeCreditLine,
 		settleCreditNote,
 		voidCreditNote,
 	} from "#modules/invoices/detail/credit-note.remote.ts";
@@ -36,9 +35,6 @@
 	const linesEditable = $derived(editable && !isMadeElsewhere(credit));
 	// One against a sent invoice is settled when the invoice is paid, not by hand.
 	const offset = $derived(credit.invoice?.status === "sent");
-	const problems = $derived(
-		credit.lines.flatMap((line) => removeCreditLine.for(String(line.id)).fields.allIssues() ?? []),
-	);
 </script>
 
 <RecordPage
@@ -110,11 +106,11 @@
 			/>
 		{/if}
 	{/snippet}
-	{#snippet summary()}
-		<Field.FieldError errors={problems} class="print:hidden" />
-	{/snippet}
 	{#snippet main()}
-		<CreditNoteDocument {data} editable={linesEditable} />
+		<BillingDocument
+			doc={{ ...credit, kind: "creditNote", organization: data.organization, totals: data.totals }}
+			editable={linesEditable}
+		/>
 	{/snippet}
 	{#snippet side()}
 		{#if credit.invoice && data.remaining !== null}

@@ -1,7 +1,7 @@
 /**
  * Credit notes for the modules that require invoicing (the partner programme's cash bonus): making
  * a standalone one in the caller's transaction, and reading where some stand. They follow the
- * invoicing module's rules (`../credit-note.ts`): a draft with the next number, at the
+ * invoices module's rules (`../credit-note.ts`): a draft with the next number, at the
  * organization's VAT rate, logged, that the office issues and settles on its page. Server-only.
  */
 import { and, eq, sql } from "drizzle-orm";

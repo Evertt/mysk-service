@@ -29,10 +29,7 @@ import {
 	pausePlan,
 	updatePlan,
 } from "#modules/maintenance/plans.remote.ts";
-import {
-	getMaintenanceSettings,
-	saveMaintenanceSettings,
-} from "#modules/maintenance/settings.remote.ts";
+import { saveMaintenanceSettings } from "#modules/maintenance/settings.remote.ts";
 import {
 	as,
 	call,

@@ -13,12 +13,9 @@ import { currentCustomer, currentTenant } from "#lib/server/auth/index.ts";
 
 import { isPartner } from "../api/wallet.server.ts";
 import { yearField } from "../form/wallet-schema.ts";
-import { bonusForms, creditValidUntil } from "../model.ts";
+import { bonusForms } from "../model.ts";
 import { forCustomers } from "../remote-functions.ts";
-import { chooseBonus, closedYearsOf } from "../server/close.ts";
-import { figuresOf } from "../server/partners.ts";
-import { rulesFor } from "../server/rules.ts";
-import { walletOf } from "../server/wallet.ts";
+import { chooseBonus, partnerStanding } from "../server/close.ts";
 
 /**
  * The contact's customer's place in the programme: for a partner, this year's figures, the rules
@@ -29,10 +26,8 @@ import { walletOf } from "../server/wallet.ts";
 export const getClientPartner = forCustomers.query(async () => {
 	const { customer } = await currentCustomer();
 	if (!(await isPartner(customer.id))) return { partner: false as const };
-	const now = currentDay();
-	const rules = await rulesFor(now.year);
-	const figures = rules ? (await figuresOf(rules, [customer.id])).get(customer.id)! : null;
-	const years = (await closedYearsOf(customer.id)).map((year) => ({
+	const { rules, closed, ...standing } = await partnerStanding(customer.id, currentDay());
+	const years = closed.map((year) => ({
 		year: year.year,
 		level: year.level,
 		colour: year.colour,
@@ -51,7 +46,7 @@ export const getClientPartner = forCustomers.query(async () => {
 	return {
 		partner: true as const,
 		organization: currentTenant().name,
-		year: now.year,
+		...standing,
 		rules: rules
 			? {
 					tiers: rules.tiers,
@@ -59,9 +54,6 @@ export const getClientPartner = forCustomers.query(async () => {
 					creditValidYears: rules.creditValidYears,
 				}
 			: null,
-		figures,
-		/** Where this year's credit would be valid until, if it's chosen. */
-		validUntil: rules ? creditValidUntil(now.year, rules.creditValidYears) : null,
 		/** The latest three closed years. */
 		closed: years.slice(0, 3),
 		/**
@@ -71,7 +63,6 @@ export const getClientPartner = forCustomers.query(async () => {
 		awaiting:
 			years.findLast((year) => !year.choice && (year.cashAmount > 0 || year.creditAmount > 0)) ??
 			null,
-		wallet: await walletOf(customer.id, now),
 	};
 });
 

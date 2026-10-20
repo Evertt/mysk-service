@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import { describeChanges, type SubjectType } from "#lib/activity/index.ts";
 import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
-import { invoicingActions, invoicingSubjects, lineNote } from "#modules/invoices/activity.ts";
+import { invoicesActions, invoicesSubjects, lineNote } from "#modules/invoices/activity.ts";
 
 const englishByDefault = getLocale;
 afterEach(() => overwriteGetLocale(englishByDefault));
@@ -12,33 +12,33 @@ const {
 	invoice_line: line,
 	invoicing_settings: settings,
 	credit_note: credit,
-}: Record<string, SubjectType> = invoicingSubjects;
+}: Record<string, SubjectType> = invoicesSubjects;
 
-describe("invoicingActions", () => {
+describe("invoicesActions", () => {
 	const inputs = { user: "Avery", subject: "invoice INV-1" };
 
 	test("has a sentence for every verb it adds", () => {
-		expect(Object.keys(invoicingActions).toSorted()).toEqual([
+		expect(Object.keys(invoicesActions).toSorted()).toEqual([
 			"issued",
 			"paid",
 			"settled",
 			"voided",
 		]);
-		for (const sentence of Object.values(invoicingActions)) {
+		for (const sentence of Object.values(invoicesActions)) {
 			expect(sentence(inputs)).toMatch(/^Avery .+invoice INV-1/);
 		}
-		expect(invoicingActions.issued(inputs)).toBe("Avery issued invoice INV-1");
+		expect(invoicesActions.issued(inputs)).toBe("Avery issued invoice INV-1");
 	});
 
 	test("puts the words where Dutch wants them", () => {
 		overwriteGetLocale(() => "nl");
-		expect(invoicingActions.voided({ user: "Avery", subject: "factuur INV-1" })).toBe(
+		expect(invoicesActions.voided({ user: "Avery", subject: "factuur INV-1" })).toBe(
 			"Avery heeft factuur INV-1 geannuleerd",
 		);
 	});
 });
 
-describe("invoicingSubjects", () => {
+describe("invoicesSubjects", () => {
 	test("links an invoice and the settings to their pages", () => {
 		expect(invoice.href?.({ id: "3", label: "INV-2026-00003" })).toBe("/invoices/INV-2026-00003");
 		expect(settings.href?.({ id: "org", label: "" })).toBe("/invoices/settings");
@@ -53,7 +53,7 @@ describe("invoicingSubjects", () => {
 			{ field: "status", before: "Sent", after: "Settled" },
 		]);
 		overwriteGetLocale(() => "nl");
-		expect(invoicingActions.settled({ user: "Avery", subject: "creditnota CN-1" })).toBe(
+		expect(invoicesActions.settled({ user: "Avery", subject: "creditnota CN-1" })).toBe(
 			"Avery heeft creditnota CN-1 verrekend",
 		);
 	});

@@ -11,11 +11,10 @@
 	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import RecordPage from "#lib/components/record-page.svelte";
 	import { formatDate, formatDateTime } from "#lib/i18n/index.ts";
+	import BillingDocument from "#modules/invoices/detail/billing-document.svelte";
 	import ConfirmButton from "#modules/invoices/detail/confirm-button.svelte";
 	import DraftEditor from "#modules/invoices/detail/draft-editor.svelte";
-	import { removeLine } from "#modules/invoices/detail/draft.remote.ts";
 	import InvoiceCredits from "#modules/invoices/detail/invoice-credits.svelte";
-	import InvoiceDocument from "#modules/invoices/detail/invoice-document.svelte";
 	import { invoiceStateDisplay } from "#modules/invoices/display.ts";
 	import { issueInvoice, markPaid, voidInvoice } from "#modules/invoices/invoice-status.remote.ts";
 	import { canChange, isEditable } from "#modules/invoices/invoice.ts";
@@ -26,9 +25,6 @@
 	const data = $derived(await getInvoice(params.number));
 	const invoice = $derived(data.invoice);
 	const editable = $derived(isEditable(invoice.status));
-	const problems = $derived(
-		invoice.lines.flatMap((line) => removeLine.for(String(line.id)).fields.allIssues() ?? []),
-	);
 </script>
 
 <RecordPage
@@ -92,11 +88,11 @@
 			/>
 		{/if}
 	{/snippet}
-	{#snippet summary()}
-		<Field.FieldError errors={problems} class="print:hidden" />
-	{/snippet}
 	{#snippet main()}
-		<InvoiceDocument {data} {editable} />
+		<BillingDocument
+			doc={{ ...invoice, kind: "invoice", organization: data.organization, totals: data.totals }}
+			{editable}
+		/>
 	{/snippet}
 	{#snippet side()}
 		{#if editable}

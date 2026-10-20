@@ -1,5 +1,5 @@
 /**
- * The invoicing module's bulk actions on the orders list (`orders.list`, `#lib/orders/extensions.ts`):
+ * The invoices module's bulk actions on the orders list (`orders.list`, `#lib/orders/extensions.ts`):
  * a draft invoice for the selected completed orders of one customer, which then opens.
  */
 import ReceiptTextIcon from "@lucide/svelte/icons/receipt-text";

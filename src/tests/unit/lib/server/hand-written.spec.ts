@@ -113,12 +113,11 @@ describe("records", () => {
 	});
 
 	it("deletes and logs with deleteAndLog() or defineRemoval()", () => {
-		// A deletion logged only when shared (views), several lines at once (an invoice's order),
-		// with what it changes besides (an order's engineer), or an announcement without a log.
+		// A deletion logged only when shared (views), with what it changes besides (an order's
+		// engineer), or an announcement without a log. A draft's lines are logged by `logLines()`.
 		const special = [
 			"src/lib/components/data-table/views.remote.ts",
 			"src/lib/orders/server/order-changes.ts",
-			"src/modules/invoices/detail/draft.remote.ts",
 			"src/modules/energy/server/live-simulation.ts",
 		];
 		expect(offenders(/action:\s*"deleted"/, ["src/lib/server/records.ts", ...special])).toEqual([]);
@@ -165,10 +164,6 @@ describe("refusals", () => {
 			"src/lib/orders/list/order-status.remote.ts",
 			"src/lib/orders/order.remote.ts",
 			"src/modules/energy/thresholds.remote.ts",
-			"src/modules/invoices/credit-notes.remote.ts",
-			"src/modules/invoices/detail/credit-note.remote.ts",
-			"src/modules/invoices/detail/draft.remote.ts",
-			"src/modules/invoices/invoice-status.remote.ts",
 			"src/modules/materials/detail/stock.remote.ts",
 			"src/modules/materials/material.remote.ts",
 			"src/modules/materials/portal/field-materials.remote.ts",

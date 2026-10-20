@@ -1,5 +1,5 @@
 /**
- * The invoicing module's revenue, for the modules that require it (the partner programme): the
+ * The invoices module's revenue, for the modules that require it (the partner programme): the
  * lines of the tenant's paid invoices, by the day the invoice was paid, less the lines of its
  * settled credit notes (negative), by the day each was settled; excluding VAT (a line's amount is).
  * Voided invoices and credit notes, drafts and what's still to be paid or settled aren't in it.

@@ -1,5 +1,5 @@
 /**
- * The invoicing module's extension points, for the modules that enhance it (see
+ * The invoices module's extension points, for the modules that enhance it (see
  * `#lib/server/extensions.ts`).
  */
 import type { BillableItem, BillingPeriod } from "#lib/billing.ts";

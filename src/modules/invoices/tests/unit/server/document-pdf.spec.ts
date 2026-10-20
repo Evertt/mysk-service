@@ -4,7 +4,8 @@ import { PDFDocument } from "pdf-lib";
 import { describe, expect, test } from "vite-plus/test";
 
 import { formatCents } from "#lib/i18n/index.ts";
-import { invoicePdf, type PdfInvoice } from "#modules/invoices/server/invoice-pdf.ts";
+import type { BillingDocument } from "#modules/invoices/document.ts";
+import { documentPdf } from "#modules/invoices/server/document-pdf.ts";
 import { day } from "#unit/temporal-support.ts";
 
 /** The texts a PDF shows, in order: its content streams' strings, as pdf-lib writes them. */
@@ -32,9 +33,20 @@ async function textOf(bytes: Uint8Array) {
 	return texts;
 }
 
-const document: PdfInvoice = {
+const customer = {
+	code: "CUST-0001",
+	name: "Acme",
+	contactName: "Ann",
+	email: "ann@acme.test",
+	city: "Utrecht",
+	country: "NL",
+};
+
+const document: BillingDocument = {
+	kind: "invoice",
 	organization: "Fieldworks Noord",
 	number: "INV-2026-00012",
+	status: "paid",
 	state: "paid",
 	issuedOn: day("2026-09-01"),
 	dueOn: day("2026-10-01"),
@@ -42,14 +54,7 @@ const document: PdfInvoice = {
 	paymentTermDays: 30,
 	vatRate: 21,
 	notes: null,
-	customer: {
-		code: "CUST-0001",
-		name: "Acme",
-		contactName: "Ann",
-		email: "ann@acme.test",
-		city: "Utrecht",
-		country: "NL",
-	},
+	customer,
 	lines: [
 		{
 			description: "ORD-2026-00001: Repair",
@@ -62,13 +67,17 @@ const document: PdfInvoice = {
 	totals: { subtotal: 10_000, vat: 2100, total: 12_100 },
 };
 
-const credit: PdfInvoice = {
-	...document,
+const credit: BillingDocument & { kind: "creditNote" } = {
+	kind: "creditNote",
+	organization: "Fieldworks Noord",
 	number: "CN-2026-0003",
-	state: "sent",
-	dueOn: null,
-	paidOn: null,
-	paymentTermDays: 0,
+	status: "sent",
+	issuedOn: day("2026-09-01"),
+	vatRate: 21,
+	customer,
+	reason: "Returned part",
+	invoice: { number: "INV-2026-00012" },
+	settledOn: null,
 	lines: [
 		{
 			description: "ORD-2026-00001: Repair",
@@ -79,12 +88,11 @@ const credit: PdfInvoice = {
 		},
 	],
 	totals: { subtotal: -2500, vat: -525, total: -3025 },
-	credit: { reason: "Returned part", invoice: "INV-2026-00012", settledOn: null },
 };
 
 describe("an invoice's PDF", () => {
 	test("is headed as an invoice, with what to pay", async () => {
-		const bytes = await invoicePdf(document);
+		const bytes = await documentPdf(document);
 		const texts = await textOf(bytes);
 		expect(texts).toEqual(
 			expect.arrayContaining(["INVOICE", "INV-2026-00012", "PAID", formatCents(12_100)]),
@@ -96,7 +104,7 @@ describe("an invoice's PDF", () => {
 
 describe("a credit note's PDF", () => {
 	test("is headed as a credit note, with the invoice it credits, its reason and negative amounts", async () => {
-		const bytes = await invoicePdf(credit);
+		const bytes = await documentPdf(credit);
 		const texts = await textOf(bytes);
 		expect(texts).toEqual(
 			expect.arrayContaining([
@@ -120,11 +128,7 @@ describe("a credit note's PDF", () => {
 
 	test("says when it was settled, as settled rather than paid", async () => {
 		const texts = await textOf(
-			await invoicePdf({
-				...credit,
-				state: "paid",
-				credit: { ...credit.credit!, settledOn: day("2026-10-02") },
-			}),
+			await documentPdf({ ...credit, status: "paid", settledOn: day("2026-10-02") }),
 		);
 		expect(texts).toEqual(expect.arrayContaining(["SETTLED", "Settled"]));
 		expect(texts).not.toContain("PAID");
@@ -135,7 +139,7 @@ describe("a credit note's PDF", () => {
 		const before = getLocale;
 		overwriteGetLocale(() => "nl");
 		try {
-			const texts = await textOf(await invoicePdf(credit));
+			const texts = await textOf(await documentPdf(credit));
 			expect(texts).toEqual(expect.arrayContaining(["CREDITNOTA", "Crediteert factuur"]));
 		} finally {
 			overwriteGetLocale(before);
