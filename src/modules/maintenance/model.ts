@@ -32,6 +32,7 @@ export function advanceDueDate(
 /**
  * The due list's ranges, as horizons: due before today (`overdue`), or before today plus 30 or 90
  * days, the overdue ones included. "Every plan" is no range at all.
+ * @labels dueRange
  */
 export const dueRanges = ["overdue", "30-days", "90-days"] as const;
 export type DueRange = (typeof dueRanges)[number];
@@ -46,6 +47,7 @@ export const dueBefore = (range: DueRange, today = currentDay()) =>
 /**
  * Where a unit's next maintenance falls, for the equipment list's column filter: overdue (before
  * today), soon (within 30 days), or no active plan at all (`none`). Later ones are in none of them.
+ * @labels nextDueBucket
  */
 export const nextDueBuckets = ["overdue", "soon", "none"] as const;
 export type NextDueBucket = (typeof nextDueBuckets)[number];

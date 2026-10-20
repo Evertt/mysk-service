@@ -191,8 +191,8 @@
 					<Table.Row>
 						<Table.Head>{m.partners_field_category()}</Table.Head>
 						<Table.Head>{m.partners_column_counts_level()}</Table.Head>
-						<Table.Head>{m.partners_form_cash()}</Table.Head>
-						<Table.Head>{m.partners_form_credit()}</Table.Head>
+						<Table.Head>{m.partners_enum_bonus_form_cash()}</Table.Head>
+						<Table.Head>{m.partners_enum_bonus_form_credit()}</Table.Head>
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>

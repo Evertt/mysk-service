@@ -28,7 +28,8 @@ const config: KnipConfig = {
 		"src/modules/*/server/columns/*.ts",
 		"src/modules/*/routes/**/+*.{ts,svelte}",
 		// (`AnySlotContribution` and `AnyBulkContribution` in `src/lib/extensions/define.ts` are tagged
-		// `@public` for the same reason: only the generated `contributions.gen.ts` imports them.)
+		// `@public` for the same reason: only the generated `contributions.gen.ts` imports them; so are
+		// the enum types that only a generated `labels.gen.ts` reads.)
 		// The tests of every Vitest project: `src/tests/{unit,e2e}/` and the modules' `tests/{unit,e2e}/`.
 		"src/**/*.{test,spec}.{ts,js}",
 		"scripts/**/*.spec.ts",

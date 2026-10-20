@@ -30,6 +30,15 @@ describe("rerunsOn", () => {
 		expect(rerunsOn("change", "src/modules/sample/api/other.ts")).toBe(false);
 	});
 
+	test("reruns when a file that tags enum arrays with @labels changes", () => {
+		const tagged = () => "/** @labels orderStatus */";
+		expect(rerunsOn("change", "src/lib/models.ts", tagged)).toBe(true);
+		expect(rerunsOn("change", "src/modules/sample/model.ts", tagged)).toBe(true);
+		expect(rerunsOn("change", "src/modules/sample/model.ts", () => "")).toBe(false);
+		expect(rerunsOn("change", "src/lib/i18n/labels.gen.ts", tagged)).toBe(false);
+		expect(rerunsOn("change", "src/modules/sample/tests/unit/model.spec.ts", tagged)).toBe(false);
+	});
+
 	test("ignores files that aren't inputs", () => {
 		expect(rerunsOn("change", "src/lib/modules/ids.gen.ts")).toBe(false);
 		expect(rerunsOn("add", "src/modules/sample/other.ts")).toBe(false);

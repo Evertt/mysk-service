@@ -21,30 +21,42 @@ export const DEFAULT_CO2_FACTOR = 0.375;
 /** At this share of a threshold a zone is near it ("binnen 15% van grenswaarde"). */
 const NEAR_RATIO = 0.85;
 
+/** @labels zoneTone */
 const zoneTones = ["nominal", "elevated", "peak", "offline"] as const;
 /** How a zone's load reads: nominaal, verhoogd, piekbelasting, offline. */
 export type ZoneTone = (typeof zoneTones)[number];
 
+/** @labels thresholdState */
 const thresholdStates = ["active", "near", "normal", "off"] as const;
 /** A zone against its thresholds: over them, within 15%, below, or not watched. */
 export type ThresholdState = (typeof thresholdStates)[number];
 
+/** @labels alertMetric */
 export const alertMetrics = ["power", "energy", "door"] as const;
 /** What an alert measured: a zone's power (kW), its consumption today (kWh), a door's open time. */
 export type AlertMetric = (typeof alertMetrics)[number];
 
+/** @labels alertSeverity */
 export const alertSeverities = ["active", "near"] as const;
+/** @public Only the generated `labels.gen.ts` reads it, which knip doesn't see. */
 export type AlertSeverity = (typeof alertSeverities)[number];
 
-/** An alert's way: open, turned into an order (the mockup's Focus AI batch), dealt with. */
+/**
+ * An alert's way: open, turned into an order (the mockup's Focus AI batch), dealt with.
+ * @labels alertStatus
+ */
 export const alertStatuses = ["open", "order", "done"] as const;
 export type AlertStatus = (typeof alertStatuses)[number];
 
+/** @labels doorKind */
 export const doorKinds = ["sectional", "freezer", "cold"] as const;
 /** Sectionaaldeur, vriescel (−22 °C), koelcel (+2 °C). */
 export type DoorKind = (typeof doorKinds)[number];
 
-/** The comparison's periods: today against yesterday, this month against last month. */
+/**
+ * The comparison's periods: today against yesterday, this month against last month.
+ * @labels period
+ */
 export const periods = ["day", "month"] as const;
 export type Period = (typeof periods)[number];
 

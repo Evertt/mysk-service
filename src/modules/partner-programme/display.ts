@@ -42,7 +42,7 @@ export const formatTier = (tier: Tier) =>
 export const formatCategory = (rule: CategoryRule) =>
 	m.partners_category_summary({
 		category: partnerLabels.label("revenueCategory", rule.category),
-		level: rule.level ? m.partners_rule_yes() : m.partners_rule_no(),
+		level: rule.level ? m.partners_enum_category_rule_yes() : m.partners_enum_category_rule_no(),
 		cash: partnerLabels.label("categoryRule", rule.cash),
 		credit: partnerLabels.label("categoryRule", rule.credit),
 	});

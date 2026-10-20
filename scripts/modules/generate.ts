@@ -19,6 +19,7 @@ import {
 } from "./extensions.ts";
 import { discoverModules } from "./find.ts";
 import { byDependency } from "./graph.ts";
+import { planLabels } from "./labels.ts";
 import { renderPathPattern, replacePathPattern } from "./messages.ts";
 import { renderRegistries } from "./registries.ts";
 import { isGenerated, walk } from "./shared.ts";
@@ -81,6 +82,8 @@ export function generateModules(root: string) {
 	const points = findPoints(root);
 	problems.push(...extensionProblems(points, modules));
 	problems.push(...skeletonProblems(modules));
+	const labels = planLabels(root, modules);
+	problems.push(...labels.problems);
 	if (problems.length) {
 		throw new Error(`The modules in src/modules break the rules:\n- ${problems.join("\n- ")}`);
 	}
@@ -95,6 +98,15 @@ export function generateModules(root: string) {
 	write("src/lib/server/lists/columns.gen.ts", renderColumnSql(points, ordered));
 	write("src/lib/extensions/form-parts.gen.ts", renderFormParts(points, ordered));
 	write("src/lib/modules/skeletons.gen.ts", renderSkeletons(ordered));
+	for (const [path, content] of Object.entries(labels.files)) write(path, content);
+	// The label maps of the modules that no longer tag any arrays.
+	for (const path of modules.map((module) => `src/modules/${module.id}/labels.gen.ts`)) {
+		const file = join(root, path);
+		if (!labels.files[path] && existsSync(file) && isGenerated(file)) {
+			rmSync(file);
+			changed.push(path);
+		}
+	}
 	write(
 		"project.inlang/settings.json",
 		replacePathPattern(settingsText, renderPathPattern(patterns, modules)),

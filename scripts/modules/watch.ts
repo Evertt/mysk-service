@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { relative } from "node:path";
 
 import type { Plugin } from "vite-plus";
@@ -11,14 +12,19 @@ const inputs =
 /** The files that declare extension points, whose ids and names the generator reads. */
 const pointFiles = /^src\/(?:lib\/[^/]+|modules\/[^/]+\/api)\/extensions\.ts$/;
 
+/** The files that may tag enum arrays with `@labels` (see `labels.ts`). */
+const labelFiles = /^src\/(?:lib|modules)\/(?!.*\/tests\/).*(?<!\.gen)\.ts$/;
+
 /**
  * Whether a watcher event on `path` (relative to the root, with `/`) makes the generator rerun:
  * every event on its inputs, but `change` only on a module's `module.ts` (its `requires`,
  * `enhances` and `alwaysOn` are read from it), on route scripts (a change may add or drop a page
- * option or an export) and on the files that declare extension points.
+ * option or an export), on the files that declare extension points, and on those that tag enum
+ * arrays with `@labels` (`read` gives a file's text).
  */
-export function rerunsOn(event: string, path: string) {
+export function rerunsOn(event: string, path: string, read: (path: string) => string = () => "") {
 	if (pointFiles.test(path)) return true;
+	if (labelFiles.test(path) && read(path).includes("@labels")) return true;
 	if (!inputs.test(path)) return false;
 	if (event !== "change") return true;
 	return /^src\/modules\/[^/]+\/module\.ts$/.test(path) || /\/routes\/.*\+[^/]*\.[jt]s$/.test(path);
@@ -42,7 +48,14 @@ export function modulesPlugin(root: string): Plugin {
 			};
 			const watch = (event: string) => (file: string) => {
 				const path = relative(root, file).replaceAll("\\", "/");
-				if (rerunsOn(event, path)) regenerate();
+				const read = () => {
+					try {
+						return readFileSync(file, "utf8");
+					} catch {
+						return "";
+					}
+				};
+				if (rerunsOn(event, path, read)) regenerate();
 			};
 			for (const event of ["add", "addDir", "unlink", "unlinkDir", "change"]) {
 				watcher.on(event, watch(event));

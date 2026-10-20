@@ -37,6 +37,9 @@
  *   `load`, `actions` and request handlers itself (`guarded()`, `guardedActions()`);
  * - lists the module's message files in `pathPattern`: the core's entries first, then each module's,
  *   in id order;
+ * - writes the label maps of the enum arrays tagged `@labels <kind>` (`labels.ts`): the core's in
+ *   `src/lib/i18n/labels.gen.ts`, a module's in `src/modules/<id>/labels.gen.ts`, each value's
+ *   message `enum_<kind>_<value>` (the core's) or `<section>_enum_<kind>_<value>` (a module's);
  * - checks the rules and stops with the full list of what's wrong: a module's folder name is its id
  *   (`^[a-z][a-z0-9-]*$`); its route files are in route groups, and its id, the first segment of its
  *   routes' URLs, isn't a core route's; its skeletons are each a page's; its message sections (`messages/<locale>/<section>.json`) are in every
@@ -47,7 +50,7 @@
  * It uses no packages besides the parser of Vite+, and imports no app code, so it runs in plain Node.
  * The work is split by what it does, in `scripts/modules/`: `find.ts` (the folders), `routes.ts`
  * and `stubs.ts` (the route stubs), `registries.ts`, `extensions.ts` (the extension points and
- * the contributions to them), `messages.ts`, `check.ts` (the rules), `generate.ts` (writing it all)
+ * the contributions to them), `messages.ts`, `labels.ts`, `check.ts` (the rules), `generate.ts` (writing it all)
  * and `watch.ts` (the dev server). This file is the entry, and the name the generated files'
  * headers give.
  */

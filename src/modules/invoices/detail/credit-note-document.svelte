@@ -40,7 +40,7 @@
 				<dd><InvoiceLink number={credit.invoice.number} /></dd>
 			{/if}
 			{#if credit.settledOn}
-				<dt class="text-muted-foreground">{m.invoices_credit_state_settled()}</dt>
+				<dt class="text-muted-foreground">{m.invoices_enum_credit_note_state_paid()}</dt>
 				<dd class="tabular-nums">{formatDate(credit.settledOn)}</dd>
 			{/if}
 		</dl>

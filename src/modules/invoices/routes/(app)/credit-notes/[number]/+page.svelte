@@ -181,7 +181,7 @@
 							value={credit.issuedOn && formatDate(credit.issuedOn)}
 						/>
 						<DetailItem
-							label={m.invoices_credit_state_settled()}
+							label={m.invoices_enum_credit_note_state_paid()}
 							value={credit.settledOn && formatDate(credit.settledOn)}
 						/>
 						{#if credit.voidedAt}

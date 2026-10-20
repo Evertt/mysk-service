@@ -115,8 +115,8 @@
 							<Table.Head>{m.partners_column_level()}</Table.Head>
 							<Table.Head class="text-right">{m.partners_partner_revenue()}</Table.Head>
 							<Table.Head class="text-right">{m.partners_bonus_revenue()}</Table.Head>
-							<Table.Head class="text-right">{m.partners_form_cash()}</Table.Head>
-							<Table.Head class="text-right">{m.partners_form_credit()}</Table.Head>
+							<Table.Head class="text-right">{m.partners_enum_bonus_form_cash()}</Table.Head>
+							<Table.Head class="text-right">{m.partners_enum_bonus_form_credit()}</Table.Head>
 							<Table.Head>{m.partners_column_closed()}</Table.Head>
 						</Table.Row>
 					</Table.Header>

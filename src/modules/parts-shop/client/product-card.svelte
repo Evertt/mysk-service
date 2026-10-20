@@ -89,7 +89,7 @@
 			{#if !orderable}
 				<Button size="sm" variant="outline" disabled>
 					{product.onRequest || product.availability === "on_request"
-						? m.shop_stock_on_request()
+						? m.shop_enum_product_stock_on_request()
 						: m.shop_not_eligible()}
 				</Button>
 			{:else if quantity}

@@ -112,7 +112,7 @@
 		current={zone.series}
 		previous={zone.previousSeries}
 		bucket="hour"
-		currentLabel={m.energy_period_day()}
+		currentLabel={m.energy_enum_period_day()}
 		previousLabel={m.energy_yesterday()}
 	/>
 

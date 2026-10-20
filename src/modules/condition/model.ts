@@ -7,7 +7,10 @@
  */
 import type { NumberFormat } from "#lib/numbering.ts";
 
-/** A unit's status, worst first: the order the Connect page sorts by. */
+/**
+ * A unit's status, worst first: the order the Connect page sorts by.
+ * @labels unitStatus
+ */
 export const unitStatuses = ["critical", "attention", "planned", "ok"] as const;
 export type UnitStatus = (typeof unitStatuses)[number];
 
@@ -17,7 +20,10 @@ export type Concern = Exclude<UnitStatus, "planned">;
 /** The statuses that need someone's attention: the Connect page's "only these" filter. */
 export const needsAttention = ["critical", "attention"] as const satisfies UnitStatus[];
 
-/** Where a condition was recorded: on a checklist in the engineer portal, or by hand in the office. */
+/**
+ * Where a condition was recorded: on a checklist in the engineer portal, or by hand in the office.
+ * @labels conditionSource
+ */
 export const conditionSources = ["checklist", "office"] as const;
 export type ConditionSource = (typeof conditionSources)[number];
 

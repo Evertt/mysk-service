@@ -45,7 +45,7 @@
 				columnId="dueOn"
 				title={m.invoices_column_due()}
 				presets={["before-today", "from-today", "this-week", "next-7-days", "this-month"]}
-				none={m.invoices_state_draft()}
+				none={m.invoices_enum_invoice_state_draft()}
 			/>
 		</table.Toolbar>
 		<table.Table emptyTitle={m.invoices_empty()} fillViewport />

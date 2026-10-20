@@ -128,6 +128,7 @@ export function changedPlaces(points: readonly PointPlace[], order: Order): Poin
 /**
  * What a checklist on an order is: an inspection (keuring), which makes a unit's inspection valid
  * for its template's months, or a maintenance visit (onderhoud). As the order's type.
+ * @labels checklistKind
  */
 export const checklistKinds = ["inspection", "maintenance"] as const;
 export type ChecklistKind = (typeof checklistKinds)[number];
@@ -136,7 +137,10 @@ export type ChecklistKind = (typeof checklistKinds)[number];
 export const checklistStatuses = ["draft", "completed"] as const;
 export type ChecklistStatus = (typeof checklistStatuses)[number];
 
-/** What the engineer found on a point: OK (Goed), rejected (Afkeur) or not applicable (N.v.t.). */
+/**
+ * What the engineer found on a point: OK (Goed), rejected (Afkeur) or not applicable (N.v.t.).
+ * @labels pointResult
+ */
 export const pointResults = ["ok", "nok", "na"] as const;
 export type PointResult = (typeof pointResults)[number];
 
@@ -213,6 +217,7 @@ export const rejectedFirst = <Point extends { result: PointResult | null }>(
  * Where a unit stands with its inspections, by its latest completed inspection: `valid` until its
  * validity runs out, `expiring` in the last 30 days of it, `expired` after; `rejected` when that
  * inspection rejected a point (unless it has expired, which is worse); `none` without one.
+ * @labels inspectionStatus
  */
 export const inspectionStatuses = ["valid", "expiring", "expired", "rejected", "none"] as const;
 export type InspectionStatus = (typeof inspectionStatuses)[number];
@@ -252,6 +257,7 @@ export function inspectionStatus(
  * Where a unit stands this year ("2026 ✓", "2026 open"): `done` once a checklist of it was
  * completed this year, else `open` while a draft of it is on an open order, else `none` (worked out
  * in SQL, `yearStateSql()` in `server/assets.ts`).
+ * @labels yearState
  */
 export const yearStates = ["done", "open", "none"] as const;
 export type YearState = (typeof yearStates)[number];

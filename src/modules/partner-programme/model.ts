@@ -13,6 +13,7 @@ import type { OrderType } from "#lib/models.ts";
 /**
  * What revenue is, for the programme ("Omzet die meetelt"): a fixed list, whose labels are messages.
  * Each year's rules say per category whether it counts for the level, the cash bonus and the credit.
+ * @labels revenueCategory
  */
 export const revenueCategories = [
 	"maintenance_contracts",
@@ -28,18 +29,24 @@ export type RevenueCategory = (typeof revenueCategories)[number];
 /**
  * Whether a category's revenue counts for a bonus form: always, never, or as the order's
  * classification says ("volgens afspraak"; without one, it doesn't).
+ * @labels categoryRule
  */
 export const categoryRuleValues = ["yes", "no", "by_agreement"] as const;
+/** @public Only the generated `labels.gen.ts` reads it, which knip doesn't see. */
 export type CategoryRuleValue = (typeof categoryRuleValues)[number];
 
 /**
  * How an order's revenue counts for the bonus, as the office classifies it: all of it, a share of
  * it (`share` percent), only for the level, or not at all (not even for the level).
+ * @labels eligibility
  */
 export const eligibilities = ["full", "partial", "level_only", "excluded"] as const;
 export type Eligibility = (typeof eligibilities)[number];
 
-/** The two bonus forms: paid out, or a (larger) credit for parts in the partner's wallet. */
+/**
+ * The two bonus forms: paid out, or a (larger) credit for parts in the partner's wallet.
+ * @labels bonusForm
+ */
 export const bonusForms = ["cash", "credit"] as const;
 export type BonusForm = (typeof bonusForms)[number];
 
@@ -52,6 +59,7 @@ export const bonusYearStatuses = ["accruing", "finalised"] as const;
 /**
  * The wallet's ledger: credit awarded for a year, spent (in the shop, later), a spend given back,
  * credit expired past its date, and corrections by hand. Signed amounts; the balance is their sum.
+ * @labels walletEntryKind
  */
 export const walletEntryKinds = ["award", "spend", "reversal", "expiry", "adjustment"] as const;
 export type WalletEntryKind = (typeof walletEntryKinds)[number];

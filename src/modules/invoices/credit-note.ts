@@ -29,7 +29,10 @@ import type { InvoiceStatus } from "./model.ts";
 
 // --- Status ----------------------------------------------------------------------------------
 
-/** What a credit note shows: its status, without overdue. `paid` reads as settled. */
+/**
+ * What a credit note shows: its status, without overdue. `paid` reads as settled.
+ * @labels creditNoteState
+ */
 export const creditNoteStates = ["draft", "sent", "paid", "void"] as const;
 export type CreditNoteState = (typeof creditNoteStates)[number];
 
@@ -45,6 +48,7 @@ export const isIssued = (status: InvoiceStatus) => status === "sent" || status =
 /**
  * How a sent credit note is still to be settled: refunded by the office (a standalone one, or one
  * against a paid invoice), or offset against the sent invoice it credits (settled with its payment).
+ * @labels creditSettlement
  */
 export const creditSettlements = ["refund", "offset"] as const;
 export type CreditSettlement = (typeof creditSettlements)[number];

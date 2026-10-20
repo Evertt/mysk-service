@@ -6,6 +6,7 @@
 import type { OrderStatus } from "#lib/models.ts";
 import type { NumberFormat } from "#lib/numbering.ts";
 
+/** @labels materialUnit materialUnitSymbol */
 export const materialUnits = ["pcs", "m", "kg", "l"] as const;
 export type MaterialUnit = (typeof materialUnits)[number];
 
@@ -18,6 +19,7 @@ export const fitsUnit = (quantity: number, unit: MaterialUnit) => {
 	return Math.abs(steps - Math.round(steps)) < 1e-9;
 };
 
+/** @labels stockLevel */
 export const stockLevels = ["out", "low", "in_stock"] as const;
 export type StockLevel = (typeof stockLevels)[number];
 
@@ -65,6 +67,7 @@ export const holdsStock = (status: OrderStatus) =>
  * amount, an order line taking it (consumption) or giving it back (return), or another module
  * setting it aside for an order of its own (reservation, e.g. a parts shop's order) and letting it
  * go again (release, when that's cancelled).
+ * @labels stockMovementKind
  */
 export const stockMovementKinds = [
 	"opening_balance",
