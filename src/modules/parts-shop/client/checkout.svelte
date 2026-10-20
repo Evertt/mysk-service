@@ -8,6 +8,7 @@
 <script lang="ts">
 	import { withoutValue } from "#lib/components/form/line-items.svelte.ts";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
+	import { submitted } from "#lib/components/form/submitted.ts";
 	import { formatCents, formatNumber } from "#lib/i18n/index.ts";
 	import { cn } from "#lib/utils.ts";
 
@@ -24,11 +25,14 @@
 		available,
 		partner,
 		onremove,
+		onplaced,
 	}: {
 		lines: Line[];
 		available: number;
 		partner: boolean;
 		onremove: (productId: number) => void;
+		/** Called once the order is placed, as the page goes to it. */
+		onplaced: () => void;
 	} = $props();
 
 	const total = $derived(
@@ -44,7 +48,12 @@
 		<Card.Description>{m.shop_checkout_description()}</Card.Description>
 	</Card.Header>
 	<Card.Content>
-		<form {...placeClientShopOrder} class="flex flex-col gap-4">
+		<form
+			{...placeClientShopOrder.enhance(async ({ submit }) => {
+				if (await submitted(submit)) onplaced();
+			})}
+			class="flex flex-col gap-4"
+		>
 			{#if lines.length}
 				<ul class="flex flex-col divide-y text-sm" data-cart>
 					{#each lines as line, index (line.product.id)}
