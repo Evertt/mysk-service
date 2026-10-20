@@ -68,7 +68,6 @@
 	"settings_invitation_not_found": "Uitnodiging niet gevonden",
 	"settings_not_possible": "Dat kan niet.",
 	"settings_email_required": "Vul het e-mailadres in.",
-	"settings_email_invalid": "Vul een geldig e-mailadres in.",
 	"settings_role_required": "Kies een rol",
 	"settings_only_owners_invite_owners": "Alleen eigenaren kunnen eigenaren uitnodigen.",
 	"settings_already_member": "{email} is al lid.",

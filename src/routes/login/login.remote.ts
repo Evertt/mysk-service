@@ -13,7 +13,7 @@ import { safeRedirect } from "./redirect.ts";
 
 export const login = forAnyone.form(
 	v.object({
-		email: email(m.auth_email_required, m.auth_email_invalid),
+		email: email(m.auth_email_required),
 		// The leading underscore keeps the password out of the page after a failed submission.
 		_password: v.pipe(v.string(), v.nonEmpty(m.auth_password_required)),
 		redirectTo: v.optional(v.string()),

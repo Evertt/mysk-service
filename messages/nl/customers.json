@@ -215,7 +215,6 @@
 	"customers_portal_invite": "Uitnodiging versturen",
 	"customers_portal_invited": "Uitnodiging verstuurd naar {email}",
 	"customers_portal_email_required": "Vul het e-mailadres in.",
-	"customers_portal_email_invalid": "Vul een geldig e-mailadres in.",
 	"customers_portal_already_member": "{email} is al lid van de organisatie.",
 	"customers_portal_already_invited": "{email} is al uitgenodigd.",
 	"customers_portal_unknown_site": "Kies vestigingen van deze klant.",

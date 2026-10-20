@@ -109,7 +109,7 @@ async function asUser<T>(call: (headers: Headers) => Promise<T>) {
 	}
 }
 
-const emailSchema = email(m.customers_portal_email_required, m.customers_portal_email_invalid);
+const emailSchema = email(m.customers_portal_email_required);
 
 /**
  * Invites a contact of the customer to its portal by email, for all of its sites or only

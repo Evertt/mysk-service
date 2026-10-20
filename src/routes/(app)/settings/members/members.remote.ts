@@ -221,7 +221,7 @@ export const removeMember = forManagers.form(v.object({ id: v.string() }), async
 
 export const invite = forManagers.form(
 	v.object({
-		email: email(m.settings_email_required, m.settings_email_invalid),
+		email: email(m.settings_email_required),
 		role: v.picklist(teamRoles, m.settings_role_required),
 	}),
 	async ({ email, role }, issue) => {
