@@ -58,8 +58,10 @@ true })`, whose contributors answer at once, without awaiting: for an owner that
   `inTenant()`, `currentTenant()`, `collect()`, `createOrders()` and `recordActivity()` work as in
   a member's request, and the log stores no user (shown as "Fieldworks (automatic)"). A job must be
   safe to repeat, makes its changes in transactions of its own, keeps mail out of them, and
-  answers counts for the run's report (`{ "maintenance.orders": 3 }`). Maintenance's
-  `server/automatic.ts` is the example.
+  answers counts for the run's report (`{ "maintenance.orders": 3 }`). A run that makes orders by
+  itself is `dailyOrderRun()` (`src/lib/server/jobs/automatic-orders.ts`: the settings' switch,
+  a transaction per candidate, the failures counted, `lastRunAt` noted); maintenance's and
+  condition's `server/automatic.ts` are the examples.
 - **Simulations for demos** (`simulation.run`, a `fail` collector in
   `src/lib/simulation/extensions.ts`): a module fed from outside makes its data up for an
   organization with a `simulation` row for it (the seed gives SHLTR its docks' and energy's; real
@@ -179,12 +181,18 @@ migration committed.
   ids through without signing in, and their stubs guard each handler with `guardedIntegration()`
   (`#lib/server/modules/hooks.ts`): a missing, unknown or revoked token is a 401, a tenant without
   the module a 404, and the handler runs as the system in the token's tenant (`asSystem()`), so
-  `inTenant()`, transactions and `recordActivity()` work as in a member's request. Tokens are the
-  core's `integration_token` rows (hash only), made and revoked through
-  `#lib/server/auth/integrations.ts` (`issueIntegrationToken()`, `revokeIntegrationToken()`) from
-  the module's manager-only forms, and listed (`integrationTokens()`, a token's first characters
-  only) on its settings page, which every member reads; a seed gives its demo
-  tenant a known one with `seedIntegrationToken()` (`src/lib/server/db/seed/integrations.ts`).
+  `inTenant()`, transactions and `recordActivity()` work as in a member's request. A `POST` that
+  takes a JSON batch is `jsonIngest({ maxBytes }, handle)` (`#lib/server/modules/integrations.ts`):
+  it answers 415, 413 and 400 for a body it can't take, and what `handle` throws as an
+  `IngestRefused` (`InvalidBatch`, `UnknownCodes` for codes the tenant hasn't, both 422), always as
+  `{ error, message, …details }`; the feed's `docs/` keep that table. Tokens are the core's
+  `integration_token` rows (hash only), made and revoked through
+  `#lib/server/auth/integrations.ts`, and shown on the module's settings page by
+  `<IntegrationTokensCard module placeholder>` (`#lib/modules/settings/`, with its remote functions
+  `getIntegrationTokens(module)`, `createIntegrationToken`, `revokeIntegrationToken`: members read,
+  managers make and revoke, for the modules the generator finds with `routes/(api)/`,
+  `integrationModules`); a module has no token remotes or messages of its own. A seed gives its
+  demo tenant a known one with `seedIntegrationToken()` (`src/lib/server/db/seed/integrations.ts`).
 - **Route ids include the group**: a module names its routes `/(app)/(modules)/contracts/[number]`
   everywhere a route id goes: `resolve()`, `RouteParams<…>`, its activity subjects' `href`s.
 - **A module's pages**: no `module.ts` names its pages; the core links to them by where its
@@ -194,8 +202,14 @@ migration committed.
   the organization's settings page links to while it's on (with its sub-pages under `settings/`,
   e.g. checklists' templates at `settings/[id]`); `routes/(customer)/portal/+page.svelte` its page in
   the customer portal. Every member reads a module's settings page; only managers change what's on
-  it (the page asks for `canManage`, as `condition`'s does). The generator refuses a `route:` or
-  `settings:` in `module.ts`.
+  it. The page is a `<ModuleSettingsPage module title description>` (`#lib/modules/settings/`):
+  the form for managers (`form` with the `fields` snippet), the `details` (`DetailItem`s) for the
+  others, and its other cards as `children`. A tenant's settings row (a table keyed by
+  `organizationId` alone) is `defineTenantSettings(id, table, { subject, defaults?, schema })` in
+  the module's `server/settings.ts`, which makes `settingsOf()`, `updateSettings()` and the page's
+  `getSettings` (with `canManage`) and `saveSettings` (logged on `subject`, back to the section);
+  the module's `settings.remote.ts` re-exports those two. Show a switch with `formatOnOff()`. The
+  generator refuses a `route:` or `settings:` in `module.ts`.
 - **The guard**: each `(modules)` group's generated `+layout.ts` 404s the tenants without the
   module that owns the route (`guardModuleRoute()` in `#lib/modules/route-guard.ts`: the module is
   the folder after `(modules)` in the route id, so the layout names no modules; it asks

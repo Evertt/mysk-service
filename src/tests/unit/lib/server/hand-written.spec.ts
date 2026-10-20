@@ -1,7 +1,8 @@
 /**
- * The server's recurring problems each have one way (`docs/agents/tenancy.md`, "One way"): these
- * specs refuse the hand-written forms that the helpers replace, as `parameters.spec.ts` does for
- * drizzle's `inArray()`. Each failure names the file and the helper to use instead.
+ * The server's recurring problems each have one way (`docs/agents/tenancy.md`, "One way", and
+ * `docs/agents/modules.md` for the modules' settings and feeds): these specs refuse the
+ * hand-written forms that the helpers replace, as `parameters.spec.ts` does for drizzle's
+ * `inArray()`. Each failure names the file and the helper to use instead.
  */
 import { globSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -183,5 +184,67 @@ describe("refusals", () => {
 		expect(holding.filter((file) => !remaining.includes(file))).toEqual([]);
 		// Moved out already: take it off the list.
 		expect(remaining.filter((file) => !holding.includes(file))).toEqual([]);
+	});
+});
+
+describe("modules' settings and integrations", () => {
+	const moduleFiles = appFiles.filter((file) => file.startsWith("src/modules/"));
+
+	it("keeps a tenant's settings row with defineTenantSettings()", () => {
+		// A table keyed by the organization alone is a tenant's settings singleton.
+		const singletons = globSync(["src/modules/*/server/schema.ts"], { cwd: root }).flatMap((file) =>
+			[
+				...code(file).matchAll(
+					/export const (\w+) = sqliteTable\(\s*"[^"]+",\s*\{\s*organizationId: organizationId\(\)\.primaryKey\(\)/g,
+				),
+			].map(([, name]) => `${file}: ${name}`),
+		);
+		expect(singletons.length).toBeGreaterThan(0);
+		const kept = new Set(
+			moduleFiles.flatMap((file) =>
+				[...code(file).matchAll(/defineTenantSettings\(\s*"[^"]+",\s*(\w+)/g)].map(([, t]) => t),
+			),
+		);
+		expect(
+			singletons.filter((at) => !kept.has(at.split(": ")[1])),
+			"keep it with defineTenantSettings() from #lib/server/modules/settings.ts",
+		).toEqual([]);
+		// Nor a lookup of its own: find, else insert the defaults.
+		expect(
+			offenders(/\.onConflictDoNothing\(\)/).filter((at) =>
+				/^src\/modules\/[^/]+\/server\/settings\.ts:/.test(at),
+			),
+		).toEqual([]);
+	});
+
+	it("leaves integration tokens to the core's remote functions and <IntegrationTokensCard>", () => {
+		const own = moduleFiles.filter((file) =>
+			/\b(?:issueIntegrationToken|revokeIntegrationToken|integrationTokens)\b/.test(code(file)),
+		);
+		// A module's demo seeds its tenant a known token with seedIntegrationToken().
+		expect(own, "use #lib/modules/settings/integration-tokens.remote.ts").toEqual([]);
+		const copies = globSync(["src/modules/*/messages/en/*.json"], { cwd: root }).flatMap((file) =>
+			Object.keys(JSON.parse(readFileSync(join(root, file), "utf8")) as object)
+				.filter((key) => /^[a-z]+_tokens?_/.test(key))
+				.map((key) => `${file}: ${key}`),
+		);
+		expect(copies, "the token messages are common_token_*").toEqual([]);
+	});
+
+	it("takes a feed's JSON batch with jsonIngest(), which reads the body with textUpTo()", () => {
+		expect(offenders(/\btextUpTo\(/, ["src/lib/server/modules/integrations.ts"])).toEqual([]);
+		const endpoints = moduleFiles.filter((file) => /\/routes\/\(api\)\/.*\+server\.ts$/.test(file));
+		expect(endpoints.length).toBeGreaterThan(0);
+		expect(
+			endpoints.filter((file) => /export const POST\b(?!\s*=\s*jsonIngest\()/.test(code(file))),
+			"export const POST = jsonIngest({ maxBytes }, handle)",
+		).toEqual([]);
+	});
+
+	it("notes a daily run of automatic orders with dailyOrderRun()", () => {
+		expect(
+			offenders(/\blastRunAt:\s*Temporal\.Now/, ["src/lib/server/jobs/automatic-orders.ts"]),
+			"use dailyOrderRun() from #lib/server/jobs/automatic-orders.ts",
+		).toEqual([]);
 	});
 });
