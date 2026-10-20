@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join, posix } from "node:path";
 
 import {
@@ -152,11 +152,50 @@ export function renderComponentStub(options: {
 	].join("\n");
 }
 
+/** What makes a component a list's table (`#lib/components/data-table/`). */
+const listTable = /\bcreate(?:Server|Client)Table\(/;
+
+/**
+ * Whether a module's page (its `+page.svelte`, `source`) shows a list's table: it imports a
+ * component of its module (`#modules/<id>/…`) that makes one (`createServerTable()` or
+ * `createClientTable()`). `read` gives a file's source by its path in the module, if it exists.
+ */
+export function isListPage(
+	module: string,
+	source: string,
+	read: (path: string) => string | undefined,
+): boolean {
+	const prefix = `#modules/${module}/`;
+	for (const [, specifier] of source.matchAll(/\bfrom\s+["']([^"']+\.svelte)["']/g)) {
+		if (!specifier.startsWith(prefix)) continue;
+		const component = read(specifier.slice(prefix.length));
+		if (component && listTable.test(component)) return true;
+	}
+	return false;
+}
+
+/**
+ * The `+page.ts` of a module's list page (`isListPage()`) without one of its own: it brings the
+ * table back as the member left it (`loadTableMemory`, see `table-memory.svelte.ts`).
+ */
+export function renderTableMemoryStub(from: string): string {
+	return [
+		`// ${generatedBy(from)}`,
+		"",
+		`import { loadTableMemory } from "#lib/components/data-table/table-memory.svelte.ts";`,
+		"",
+		"// The page shows a list's table: as the member left it (see `table-memory.svelte.ts`).",
+		"export const load = loadTableMemory;",
+		"",
+	].join("\n");
+}
+
 /**
  * The stubs for the modules' routes, per `(modules)` group under `src/routes` (e.g. `(app)/(modules)`):
  * the files in it, relative to it, with their content. The contracts module's
  * `routes/(app)/[number]/+page.svelte` is `contracts/[number]/+page.svelte` in `(app)/(modules)`,
- * whose `+layout.ts` guards the routes of every module in it.
+ * whose `+layout.ts` guards the routes of every module in it. A list's page without a `+page.ts` of
+ * its own gets one with the table's memory (`renderTableMemoryStub()`).
  */
 export function planStubs(root: string, modules: ModuleFolder[]): Map<string, Map<string, string>> {
 	const groups = new Map<string, Map<string, string>>();
@@ -192,6 +231,25 @@ export function planStubs(root: string, modules: ModuleFolder[]): Map<string, Ma
 			const files = groups.get(group) ?? new Map([["+layout.ts", renderGroupGuard()]]);
 			groups.set(group, files);
 			files.set(`${module.id}/${place.rest}`, stub);
+
+			const folder = posix.dirname(file);
+			const ownLoad = ["+page.ts", "+page.js"].some((name) =>
+				module.routeFiles.includes(posix.join(folder, name)),
+			);
+			const moduleRoot = join(root, `src/modules/${module.id}`);
+			if (
+				kind === "page" &&
+				!ownLoad &&
+				isListPage(module.id, readFileSync(join(root, from), "utf8"), (path) => {
+					const found = join(moduleRoot, path);
+					return existsSync(found) ? readFileSync(found, "utf8") : undefined;
+				})
+			) {
+				files.set(
+					`${module.id}/${posix.join(posix.dirname(place.rest), "+page.ts")}`,
+					renderTableMemoryStub(from),
+				);
+			}
 		}
 	}
 	return groups;
