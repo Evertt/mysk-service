@@ -5,6 +5,7 @@
 	over, the close itself, after asking.
 -->
 <script lang="ts">
+	import { canManage } from "#lib/auth/can-manage.ts";
 	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
 	import { CustomerLink } from "#lib/customers/components.ts";
 	import { formatCents, formatDate, formatWholeEuros } from "#lib/i18n/index.ts";
@@ -64,7 +65,7 @@
 						})
 					: m.partners_close_all_closed()}
 			</Card.Description>
-			{#if preview.canManage && preview.closable && preview.rules && waiting.length}
+			{#if (await canManage()) && preview.closable && preview.rules && waiting.length}
 				<Card.Action>
 					<ConfirmDialog
 						form={closeProgrammeYear}

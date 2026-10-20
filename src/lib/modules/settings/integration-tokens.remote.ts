@@ -7,9 +7,8 @@
  */
 import * as v from "valibot";
 
-import { isManager } from "#lib/auth/index.ts";
 import { integrationModules } from "#lib/modules/manifests.ts";
-import { currentTenant, requireModule } from "#lib/server/auth/index.ts";
+import { requireModule } from "#lib/server/auth/index.ts";
 import {
 	integrationTokens,
 	issueIntegrationToken,
@@ -19,13 +18,10 @@ import { forManagers, forMembers } from "#lib/server/remote-functions.ts";
 
 const moduleId = v.picklist(integrationModules);
 
-/** The module's tokens (newest first, revoked ones too), and whether the user may change them. */
+/** The module's tokens, newest first, revoked ones too. */
 export const getIntegrationTokens = forMembers.query(moduleId, (module) => {
 	requireModule(module);
-	return integrationTokens(module).then((tokens) => ({
-		tokens,
-		canManage: isManager(currentTenant().roles),
-	}));
+	return integrationTokens(module);
 });
 
 /** Makes a token for the module: answers it, the one time it's shown. */

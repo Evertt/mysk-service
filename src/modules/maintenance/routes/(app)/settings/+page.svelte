@@ -30,7 +30,6 @@
 	module="maintenance"
 	title={m.maintenance_settings_title()}
 	description={m.maintenance_settings_description()}
-	canManage={settings.canManage}
 	form={saveMaintenanceSettings}
 >
 	{#snippet fields()}

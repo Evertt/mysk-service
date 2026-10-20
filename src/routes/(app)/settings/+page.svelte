@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
+	import { canManage } from "#lib/auth/can-manage.ts";
 	import { masonry, masonryGrid } from "#lib/components/masonry.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { getEquipmentCategories } from "#lib/equipment/remotes.ts";
@@ -14,6 +15,7 @@
 	import { getOrganizationSettings } from "./settings.remote.ts";
 
 	const settings = $derived(await getOrganizationSettings());
+	const manager = $derived(await canManage());
 	const categories = $derived(await getEquipmentCategories());
 	const typeSettings = $derived(await getOrderTypes());
 	const icons = new Map(moduleRegistry.map((m) => [m.id, m.icon]));
@@ -41,9 +43,7 @@
 			<Card.Title>{m.settings_modules()}</Card.Title>
 			<Card.Description>
 				{m.settings_modules_description()}
-				{settings.canManage
-					? m.settings_modules_subscription()
-					: m.settings_managers_change_these()}
+				{manager ? m.settings_modules_subscription() : m.settings_managers_change_these()}
 			</Card.Description>
 		</Card.Header>
 		<Card.Content class="flex flex-col gap-4">
@@ -51,7 +51,6 @@
 				<ModuleCard
 					{module}
 					modules={settings.modules}
-					canManage={settings.canManage}
 					icon={icons.get(module.id)}
 					settingsHref={settingsHref(module.id)}
 				/>
@@ -65,7 +64,7 @@
 			<Card.Description>{m.settings_members_description()}</Card.Description>
 			<Card.Action>
 				<Button href={resolve("/(app)/settings/members")} variant="outline" size="sm">
-					{settings.canManage ? m.settings_manage_members() : m.settings_view_members()}
+					{manager ? m.settings_manage_members() : m.settings_view_members()}
 				</Button>
 			</Card.Action>
 		</Card.Header>
@@ -107,9 +106,9 @@
 			<Card.Title>{m.equipment_categories_title()}</Card.Title>
 			<Card.Description>
 				{m.equipment_categories_description()}
-				{#if !settings.canManage}{m.settings_managers_change_these()}{/if}
+				{#if !manager}{m.settings_managers_change_these()}{/if}
 			</Card.Description>
-			{#if settings.canManage}
+			{#if manager}
 				<Card.Action>
 					<Button
 						href={resolve("/(app)/settings/equipment-categories")}
@@ -139,9 +138,9 @@
 			<Card.Title>{m.orders_types_title()}</Card.Title>
 			<Card.Description>
 				{m.orders_types_description()}
-				{#if !settings.canManage}{m.settings_managers_change_these()}{/if}
+				{#if !manager}{m.settings_managers_change_these()}{/if}
 			</Card.Description>
-			{#if settings.canManage}
+			{#if manager}
 				<Card.Action>
 					<Button href={resolve("/(app)/settings/order-types")} variant="outline" size="sm">
 						{m.orders_types_manage()}

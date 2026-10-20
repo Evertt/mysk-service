@@ -22,6 +22,9 @@ vi.mock(
 	() => import("#unit/lib/components/fake-history-dialog.svelte.ts"),
 );
 
+// A manager's card: the switches show.
+vi.mock("#lib/auth/can-manage.ts", () => ({ canManage: async () => true }));
+
 /** What the next form the card makes is like, and what it submitted. */
 const form = vi.hoisted(() => ({
 	issues: [] as string[],
@@ -62,7 +65,7 @@ const modulesWith = (on: string[]) =>
 	}));
 const card = (id: string, on: string[]) => {
 	const modules = modulesWith(on);
-	return { module: modules.find((module) => module.id === id)!, modules, canManage: true };
+	return { module: modules.find((module) => module.id === id)!, modules };
 };
 
 test("switching a module on names what it also switches on, and submits them together", async () => {

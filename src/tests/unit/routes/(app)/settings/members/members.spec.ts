@@ -67,8 +67,7 @@ beforeAll(async () => {
 
 describe("the members page", () => {
 	test("lists the team, without the customers' contacts", async () => {
-		const { members, canManage } = await as(north.owner, () => data(getMembers));
-		expect(canManage).toBe(true);
+		const { members } = await as(north.owner, () => data(getMembers));
 		const emails = members.map((member) => member.email);
 		expect(emails).toEqual(expect.arrayContaining([admin.email, planner.email]));
 		expect(emails).not.toContain(north.customer.email);
@@ -77,7 +76,6 @@ describe("the members page", () => {
 		expect(you).toMatchObject({ email: admin.email, roleOptions: [], canRemove: false });
 		// A planner sees it read-only.
 		const asPlanner = await as(north.member, () => data(getMembers));
-		expect(asPlanner.canManage).toBe(false);
 		expect(asPlanner.invitations).toEqual([]);
 		expect(
 			asPlanner.members.every((member) => !member.canRemove && !member.roleOptions.length),

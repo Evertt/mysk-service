@@ -26,7 +26,6 @@ import { eq } from "drizzle-orm";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 import type { GenericSchema, InferInput } from "valibot";
 
-import { isManager } from "#lib/auth/index.ts";
 import type { ModuleId } from "#lib/modules/ids.ts";
 import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
@@ -82,11 +81,8 @@ export function defineTenantSettings<
 	const { query } = moduleRemote(moduleId);
 	const forManagers = moduleRemote(moduleId, "manager");
 
-	/** The tenant's settings, and whether the user may change them. */
-	const getSettings = query(async () => ({
-		...(await settingsOf()),
-		canManage: isManager(currentTenant().roles),
-	}));
+	/** The tenant's settings. */
+	const getSettings = query(() => settingsOf());
 
 	/** Saves the settings page's form, logs it and goes back to the module's section. */
 	const saveSettings = forManagers.form(

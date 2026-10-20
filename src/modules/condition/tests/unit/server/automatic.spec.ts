@@ -56,14 +56,12 @@ describe("the condition settings, in North", () => {
 			attentionBelow: 70,
 			autoPlan: false,
 			lastRunAt: null,
-			canManage: false,
 		});
 		expect(
 			await as(north.member, () =>
 				submit(saveConditionSettings, { criticalBelow: 40, attentionBelow: 70, autoPlan: true }),
 			),
 		).toMatchObject({ status: 403 });
-		expect((await as(north.owner, () => data(getConditionSettings))).canManage).toBe(true);
 	});
 
 	test("off, the daily run plans nothing", async () => {

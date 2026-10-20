@@ -1,13 +1,11 @@
 import { redirect } from "@sveltejs/kit";
 import * as v from "valibot";
 
-import { isManager } from "#lib/auth/index.ts";
 /**
  * The programme's years and their rules: every member may read them, managers set up a year (a
  * copy of the one before) and change its rules. Closing a year is in `close.remote.ts`.
  */
 import { currentDay } from "#lib/dates.ts";
-import { currentTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 
 import { rulesSchema } from "./form/rules-schema.ts";
@@ -28,7 +26,6 @@ export const getProgrammeYears = query(async () => {
 		years: years.map((each) => ({ year: each.year, levels: each.tiers.length })),
 		current,
 		next,
-		canManage: isManager(currentTenant().roles),
 	};
 });
 
@@ -52,7 +49,6 @@ export const getYearRules = query(year, async (wanted) => {
 		from: before
 			? ((await programmeYears()).find((each) => each.year <= wanted)?.year ?? null)
 			: null,
-		canManage: isManager(currentTenant().roles),
 	};
 });
 

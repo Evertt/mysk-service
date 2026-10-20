@@ -85,6 +85,9 @@ Organizations own all business data.
   `await engineerOrder(ref)`, `engineerOrderNotFound(ref)` in `src/lib/server/auth/engineer.ts`),
   the customer portal's queries to the customer (`ofCustomer()`, `customerOrders()`, `atSites()`
   in `src/lib/server/auth/customer.ts`).
+- An office page hides manager-only controls with `await canManage()` (`#lib/auth/can-manage.ts`,
+  from `getCurrentTenant()`'s roles); a query never sends a `canManage` flag
+  (`can-manage.spec.ts`). It only hides: the gate (`forManagers`) still refuses the others.
 - Every select, update and delete on a tenant table is scoped: `inTenant(table)`,
   `idInTenant(table, id)`, `idsInTenant(table, ids)`, and joins through `tenantJoin()` (or
   `sameTenant(a, b)`). Ids come from the client.

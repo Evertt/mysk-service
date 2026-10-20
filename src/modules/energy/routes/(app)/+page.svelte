@@ -3,6 +3,7 @@
 	import type { RouteParams } from "$app/types";
 	import SettingsIcon from "@lucide/svelte/icons/settings";
 
+	import { canManage } from "#lib/auth/can-manage.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
 	import { formatNumber } from "#lib/i18n/index.ts";
 	import { formatKw, formatKwh } from "#modules/energy/display.ts";
@@ -19,7 +20,7 @@
 <div class="flex flex-col gap-6">
 	<PageHeader title={m.energy_title()} description={m.energy_description()}>
 		{#snippet actions()}
-			{#if data.canManage}
+			{#if await canManage()}
 				<NewSiteDialog />
 			{/if}
 			<Button variant="outline" href={resolve("/(app)/(modules)/energy/settings")}>

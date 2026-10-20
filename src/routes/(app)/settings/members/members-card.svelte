@@ -1,11 +1,12 @@
 <!--
 	@component
-	The organization's members. Owners and admins (`canManage`) also change roles, which saves as
+	The organization's members. Owners and admins (`canManage()`) also change roles, which saves as
 	soon as another is chosen, and remove members.
 -->
 <script lang="ts">
 	import { toast } from "svelte-sonner";
 
+	import { canManage } from "#lib/auth/can-manage.ts";
 	import type { TeamRole } from "#lib/auth/index.ts";
 	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
@@ -15,11 +16,8 @@
 
 	type Member = Awaited<ReturnType<typeof getMembers>>["members"][number];
 
-	let {
-		members,
-		organization,
-		canManage,
-	}: { members: Member[]; organization: string; canManage: boolean } = $props();
+	let { members, organization }: { members: Member[]; organization: string } = $props();
+	const manager = $derived(await canManage());
 
 	const label = (role: string) => labelOrValue("memberRole", role);
 </script>
@@ -29,7 +27,7 @@
 		<Card.Title>{m.settings_members()}</Card.Title>
 		<Card.Description>
 			{m.settings_people({ count: members.length, organization })}
-			{canManage ? "" : m.settings_managers_change_this()}
+			{manager ? "" : m.settings_managers_change_this()}
 		</Card.Description>
 	</Card.Header>
 	<Card.Content>
@@ -39,7 +37,7 @@
 					<Table.Head>{m.settings_column_name()}</Table.Head>
 					<Table.Head>{m.settings_column_role()}</Table.Head>
 					<Table.Head>{m.settings_column_joined()}</Table.Head>
-					{#if canManage}
+					{#if manager}
 						<Table.Head><span class="sr-only">{m.settings_column_actions()}</span></Table.Head>
 					{/if}
 				</Table.Row>
@@ -103,7 +101,7 @@
 							{/if}
 						</Table.Cell>
 						<Table.Cell class="tabular-nums">{formatDate(member.joinedAt)}</Table.Cell>
-						{#if canManage}
+						{#if manager}
 							<Table.Cell class="text-right">
 								{#if member.canRemove}
 									<DeleteDialog

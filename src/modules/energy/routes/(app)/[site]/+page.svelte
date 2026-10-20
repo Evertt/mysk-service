@@ -13,6 +13,7 @@
 	import TrendingUpIcon from "@lucide/svelte/icons/trending-up";
 	import ZapIcon from "@lucide/svelte/icons/zap";
 
+	import { canManage } from "#lib/auth/can-manage.ts";
 	import FilterChips from "#lib/components/filter-chips.svelte";
 	import SegmentedNav from "#lib/components/segmented-nav.svelte";
 	import SimulationBar from "#lib/components/simulation/simulation-bar.svelte";
@@ -187,7 +188,7 @@
 				<PrinterIcon data-icon="inline-start" />
 				{m.energy_report_title()}
 			</Button>
-			{#if overview.canManage}
+			{#if await canManage()}
 				<Button variant="secondary" size="sm" href="{siteHref}/setup">
 					<SettingsIcon data-icon="inline-start" />
 					{m.energy_setup_title()}

@@ -5,6 +5,8 @@
 	for other members.
 -->
 <script lang="ts">
+	import { canManage } from "#lib/auth/can-manage.ts";
+
 	import AcceptCard from "../../detail/accept-card.svelte";
 	import PartnerCard from "../../detail/partner-card.svelte";
 	import { getPartnerCard } from "../../partners.remote.ts";
@@ -16,6 +18,6 @@
 
 {#if card.partner !== null}
 	<PartnerCard {card} />
-{:else if card.canManage}
+{:else if await canManage()}
 	<AcceptCard customer={card.customer} />
 {/if}

@@ -8,6 +8,7 @@
 	import { resolve } from "$app/paths";
 	import { toast } from "svelte-sonner";
 
+	import { canManage } from "#lib/auth/can-manage.ts";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import { formatCents } from "#lib/i18n/index.ts";
@@ -19,9 +20,7 @@
 		code,
 		year,
 		creditNote,
-		canManage,
-	}: { code: string; year: number; creditNote: CreditNoteStatus | null; canManage: boolean } =
-		$props();
+	}: { code: string; year: number; creditNote: CreditNoteStatus | null } = $props();
 
 	const form = $derived(createBonusCreditNote.for(`${code}:${year}`));
 	const paying = $derived(creditNote && creditNote.status !== "void" ? creditNote : null);
@@ -43,7 +42,7 @@
 		>
 		· {states[paying.status]()} · <span class="tabular-nums">{formatCents(paying.total)}</span>
 	</p>
-{:else if canManage}
+{:else if await canManage()}
 	<form
 		{...form.enhance(async ({ submit }) => {
 			if (await submitted(submit)) toast.success(m.partners_credit_note_created());

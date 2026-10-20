@@ -9,6 +9,7 @@
 	import { resolve } from "$app/paths";
 	import WalletCardsIcon from "@lucide/svelte/icons/wallet-cards";
 
+	import { canManage } from "#lib/auth/can-manage.ts";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
@@ -28,6 +29,7 @@
 	type PartnerCardData = Extract<Awaited<ReturnType<typeof getPartnerCard>>, { year: number }>;
 
 	let { card }: { card: PartnerCardData } = $props();
+	const manager = $derived(await canManage());
 
 	const figures = $derived(card.figures);
 	const wallet = $derived(card.wallet);
@@ -144,11 +146,10 @@
 							code={card.customer.code}
 							year={closed.year}
 							creditNote={closed.creditNote}
-							canManage={card.canManage}
 						/>
 					{/if}
 				{:else if closed.cashAmount || closed.creditAmount}
-					{#if card.canManage}
+					{#if manager}
 						<div class="flex flex-wrap gap-2">
 							<ChoiceDialog
 								code={card.customer.code}
@@ -200,7 +201,7 @@
 			]}
 			data-wallet
 		>
-			{#if card.canManage}
+			{#if manager}
 				<div class="text-foreground">
 					<WalletEntryDialog code={card.customer.code} validUntil={card.validUntil} />
 				</div>

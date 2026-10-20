@@ -34,7 +34,6 @@
 	module="condition"
 	title={m.condition_settings_title()}
 	description={m.condition_settings_description()}
-	canManage={settings.canManage}
 	form={saveConditionSettings}
 >
 	{#snippet fields()}

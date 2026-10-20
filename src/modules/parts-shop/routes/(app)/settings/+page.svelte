@@ -7,6 +7,7 @@
 	import type { RouteParams } from "$app/types";
 	import { toast } from "svelte-sonner";
 
+	import { canManage } from "#lib/auth/can-manage.ts";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
@@ -22,6 +23,7 @@
 	const _props: { params: RouteParams<"/(app)/(modules)/parts-shop/settings"> } = $props();
 
 	const data = $derived(await getShopCategories());
+	const manager = $derived(await canManage());
 </script>
 
 <PageHeader
@@ -41,7 +43,7 @@
 					{@const rename = renameShopCategory.for(String(category.id))}
 					{@const remove = deleteShopCategory.for(String(category.id))}
 					<li class="flex flex-col gap-2 py-3" data-shop-category={category.name}>
-						{#if data.canManage}
+						{#if manager}
 							<div class="flex flex-wrap items-center gap-2">
 								<form
 									class="flex min-w-0 flex-1 items-center gap-2"
@@ -90,7 +92,7 @@
 			<p class="text-sm text-muted-foreground">{m.shop_categories_none_description()}</p>
 		{/if}
 
-		{#if data.canManage}
+		{#if manager}
 			<form
 				class="flex flex-col gap-2"
 				{...addShopCategory.enhance(async ({ element, submit }) => {

@@ -216,11 +216,11 @@ migration committed.
   e.g. checklists' templates at `settings/[id]`); `routes/(customer)/portal/+page.svelte` its page in
   the customer portal. Every member reads a module's settings page; only managers change what's on
   it. The page is a `<ModuleSettingsPage module title description>` (`#lib/modules/settings/`):
-  the form for managers (`form` with the `fields` snippet), the `details` (`DetailItem`s) for the
+  the form for managers (`form` with the `fields` snippet; it asks `canManage()`), the `details` (`DetailItem`s) for the
   others, and its other cards as `children`. A tenant's settings row (a table keyed by
   `organizationId` alone) is `defineTenantSettings(id, table, { subject, defaults?, schema })` in
   the module's `server/settings.ts`, which makes `settingsOf()`, `updateSettings()` and the page's
-  `getSettings` (with `canManage`) and `saveSettings` (logged on `subject`, back to the section);
+  `getSettings` and `saveSettings` (logged on `subject`, back to the section);
   the module's `settings.remote.ts` re-exports those two. Show a switch with `formatOnOff()`. The
   generator refuses a `route:` or `settings:` in `module.ts`.
 - **The guard**: each `(modules)` group's generated `+layout.ts` 404s the tenants without the

@@ -13,6 +13,7 @@
 	import RefreshCcwIcon from "@lucide/svelte/icons/refresh-ccw";
 	import { toast } from "svelte-sonner";
 
+	import { canManage } from "#lib/auth/can-manage.ts";
 	import type { ModuleId } from "#lib/modules/ids.ts";
 	import { simulationSpeeds } from "#lib/simulation/extensions.ts";
 	import { errorMessage } from "#lib/utils.ts";
@@ -90,7 +91,7 @@
 			<ActivityIcon class="size-4 text-primary" aria-hidden="true" />
 			{label ?? m.simulation_title()}
 		</span>
-		{#if simulation.canManage}
+		{#if await canManage()}
 			<Button
 				size="sm"
 				variant={simulation.running ? "outline" : "default"}

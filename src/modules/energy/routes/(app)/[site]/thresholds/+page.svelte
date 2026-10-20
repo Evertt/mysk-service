@@ -3,6 +3,7 @@
 	import type { RouteParams } from "$app/types";
 	import { toast } from "svelte-sonner";
 
+	import { canManage } from "#lib/auth/can-manage.ts";
 	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import CheckboxField from "#lib/components/form/checkbox-field.svelte";
 	import NumberField from "#lib/components/form/number-field.svelte";
@@ -21,6 +22,7 @@
 	let { params }: { params: RouteParams<"/(app)/(modules)/energy/[site]/thresholds"> } = $props();
 
 	const data = $derived(await getEnergyThresholds(Number(params.site)));
+	const manager = $derived(await canManage());
 	const siteHref = $derived(resolve("/(app)/(modules)/energy/[site]", { site: params.site }));
 </script>
 
@@ -35,7 +37,7 @@
 		]}
 	/>
 
-	{#if !data.canManage}
+	{#if !manager}
 		<p class="text-sm text-muted-foreground" data-managers-only>{m.energy_thresholds_managers()}</p>
 	{/if}
 
@@ -65,7 +67,7 @@
 						</Card.Action>
 					</Card.Header>
 					<Card.Content>
-						{#if data.canManage}
+						{#if manager}
 							<form
 								{...form.enhance(async ({ submit }) => {
 									if (await submitted(submit)) toast.success(m.energy_thresholds_saved());
