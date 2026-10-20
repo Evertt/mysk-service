@@ -2,9 +2,12 @@
 	@component
 	A segmented control of links, e.g. a schedule's Month / Week / Day: each a page of its own, the
 	current one marked (`aria-current`). `band` is its look on a `ToolbarBand`: translucent in the
-	band's text colour, the current segment solid, as the mockup's white-on-teal switch.
+	band's text colour, the current segment solid, as the mockup's white-on-teal switch. Other
+	attributes go to the `nav`, e.g. `data-sveltekit-reset="false"` for its links.
 -->
 <script lang="ts">
+	import type { HTMLAttributes } from "svelte/elements";
+
 	import { cn } from "#lib/utils.ts";
 
 	let {
@@ -12,7 +15,8 @@
 		items,
 		variant = "default",
 		class: className,
-	}: {
+		...rest
+	}: Omit<HTMLAttributes<HTMLElement>, "class"> & {
 		/** What the links switch between, for screen readers. */
 		label: string;
 		items: { label: string; href: string; current: boolean }[];
@@ -22,6 +26,7 @@
 </script>
 
 <nav
+	{...rest}
 	aria-label={label}
 	class={cn(
 		"inline-flex rounded-md border p-0.5",

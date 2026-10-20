@@ -53,3 +53,26 @@ test("chooses one chip at a time, none for 'all' or the chosen one again", async
 	await page.getByRole("button", { name: "All" }).click();
 	expect(onchange).toHaveBeenLastCalledWith(null);
 });
+
+test("with an href, each chip links to its page, the current one marked", async () => {
+	render(FilterChips, {
+		label: "Category",
+		options: options.map((option) => ({ ...option, href: `?category=${option.value}` })),
+		value: "4",
+		all: { label: "All", href: "?" },
+		"data-sveltekit-replacestate": "",
+	});
+
+	const group = page.getByRole("group", { name: "Category" });
+	await expect.element(group).toHaveAttribute("data-sveltekit-replacestate", "");
+	await expect
+		.element(group.getByRole("link", { name: /Sectional doors/ }))
+		.toHaveAttribute("aria-current", "page");
+	await expect
+		.element(group.getByRole("link", { name: /Fire doors/ }))
+		.toHaveAttribute("href", "?category=3");
+	const all = group.getByRole("link", { name: "All" });
+	await expect.element(all).not.toHaveAttribute("aria-current");
+	await expect.element(all).toHaveAttribute("data-chip", "all");
+	expect(group.getByRole("button").elements()).toHaveLength(0);
+});

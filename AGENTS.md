@@ -45,6 +45,10 @@ its branch after the task, then `git worktreeinclude apply` (`.env`) and `pnpm i
   its delete button), from `#lib/components/form/`: they submit, toast, close, show the server's
   refusal and give the dialog a history entry, so back closes it. Never `Dialog.Root` or
   `AlertDialog.Root` outside `src/lib/components/` (`src/tests/unit/dialogs.spec.ts`).
+- A single choice among a few options is `FilterChips` (chips; each with an `href` when the choice
+  is kept in the URL) or `SegmentedNav` (a page's views), from `#lib/components/`, never a
+  hand-made row of buttons or links (`src/tests/unit/choice-controls.spec.ts` refuses
+  `aria-pressed` and tabs).
 
 Details: `docs/agents/structure.md`.
 

@@ -13,6 +13,7 @@
 	import { untrack } from "svelte";
 
 	import { scrollPages } from "#lib/components/data-table/server-table.svelte.ts";
+	import FilterChips from "#lib/components/filter-chips.svelte";
 	import { unitTitle } from "#lib/equipment/index.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
 
@@ -60,14 +61,14 @@
 		timer = setTimeout(() => change({ q: value.trim() || null }), 300);
 	}
 
-	const chips = $derived([
-		{ value: "", label: m.checklists_assets_year_all(), count: undefined },
-		...yearStates.map((state) => ({
+	const chips = $derived(
+		yearStates.map((state) => ({
 			value: state,
 			label: checklistLabels.label("yearState", state),
 			count: facets.thisYear[state] ?? 0,
+			href: pageHref(page.url, { year: state, row: null }),
 		})),
-	]);
+	);
 
 	/**
 	 * Loads more rows as the end of the list comes into view; anew once they're in, in case it still
@@ -113,28 +114,20 @@
 				</NativeSelect.Option>
 			{/each}
 		</NativeSelect.Root>
-		<div
-			class="flex flex-wrap gap-1.5"
-			role="group"
-			aria-label={m.checklists_assets_year_label()}
+		<!-- Links in place: the list's state, as `change()` keeps it. -->
+		<FilterChips
+			label={m.checklists_assets_year_label()}
+			options={chips}
+			value={yearFilter || null}
+			all={{
+				label: m.checklists_assets_year_all(),
+				href: pageHref(page.url, { year: null, row: null }),
+			}}
+			class="gap-1.5"
 			data-year-filter
-		>
-			{#each chips as chip (chip.value)}
-				<a
-					href={pageHref(page.url, { year: chip.value || null, row: null })}
-					class="inline-flex h-7 items-center gap-1 rounded-full border px-2.5 text-xs font-medium hover:bg-muted aria-[current=true]:border-primary aria-[current=true]:bg-primary aria-[current=true]:text-primary-foreground"
-					aria-current={yearFilter === chip.value ? "true" : undefined}
-					data-sveltekit-replacestate
-					data-sveltekit-reset="false"
-					data-chip={chip.value || "all"}
-				>
-					{chip.label}
-					{#if chip.count !== undefined}
-						<span class="tabular-nums opacity-70">{formatNumber(chip.count)}</span>
-					{/if}
-				</a>
-			{/each}
-		</div>
+			data-sveltekit-replacestate
+			data-sveltekit-reset="false"
+		/>
 		<p class="text-xs text-muted-foreground" data-asset-count>
 			{m.checklists_assets_count({ count: pages.rowCount })}
 		</p>

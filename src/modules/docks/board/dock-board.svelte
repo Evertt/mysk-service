@@ -14,6 +14,7 @@
 	import TimerIcon from "@lucide/svelte/icons/timer";
 	import TruckIcon from "@lucide/svelte/icons/truck";
 
+	import FilterChips from "#lib/components/filter-chips.svelte";
 	import StatTile from "#lib/components/stat-tile.svelte";
 	import { Clock } from "#lib/hooks/clock.svelte.ts";
 	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
@@ -52,22 +53,21 @@
 			now,
 		),
 	);
-	const siteHref = (id: number) => `${resolve("/(app)/(modules)/docks")}?site=${id}`;
+	const siteChips = $derived(
+		board.sites.map((site) => ({
+			value: String(site.id),
+			label: `${site.customer.name} — ${site.name}`,
+			href: `${resolve("/(app)/(modules)/docks")}?site=${site.id}`,
+		})),
+	);
 </script>
 
 {#if board.sites.length > 1}
-	<nav class="flex flex-wrap gap-2" aria-label={m.docks_site_label()}>
-		{#each board.sites as site (site.id)}
-			<Button
-				size="sm"
-				variant={site.id === board.site?.id ? "default" : "outline"}
-				href={siteHref(site.id)}
-				aria-current={site.id === board.site?.id ? "page" : undefined}
-			>
-				{site.customer.name} — {site.name}
-			</Button>
-		{/each}
-	</nav>
+	<FilterChips
+		label={m.docks_site_label()}
+		options={siteChips}
+		value={board.site ? String(board.site.id) : null}
+	/>
 {/if}
 
 <div class="grid grid-cols-2 gap-4 lg:grid-cols-5" data-dock-figures>

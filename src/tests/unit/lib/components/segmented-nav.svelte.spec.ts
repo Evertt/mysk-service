@@ -31,3 +31,11 @@ test("on a band, the current segment is solid in the band's text colour", async 
 		.element(page.getByRole("link", { name: "Week" }))
 		.toHaveClass("bg-primary-foreground", "text-primary");
 });
+
+test("passes other attributes to the nav, e.g. its links' options", async () => {
+	render(SegmentedNav, { label: "View", items, "data-sveltekit-reset": "false" });
+
+	await expect
+		.element(page.getByRole("navigation", { name: "View" }))
+		.toHaveAttribute("data-sveltekit-reset", "false");
+});
