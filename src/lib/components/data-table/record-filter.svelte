@@ -15,6 +15,7 @@
 -->
 <script lang="ts">
 	import CheckIcon from "@lucide/svelte/icons/check";
+	import { Debounced, resource } from "runed";
 	import { untrack } from "svelte";
 	import type { Attachment } from "svelte/attachments";
 	import { SvelteMap } from "svelte/reactivity";
@@ -67,14 +68,8 @@
 	/** Whether the options are on screen (in the Filter menu or the pill's popover). */
 	let shown = $state(false);
 	let search = $state("");
-	/** The last answer, and what it was asked with. */
-	let answer = $state.raw<{ load: LoadRecordOptions; options: RecordOptions }>();
-	/**
-	 * What was found, while the list's other filters are those it was found under: another's counts
-	 * (on opening the filter after they changed) aren't shown while the new ones come.
-	 */
-	const found = $derived(answer?.load === load ? answer.options : undefined);
-	let searching = $state(false);
+	/** What's searched for: once typing pauses. */
+	const term = new Debounced(() => search.trim(), searchDelay);
 
 	/** On the option list: it's searched while shown, and the search starts over each time. */
 	const whileShown: Attachment = () => {
@@ -82,6 +77,7 @@
 		return () => {
 			shown = false;
 			search = "";
+			term.setImmediately("");
 		};
 	};
 
@@ -109,40 +105,33 @@
 	});
 
 	// Searching, while shown: right away when shown or the list's other filters change (a new
-	// `load`), then once typing pauses.
-	$effect(() => {
-		if (!shown) return;
-		const fetch = load;
-		const term = search.trim();
-		const ticked = untrack(() => selected);
-		let current = true;
-		searching = true;
-		const timer = setTimeout(
-			async () => {
-				try {
-					const result = await fetch({ search: term, selected: ticked });
-					if (!current) return;
-					remember(result);
-					answer = { load: fetch, options: result };
-				} catch {
-					// Keep what was found before.
-				} finally {
-					if (current) searching = false;
-				}
-			},
-			term ? searchDelay : 0,
-		);
-		return () => {
-			current = false;
-			clearTimeout(timer);
-		};
-	});
+	// `load`), and for each term. A failed search keeps what was found before.
+	const answer = resource(
+		[() => shown, () => load, () => term.current],
+		async (
+			[open, ask, words],
+			_,
+			{ data, signal },
+		): Promise<{ load: LoadRecordOptions; options: RecordOptions } | undefined> => {
+			if (!open) return data;
+			const options = await ask({ search: words, selected });
+			signal.throwIfAborted();
+			remember(options);
+			return { load: ask, options };
+		},
+	);
+	/**
+	 * What was found, while the list's other filters are those it was found under: another's counts
+	 * (on opening the filter after they changed) aren't shown while the new ones come.
+	 */
+	const found = $derived(answer.current?.load === load ? answer.current.options : undefined);
+	const searching = $derived(term.pending || answer.loading);
 
 	/** The option for rows without a value, unless the search rules it out. */
 	const noneOption = $derived.by((): RecordOption | undefined => {
 		if (!none) return undefined;
-		const term = search.trim().toLowerCase();
-		if (term && !none.toLowerCase().includes(term)) return undefined;
+		const words = search.trim().toLowerCase();
+		if (words && !none.toLowerCase().includes(words)) return undefined;
 		return { value: noneToken, label: none, count: found?.none };
 	});
 
