@@ -5,7 +5,7 @@
  * a single row too. `createAppTable` sets one up for every table it makes; a table without an
  * action bar offers none.
  */
-import { getContext, setContext } from "svelte";
+import { createContext } from "svelte";
 
 import type { BulkAction } from "./bulk-actions.ts";
 
@@ -44,14 +44,10 @@ class RowBulkActions {
 	}
 }
 
-const key = Symbol("row-bulk-actions");
+const [getBridge, setBridge, hasBridge] = createContext<RowBulkActions>();
 
 /** Sets up the bridge for a table's components; call it while the table's component initializes. */
-export function setRowBulkActions() {
-	return setContext(key, new RowBulkActions());
-}
+export const setRowBulkActions = () => setBridge(new RowBulkActions());
 
 /** The table's bridge, if the component is in a table made by `createAppTable`. */
-export function getRowBulkActions(): RowBulkActions | undefined {
-	return getContext<RowBulkActions | undefined>(key);
-}
+export const getRowBulkActions = () => (hasBridge() ? getBridge() : undefined);

@@ -1,18 +1,14 @@
-import { getContext, setContext } from "svelte";
+import { createContext } from "svelte";
 
 import type { Slot, SlotProps, SlotStyle, Theme } from "./types.ts";
 
-const key = Symbol("theme");
-
-interface ThemeContext {
+const [getTheme, setTheme, hasTheme] = createContext<{
 	get: () => Theme;
 	isDark: () => boolean;
-}
+}>();
 
 /** Makes a theme available to all components below; both getters are read reactively. */
-export function provideTheme(get: () => Theme, isDark: () => boolean) {
-	setContext<ThemeContext>(key, { get, isDark });
-}
+export const provideTheme = (get: () => Theme, isDark: () => boolean) => setTheme({ get, isDark });
 
 /**
  * Gives a component access to the current theme's classes. Call it while the component
@@ -23,7 +19,7 @@ export function provideTheme(get: () => Theme, isDark: () => boolean) {
  * ```
  */
 export function useTheme() {
-	const context = getContext<ThemeContext | undefined>(key);
+	const context = hasTheme() ? getTheme() : undefined;
 	const get = context?.get;
 	return {
 		/** Whether dark mode is active (the preference allows it and the theme supports it). */
