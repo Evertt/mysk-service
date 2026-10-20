@@ -9,16 +9,16 @@
 	import { resolve } from "$app/paths";
 	import WalletCardsIcon from "@lucide/svelte/icons/wallet-cards";
 
-	import DarkPanel from "#lib/components/dark-panel.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import { submitted } from "#lib/components/form/submitted.ts";
-	import KeyFigure from "#lib/components/key-figure.svelte";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 
 	import { formatEuros } from "../display.ts";
 	import { partnerLabels } from "../labels.ts";
 	import { closePartnerYear, type getPartnerCard } from "../partners.remote.ts";
+	import DarkPanel from "../ui/dark-panel.svelte";
+	import KeyFigure from "../ui/key-figure.svelte";
 	import LevelBadge from "../ui/level-badge.svelte";
 	import LevelProgress from "../ui/level-progress.svelte";
 	import BonusCreditNote from "./bonus-credit-note.svelte";

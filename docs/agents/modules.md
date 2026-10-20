@@ -89,6 +89,15 @@ true })`, whose contributors answer at once, without awaiting: for an owner that
   its category; a module that's off adds none. Docks' `server/notifications.ts` is the example; a
   rule that needs more than the entry says adds it to the entry (`changes`), not a record of its
   own.
+- **A record's points** (an order's, a customer's, a unit's, an engineer's, a contract's) are
+  declared by one call in its owner's `extensions.ts`, named alike for every record:
+  `export const points = defineRecordPoints("orders", { detail: slotProps<{ number: string }>(),
+bulk: bulkRows<OrderBulkRow>() })` declares the slots `orders.detail.main` and
+  `orders.detail.side` (cards in the columns of its `RecordPage`, given `detail`'s props) and, when
+  its options ask, `orders.list.columns` (`listColumns: true`, columns in its list) and
+  `orders.list.bulk` (`bulk`, bulk actions on its list's selection). The generator reads the call
+  like the other declarations, so a module contributes to `slots/orders.detail.main/`,
+  `bulk-actions/orders.list.bulk.ts` or `columns/equipment.list.columns.ts`.
 - **Form slots** (`defineFormSlot()`, e.g. the order form's `orders.form`) take a module's inputs
   into a core form. The module gives, besides its components at `slots/<point id>/`, the valibot
   object schema of its part as the default export of `form-parts/<point id>.ts`; the generator
@@ -235,10 +244,11 @@ migration committed.
   `requires` or `enhances`. Every `.svelte` directly in `slots/<point id>/` is a contribution, so a
   contribution's helper components live outside `slots/` (next to the module's other components). A
   slot's component must declare the slot's props (optional is fine): a component without them is
-  refused by the type check at a slot that passes props. The owner's page renders a slot with
-  `<ExtensionSlot point={detailSide} props={{ number }} />` (`detailSide` from the owner's
-  `extensions.ts`), and a table gets its contributed actions with
-  `extensionBulkActions(list)` (`src/lib/extensions/bulk-actions.svelte.ts`), which its action bar
+  refused by the type check at a slot that passes props. A record's page renders its slots through
+  `<RecordPage slots={points.detail} slotProps={{ number }}>` (the main column's after its own
+  cards, the side column's before the activity card); any other page with
+  `<ExtensionSlot point={…} props={…} />`. A table gets its contributed actions with
+  `extensionBulkActions(points.list.bulk)` (`src/lib/extensions/bulk-actions.svelte.ts`), which its action bar
   also offers in each row's menu, for that row alone (an action that makes no sense for one row
   says `row: false`; see `#lib/components/data-table/bulk-actions.ts`); both show only
   the contributions of the modules the tenant has, in registry order, and key a contribution by its
@@ -283,16 +293,17 @@ e2e src/tests/e2e/skeletons.repro.test.ts`; it counts page errors, and the race 
   shop are (`/partner-programme/portal`, `/parts-shop/portal`). Use remote queries there: a module's server files (`+page.server.ts`, endpoints) are
   guarded by `requireModule()`, which refuses customers' contacts.
 - **A slot owned by a module**: a module declares its points in its `api/extensions.ts` and renders
-  them like core does: contracts declares `contracts.detail.side` (props
-  `{ number: string; equipmentIds: number[] }`) and its contract page renders
-  `<ExtensionSlot>` (`#lib/extensions/extension-slot.svelte`, which a module's page imports like a
-  core page). Maintenance, which `enhances` contracts, contributes
+  them like core does: contracts declares its record's points (`defineRecordPoints("contracts", …)`,
+  so `contracts.detail.side`, props `{ number: string; equipmentIds: number[] }`) and its contract
+  page is a `<RecordPage>` with `slots={points.detail}`, like a core record's (a module's page
+  imports `#lib/components/` like a core page). Maintenance, which `enhances` contracts, contributes
   `slots/contracts.detail.side/plans.svelte`: it may import only contracts' `api/extensions.ts`, so
   it gets the covered units from the props (and checks them in its own queries), never from
   contracts' tables. A point of a module that's off has no contributions shown (its page is gone).
 - **Columns in a core list** (`#lib/components/data-table/module-columns.ts`): a list that takes
-  them names its point in its definition (`docs/agents/lists.md`), e.g. `listColumns =
-defineListColumns("equipment.list")` in `#lib/equipment/extensions.ts`. A module contributes two
+  them names its point in its definition (`docs/agents/lists.md`), e.g. `points.list.columns`
+  (`equipment.list.columns`, `defineRecordPoints("equipment", { …, listColumns: true })` in
+  `#lib/equipment/extensions.ts`). A module contributes two
   files per list, which the generator requires together and checks like the others (point, kind,
   owner): `columns/<point id>.ts`, default export an array of `listColumn({ id, param, label, sort,
 filter, optionLabel, cell })` (isomorphic; the id is namespaced, `maintenance.nextDue`; the cell
@@ -425,7 +436,7 @@ it (`api/extensions.ts`, `energy.door`), a simulator that shares the seed's simu
 (`simulation.run`, `server/live-simulation.ts`: each tick posts the intervals since the latest
 reading and the doors' events through the module's own ingest, `parseBatch()` and `storeBatch()`,
 as a gateway would; reset posts the seed's yesterday and today again). Its site page is the
-mockup's: a page banner (`#lib/components/hero-banner.svelte`, generic), the floor plan with the
+mockup's: a page banner (`overview/hero-banner.svelte`), the floor plan with the
 live meter, door cards with the animated door, and the chart with what's still to measure
 (`overview/`); the selection (`?scope=`) is a link that keeps the scroll position
 (`data-sveltekit-reset="false"`), and the zone pages are linked from it. Managers set a site up in the office

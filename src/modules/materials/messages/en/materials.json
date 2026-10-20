@@ -4,7 +4,6 @@
 	"materials_module_description": "Parts and consumables: their prices, their stock, and what orders use of them.",
 	"materials_title": "Materials",
 	"materials_description": "Parts and consumables, their list prices and stock.",
-	"materials_head_title": "{title} · Materials",
 	"materials_new": "New material",
 	"materials_new_description": "Add a part or consumable to the catalogue.",
 	"materials_breadcrumb_new": "New",

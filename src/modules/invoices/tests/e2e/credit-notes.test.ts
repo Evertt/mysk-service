@@ -186,7 +186,7 @@ describe("in North", () => {
 	test("the dashboard owes what's left to pay, and what's to refund", async () => {
 		await app.go("/");
 		const receivables = card("Receivables");
-		await expect.poll(() => receivables.locator("dd[data-amount]").count()).toBe(2);
+		await expect.poll(() => receivables.locator("[data-stat-value]").count()).toBe(2);
 		const refunds = await receivables.locator("[data-refunds]").innerText();
 		expect(refunds).toMatch(/^€[\d,.]+ to refund on \d+ credit notes?$/);
 

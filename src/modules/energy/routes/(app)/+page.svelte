@@ -16,10 +16,6 @@
 	const sites = $derived(data.sites);
 </script>
 
-<svelte:head>
-	<title>{m.energy_title()}</title>
-</svelte:head>
-
 <div class="flex flex-col gap-6">
 	<PageHeader title={m.energy_title()} description={m.energy_description()}>
 		{#snippet actions()}

@@ -1,6 +1,6 @@
 /**
  * A unit's next maintenance visit in SQL: a correlated subquery for the earliest due date of its
- * active plans. The equipment list's column (`columns/equipment.list.ts`) and the condition
+ * active plans. The equipment list's column (`columns/equipment.list.columns.ts`) and the condition
  * module's units (`condition.signals`) both read it. It binds no parameters (the condition module
  * repeats it in one statement, which may bind at most 100): the plans are in the tenant of the unit
  * they're correlated with, which the outer query holds to the request's (`inTenant(equipment)`).

@@ -20,10 +20,6 @@
 	const facets = $derived(getMaterialFacets(whereOf(query)));
 </script>
 
-<svelte:head>
-	<title>{m.materials_title()}</title>
-</svelte:head>
-
 <PageHeader title={m.materials_title()} description={m.materials_description()}>
 	{#snippet actions()}
 		<Button href={resolve("/(app)/(modules)/materials/new")}>

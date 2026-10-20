@@ -3,7 +3,8 @@
 	A notice on a record's page when someone else changes the record while it's open ("Changed by
 	Anouk de Vries · 1 minute ago"), with a button that loads the latest version, so a save doesn't
 	quietly undo their changes. Nothing for the user's own changes. It follows the record with
-	`watchRecordChanges`, whose `watchedRecords` lists the types it takes.
+	`watchRecordChanges`, for the types in `watchedTypes` (`./watched.ts`). `RecordPage` shows it on
+	a record's page; an edit page shows it above its form, with `onreload`.
 -->
 <script lang="ts">
 	import { refreshAll } from "$app/navigation";
@@ -13,6 +14,7 @@
 	import { formatTimeAgo } from "#lib/i18n/index.ts";
 
 	import { type RecordChange, watchRecordChanges } from "./activity.remote.ts";
+	import type { WatchedType } from "./watched.ts";
 
 	let {
 		type,
@@ -20,7 +22,7 @@
 		onreload,
 	}: {
 		/** The record's activity subject type, e.g. `order`. */
-		type: Parameters<typeof watchRecordChanges>[0]["type"];
+		type: WatchedType;
 		id: number;
 		/**
 		 * Runs once the page has the latest version, e.g. to start its form afresh (a remote form

@@ -1,6 +1,6 @@
 /**
  * The SQL of the checklists module's column in the equipment list (see
- * `../../columns/equipment.list.ts`): each unit's latest completed inspection and its status today
+ * `../../columns/equipment.list.columns.ts`): each unit's latest completed inspection and its status today
  * (`../inspection-sql.ts`).
  */
 import { sql } from "drizzle-orm";
@@ -8,7 +8,7 @@ import { sql } from "drizzle-orm";
 import { inList } from "#lib/server/db/parameters.ts";
 import { columnSql } from "#lib/server/lists/index.ts";
 
-import { type InspectionValue, inspection } from "../../columns/equipment.list.ts";
+import { type InspectionValue, inspection } from "../../columns/equipment.list.columns.ts";
 import { inspectionSql } from "../inspection-sql.ts";
 
 export default [

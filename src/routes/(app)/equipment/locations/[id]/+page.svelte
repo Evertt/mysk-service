@@ -4,11 +4,10 @@
 	import PrinterIcon from "@lucide/svelte/icons/printer";
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 
-	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
-	import PageHeader from "#lib/components/page-header.svelte";
+	import RecordPage from "#lib/components/record-page.svelte";
 	import { CustomerLink } from "#lib/customers/components.ts";
 	import {
 		EquipmentLink,
@@ -37,18 +36,14 @@
 	const remove = $derived(deleteLocation.for(String(location.id)));
 </script>
 
-<svelte:head>
-	<title>{location.name} · {owner.name}</title>
-</svelte:head>
-
-<PageHeader
+<RecordPage
 	title={location.name}
-	description="{owner.name} · {site.name}"
-	breadcrumbs={[
+	subtitle="{owner.name} · {site.name}"
+	list={[
 		{ label: m.customers_title(), href: resolve("/(app)/customers") },
 		{ label: owner.name, href: customerHref },
-		{ label: location.name },
 	]}
+	subject={{ type: "location", id: location.id }}
 >
 	{#snippet actions()}
 		<Button variant="outline" href={labelsHref}>
@@ -64,10 +59,8 @@
 			{m.common_delete()}
 		</Button>
 	{/snippet}
-</PageHeader>
 
-<div class="grid items-start gap-6 lg:grid-cols-3">
-	<div class="flex min-w-0 flex-col gap-6 lg:col-span-2">
+	{#snippet main()}
 		<Card.Root data-testid="location-units">
 			<Card.Header>
 				<Card.Title>{m.equipment_location_units_title()}</Card.Title>
@@ -118,9 +111,9 @@
 		</Card.Root>
 
 		<LocationHistory orders={data.orders} />
-	</div>
+	{/snippet}
 
-	<div class="flex min-w-0 flex-col gap-6">
+	{#snippet side()}
 		<Card.Root>
 			<Card.Header>
 				<Card.Title>{m.equipment_location_details()}</Card.Title>
@@ -149,10 +142,8 @@
 		</Card.Root>
 
 		<QrCard token={location.qrToken} name={location.name} printHref={labelsHref} />
-
-		<ActivityCard type="location" id={location.id} />
-	</div>
-</div>
+	{/snippet}
+</RecordPage>
 
 <LocationDialog siteId={site.id} {location} bind:open={editing} />
 

@@ -6,10 +6,6 @@
 	import { createCustomer, getCustomerFormOptions } from "#lib/customers/remotes.ts";
 </script>
 
-<svelte:head>
-	<title>{m.customers_new()} · {m.customers_title()}</title>
-</svelte:head>
-
 <PageHeader
 	title={m.customers_new()}
 	description={m.customers_new_description()}

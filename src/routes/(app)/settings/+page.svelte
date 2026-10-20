@@ -24,10 +24,6 @@
 	};
 </script>
 
-<svelte:head>
-	<title>{m.common_organization_settings()}</title>
-</svelte:head>
-
 <PageHeader title={m.common_organization_settings()} description={settings.name} />
 
 <!-- The cards, packed into columns (`#lib/components/masonry.ts`): columns at least 20rem wide (the

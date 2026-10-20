@@ -17,10 +17,6 @@
 	let adding = $state(false);
 </script>
 
-<svelte:head>
-	<title>{m.checklists_templates_title()}</title>
-</svelte:head>
-
 <PageHeader
 	title={m.checklists_templates_title()}
 	description={m.checklists_templates_description()}

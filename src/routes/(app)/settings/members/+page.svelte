@@ -16,10 +16,6 @@
 	const data = $derived(await getMembers());
 </script>
 
-<svelte:head>
-	<title>{m.settings_members()} · {m.common_organization_settings()}</title>
-</svelte:head>
-
 <PageHeader
 	title={m.settings_members()}
 	description={data.name}

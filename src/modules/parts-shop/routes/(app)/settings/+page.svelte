@@ -24,10 +24,6 @@
 	const data = $derived(await getShopCategories());
 </script>
 
-<svelte:head>
-	<title>{m.shop_categories_title()}</title>
-</svelte:head>
-
 <PageHeader
 	title={m.shop_categories_title()}
 	description={m.shop_categories_description()}

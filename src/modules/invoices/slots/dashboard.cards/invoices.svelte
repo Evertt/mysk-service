@@ -8,6 +8,7 @@
 	import { resolve } from "$app/paths";
 
 	import { squeeze } from "#lib/components/squeeze.ts";
+	import StatTile from "#lib/components/stat-tile.svelte";
 	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 
 	import { getReceivables } from "../../invoicing.remote.ts";
@@ -28,37 +29,23 @@
 	</Card.Header>
 	<!-- The amounts side by side where they fit, else one above the other. -->
 	<Card.Content class="@container">
-		<dl class="grid grid-cols-1 gap-4 @xs:grid-cols-2">
-			<div class="flex min-w-0 flex-col gap-1">
-				<dt class="text-sm text-muted-foreground">{m.invoices_outstanding()}</dt>
-				<dd
-					data-amount
-					class="text-2xl font-semibold whitespace-nowrap tabular-nums @md:text-3xl"
-					{@attach squeeze()}
-				>
-					{formatCents(data.outstanding.total)}
-				</dd>
-				<dd class="text-sm text-muted-foreground">
-					{m.invoices_count({ count: data.outstanding.count })}
-				</dd>
-			</div>
-			<div class="flex min-w-0 flex-col gap-1">
-				<dt class="text-sm text-muted-foreground">{m.invoices_overdue()}</dt>
-				<dd
-					data-amount
-					{@attach squeeze()}
-					class={[
-						"text-2xl font-semibold whitespace-nowrap tabular-nums @md:text-3xl",
-						data.overdue.count > 0 && "text-destructive",
-					]}
-				>
-					{formatCents(data.overdue.total)}
-				</dd>
-				<dd class="text-sm text-muted-foreground">
-					{m.invoices_count({ count: data.overdue.count })}
-				</dd>
-			</div>
-		</dl>
+		<div class="grid grid-cols-1 gap-4 @xs:grid-cols-2" data-receivables>
+			<StatTile
+				layout="figure"
+				size="large"
+				label={m.invoices_outstanding()}
+				value={formatCents(data.outstanding.total)}
+				detail={m.invoices_count({ count: data.outstanding.count })}
+			/>
+			<StatTile
+				layout="figure"
+				size="large"
+				tone={data.overdue.count > 0 ? "danger" : "neutral"}
+				label={m.invoices_overdue()}
+				value={formatCents(data.overdue.total)}
+				detail={m.invoices_count({ count: data.overdue.count })}
+			/>
+		</div>
 	</Card.Content>
 	<Card.Footer class="flex flex-col items-start gap-1 text-sm text-muted-foreground">
 		<span>{m.invoices_drafts_waiting({ count: data.drafts })}</span>

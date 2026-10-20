@@ -23,6 +23,16 @@ const point = (
 	exportName = id.split(".").at(-1) ?? id,
 ): ExtensionPoint => ({ id, kind, owner, file, exportName });
 
+/** One of a made-up core record's points, `defineRecordPoints()`'s, exported as `points`. */
+const recordPoint = (
+	owner: string,
+	member: string,
+	kind: ExtensionPoint["kind"],
+): ExtensionPoint => ({
+	...point(`${owner}.${member}`, kind, owner, `src/lib/${owner}/extensions.ts`, "points"),
+	member,
+});
+
 describe("findPoints", () => {
 	let root: string;
 	const put = (path: string, content: string) => {
@@ -113,19 +123,41 @@ describe("findPoints", () => {
 		]);
 	});
 
-	test("reads a list that takes columns", () => {
+	test("reads a record's points, with the list's that its options ask for", () => {
+		put(
+			"src/lib/orders/extensions.ts",
+			[
+				`export const form = defineFormSlot<{ order: undefined }>("orders.form");`,
+				`export const points = defineRecordPoints("orders", {`,
+				`\tdetail: slotProps<{ number: string }>(),`,
+				`\tbulk: bulkRows<OrderBulkRow>(),`,
+				`});`,
+			].join("\n"),
+		);
 		put(
 			"src/lib/equipment/extensions.ts",
-			`export const listColumns = defineListColumns("equipment.list");`,
+			`export const points = defineRecordPoints("equipment", { detail: slotProps<{ serialNumber: string }>(), listColumns: true });`,
+		);
+		put(
+			"src/lib/engineers/extensions.ts",
+			`export const points = defineRecordPoints("engineers", { detail: slotProps<{ id: number }>() });`,
 		);
 		expect(findPoints(root)).toEqual([
+			recordPoint("engineers", "detail.main", "slot"),
+			recordPoint("engineers", "detail.side", "slot"),
+			recordPoint("equipment", "detail.main", "slot"),
+			recordPoint("equipment", "detail.side", "slot"),
+			recordPoint("equipment", "list.columns", "columns"),
 			{
-				id: "equipment.list",
-				kind: "columns",
-				owner: "equipment",
-				file: "src/lib/equipment/extensions.ts",
-				exportName: "listColumns",
+				id: "orders.form",
+				kind: "form",
+				owner: "orders",
+				file: "src/lib/orders/extensions.ts",
+				exportName: "form",
 			},
+			recordPoint("orders", "detail.main", "slot"),
+			recordPoint("orders", "detail.side", "slot"),
+			recordPoint("orders", "list.bulk", "bulk"),
 		]);
 	});
 
@@ -254,15 +286,15 @@ describe("extensionProblems", () => {
 describe("renderContributions", () => {
 	const points = [
 		point("dashboard.cards", "slot", "dashboard", "src/lib/dashboard/extensions.ts", "cards"),
-		point("orders.detail.side", "slot", "orders", "src/lib/orders/extensions.ts", "detailSide"),
-		point("orders.list", "bulk", "orders", "src/lib/orders/extensions.ts", "list"),
+		recordPoint("orders", "detail.side", "slot"),
+		recordPoint("orders", "list.bulk", "bulk"),
 		point("orders.adjustPrices", "collector", "orders"),
 		point("invoices.side", "slot", "invoices", "src/modules/invoices/api/extensions.ts", "side"),
 	];
 	const modules = [
 		module("invoices", {
 			slotFiles: ["slots/dashboard.cards/invoices.svelte"],
-			bulkFiles: ["bulk-actions/orders.list.ts"],
+			bulkFiles: ["bulk-actions/orders.list.bulk.ts"],
 		}),
 		module("contracts", {
 			enhances: ["invoices"],
@@ -277,20 +309,20 @@ describe("renderContributions", () => {
 	test("renders typed contributions in registry order", () => {
 		const file = renderContributions(points, modules);
 		expect(file).toContain(
-			`slotContribution(ordersDetailSide, "contracts", "coverage", () => import("#modules/contracts/slots/orders.detail.side/coverage.svelte"))`,
+			`slotContribution(ordersPoints.detail.side, "contracts", "coverage", () => import("#modules/contracts/slots/orders.detail.side/coverage.svelte"))`,
 		);
-		const calls = [...file.matchAll(/^\t(\w+Contribution\(\w+, "[\w-]+"(?:, "[\w-]+")?)/gm)].map(
+		const calls = [...file.matchAll(/^\t(\w+Contribution\([\w.]+, "[\w-]+"(?:, "[\w-]+")?)/gm)].map(
 			(match) => match[1],
 		);
 		expect(calls).toEqual([
 			`slotContribution(dashboardCards, "invoices", "invoices"`,
 			`slotContribution(dashboardCards, "contracts", "contracts"`,
 			`slotContribution(invoicesSide, "contracts", "fees"`,
-			`slotContribution(ordersDetailSide, "contracts", "coverage"`,
-			`bulkContribution(ordersList, "invoices"`,
+			`slotContribution(ordersPoints.detail.side, "contracts", "coverage"`,
+			`bulkContribution(ordersPoints.list.bulk, "invoices"`,
 		]);
 		expect(file).toContain(
-			`bulkContribution(ordersList, "invoices", () => import("#modules/invoices/bulk-actions/orders.list.ts"))`,
+			`bulkContribution(ordersPoints.list.bulk, "invoices", () => import("#modules/invoices/bulk-actions/orders.list.bulk.ts"))`,
 		);
 	});
 
@@ -299,9 +331,7 @@ describe("renderContributions", () => {
 		expect(file).toContain(
 			`import { cards as dashboardCards } from "#lib/dashboard/extensions.ts";`,
 		);
-		expect(file).toContain(
-			`import { detailSide as ordersDetailSide, list as ordersList } from "#lib/orders/extensions.ts";`,
-		);
+		expect(file).toContain(`import { points as ordersPoints } from "#lib/orders/extensions.ts";`);
 		expect(file).toContain(
 			`import { side as invoicesSide } from "#modules/invoices/api/extensions.ts";`,
 		);
@@ -321,16 +351,10 @@ describe("renderContributions", () => {
 });
 
 describe("a list's columns", () => {
-	const listPoint = point(
-		"equipment.list",
-		"columns",
-		"equipment",
-		"src/lib/equipment/extensions.ts",
-		"listColumns",
-	);
+	const listPoint = recordPoint("equipment", "list.columns", "columns");
 	const both = {
-		columnFiles: ["columns/equipment.list.ts"],
-		serverColumnFiles: ["server/columns/equipment.list.ts"],
+		columnFiles: ["columns/equipment.list.columns.ts"],
+		serverColumnFiles: ["server/columns/equipment.list.columns.ts"],
 	};
 
 	test("come in two halves, the definitions and their SQL, named after the list", () => {
@@ -339,19 +363,19 @@ describe("a list's columns", () => {
 			extensionProblems(
 				[listPoint],
 				[
-					module("a", { columnFiles: ["columns/equipment.list.ts"] }),
-					module("b", { serverColumnFiles: ["server/columns/equipment.list.ts"] }),
+					module("a", { columnFiles: ["columns/equipment.list.columns.ts"] }),
+					module("b", { serverColumnFiles: ["server/columns/equipment.list.columns.ts"] }),
 					module("c", {
-						columnFiles: ["columns/equipment.list/x.ts"],
-						serverColumnFiles: ["server/columns/equipment.list/x.ts"],
+						columnFiles: ["columns/equipment.list.columns/x.ts"],
+						serverColumnFiles: ["server/columns/equipment.list.columns/x.ts"],
 					}),
 				],
 			),
 		).toEqual([
-			"src/modules/a/columns/equipment.list.ts: its columns' SQL is missing, in server/columns/equipment.list.ts.",
-			"src/modules/b/server/columns/equipment.list.ts: the columns it's the SQL of are missing, in columns/equipment.list.ts.",
-			"src/modules/c/columns/equipment.list/x.ts: a list's columns are columns/<point id>.ts.",
-			"src/modules/c/server/columns/equipment.list/x.ts: a list's columns' SQL is server/columns/<point id>.ts.",
+			"src/modules/a/columns/equipment.list.columns.ts: its columns' SQL is missing, in server/columns/equipment.list.columns.ts.",
+			"src/modules/b/server/columns/equipment.list.columns.ts: the columns it's the SQL of are missing, in columns/equipment.list.columns.ts.",
+			"src/modules/c/columns/equipment.list.columns/x.ts: a list's columns are columns/<point id>.ts.",
+			"src/modules/c/server/columns/equipment.list.columns/x.ts: a list's columns' SQL is server/columns/<point id>.ts.",
 		]);
 	});
 
@@ -381,17 +405,17 @@ describe("a list's columns", () => {
 	test("are listed for the client, loaded per tenant, and for the server, imported", () => {
 		const modules = [module("maintenance", both)];
 		expect(renderContributions([listPoint], modules)).toContain(
-			`columnsContribution(equipmentList, "maintenance", () => import("#modules/maintenance/columns/equipment.list.ts"))`,
+			`columnsContribution(equipmentPoints.list.columns, "maintenance", () => import("#modules/maintenance/columns/equipment.list.columns.ts"))`,
 		);
 		const server = renderColumnSql([listPoint], modules);
 		expect(server).toContain(
-			`import { listColumns as equipmentList } from "#lib/equipment/extensions.ts";`,
+			`import { points as equipmentPoints } from "#lib/equipment/extensions.ts";`,
 		);
 		expect(server).toContain(
-			`import maintenanceEquipmentList from "#modules/maintenance/server/columns/equipment.list.ts";`,
+			`import maintenanceEquipmentListColumns from "#modules/maintenance/server/columns/equipment.list.columns.ts";`,
 		);
 		expect(server).toContain(
-			`{ module: "maintenance", point: equipmentList, columns: maintenanceEquipmentList },`,
+			`{ module: "maintenance", point: equipmentPoints.list.columns, columns: maintenanceEquipmentListColumns },`,
 		);
 		expect(renderColumnSql([listPoint], [])).toContain("return [];");
 	});

@@ -10,11 +10,11 @@
 	import InfoIcon from "@lucide/svelte/icons/info";
 	import ShoppingBagIcon from "@lucide/svelte/icons/shopping-bag";
 
-	import KeyFigure from "#lib/components/key-figure.svelte";
 	import { formatCents } from "#lib/i18n/index.ts";
 
 	import { formatEuros } from "../display.ts";
 	import type { YearFigures } from "../model.ts";
+	import KeyFigure from "../ui/key-figure.svelte";
 	import LevelBadge from "../ui/level-badge.svelte";
 	import LevelProgress from "../ui/level-progress.svelte";
 

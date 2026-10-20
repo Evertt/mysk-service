@@ -45,6 +45,15 @@ its branch after the task, then `git worktreeinclude apply` (`.env`) and `pnpm i
   its delete button), from `#lib/components/form/`: they submit, toast, close, show the server's
   refusal and give the dialog a history entry, so back closes it. Never `Dialog.Root` or
   `AlertDialog.Root` outside `src/lib/components/` (`src/tests/unit/dialogs.spec.ts`).
+- A record's page is a `<RecordPage>` (`#lib/components/record-page.svelte`): header, trail,
+  Edit/Delete, `<ChangedElsewhere>`, the two columns (`main`, `side`), the modules' slots and the
+  activity card; its cards live in the domain's `detail/`. Its form is a `<RecordForm>` with
+  `<FormSection>`s (`#lib/components/form/`), its props a union of the create and update forms,
+  never a cast. A key figure is a `<StatTile>` (`layout="card"` on a page, `"figure"` in a card).
+  `PageHeader` titles the tab: no `<title>` beside it (`src/tests/unit/record-pages.spec.ts`).
+- A record's extension points are one `defineRecordPoints("<domain>", { detail, listColumns, bulk })`
+  in its `extensions.ts` (`<domain>.detail.main`/`.side`, `.list.columns`, `.list.bulk`), passed
+  to `RecordPage` as `slots={points.detail}`.
 
 Details: `docs/agents/structure.md`.
 

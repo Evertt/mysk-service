@@ -11,7 +11,7 @@ import {
 } from "#lib/components/data-table/list-definition.ts";
 import { checkModuleColumn, listColumn } from "#lib/components/data-table/module-columns.ts";
 import { parseTableUrl } from "#lib/components/data-table/url-state.ts";
-import { listColumns } from "#lib/equipment/extensions.ts";
+import { points } from "#lib/equipment/extensions.ts";
 import { loadListColumns } from "#lib/extensions/list-columns.ts";
 import { fakeColumnContributions, gadgetsRating, widgetsNote } from "#unit/lib/modules/fakes.ts";
 
@@ -22,7 +22,7 @@ const units = defineList({
 		customer: { filter: code },
 	},
 	defaults: { sort: [{ id: "serial", desc: false }] },
-	moduleColumns: listColumns,
+	moduleColumns: points.list.columns,
 });
 
 /** A page of rows, with filters and sorting. */
@@ -51,7 +51,7 @@ describe("extendList", () => {
 		expect(extended.moduleColumns).toEqual([gadgetsRating, widgetsNote]);
 		// What the list was defined with stays as it was.
 		expect(extended.urlSpec.defaults).toEqual(units.urlSpec.defaults);
-		expect(extended.point).toBe(listColumns);
+		expect(extended.point).toBe(points.list.columns);
 	});
 
 	test("reads the URL's parameters of the modules' columns into the query", () => {
@@ -140,13 +140,13 @@ describe("module columns", () => {
 
 	test("load for the modules that are on, in registry order", async () => {
 		const load = (modules: string[]) =>
-			loadListColumns(listColumns, modules, fakeColumnContributions);
+			loadListColumns(points.list.columns, modules, fakeColumnContributions);
 		expect(await load(["widgets", "gadgets"])).toEqual([gadgetsRating, widgetsNote]);
 		expect(await load(["widgets"])).toEqual([widgetsNote]);
 		expect(await load([])).toEqual([]);
 		expect(
 			await loadListColumns(
-				{ id: "orders.list", kind: "columns" },
+				{ id: "orders.list.columns", kind: "columns" },
 				["gadgets"],
 				fakeColumnContributions,
 			),

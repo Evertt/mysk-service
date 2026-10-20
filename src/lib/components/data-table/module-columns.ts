@@ -1,8 +1,8 @@
 /**
  * Columns that the optional modules add to a core server-side list, e.g. maintenance's "Next
  * maintenance" in the equipment list. The list names its extension point in its definition
- * (`defineList({ moduleColumns: listColumns })`, the point a `defineListColumns()` of the list's
- * `extensions.ts`), and a module contributes two files per list:
+ * (`defineList({ moduleColumns: points.list.columns })`, the record's `list.columns` point,
+ * `defineRecordPoints()` in its `extensions.ts`), and a module contributes two files per list:
  *
  * - `src/modules/<id>/columns/<point id>.ts`: default export, the columns' definitions, each a
  *   `listColumn()`: its namespaced id (`maintenance.nextDue`), its name in the URL, its label,

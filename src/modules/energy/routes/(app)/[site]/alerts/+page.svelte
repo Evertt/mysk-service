@@ -24,10 +24,6 @@
 	const siteHref = $derived(resolve("/(app)/(modules)/energy/[site]", { site: params.site }));
 </script>
 
-<svelte:head>
-	<title>{m.energy_alerts_title()} · {site.name}</title>
-</svelte:head>
-
 <div class="flex flex-col gap-6">
 	<PageHeader
 		title={m.energy_alerts_title()}

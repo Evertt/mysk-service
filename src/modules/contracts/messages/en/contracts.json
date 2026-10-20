@@ -2,7 +2,6 @@
 	"$schema": "https://inlang.com/schema/inlang-message-format",
 	"contracts_title": "Service contracts",
 	"contracts_description": "Maintenance agreements covering customers' equipment with a guaranteed response time.",
-	"contracts_head_title": "{title} · Service contracts",
 	"contracts_new": "New contract",
 	"contracts_new_description": "Agree on maintenance cover for a customer's equipment.",
 	"contracts_breadcrumb_new": "New",
@@ -92,11 +91,6 @@
 			}
 		}
 	],
-	"contracts_company": "Company",
-	"contracts_contact": "Contact",
-	"contracts_email": "Email",
-	"contracts_phone": "Phone",
-	"contracts_location": "Location",
 	"contracts_term_days": [
 		{
 			"declarations": [

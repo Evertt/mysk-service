@@ -4,7 +4,7 @@ import { render } from "svelte/server";
 import { expect, test, vi } from "vite-plus/test";
 
 import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
-import { detailSide } from "#lib/orders/extensions.ts";
+import { points } from "#lib/orders/extensions.ts";
 
 // The same made-up modules as in the component test: gadgets' card renders, gizmos' component
 // doesn't load and widgets' card fails on its data (see there for the others).
@@ -14,19 +14,19 @@ vi.mock("#lib/modules/manifests.gen.ts", async () => {
 });
 vi.mock("#lib/extensions/contributions.gen.ts", async () => {
 	const { slotContribution } = await import("#lib/extensions/define.ts");
-	const { detailSide } = await import("#lib/orders/extensions.ts");
+	const { points } = await import("#lib/orders/extensions.ts");
 	const { gadgets, gizmosOrderCard, widgets } = await import("#unit/lib/modules/fakes.ts");
 	return {
 		slotContributions: [
 			slotContribution(
-				detailSide,
+				points.detail.side,
 				gadgets.id,
 				"card",
 				() => import("./extension-slot.test-harness.svelte"),
 			),
 			gizmosOrderCard,
 			slotContribution(
-				detailSide,
+				points.detail.side,
 				widgets.id,
 				"card",
 				() => import("./extension-slot.failing.test-harness.svelte"),
@@ -40,7 +40,7 @@ vi.mock("#lib/auth/session.remote.ts", () => ({
 	getTenantModules: vi.fn(() => Promise.resolve(["gadgets", "gizmos", "widgets"])),
 }));
 
-const props = { point: detailSide, props: { number: "ORD-0001" } };
+const props = { point: points.detail.side, props: { number: "ORD-0001" } };
 
 test("a failed part renders its notice in the page's HTML, ready to hydrate", async () => {
 	// SvelteKit passes the errors that boundaries catch through `handleError` like this.

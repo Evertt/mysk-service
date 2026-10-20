@@ -1,21 +1,17 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import type { RouteParams } from "$app/types";
-	import PencilIcon from "@lucide/svelte/icons/pencil";
 
-	import ActivityCard from "#lib/components/activity/activity-card.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import EnumBadge from "#lib/components/enum-badge.svelte";
-	import DeleteDialog from "#lib/components/form/delete-dialog.svelte";
-	import PageHeader from "#lib/components/page-header.svelte";
-	import { CustomerLink } from "#lib/customers/components.ts";
+	import RecordPage from "#lib/components/record-page.svelte";
+	import { CustomerCard } from "#lib/customers/components.ts";
 	import { EquipmentLink } from "#lib/equipment/components.ts";
 	import { equipmentStatusDisplay } from "#lib/equipment/index.ts";
-	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
-	import { formatCents, formatDate, label } from "#lib/i18n/index.ts";
+	import { formatCents, formatDate } from "#lib/i18n/index.ts";
 	import { OrderLink, TypeLabel } from "#lib/orders/components.ts";
 	import { unitsSummary, orderStatusDisplay } from "#lib/orders/index.ts";
-	import { detailSide } from "#modules/contracts/api/extensions.ts";
+	import { points } from "#modules/contracts/api/extensions.ts";
 	import { deleteContract, getContract } from "#modules/contracts/contracts.remote.ts";
 	import {
 		formatTerm,
@@ -33,44 +29,29 @@
 	const status = $derived(contractStatus(contract));
 </script>
 
-<svelte:head>
-	<title>{m.contracts_head_title({ title: contract.number })}</title>
-</svelte:head>
-
-<PageHeader
+<RecordPage
 	title={contract.number}
-	description={m.contracts_detail_description({
+	subtitle={m.contracts_detail_description({
 		level: contractLevelDisplay[contract.level].label,
 		customer: customer.name,
 	})}
-	breadcrumbs={[
-		{ label: m.contracts_title(), href: resolve("/(app)/(modules)/contracts") },
-		{ label: contract.number },
-	]}
+	list={{ label: m.contracts_title(), href: resolve("/(app)/(modules)/contracts") }}
+	edit={resolve("/(app)/(modules)/contracts/[number]/edit", { number: contract.number })}
+	remove={{
+		form: deleteContract,
+		id: String(contract.id),
+		title: m.contracts_delete_title({ number: contract.number }),
+		description: m.contracts_delete_description(),
+	}}
+	subject={{ type: "contract", id: contract.id }}
+	slots={points.detail}
+	slotProps={{ number: contract.number, equipmentIds: equipment.map((unit) => unit.id) }}
 >
 	{#snippet badges()}
 		<EnumBadge display={contractStatusDisplay} value={status} />
 		<EnumBadge display={contractLevelDisplay} value={contract.level} />
 	{/snippet}
-	{#snippet actions()}
-		<Button
-			variant="outline"
-			href={resolve("/(app)/(modules)/contracts/[number]/edit", { number: contract.number })}
-		>
-			<PencilIcon data-icon="inline-start" />
-			{m.common_edit()}
-		</Button>
-		<DeleteDialog
-			form={deleteContract}
-			id={String(contract.id)}
-			title={m.contracts_delete_title({ number: contract.number })}
-			description={m.contracts_delete_description()}
-		/>
-	{/snippet}
-</PageHeader>
-
-<div class="grid items-start gap-6 lg:grid-cols-3">
-	<div class="flex min-w-0 flex-col gap-6 lg:col-span-2">
+	{#snippet main()}
 		<Card.Root>
 			<Card.Header>
 				<Card.Title>{m.contracts_form_covered()}</Card.Title>
@@ -169,9 +150,8 @@
 				{/if}
 			</Card.Content>
 		</Card.Root>
-	</div>
-
-	<div class="flex min-w-0 flex-col gap-6">
+	{/snippet}
+	{#snippet side()}
 		<Card.Root>
 			<Card.Header>
 				<Card.Title>{m.contracts_terms()}</Card.Title>
@@ -198,47 +178,6 @@
 			</Card.Content>
 		</Card.Root>
 
-		<Card.Root>
-			<Card.Header>
-				<Card.Title>{m.contracts_customer()}</Card.Title>
-				<Card.Description>{customer.code}</Card.Description>
-				<Card.Action>
-					<Badge variant="outline">{label("customerSegment", customer.segment)}</Badge>
-				</Card.Action>
-			</Card.Header>
-			<Card.Content>
-				<dl class="grid grid-cols-2 gap-4">
-					<DetailItem label={m.contracts_company()}>
-						<CustomerLink
-							code={customer.code}
-							name={customer.name}
-							class="underline-offset-4 hover:underline"
-						/>
-					</DetailItem>
-					<DetailItem label={m.contracts_contact()} value={customer.contactName} />
-					<DetailItem
-						label={m.contracts_email()}
-						value={customer.email}
-						href={`mailto:${customer.email}`}
-					/>
-					<DetailItem
-						label={m.contracts_phone()}
-						value={customer.phone}
-						href={`tel:${customer.phone}`}
-					/>
-					<DetailItem
-						label={m.contracts_location()}
-						value={`${customer.city}, ${customer.country}`}
-					/>
-				</dl>
-			</Card.Content>
-		</Card.Root>
-
-		<ExtensionSlot
-			point={detailSide}
-			props={{ number: contract.number, equipmentIds: equipment.map((unit) => unit.id) }}
-		/>
-
-		<ActivityCard type="contract" id={contract.id} />
-	</div>
-</div>
+		<CustomerCard {customer} title={m.contracts_customer()} />
+	{/snippet}
+</RecordPage>

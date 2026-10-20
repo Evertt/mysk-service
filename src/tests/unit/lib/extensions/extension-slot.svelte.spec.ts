@@ -3,7 +3,7 @@ import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
 import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
-import { detailSide } from "#lib/orders/extensions.ts";
+import { points } from "#lib/orders/extensions.ts";
 
 import { data } from "./extension-slot.failing.test-harness.svelte";
 
@@ -16,27 +16,27 @@ vi.mock("#lib/modules/manifests.gen.ts", async () => {
 });
 vi.mock("#lib/extensions/contributions.gen.ts", async () => {
 	const { slotContribution } = await import("#lib/extensions/define.ts");
-	const { detailSide } = await import("#lib/orders/extensions.ts");
+	const { points } = await import("#lib/orders/extensions.ts");
 	const { dormant, fakeSlotContributions, gadgets, gizmosOrderCard, widgets } =
 		await import("#unit/lib/modules/fakes.ts");
 	return {
 		slotContributions: [
 			fakeSlotContributions[0],
 			slotContribution(
-				detailSide,
+				points.detail.side,
 				gadgets.id,
 				"card",
 				() => import("./extension-slot.test-harness.svelte"),
 			),
 			gizmosOrderCard,
 			slotContribution(
-				detailSide,
+				points.detail.side,
 				widgets.id,
 				"card",
 				() => import("./extension-slot.failing.test-harness.svelte"),
 			),
 			slotContribution(
-				detailSide,
+				points.detail.side,
 				dormant.id,
 				"card",
 				() => import("./extension-slot.test-harness.svelte"),
@@ -66,7 +66,7 @@ afterEach(() => {
 
 // Under `props`: the component's own `props` prop would be read as the options' `props`.
 const renderOrderSlot = () =>
-	render(ExtensionSlot, { props: { point: detailSide, props: { number: "ORD-0001" } } });
+	render(ExtensionSlot, { props: { point: points.detail.side, props: { number: "ORD-0001" } } });
 
 const failedCard = (id: string) =>
 	page.elementLocator(document.querySelector(`[data-extension-failed="${id}"]`)!);

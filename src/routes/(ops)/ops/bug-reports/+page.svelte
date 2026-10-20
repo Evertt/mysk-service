@@ -10,10 +10,6 @@
 	const now = Temporal.Now.instant();
 </script>
 
-<svelte:head>
-	<title>{m.bugs_list_title()}</title>
-</svelte:head>
-
 <PageHeader title={m.bugs_list_title()} description={m.bugs_list_description()} />
 
 {#if reports.length === 0}

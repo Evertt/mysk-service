@@ -3,22 +3,17 @@
  * (see `#lib/extensions/define.ts` and `#lib/server/extensions.ts`). The vote has one caller,
  * `removeSite()` (`server/sites.ts`). Isomorphic, so the slots' types are there for the pages.
  */
-import { defineSlot, defineVote } from "#lib/extensions/define.ts";
+import { defineRecordPoints, defineVote, slotProps } from "#lib/extensions/define.ts";
 // Only the type: this file is isomorphic.
 import type { Transaction } from "#lib/server/db/index.ts";
 
 /**
- * Cards in the side column of a customer's page, e.g. the partner programme's level and wallet.
- * The components load their own data through their module's remote functions (by the customer's
- * code, checked in the tenant there), and render nothing when they have nothing to say.
+ * A customer's points: cards in the columns of its page, e.g. the partner programme's level and
+ * wallet at the side, the service history of its units in the main column. The components load
+ * their own data through their module's remote functions (by the customer's code, checked in the
+ * tenant there), and render nothing when they have nothing to say.
  */
-export const detailSide = defineSlot<{ code: string }>("customers.detail.side");
-
-/**
- * Cards in the main column of a customer's page, below its recent activity, e.g. the service
- * history of its units. Like the side column's: by the customer's code, loading their own data.
- */
-export const detailMain = defineSlot<{ code: string }>("customers.detail.main");
+export const points = defineRecordPoints("customers", { detail: slotProps<{ code: string }>() });
 
 /**
  * Core is about to delete one of the tenant's customer sites, in `tx`; its equipment is gone and

@@ -4,7 +4,7 @@ import { expect, test } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
-import DarkPanel from "#lib/components/dark-panel.svelte";
+import DarkPanel from "#modules/partner-programme/ui/dark-panel.svelte";
 
 test("shows its title and lines, the strong one between rules, attributes on the values", async () => {
 	const { container } = await render(DarkPanel, {

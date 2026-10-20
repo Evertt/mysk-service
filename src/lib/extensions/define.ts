@@ -6,6 +6,9 @@
  * reads without running the file. Isomorphic: a point is only its id and kind (its types ride along
  * for the compiler).
  *
+ * - A record's points (`defineRecordPoints()`): the slots of its page and its list's columns and
+ *   bulk actions, one call per record, named alike for every one (`orders.detail.side`,
+ *   `orders.list.bulk`, `equipment.list.columns`).
  * - Hooks (collectors, events, votes, save hooks): modules contribute with `contribute()` in their
  *   `server/index.ts`, and the owner calls them with `collect()`, `emit()`, `vote()` or `save()`, all in
  *   `#lib/server/extensions.ts`, which also says how each kind runs.
@@ -185,8 +188,75 @@ export interface ListColumnsPoint {
 	readonly kind: "columns";
 }
 
-/** Declares a server-side list that modules add columns to. */
-export const defineListColumns = (id: string): ListColumnsPoint => ({ id, kind: "columns" });
+/** Declares a server-side list that modules add columns to (a record's, `defineRecordPoints()`). */
+const defineListColumns = (id: string): ListColumnsPoint => ({ id, kind: "columns" });
+
+/** Carries a type in `defineRecordPoints()`'s options; never read. */
+export interface Shape<T> {
+	readonly shape?: T;
+}
+
+/** The props of a record's detail slots, in `defineRecordPoints()`. */
+export const slotProps = <Props extends Record<string, unknown>>(): Shape<Props> => ({});
+
+/** The rows of a record's list's selection, in `defineRecordPoints()`. */
+export const bulkRows = <Row>(): Shape<Row> => ({});
+
+/** What a record's points are declared with: which list points it has, and their types. */
+interface RecordPointOptions {
+	/** Its list takes the modules' columns. */
+	listColumns?: true;
+	/** Its list's selection takes the modules' bulk actions, for these rows. */
+	bulk?: Shape<unknown>;
+}
+
+/** A record's points on its list page, as its options ask for them. */
+type ListPoints<Options extends RecordPointOptions> = (Options extends { listColumns: true }
+	? { readonly columns: ListColumnsPoint }
+	: unknown) &
+	(Options extends { bulk: Shape<infer Row> } ? { readonly bulk: BulkTable<Row> } : unknown);
+
+/** A core record's extension points, in one shape for every domain. */
+export interface RecordPoints<Props extends Record<string, unknown>, List> {
+	/** The two columns of its page (`RecordPage`): cards after its own, each column's. */
+	readonly detail: { readonly main: SlotPoint<Props>; readonly side: SlotPoint<Props> };
+	readonly list: List;
+}
+
+/**
+ * Declares a core record's extension points, named alike for every domain: `<owner>.detail.main`
+ * and `<owner>.detail.side` (slots on its page, whose components get `detail`'s props), and, when
+ * asked for, `<owner>.list.columns` (its list takes columns) and `<owner>.list.bulk` (its list's
+ * selection takes bulk actions, for `bulk`'s rows):
+ *
+ * ```ts
+ * export const points = defineRecordPoints("orders", {
+ * 	detail: slotProps<{ number: string }>(),
+ * 	bulk: bulkRows<OrderBulkRow>(),
+ * });
+ * ```
+ *
+ * `scripts/modules.ts` reads the call like the other declarations (the owner is a literal).
+ */
+export function defineRecordPoints<
+	Props extends Record<string, unknown>,
+	const Options extends RecordPointOptions,
+>(
+	owner: string,
+	options: Options & { detail: Shape<Props> },
+): RecordPoints<Props, ListPoints<Options>> {
+	const list = {
+		...(options.listColumns && { columns: defineListColumns(`${owner}.list.columns`) }),
+		...(options.bulk && { bulk: defineBulkTable(`${owner}.list.bulk`) }),
+	};
+	return {
+		detail: {
+			main: defineSlot<Props>(`${owner}.detail.main`),
+			side: defineSlot<Props>(`${owner}.detail.side`),
+		},
+		list: list as ListPoints<Options>,
+	};
+}
 
 /** A module's columns for a list (their definitions and cells), loaded like a slot's component. */
 export interface ColumnsContribution {

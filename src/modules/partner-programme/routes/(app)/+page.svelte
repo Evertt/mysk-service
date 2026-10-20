@@ -22,10 +22,6 @@
 	const overview = $derived(getProgrammeOverview());
 </script>
 
-<svelte:head>
-	<title>{m.partners_title()}</title>
-</svelte:head>
-
 <PageHeader
 	title={m.partners_title()}
 	description={m.partners_description({ year: String((await year).year) })}

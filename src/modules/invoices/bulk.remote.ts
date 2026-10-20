@@ -1,6 +1,6 @@
 /**
  * What the invoicing module adds to the orders list's selection (see
- * `bulk-actions/orders.list.ts`).
+ * `bulk-actions/orders.list.bulk.ts`).
  */
 import { error } from "@sveltejs/kit";
 

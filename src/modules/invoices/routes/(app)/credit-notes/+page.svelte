@@ -11,10 +11,6 @@
 	const _props: { params: RouteParams<"/(app)/(modules)/invoices/credit-notes"> } = $props();
 </script>
 
-<svelte:head>
-	<title>{m.invoices_credit_notes()} · {m.invoices_title()}</title>
-</svelte:head>
-
 <PageHeader
 	title={m.invoices_credit_notes()}
 	description={m.invoices_credit_notes_description()}

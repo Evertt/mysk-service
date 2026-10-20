@@ -6,7 +6,7 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
-	import { squeeze } from "#lib/components/squeeze.ts";
+	import StatTile from "#lib/components/stat-tile.svelte";
 	import { formatCents, formatNumber } from "#lib/i18n/index.ts";
 
 	import { getProgrammeOverview } from "../../overview.remote.ts";
@@ -29,16 +29,11 @@
 		</Card.Action>
 	</Card.Header>
 	<Card.Content class="flex flex-col gap-4">
-		<div class="flex flex-col gap-1">
-			<div class="text-sm text-muted-foreground">{m.partners_dashboard_credit()}</div>
-			<div
-				class="text-2xl font-semibold whitespace-nowrap tabular-nums"
-				data-credit-outstanding
-				{@attach squeeze()}
-			>
-				{formatCents(overview.credit)}
-			</div>
-		</div>
+		<StatTile
+			layout="figure"
+			label={m.partners_dashboard_credit()}
+			value={formatCents(overview.credit)}
+		/>
 		{#if reached.length}
 			<ul class="flex flex-col divide-y text-sm">
 				{#each reached as each (each.level ?? "")}

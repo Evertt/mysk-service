@@ -195,7 +195,7 @@ describe("in North", () => {
 
 describe("the unit's cards", () => {
 	/** The unit page's cards' container (a masonry). */
-	const cards = () => app.page.locator("[data-unit-cards]");
+	const cards = () => app.page.locator("[data-record-cards]");
 
 	/** A North unit with few orders, so its timeline is shorter than the other cards together. */
 	const quietUnit = async () => {
@@ -258,7 +258,7 @@ describe("the unit's cards", () => {
 		const serial = await quietUnit();
 		await onPhone(app.page, async () => {
 			await app.go(`/equipment/${serial}`);
-			expect(await app.page.locator("[data-unit-cards][data-masonry]").count()).toBe(0);
+			expect(await app.page.locator("[data-record-cards][data-masonry]").count()).toBe(0);
 			const boxes = await cardBoxes(cards());
 			expect(boxes[0].title).toBe("Service history");
 			expect(boxes.at(-1)?.title).toBe("Activity");

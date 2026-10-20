@@ -9,10 +9,6 @@
 	const _props: { params: RouteParams<"/(app)/(modules)/materials/new"> } = $props();
 </script>
 
-<svelte:head>
-	<title>{m.materials_head_title({ title: m.materials_new() })}</title>
-</svelte:head>
-
 <PageHeader
 	title={m.materials_new()}
 	description={m.materials_new_description()}

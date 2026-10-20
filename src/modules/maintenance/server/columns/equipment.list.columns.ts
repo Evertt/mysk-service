@@ -1,6 +1,6 @@
 /**
  * The SQL of the maintenance module's column in the equipment list (see
- * `../../columns/equipment.list.ts`): the earliest due date of the unit's active plans
+ * `../../columns/equipment.list.columns.ts`): the earliest due date of the unit's active plans
  * (`../next-due-sql.ts`).
  */
 import { sql } from "drizzle-orm";
@@ -9,7 +9,7 @@ import { currentDay } from "#lib/dates.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { columnSql } from "#lib/server/lists/index.ts";
 
-import { nextMaintenance } from "../../columns/equipment.list.ts";
+import { nextMaintenance } from "../../columns/equipment.list.columns.ts";
 import { SOON_DAYS } from "../../model.ts";
 import { nextDueSql } from "../next-due-sql.ts";
 import { maintenancePlan } from "../schema.ts";
