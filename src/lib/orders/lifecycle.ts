@@ -12,6 +12,7 @@ import {
 	type OrderStatus,
 	orderStatuses,
 } from "#lib/models.ts";
+import { isOneOf } from "#lib/one-of.ts";
 
 /** Why an order can't be changed or deleted (see `isEditableOrder`). */
 export const notEditable = (number: string, change: "changed" | "deleted") =>
@@ -147,7 +148,7 @@ export type OrderVerb = keyof typeof orderTransitions;
 
 /** Whether `verb` can move an order with `status` (whatever it moves it to). */
 export const can = (verb: OrderVerb, status: OrderStatus) =>
-	(orderTransitions[verb].from as readonly OrderStatus[]).includes(status);
+	isOneOf<OrderStatus>(orderTransitions[verb].from, status);
 
 /** The page's Edit button and the order form: whether an order can be changed in its status. */
 export const mayEditOrder = (status: OrderStatus) => can("set", status);

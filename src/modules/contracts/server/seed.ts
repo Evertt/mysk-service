@@ -2,6 +2,7 @@ import type { Faker } from "@faker-js/faker";
 
 import type { customerSegments } from "#lib/models.ts";
 import { formatCode } from "#lib/numbering.ts";
+import { isOneOf } from "#lib/one-of.ts";
 import { insertRows } from "#lib/server/db/parameters.ts";
 import { addDays, HOUR, now, today } from "#lib/server/db/seed/clock.ts";
 import {
@@ -347,7 +348,7 @@ const monthlyFeeText = (term: { number: string; level: ContractLevel }, month: C
  */
 function coveringTerm(coverage: Map<number, ContractTerm[]>, order: SeedOrder) {
 	const [first, ...others] = order.equipmentIds;
-	if (!(coveredOrderTypes as readonly string[]).includes(order.type) || first === undefined) {
+	if (!isOneOf(coveredOrderTypes, order.type) || first === undefined) {
 		return undefined;
 	}
 	return (

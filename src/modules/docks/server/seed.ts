@@ -11,6 +11,7 @@
 import { en, Faker, nl } from "@faker-js/faker";
 import { and, eq } from "drizzle-orm";
 
+import { isOneOf } from "#lib/one-of.ts";
 import { withTenantRefs } from "#lib/server/db/columns.ts";
 import { customer, customerSite, equipment, equipmentLocation } from "#lib/server/db/schema.ts";
 import { DAY, MINUTE, now } from "#lib/server/db/seed/clock.ts";
@@ -101,9 +102,7 @@ export default defineSeed({
 			const sessions: (typeof dockSession.$inferInsert)[] = [];
 			const states: (typeof dockState.$inferInsert)[] = [];
 			const current = mockupDocks(toMoment(now));
-			const salvoDocks = docks.filter((each) =>
-				(demoSalvoDocks as readonly string[]).includes(each.code),
-			);
+			const salvoDocks = docks.filter((each) => isOneOf(demoSalvoDocks, each.code));
 			for (const dock of salvoDocks) {
 				const { facts, session } = current[dock.code as DemoDock];
 				// The history ends a while before the truck at it now arrived (or before now).

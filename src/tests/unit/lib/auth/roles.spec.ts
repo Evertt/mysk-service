@@ -9,6 +9,7 @@ import {
 	parseRoles,
 	teamRoles,
 } from "#lib/auth/roles.ts";
+import { isOneOf } from "#lib/one-of.ts";
 
 describe("isFieldEngineer", () => {
 	test("is a member whose only role is engineer", () => {
@@ -46,16 +47,14 @@ describe("isManager", () => {
 });
 
 test("every role but engineer and customer works in the office", () => {
-	expect(memberRoles.filter((role) => !(officeRoles as readonly string[]).includes(role))).toEqual([
+	expect(memberRoles.filter((role) => !isOneOf(officeRoles, role))).toEqual([
 		"engineer",
 		"customer",
 	]);
 });
 
 test("the team's roles are all but the customer's", () => {
-	expect(memberRoles.filter((role) => !(teamRoles as readonly string[]).includes(role))).toEqual([
-		"customer",
-	]);
+	expect(memberRoles.filter((role) => !isOneOf(teamRoles, role))).toEqual(["customer"]);
 });
 
 describe("isCustomerContact", () => {

@@ -3,6 +3,7 @@
  * `$lib/server` so client code (filters, badges) can import the option lists.
  */
 import type { ModuleAction } from "#lib/modules/manifests.ts";
+import { isOneOf } from "#lib/one-of.ts";
 
 /** @labels customerSegment */
 export const customerSegments = ["enterprise", "mid_market", "small_business"] as const;
@@ -52,8 +53,7 @@ export type OrderType = (typeof orderTypes)[number];
  */
 export const correctiveOrderTypes = ["breakdown", "repair"] as const satisfies OrderType[];
 
-export const isCorrectiveWork = (type: OrderType) =>
-	(correctiveOrderTypes as readonly OrderType[]).includes(type);
+export const isCorrectiveWork = (type: OrderType) => isOneOf(correctiveOrderTypes, type);
 
 /**
  * In workflow order. An order a customer reports in the customer portal starts `awaiting_acceptance`
@@ -85,8 +85,7 @@ export const openOrderStatuses = [
 /** Orders whose work is done, and which count towards revenue. */
 export const doneOrderStatuses = ["completed", "invoiced"] as const satisfies OrderStatus[];
 
-export const isOpenOrder = (status: OrderStatus) =>
-	(openOrderStatuses as readonly OrderStatus[]).includes(status);
+export const isOpenOrder = (status: OrderStatus) => isOneOf(openOrderStatuses, status);
 
 /** Whether an order is a customer's report that a planner hasn't accepted or rejected yet. */
 export const isAwaitingAcceptance = (status: OrderStatus) => status === "awaiting_acceptance";
@@ -100,8 +99,7 @@ export const pendingOrderStatuses = [
 	...openOrderStatuses,
 ] as const satisfies OrderStatus[];
 
-export const isDoneOrder = (status: OrderStatus) =>
-	(doneOrderStatuses as readonly OrderStatus[]).includes(status);
+export const isDoneOrder = (status: OrderStatus) => isOneOf(doneOrderStatuses, status);
 
 /**
  * The statuses an order can be given by hand, e.g. in the order form. Not `invoiced`: an order is

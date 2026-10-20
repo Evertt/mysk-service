@@ -27,6 +27,7 @@
  *   on. Cancelled orders have no deadline.
  */
 import { isCorrectiveWork, type OrderStatus, type OrderType } from "#lib/models.ts";
+import { isOneOf } from "#lib/one-of.ts";
 
 import { contractLabels } from "./labels.ts";
 import { type ContractLevel, contractStatus, coveredOrderTypes } from "./model.ts";
@@ -51,8 +52,7 @@ const includedLabels: Record<ContractLevel, () => string> = {
 export const includedLabel = (level: ContractLevel) => includedLabels[level]();
 
 /** Whether a contract covers this type of work on a covered unit. */
-export const isCoveredWork = (type: OrderType) =>
-	(coveredOrderTypes as readonly OrderType[]).includes(type);
+export const isCoveredWork = (type: OrderType) => isOneOf(coveredOrderTypes, type);
 
 /** Of the contracts covering a unit, the one that covered it at `at`, if any: the fastest response wins. */
 export function coveringContract<
@@ -148,7 +148,7 @@ export function slaState(
 	window: Temporal.Duration,
 	now: Temporal.Instant,
 ): SlaState {
-	if (!(waitingStatuses as readonly OrderStatus[]).includes(status)) return "responded";
+	if (!isOneOf(waitingStatuses, status)) return "responded";
 	const left = now.until(due).total("milliseconds");
 	if (left <= 0) return "overdue";
 	return left < window.total("milliseconds") * AT_RISK_SHARE ? "at_risk" : "on_track";

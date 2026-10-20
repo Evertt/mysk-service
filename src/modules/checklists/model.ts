@@ -9,6 +9,7 @@
  * in the other.
  */
 import { isOpenOrder, type OrderStatus, type OrderType } from "#lib/models.ts";
+import { isOneOf } from "#lib/one-of.ts";
 import { moved } from "#lib/ordering.ts";
 import type { MoveDirection } from "#lib/schema.ts";
 
@@ -142,9 +143,7 @@ export const pointResults = ["ok", "nok", "na"] as const;
 export type PointResult = (typeof pointResults)[number];
 
 /** The kind of checklist each unit of an order of `type` gets; none for other types. */
-export function checklistKind(type: OrderType): ChecklistKind | null {
-	return (checklistKinds as readonly string[]).includes(type) ? (type as ChecklistKind) : null;
-}
+export const checklistKind = (type: OrderType) => (isOneOf(checklistKinds, type) ? type : null);
 
 /**
  * Whether an order with `status` gets checklists for its units: while it's to be done. A done or
