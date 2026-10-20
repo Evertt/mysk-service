@@ -6,6 +6,7 @@
  * answered, after what's still to save, unless some of it fails to. An answer that fails to save
  * is taken back to the server's, and said so, unless a newer one has replaced it by then.
  */
+import { useDebounce } from "runed";
 import { untrack } from "svelte";
 import { toast } from "svelte-sonner";
 
@@ -73,23 +74,11 @@ export function checklistDraft<Point extends DraftPoint>(
 		} while (last !== queue);
 	}
 
-	// Plain records: what's pending to save shows nowhere.
-	const timers: Record<string, ReturnType<typeof setTimeout>> = {};
-	/** Saves a moment after typing stops. */
-	function later(key: string, save: () => void) {
-		clearTimeout(timers[key]);
-		timers[key] = setTimeout(() => {
-			delete timers[key];
-			save();
-		}, 800);
-	}
-	/** Saves now what's waiting to be saved, if anything. */
-	function now(key: string, save: () => void) {
-		if (!(key in timers)) return;
-		clearTimeout(timers[key]);
-		delete timers[key];
-		save();
-	}
+	/** Saves a moment after typing stops (`runScheduledNow()`: now, if it's waiting). */
+	const typed = (save: () => void) => useDebounce(save, 800);
+	const remarksTyped = typed(saveRemarks);
+	const remarkTyped = new Map(points.map((point) => [point.id, typed(() => saveRemark(point))]));
+	const typing = (point: Point) => remarkTyped.get(point.id)!;
 
 	/** What the server has of each point's result, as its saves confirm it. */
 	const answered: Record<number, PointResult | null> = Object.fromEntries(
@@ -137,7 +126,7 @@ export function checklistDraft<Point extends DraftPoint>(
 		/** Sets the general remark, saved a moment after typing stops. */
 		set remarks(value: string) {
 			remarks = value;
-			later("remarks", saveRemarks);
+			void remarksTyped();
 		},
 		/** How many changes are being saved. */
 		get saving() {
@@ -173,15 +162,15 @@ export function checklistDraft<Point extends DraftPoint>(
 		/** Sets a point's remark, saved a moment after typing stops. */
 		setRemark(point: Point, remark: string) {
 			point.remark = remark;
-			later(`point-${point.id}`, () => saveRemark(point));
+			void typing(point)();
 		},
 		/** Saves a point's remark now, if it's waiting (its field is left). */
 		flushRemark(point: Point) {
-			now(`point-${point.id}`, () => saveRemark(point));
+			void typing(point).runScheduledNow();
 		},
 		/** Saves the general remark now, if it's waiting. */
 		flushRemarks() {
-			now("remarks", saveRemarks);
+			void remarksTyped.runScheduledNow();
 		},
 		/**
 		 * Completes it, once every point is answered (else it shows what's missing), after what's
@@ -191,10 +180,7 @@ export function checklistDraft<Point extends DraftPoint>(
 		async complete() {
 			tried = true;
 			if (!ready) return false;
-			for (const key of Object.keys(timers)) {
-				clearTimeout(timers[key]);
-				delete timers[key];
-			}
+			for (const waiting of [remarksTyped, ...remarkTyped.values()]) void waiting.runScheduledNow();
 			const failed = failures;
 			for (const point of points) saveRemark(point);
 			saveRemarks();
