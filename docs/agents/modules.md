@@ -116,7 +116,9 @@ declares every type it names, which `src/tests/unit/modules/order-types.spec.ts`
 `liveTypes` (types it announces for its live pages but never logs, e.g. energy's readings), and
 `portal` (below); it is in every tenant's bundle, so it imports only messages, icons, types,
 `import()` loaders and its own small scripts),
-`server/` (`index.ts` with `defineServerModule()`, `schema.ts`, `seed.ts` with `defineSeed()`, its
+`server/` (`index.ts` with `defineServerModule()`, `schema.ts`, `seed.ts` with `defineSeed()`, which inserts with `insertRows()` and numbers its rows after
+the tenants' before with the context's `ids.claim()`, and needs no clearing: deleting the
+organizations does it; its
 columns' SQL in `columns/`, its logic; server-only), `routes/` (its pages, in route groups, under
 the module's own URL, `/<id>`: `+` files only; see "A module's pages" below), its components
 in folders by feature like a core domain's (`ui/` for links and badges, `list/`, `form/`, `detail/`,
