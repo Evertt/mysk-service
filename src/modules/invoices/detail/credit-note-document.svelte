@@ -7,11 +7,10 @@
 <script lang="ts">
 	import XIcon from "@lucide/svelte/icons/x";
 
-	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
+	import { formatCents, formatDate, formatNumber, formatPercent } from "#lib/i18n/index.ts";
 	import { OrderLink } from "#lib/orders/components.ts";
 
 	import type { getCreditNote } from "../credit-notes.remote.ts";
-	import { formatRate } from "../display.ts";
 	import InvoiceLink from "../ui/invoice-link.svelte";
 	import { removeCreditLine } from "./credit-note.remote.ts";
 
@@ -130,7 +129,10 @@
 					{#if editable}<Table.Cell></Table.Cell>{/if}
 				</Table.Row>
 				<Table.Row>
-					<Table.Cell colspan={3}>{m.invoices_vat({ rate: formatRate(credit.vatRate) })}</Table.Cell
+					<Table.Cell colspan={3}
+						>{m.invoices_vat({
+							rate: formatPercent(credit.vatRate, { basis: "percent" }),
+						})}</Table.Cell
 					>
 					<Table.Cell class="text-right tabular-nums">{formatCents(data.totals.vat)}</Table.Cell>
 					{#if editable}<Table.Cell></Table.Cell>{/if}

@@ -8,8 +8,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { fitsWidth, onPhone, organizations, rows, useApp, users } from "#e2e/app.ts";
 import { signedInPage } from "#e2e/portal-helpers.ts";
-import { formatCents, formatDate } from "#lib/i18n/index.ts";
-import { formatEuros } from "#modules/partner-programme/display.ts";
+import { formatCents, formatDate, formatWholeEuros } from "#lib/i18n/index.ts";
 
 import { closedYears, figuresFromDatabase, lastYear, thisYear, walletOf } from "./helpers.ts";
 
@@ -43,7 +42,7 @@ describe("a partner's contact", () => {
 		const home = page.locator("[data-client-home-bonus]");
 		await home.waitFor();
 		expect(await home.locator("[data-partner-revenue]").innerText()).toBe(
-			formatEuros(figures.partnerRevenue),
+			formatWholeEuros(figures.partnerRevenue),
 		);
 		const wallet = page.locator("[data-client-wallet]");
 		expect(await wallet.locator("[data-wallet-awarded]").innerText()).toBe(formatCents(375_000));
@@ -80,7 +79,7 @@ describe("a partner's contact", () => {
 		]);
 		await panel.getByRole("link", { name: "Spend parts credit" }).waitFor();
 		expect(await bonus.locator("[data-bonus-revenue]").innerText()).toBe(
-			formatEuros(figures.bonusRevenue.cash),
+			formatWholeEuros(figures.bonusRevenue.cash),
 		);
 		expect(await bonus.locator("[data-expected-credit]").innerText()).toBe(
 			formatCents(figures.bonus.credit),

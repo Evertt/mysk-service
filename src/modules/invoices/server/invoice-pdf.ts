@@ -7,9 +7,8 @@
  */
 import { type PDFFont, PDFDocument, type PDFPage, rgb, StandardFonts } from "pdf-lib";
 
-import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
+import { formatCents, formatDate, formatNumber, formatPercent } from "#lib/i18n/index.ts";
 
-import { formatRate } from "../display.ts";
 import type { InvoiceState } from "../invoice.ts";
 import { invoicingLabels } from "../labels.ts";
 
@@ -244,7 +243,11 @@ export async function invoicePdf(invoice: PdfInvoice): Promise<Uint8Array> {
 	y -= 18;
 	const totals: [string, number, PDFFont][] = [
 		[m.invoices_subtotal(), invoice.totals.subtotal, regular],
-		[m.invoices_vat({ rate: formatRate(invoice.vatRate) }), invoice.totals.vat, regular],
+		[
+			m.invoices_vat({ rate: formatPercent(invoice.vatRate, { basis: "percent" }) }),
+			invoice.totals.vat,
+			regular,
+		],
 		[m.invoices_total(), invoice.totals.total, bold],
 	];
 	for (const [name, amount, font] of totals) {

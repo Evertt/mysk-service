@@ -8,8 +8,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { organizations, rows, useApp } from "#e2e/app.ts";
-import { formatCents } from "#lib/i18n/index.ts";
-import { formatEuros } from "#modules/partner-programme/display.ts";
+import { formatCents, formatWholeEuros } from "#lib/i18n/index.ts";
 
 import {
 	closedYears,
@@ -52,10 +51,10 @@ describe("in North, which has the module", () => {
 		await app.go(`/customers/${partner.code}`);
 		await card().waitFor();
 		expect(await card().locator("[data-partner-revenue]").innerText()).toBe(
-			formatEuros(figures.partnerRevenue),
+			formatWholeEuros(figures.partnerRevenue),
 		);
 		expect(await card().locator("[data-bonus-revenue]").innerText()).toBe(
-			formatEuros(figures.bonusRevenue.cash),
+			formatWholeEuros(figures.bonusRevenue.cash),
 		);
 		expect(await card().locator("[data-expected-cash]").innerText()).toBe(
 			formatCents(figures.bonus.cash),
@@ -139,7 +138,7 @@ describe("in North, which has the module", () => {
 		await expect.poll(() => preview.locator("tbody tr").count()).toBe(partners.length);
 		const expected = await figuresFromDatabase(north.id, partners[0].id, lastYear);
 		expect(await preview.locator(`[data-partner="${partners[0].code}"]`).innerText()).toContain(
-			formatEuros(expected.partnerRevenue),
+			formatWholeEuros(expected.partnerRevenue),
 		);
 
 		await page.getByRole("button", { name: `Close ${lastYear}` }).click();

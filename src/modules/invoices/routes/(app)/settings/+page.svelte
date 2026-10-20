@@ -4,9 +4,8 @@
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import NumberField from "#lib/components/form/number-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { formatDate } from "#lib/i18n/index.ts";
+	import { formatDate, formatPercent } from "#lib/i18n/index.ts";
 	import ModuleSettingsPage from "#lib/modules/settings/module-settings-page.svelte";
-	import { formatRate } from "#modules/invoices/display.ts";
 	import { getInvoicingSettings, saveSettings } from "#modules/invoices/settings.remote.ts";
 
 	// The props the route passes; this page needs none of them.
@@ -51,7 +50,10 @@
 		</Field.FieldGroup>
 	{/snippet}
 	{#snippet details()}
-		<DetailItem label={m.invoices_vat_rate()} value={formatRate(settings.vatRate)} />
+		<DetailItem
+			label={m.invoices_vat_rate()}
+			value={formatPercent(settings.vatRate, { basis: "percent" })}
+		/>
 		<DetailItem
 			label={m.invoices_payment_term()}
 			value={m.invoices_days({ count: settings.paymentTermDays })}

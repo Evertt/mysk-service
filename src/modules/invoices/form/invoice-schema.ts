@@ -1,9 +1,7 @@
 import * as v from "valibot";
 
-import { formatNumber } from "#lib/i18n/index.ts";
+import { formatNumber, formatPercent } from "#lib/i18n/index.ts";
 import { cents, date, id, text } from "#lib/schema.ts";
-
-import { formatRate } from "../display.ts";
 
 /** Days to pay: whole days, up to a year. */
 const days = () =>
@@ -54,7 +52,9 @@ export const settingsFields = {
 	vatRate: v.pipe(
 		v.number(m.invoices_rate_required),
 		v.minValue(0, m.validation_not_negative),
-		v.maxValue(100, (issue) => m.invoices_rate_max({ max: formatRate(issue.requirement) })),
+		v.maxValue(100, (issue) =>
+			m.invoices_rate_max({ max: formatPercent(issue.requirement, { basis: "percent" }) }),
+		),
 	),
 	paymentTermDays: days(),
 	billFrom: date(m.invoices_bill_from_required),

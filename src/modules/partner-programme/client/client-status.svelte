@@ -10,9 +10,8 @@
 	import InfoIcon from "@lucide/svelte/icons/info";
 	import ShoppingBagIcon from "@lucide/svelte/icons/shopping-bag";
 
-	import { formatCents } from "#lib/i18n/index.ts";
+	import { formatCents, formatWholeEuros } from "#lib/i18n/index.ts";
 
-	import { formatEuros } from "../display.ts";
 	import type { YearFigures } from "../model.ts";
 	import KeyFigure from "../ui/key-figure.svelte";
 	import LevelBadge from "../ui/level-badge.svelte";
@@ -33,16 +32,16 @@
 				<LevelBadge level={figures.level?.level ?? null} colour={figures.level?.colour} />
 			</KeyFigure>
 			<KeyFigure label={m.partners_partner_revenue()}>
-				<span data-partner-revenue>{formatEuros(figures.partnerRevenue)}</span>
+				<span data-partner-revenue>{formatWholeEuros(figures.partnerRevenue)}</span>
 			</KeyFigure>
 			<KeyFigure
 				label={sameBonusRevenue ? m.partners_bonus_revenue() : m.partners_bonus_revenue_cash()}
 			>
-				<span data-bonus-revenue>{formatEuros(figures.bonusRevenue.cash)}</span>
+				<span data-bonus-revenue>{formatWholeEuros(figures.bonusRevenue.cash)}</span>
 			</KeyFigure>
 			{#if !sameBonusRevenue}
 				<KeyFigure label={m.partners_bonus_revenue_credit()} class="@md:col-start-3">
-					{formatEuros(figures.bonusRevenue.credit)}
+					{formatWholeEuros(figures.bonusRevenue.credit)}
 				</KeyFigure>
 			{/if}
 		</dl>

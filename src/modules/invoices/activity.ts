@@ -3,14 +3,13 @@ import { resolve } from "$app/paths";
 
 // Only types from `#lib/activity/subjects.ts`: it imports the modules, and so this file, in turn.
 import type { FieldFormat, Sentence, SubjectType } from "#lib/activity/index.ts";
-import { formatCents, formatNumber, formatStoredDay } from "#lib/i18n/index.ts";
+import { formatCents, formatNumber, formatPercent, formatStoredDay } from "#lib/i18n/index.ts";
 
-import { formatRate } from "./display.ts";
 import { invoicingLabels } from "./labels.ts";
 
 const day = formatStoredDay;
 const days = (value: unknown) => m.invoices_activity_value_days({ count: Number(value) });
-const rate = (value: unknown) => formatRate(Number(value));
+const rate = (value: unknown) => formatPercent(Number(value), { basis: "percent" });
 
 /** Fields of both an invoice and the invoicing settings. */
 const paymentTermDays: FieldFormat = {

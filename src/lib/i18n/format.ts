@@ -71,6 +71,33 @@ const euros = numberFormatter({ style: "currency", currency: "EUR" });
 /** Formats an amount in cents, e.g. `123456` → `€1,234.56`, in Dutch `€ 1.234,56`. */
 export const formatCents = (cents: number, locale?: Locale) => euros(cents / 100, locale);
 
+const wholeEuros = numberFormatter({
+	style: "currency",
+	currency: "EUR",
+	maximumFractionDigits: 0,
+});
+
+/**
+ * Formats an amount in cents in whole euros, rounded (or `round: "floor"` or `"ceil"`), e.g.
+ * `20000000` → `€200,000`, in Dutch `€ 200.000`.
+ */
+export const formatWholeEuros = (
+	cents: number,
+	{ round = "round", locale }: { round?: "round" | "floor" | "ceil"; locale?: Locale } = {},
+) => wholeEuros(Math[round](cents / 100), locale);
+
+const percent = numberFormatter({ style: "percent", maximumFractionDigits: 2 });
+const percentBases = { percent: 100, basisPoints: 10_000 };
+
+/**
+ * Formats a rate stored in `basis` units, with at most two decimals: in percent (`21` → `21%`, a
+ * VAT rate) or in basis points (`380` → `3.8%`); in Dutch `3,8%`.
+ */
+export const formatPercent = (
+	value: number,
+	{ basis, locale }: { basis: keyof typeof percentBases; locale?: Locale },
+) => percent(value / percentBases[basis], locale);
+
 /** Formats a day, e.g. `7 Oct 2026`, in Dutch `7 okt 2026`. */
 export const formatDate = dateFormatter({ day: "numeric", month: "short", year: "numeric" });
 

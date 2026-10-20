@@ -6,10 +6,9 @@
 <script lang="ts">
 	import XIcon from "@lucide/svelte/icons/x";
 
-	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
+	import { formatCents, formatDate, formatNumber, formatPercent } from "#lib/i18n/index.ts";
 	import { OrderLink } from "#lib/orders/components.ts";
 
-	import { formatRate } from "../display.ts";
 	import type { getInvoice } from "../invoices.remote.ts";
 	import { removeLine } from "./draft.remote.ts";
 
@@ -142,7 +141,9 @@
 				</Table.Row>
 				<Table.Row>
 					<Table.Cell colspan={3}
-						>{m.invoices_vat({ rate: formatRate(invoice.vatRate) })}</Table.Cell
+						>{m.invoices_vat({
+							rate: formatPercent(invoice.vatRate, { basis: "percent" }),
+						})}</Table.Cell
 					>
 					<Table.Cell class="text-right tabular-nums">{formatCents(data.totals.vat)}</Table.Cell>
 					{#if editable}<Table.Cell></Table.Cell>{/if}

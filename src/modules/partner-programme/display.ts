@@ -1,16 +1,9 @@
 /** How the partner programme shows its amounts and rates (through `#lib/i18n/format.ts`). */
-import { numberFormatter } from "#lib/i18n/index.ts";
+import { formatPercent, formatWholeEuros } from "#lib/i18n/index.ts";
 import type { Locale } from "#lib/paraglide/runtime.js";
 
 import { partnerLabels } from "./labels.ts";
 import type { CategoryRule, Progress, Tier } from "./model.ts";
-
-const euros = numberFormatter({ style: "currency", currency: "EUR", maximumFractionDigits: 0 });
-const percent = numberFormatter({ style: "percent", maximumFractionDigits: 2 });
-
-/** An amount in cents in whole euros, as the programme's figures read: `€200,000`, `€ 200.000`. */
-export const formatEuros = (cents: number, locale?: Locale) =>
-	euros(Math.round(cents / 100), locale);
 
 /**
  * The way to the next level in whole euros: the revenue rounded down and what's left rounded up, so
@@ -18,13 +11,10 @@ export const formatEuros = (cents: number, locale?: Locale) =>
  * of €50,000" and "€1 to go", not "€50,000 of €50,000").
  */
 export const formatProgress = (revenue: number, progress: Progress, locale?: Locale) => ({
-	revenue: euros(Math.floor(revenue / 100), locale),
-	threshold: formatEuros(progress.next.threshold, locale),
-	remaining: euros(Math.ceil(progress.remaining / 100), locale),
+	revenue: formatWholeEuros(revenue, { round: "floor", locale }),
+	threshold: formatWholeEuros(progress.next.threshold, { locale }),
+	remaining: formatWholeEuros(progress.remaining, { round: "ceil", locale }),
 });
-
-/** A rate in basis points, e.g. `380` → `3.8%`; in Dutch `3,8%`. */
-export const formatRate = (rate: number, locale?: Locale) => percent(rate / 10_000, locale);
 
 /**
  * A level as the activity log lists it (the log shows a list's items one by one, joined): "BRONZE
@@ -33,9 +23,9 @@ export const formatRate = (rate: number, locale?: Locale) => percent(rate / 10_0
 export const formatTier = (tier: Tier) =>
 	m.partners_tier_summary({
 		level: tier.level,
-		threshold: formatEuros(tier.threshold),
-		cash: formatRate(tier.cashRate),
-		credit: formatRate(tier.creditRate),
+		threshold: formatWholeEuros(tier.threshold),
+		cash: formatPercent(tier.cashRate, { basis: "basisPoints" }),
+		credit: formatPercent(tier.creditRate, { basis: "basisPoints" }),
 	});
 
 /** A category's rule as the activity log lists it. */

@@ -7,10 +7,9 @@
 <script lang="ts">
 	import ConfirmDialog from "#lib/components/form/confirm-dialog.svelte";
 	import { CustomerLink } from "#lib/customers/components.ts";
-	import { formatCents, formatDate } from "#lib/i18n/index.ts";
+	import { formatCents, formatDate, formatWholeEuros } from "#lib/i18n/index.ts";
 
 	import { closeProgrammeYear, type getClosePreview } from "../close.remote.ts";
-	import { formatEuros } from "../display.ts";
 	import { levelColour } from "../model.ts";
 	import LevelBadge from "../ui/level-badge.svelte";
 
@@ -103,9 +102,11 @@
 								<Table.Cell
 									><LevelBadge level={row.level} colour={row.colour || undefined} /></Table.Cell
 								>
-								<Table.Cell class="text-right tabular-nums">{formatEuros(row.revenue)}</Table.Cell>
 								<Table.Cell class="text-right tabular-nums"
-									>{formatEuros(row.bonusRevenue)}</Table.Cell
+									>{formatWholeEuros(row.revenue)}</Table.Cell
+								>
+								<Table.Cell class="text-right tabular-nums"
+									>{formatWholeEuros(row.bonusRevenue)}</Table.Cell
 								>
 								<Table.Cell class="text-right tabular-nums">{formatCents(row.cash)}</Table.Cell>
 								<Table.Cell class="text-right tabular-nums">{formatCents(row.credit)}</Table.Cell>
