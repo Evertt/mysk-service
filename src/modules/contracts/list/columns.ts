@@ -1,6 +1,7 @@
 import { resolve } from "$app/paths";
 import { renderComponent } from "@tanstack/svelte-table";
 
+import { withListColumns } from "#lib/components/data-table/list-definition.ts";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
@@ -10,19 +11,20 @@ import type { getContracts } from "../contracts.remote.ts";
 import { formatTerm, contractLevelDisplay, contractStatusDisplay } from "../display.ts";
 import { contractLevels, contractStatus, contractStatuses } from "../model.ts";
 import ContractLink from "../ui/contract-link.svelte";
+import { contractsList } from "./contracts-list.ts";
 
 export type ContractRow = Awaited<ReturnType<typeof getContracts>>[number];
 
 const column = createAppColumnHelper<ContractRow>();
 
-export const columns = column.columns([
-	column.select(),
-	column.accessor("number", {
+export const columns = withListColumns(contractsList, {
+	select: column.select(),
+	number: column.accessor("number", {
 		cell: ({ getValue }) => renderComponent(ContractLink, { number: getValue() }),
 		enableHiding: false,
 		meta: { label: m.contracts_contract },
 	}),
-	column.accessor((row) => row.customer.name, {
+	customer: column.accessor((row) => row.customer.name, {
 		id: "customer",
 		cell: ({ row }) =>
 			renderComponent(TwoLineCell, {
@@ -30,12 +32,10 @@ export const columns = column.columns([
 				secondary: row.original.customer.code,
 			}),
 		// By the customer's code, e.g. `?customer=CUST-0001`.
-		filterFn: (row, _id, codes: string[]) => codes.includes(row.original.customer.code),
-		enableGrouping: true,
 		getGroupingValue: (row) => row.customer.code,
-		meta: { label: m.contracts_customer, filter: "set" },
+		meta: { label: m.contracts_customer },
 	}),
-	column.enum("level", {
+	level: column.enum("level", {
 		values: contractLevels,
 		display: contractLevelDisplay,
 		// From basic to premium rather than alphabetically.
@@ -43,14 +43,14 @@ export const columns = column.columns([
 		meta: { label: m.contracts_level },
 	}),
 	// Not stored: follows from the period and today's date.
-	column.enum((row) => contractStatus(row), {
+	status: column.enum((row) => contractStatus(row), {
 		id: "status",
 		values: contractStatuses,
 		display: contractStatusDisplay,
 		sortByOrder: true,
 		meta: { label: m.contracts_status },
 	}),
-	column.accessor("startsOn", {
+	period: column.accessor("startsOn", {
 		id: "period",
 		cell: ({ row }) =>
 			renderComponent(TwoLineCell, {
@@ -60,33 +60,27 @@ export const columns = column.columns([
 		enableGlobalFilter: false,
 		meta: { label: m.contracts_period },
 	}),
-	column.accessor("units", {
+	units: column.accessor("units", {
 		cell: ({ cell }) => renderComponent(cell.NumberCell, { format: m.common_count_units }),
 		enableGlobalFilter: false,
 		meta: { label: m.contracts_covers, align: "end" },
 	}),
-	column.accessor("responseHours", {
+	responseHours: column.accessor("responseHours", {
 		cell: ({ cell }) => renderComponent(cell.NumberCell, { format: m.common_count_hours_short }),
 		enableGlobalFilter: false,
-		meta: { label: m.contracts_response, align: "end", param: "response" },
+		meta: { label: m.contracts_response, align: "end" },
 	}),
-	column.accessor("monthlyFee", {
+	monthlyFee: column.accessor("monthlyFee", {
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
-		filterFn: "inMoneyRange",
-		meta: {
-			label: m.contracts_monthly_fee,
-			align: "end",
-			param: "fee",
-			groupSum: (sum) => formatCents(sum),
-		},
+		meta: { label: m.contracts_monthly_fee, align: "end", groupSum: (sum) => formatCents(sum) },
 	}),
-	column.accessor("createdAt", {
+	createdAt: column.accessor("createdAt", {
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
-		meta: { label: m.contracts_created, param: "created" },
+		meta: { label: m.contracts_created },
 	}),
-	column.display({
+	actions: column.display({
 		id: "actions",
 		cell: ({ row }) =>
 			renderComponent(RowActions, {
@@ -101,4 +95,4 @@ export const columns = column.columns([
 				],
 			}),
 	}),
-]);
+});

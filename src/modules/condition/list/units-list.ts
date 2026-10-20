@@ -23,6 +23,7 @@ export const conditionList = defineList({
 		nextDue: { param: "next-due", sort: true },
 		inspection: { sort: true },
 		status: { sort: true, filter: oneOf(unitStatuses) },
+		advice: {},
 	},
 	defaults: { sort: [{ id: "status", desc: false }] },
 });

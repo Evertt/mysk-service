@@ -1,11 +1,12 @@
 import { renderComponent } from "@tanstack/svelte-table";
 
+import { withListColumns } from "#lib/components/data-table/list-definition.ts";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
-import { noneToken } from "#lib/components/data-table/url-state.ts";
 import { CustomerLink } from "#lib/customers/components.ts";
 
 import LevelBadge from "../ui/level-badge.svelte";
 import LevelProgress from "../ui/level-progress.svelte";
+import { partnersList } from "./partners-list.ts";
 import type { getPartners } from "./partners.remote.ts";
 
 /** A row of the partners list, a page of which comes from the server (see `partnersList`). */
@@ -13,8 +14,8 @@ type PartnerRow = Awaited<ReturnType<typeof getPartners>>["rows"][number];
 
 const column = createAppColumnHelper<PartnerRow>();
 
-export const columns = column.columns([
-	column.accessor((row) => row.customer.name, {
+export const columns = withListColumns(partnersList, {
+	partner: column.accessor((row) => row.customer.name, {
 		id: "partner",
 		cell: ({ row }) =>
 			renderComponent(CustomerLink, {
@@ -25,21 +26,19 @@ export const columns = column.columns([
 		enableHiding: false,
 		meta: { label: m.partners_column_partner },
 	}),
-	column.accessor((row) => row.level ?? undefined, {
+	// By the level's name; `none` is the partners below the first.
+	level: column.accessor((row) => row.level ?? undefined, {
 		id: "level",
 		cell: ({ row }) =>
 			renderComponent(LevelBadge, { level: row.original.level, colour: row.original.colour }),
-		enableSorting: false,
-		// By the level's name; `none` keeps the partners below the first.
-		filterFn: (row, _id, levels: string[]) => levels.includes(row.original.level ?? noneToken),
-		meta: { label: m.partners_column_level, filter: "set" },
+		meta: { label: m.partners_column_level, none: m.partners_no_level },
 	}),
-	column.accessor("revenue", {
+	revenue: column.accessor("revenue", {
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
 		meta: { label: m.partners_partner_revenue },
 	}),
-	column.display({
+	progress: column.display({
 		id: "progress",
 		cell: ({ row }) =>
 			renderComponent(LevelProgress, {
@@ -49,15 +48,15 @@ export const columns = column.columns([
 			}),
 		meta: { label: m.partners_column_progress },
 	}),
-	column.accessor("wallet", {
+	wallet: column.accessor("wallet", {
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
 		meta: { label: m.partners_column_wallet },
 	}),
-	column.accessor("acceptedOn", {
+	accepted: column.accessor("acceptedOn", {
 		id: "accepted",
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
 		meta: { label: m.partners_column_accepted },
 	}),
-]);
+});

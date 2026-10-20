@@ -6,29 +6,44 @@
  */
 import { renderComponent, type RowData } from "@tanstack/svelte-table";
 
+import { listColumnOptions } from "./list-definition.ts";
 import type { ModuleListColumn, WithModuleValues } from "./module-columns.ts";
 import { createAppColumnHelper } from "./table.svelte.ts";
+import { noneToken } from "./url-state.ts";
 
 /** The table columns for the modules' `columns`, for rows that carry their values. */
 function moduleTableColumns<TData extends RowData & WithModuleValues>(
 	columns: readonly ModuleListColumn[],
 ) {
 	const column = createAppColumnHelper<TData>();
-	return columns.map((module) =>
-		column.accessor((row) => row.moduleValues[module.id] ?? null, {
+	return columns.map((module) => {
+		const options = listColumnOptions(module);
+		return column.accessor((row) => row.moduleValues[module.id] ?? null, {
 			id: module.id,
 			cell: ({ getValue }) => renderComponent(module.cell, { value: getValue() }),
-			enableSorting: Boolean(module.sort),
 			enableGlobalFilter: false,
-			...(module.filter ? { filterFn: "oneOf" as const } : {}),
+			...options,
 			meta: {
 				label: module.label,
-				param: module.param,
-				...(module.filter?.values ? { filterValues: module.filter.values } : {}),
+				...options.meta,
+				// The filter's options, named as the module says (read when shown).
+				...(module.filter?.values
+					? {
+							filterOptions: module.filter.values
+								// `none` is the filter's own option where it takes it (`orNone()`).
+								.filter((value) => !(module.filter?.none && value === noneToken))
+								.map((value) => ({
+									value,
+									get label() {
+										return module.optionLabel?.(value) ?? value;
+									},
+								})),
+						}
+					: {}),
 				...(module.align ? { align: module.align } : {}),
 			},
-		}),
-	);
+		});
+	});
 }
 
 /**

@@ -1,6 +1,7 @@
 import { resolve } from "$app/paths";
 import { renderComponent } from "@tanstack/svelte-table";
 
+import { withListColumns } from "#lib/components/data-table/list-definition.ts";
 import RowActions from "#lib/components/data-table/row-actions.svelte";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import { CustomerLink } from "#lib/customers/components.ts";
@@ -11,19 +12,20 @@ import { invoiceStates } from "../invoice.ts";
 import type { getInvoices } from "../invoices.remote.ts";
 import InvoiceLink from "../ui/invoice-link.svelte";
 import CreditedCell from "./credited-cell.svelte";
+import { invoicesList } from "./invoices-list.ts";
 
 export type InvoiceRow = Awaited<ReturnType<typeof getInvoices>>[number];
 
 const column = createAppColumnHelper<InvoiceRow>();
 
-export const columns = column.columns([
-	column.select(),
-	column.accessor("number", {
+export const columns = withListColumns(invoicesList, {
+	select: column.select(),
+	number: column.accessor("number", {
 		cell: ({ getValue }) => renderComponent(InvoiceLink, { number: getValue() }),
 		enableHiding: false,
 		meta: { label: m.invoices_column_invoice },
 	}),
-	column.accessor((row) => row.customer.name, {
+	customer: column.accessor((row) => row.customer.name, {
 		id: "customer",
 		cell: ({ row }) =>
 			renderComponent(CustomerLink, {
@@ -32,13 +34,11 @@ export const columns = column.columns([
 				withCode: true,
 			}),
 		// By the customer's code, e.g. `?customer=CUST-0001`.
-		filterFn: (row, _id, codes: string[]) => codes.includes(row.original.customer.code),
-		enableGrouping: true,
 		getGroupingValue: (row) => row.customer.code,
-		meta: { label: m.invoices_column_customer, filter: "set" },
+		meta: { label: m.invoices_column_customer },
 	}),
 	// The status, with sent invoices past their due date as overdue.
-	column.enum("state", {
+	status: column.enum("state", {
 		id: "status",
 		values: invoiceStates,
 		display: invoiceStateDisplay,
@@ -47,30 +47,28 @@ export const columns = column.columns([
 		meta: { label: m.invoices_column_status },
 	}),
 	// Drafts have no dates yet; `undefined` sorts them last.
-	column.accessor((row) => row.issuedOn ?? undefined, {
+	issuedOn: column.accessor((row) => row.issuedOn ?? undefined, {
 		id: "issuedOn",
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		sortUndefined: "last",
 		enableGlobalFilter: false,
-		meta: { label: m.invoices_column_issued, param: "issued" },
+		meta: { label: m.invoices_column_issued },
 	}),
-	column.accessor((row) => row.dueOn ?? undefined, {
+	dueOn: column.accessor((row) => row.dueOn ?? undefined, {
 		id: "dueOn",
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		sortUndefined: "last",
 		enableGlobalFilter: false,
 		// `?due=before-today`: due before today; `none` the drafts.
-		filterFn: "inDateRange",
-		meta: { label: m.invoices_column_due, param: "due", filterNone: true },
+		meta: { label: m.invoices_column_due, none: m.invoices_enum_invoice_state_draft },
 	}),
-	column.accessor("total", {
+	total: column.accessor("total", {
 		cell: ({ cell }) => renderComponent(cell.CurrencyCell),
 		enableGlobalFilter: false,
-		filterFn: "inMoneyRange",
 		meta: { label: m.invoices_column_total, align: "end", groupSum: (sum) => formatCents(sum) },
 	}),
 	// What its issued credit notes took off; the total stays what the invoice billed.
-	column.accessor("credited", {
+	credited: column.accessor("credited", {
 		cell: ({ getValue }) => renderComponent(CreditedCell, { value: getValue() }),
 		enableGlobalFilter: false,
 		meta: {
@@ -79,12 +77,12 @@ export const columns = column.columns([
 			groupSum: (sum) => formatCents(sum),
 		},
 	}),
-	column.accessor("createdAt", {
+	createdAt: column.accessor("createdAt", {
 		cell: ({ cell }) => renderComponent(cell.DateCell),
 		enableGlobalFilter: false,
-		meta: { label: m.invoices_column_created, param: "created" },
+		meta: { label: m.invoices_column_created },
 	}),
-	column.display({
+	actions: column.display({
 		id: "actions",
 		cell: ({ row }) =>
 			renderComponent(RowActions, {
@@ -96,4 +94,4 @@ export const columns = column.columns([
 				],
 			}),
 	}),
-]);
+});

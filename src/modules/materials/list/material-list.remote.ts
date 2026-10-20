@@ -1,16 +1,9 @@
 import { and, countDistinct } from "drizzle-orm";
 
-import { queryKey } from "#lib/components/data-table/list-definition.ts";
 import { inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
-import {
-	bulkChange,
-	listTarget,
-	refreshRequested,
-	pageGroupsOf,
-	planList,
-} from "#lib/server/lists/index.ts";
+import { bulkChange, listTarget, refreshRequested, planList } from "#lib/server/lists/index.ts";
 
 import { command, query } from "../remote-functions.ts";
 import { materialsSql } from "../server/list-sql.ts";
@@ -23,48 +16,39 @@ import { materialsList } from "./materials-list.ts";
  * A page of the materials list with the number of orders that use them, searched, filtered and
  * sorted as the query says (see `materialsList`), and how many match in all.
  */
-export const getMaterials = query(materialsList.query, async (input) => {
-	const plan = planList(materialsSql(), input);
-	const [rows, rowCount, counts] = await Promise.all([
-		plan.paged(
-			db
-				.select({
-					id: material.id,
-					sku: material.sku,
-					name: material.name,
-					unit: material.unit,
-					unitPrice: material.unitPrice,
-					stock: material.stock,
-				})
-				.from(material)
-				.$dynamic(),
-		),
-		plan.count(),
-		plan.groupCounts(),
-	]);
-
-	// The page's usage (only).
-	const ids = rows.map((row) => row.id);
-	const usage = ids.length
-		? await db
-				.select({ materialId: orderLine.materialId, orders: countDistinct(orderLine.orderId) })
-				.from(orderLine)
-				.where(and(inTenant(orderLine), inList(orderLine.materialId, ids)))
-				.groupBy(orderLine.materialId)
-		: [];
-	const usageOf = new Map(usage.map((row) => [row.materialId, row.orders]));
-
-	const page = plan.page(rows.map((row) => ({ ...row, orderCount: usageOf.get(row.id) ?? 0 })));
-	return {
-		rows: page.rows,
-		rowCount,
-		/** The query the rows are for (its `where` is the target of "select all matching"). */
-		query: input,
-		/** The same as a string, to tell whether the table is waiting for other rows (`isStale`). */
-		key: queryKey(input),
-		groups: pageGroupsOf(counts, page),
-	};
-});
+export const getMaterials = query(materialsList.query, (input) =>
+	planList(materialsSql(), input).answer(
+		db
+			.select({
+				id: material.id,
+				sku: material.sku,
+				name: material.name,
+				unit: material.unit,
+				unitPrice: material.unitPrice,
+				stock: material.stock,
+			})
+			.from(material)
+			.$dynamic(),
+		{
+			// The page's usage (only).
+			enrich: async (rows) => {
+				const ids = rows.map((row) => row.id);
+				const usage = ids.length
+					? await db
+							.select({
+								materialId: orderLine.materialId,
+								orders: countDistinct(orderLine.orderId),
+							})
+							.from(orderLine)
+							.where(and(inTenant(orderLine), inList(orderLine.materialId, ids)))
+							.groupBy(orderLine.materialId)
+					: [];
+				const usageOf = new Map(usage.map((row) => [row.materialId, row.orders]));
+				return rows.map((row) => ({ ...row, orderCount: usageOf.get(row.id) ?? 0 }));
+			},
+		},
+	),
+);
 
 /**
  * How many materials have each unit and stock level, for the counts in the list's filters: of

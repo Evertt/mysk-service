@@ -4,8 +4,7 @@
 	import HistoryIcon from "@lucide/svelte/icons/history";
 	import SettingsIcon from "@lucide/svelte/icons/settings";
 
-	import { whereOf } from "#lib/components/data-table/list-definition.ts";
-	import { urlListQuery } from "#lib/components/data-table/server-table.svelte.ts";
+	import { listQueries } from "#lib/components/data-table/server-table.svelte.ts";
 	import PageBanner from "#lib/components/page-banner.svelte";
 	import {
 		getConditionCounts,
@@ -21,15 +20,12 @@
 	const _props: { params: RouteParams<"/(app)/(modules)/condition"> } = $props();
 
 	// The server filters, sorts and pages the units, as the URL says (see the orders page).
-	const listQuery = urlListQuery(() => conditionList);
-	const query = $derived(listQuery.current);
-	// Both start at once.
-	const units = $derived(getConditionUnits(query));
-	const counts = $derived(getConditionCounts(whereOf(query)));
+	const units = listQueries(() => conditionList, getConditionUnits, getConditionCounts);
 	/** The chosen customer, whose service history the log shows; everyone's without one. */
-	const customer = $derived(
-		query.filters.customer?.length === 1 ? query.filters.customer[0] : null,
-	);
+	const customer = $derived.by(() => {
+		const { customer } = units.query.filters;
+		return customer?.length === 1 ? customer[0] : null;
+	});
 	let showHistory = $state(false);
 </script>
 
@@ -56,9 +52,9 @@
 
 <ProcessSteps />
 
-<StatusLegend thresholds={(await units).thresholds} />
+<StatusLegend thresholds={(await units.rows).thresholds} />
 
-<UnitsTable units={await units} counts={await counts} />
+<UnitsTable units={await units.rows} counts={await units.facets} />
 
 <!-- The service history of the chosen customer's units, beside the list, so it stays in view. -->
 <Sheet.Root bind:open={showHistory}>

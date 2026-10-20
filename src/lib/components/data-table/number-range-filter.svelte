@@ -12,6 +12,7 @@
 <script lang="ts">
 	import { formatCents, formatNumber } from "#lib/i18n/format.ts";
 
+	import { filterColumn } from "./filters.svelte.ts";
 	import RangeFilter from "./range-filter.svelte";
 	import {
 		euroCents,
@@ -22,32 +23,47 @@
 		parseMoneyRange,
 		parseNumberRange,
 	} from "./ranges.ts";
+	import { useTableContext } from "./table.svelte.ts";
 	import { noneToken } from "./url-state.ts";
 
 	let {
 		columnId,
-		title,
-		money = false,
-		step = money ? 0.01 : "any",
+		title: givenTitle,
+		money: givenMoney,
+		step: givenStep,
 		min,
-		none,
+		none: givenNone,
 	}: {
 		columnId: string;
-		title: string;
-		/** An amount of money: cents in the table, euros in the inputs and the URL. */
+		/** The column's label if not given. */
+		title?: string;
+		/**
+		 * An amount of money: cents in the table, euros in the inputs and the URL. The column's
+		 * filter says (`moneyRange`) if not given.
+		 */
 		money?: boolean;
 		/** The inputs' step, e.g. 1 for counts; cents for money, else any number. */
 		step?: number | "any";
 		/** The smallest value the inputs offer, e.g. 0 for counts. */
 		min?: number;
 		/**
-		 * For a column that can be empty (`meta.filterNone`): offers the rows without a value, with
+		 * For a column that can be empty (`meta.filterNone`, the column's `meta.none` if not given): offers the rows without a value, with
 		 * this label.
 		 */
-		none?: string;
+		none?: string | boolean;
 	} = $props();
 
 	const id = $props.id();
+	const filter = filterColumn(useTableContext(), () => ({
+		columnId,
+		title: givenTitle,
+		none: givenNone,
+	}));
+	const title = $derived(filter.title);
+	const none = $derived(filter.none);
+
+	const money = $derived(givenMoney ?? filter.column?.columnDef.meta?.filter === "moneyRange");
+	const step = $derived(givenStep ?? (money ? 0.01 : "any"));
 
 	const parse = (token: string) => (money ? parseMoneyRange(token) : parseNumberRange(token));
 	const format = (value: number) => (money ? formatCents(value) : formatNumber(value));

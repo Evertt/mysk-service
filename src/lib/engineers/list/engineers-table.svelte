@@ -1,71 +1,34 @@
 <script lang="ts">
-	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
-	import DateRangeFilter from "#lib/components/data-table/date-range-filter.svelte";
-	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
-	import NumberRangeFilter from "#lib/components/data-table/number-range-filter.svelte";
-	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
+	import ListLayout from "#lib/components/data-table/list-layout.svelte";
+	import { createClientTable } from "#lib/components/data-table/table.svelte.ts";
 
-	import { regionOptions, specialtyOptions } from "../display.ts";
+	import { regionOptions } from "../display.ts";
 	import { activate, deactivate } from "./bulk-actions.ts";
 	import { columns, type EngineerRow } from "./columns.ts";
+	import { engineersList } from "./engineers-list.ts";
 
-	// The table is created here rather than in the page because `createAppTable` sets context,
+	// The table is created here rather than in the page because making the table sets context,
 	// which Svelte doesn't allow after the page's `await`.
 	let { engineers }: { engineers: EngineerRow[] } = $props();
 
-	const table = createAppTable({
+	const table = createClientTable({
+		list: engineersList,
+		data: () => engineers,
 		columns,
-		get data() {
-			return engineers;
-		},
-		getRowId: (row) => String(row.id),
-		initialState: {
-			sorting: [{ id: "name", desc: false }],
-			columnVisibility: { email: false },
-		},
+		initialState: { columnVisibility: { email: false } },
 	});
-
-	// Regions are free text, so include any outside the usual list.
-	const regions = $derived(regionOptions(engineers.map((row) => row.region)));
-	const statusOptions = $derived([
-		{ value: "active", label: m.engineers_active() },
-		{ value: "inactive", label: m.engineers_inactive() },
-	]);
 </script>
 
-<table.AppTable>
-	<div class="flex min-h-0 flex-1 flex-col gap-4">
-		<table.Toolbar searchLabel={m.engineers_search()}>
-			<FacetedFilter
-				columnId="specialty"
-				title={m.engineers_column_specialty()}
-				options={specialtyOptions}
-			/>
-			<FacetedFilter columnId="region" title={m.engineers_column_region()} options={regions} />
-			<FacetedFilter
-				columnId="status"
-				title={m.engineers_column_status()}
-				options={statusOptions}
-			/>
-			<NumberRangeFilter
-				columnId="hourlyRate"
-				title={m.engineers_column_hourly_rate()}
-				money
-				min={0}
-			/>
-			<NumberRangeFilter
-				columnId="openOrders"
-				title={m.engineers_column_open_orders()}
-				step={1}
-				min={0}
-			/>
-			<DateRangeFilter
-				columnId="hiredAt"
-				title={m.engineers_column_hired()}
-				presets={["this-month", "last-30-days", "this-year", "last-year"]}
-			/>
-		</table.Toolbar>
-		<table.Table emptyTitle={m.engineers_empty()} fillViewport />
-		<BulkActionBar actions={[activate, deactivate]} />
-	</div>
-</table.AppTable>
+<ListLayout
+	{table}
+	actions={[activate, deactivate]}
+	searchLabel={m.engineers_search()}
+	emptyTitle={m.engineers_empty()}
+	filters={{
+		// Free text, so any outside the usual list too.
+		region: { options: regionOptions(engineers.map((row) => row.region)) },
+		hourlyRate: { min: 0 },
+		openOrders: { step: 1, min: 0 },
+		hiredAt: { presets: ["this-month", "last-30-days", "this-year", "last-year"] },
+	}}
+/>

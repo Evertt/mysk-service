@@ -4,8 +4,7 @@
 	import type { RouteParams } from "$app/types";
 	import ClipboardListIcon from "@lucide/svelte/icons/clipboard-list";
 
-	import { whereOf } from "#lib/components/data-table/list-definition.ts";
-	import { urlListQuery } from "#lib/components/data-table/server-table.svelte.ts";
+	import { listQueries } from "#lib/components/data-table/server-table.svelte.ts";
 	import PageBanner from "#lib/components/page-banner.svelte";
 	import { currentDay } from "#lib/dates.ts";
 	import AssetList from "#modules/checklists/assets/asset-list.svelte";
@@ -17,11 +16,7 @@
 	const _props: { params: RouteParams<"/(app)/(modules)/checklists"> } = $props();
 
 	// The server searches, filters and pages the assets, as the URL says (see the orders page).
-	const listQuery = urlListQuery(() => assetList);
-	const query = $derived(listQuery.current);
-	// Both start at once.
-	const assets = $derived(getAssets(query));
-	const facets = $derived(getAssetFacets(whereOf(query)));
+	const assets = listQueries(() => assetList, getAssets, getAssetFacets);
 
 	// What's selected (see `selection.ts`).
 	const params = $derived(page.url.searchParams);
@@ -46,11 +41,11 @@
 	</PageBanner>
 
 	<div class="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
-		<AssetList assets={await assets} facets={await facets} {year} />
+		<AssetList assets={await assets.rows} facets={await assets.facets} {year} />
 		{#if serialNumber}
 			<!-- Anew for another unit: its checklist's answers are kept in the panel as they're given. -->
 			{#key serialNumber}
-				<AssetPanel {serialNumber} {componentNumber} {checklistId} listQuery={query} />
+				<AssetPanel {serialNumber} {componentNumber} {checklistId} listQuery={assets.query} />
 			{/key}
 		{:else}
 			<Empty.Root class="border" data-asset-pick>

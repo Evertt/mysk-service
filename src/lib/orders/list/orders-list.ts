@@ -12,8 +12,8 @@ import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.ts";
 /**
  * The orders list: what it sorts, groups and filters by, and with which values. The page, the
  * table, the server's SQL (`ordersSql` in `server/list-sql.ts`) and the bulk commands read it.
- * Its state is in the URL, e.g. `?customer=CUST-0001&status=quote,scheduled&sort=-priority,number&page=2`
- * (`columns.spec.ts` checks that the table reads and writes the same). Customers are filtered (and
+ * Its state is in the URL, e.g. `?customer=CUST-0001&status=quote,scheduled&sort=-priority,number&page=2`.
+ * Customers are filtered (and
  * grouped) by code, equipment by serial number, engineers by id; `?equipment=none` is the new
  * installations, `?engineer=none` the unassigned orders. The dates filter by a range of days,
  * e.g. `?scheduled=none,this-week` (unscheduled or this week) or `?created=today..`, and the total

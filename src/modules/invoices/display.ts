@@ -7,8 +7,8 @@ import SendIcon from "@lucide/svelte/icons/send";
 import { type BadgeDisplay, numberFormatter } from "#lib/i18n/index.ts";
 import type { Locale } from "#lib/paraglide/runtime.js";
 
-import { type CreditNoteState, creditNoteStates, creditSettlements } from "./credit-note.ts";
-import { type InvoiceState, invoiceStates } from "./invoice.ts";
+import type { CreditNoteState } from "./credit-note.ts";
+import type { InvoiceState } from "./invoice.ts";
 import { invoicingLabels } from "./labels.ts";
 
 const stateDetails: Record<InvoiceState, BadgeDisplay> = {
@@ -22,13 +22,6 @@ const stateDetails: Record<InvoiceState, BadgeDisplay> = {
 /** An invoice's status as shown (overdue for sent ones past their due date), translated. */
 export const invoiceStateDisplay = invoicingLabels.withLabels("invoiceState", stateDetails);
 
-/** Options for the faceted filter, in order. */
-export const stateOptions = invoicingLabels.labelOptions(
-	"invoiceState",
-	invoiceStates,
-	stateDetails,
-);
-
 const creditStateDetails: Record<CreditNoteState, BadgeDisplay> = {
 	draft: stateDetails.draft,
 	sent: stateDetails.sent,
@@ -40,19 +33,6 @@ const creditStateDetails: Record<CreditNoteState, BadgeDisplay> = {
 export const creditNoteStateDisplay = invoicingLabels.withLabels(
 	"creditNoteState",
 	creditStateDetails,
-);
-
-/** Options for the credit notes' faceted filter, in order. */
-export const creditStateOptions = invoicingLabels.labelOptions(
-	"creditNoteState",
-	creditNoteStates,
-	creditStateDetails,
-);
-
-/** Options for the credit notes' settlement filter: to refund, or offset against the invoice. */
-export const creditSettlementOptions = invoicingLabels.labelOptions(
-	"creditSettlement",
-	creditSettlements,
 );
 
 const percent = numberFormatter({ style: "percent", maximumFractionDigits: 2 });

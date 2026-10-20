@@ -3,9 +3,7 @@ import { expect, test } from "vite-plus/test";
 
 import { extendList } from "#lib/components/data-table/list-definition.ts";
 import { withModuleTableColumns } from "#lib/components/data-table/module-table-columns.ts";
-import { urlGrammar } from "#lib/components/data-table/server-table.svelte.ts";
 import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
-import { tableUrlSpec } from "#lib/components/data-table/url-sync.svelte.ts";
 import { columns, type EquipmentRow } from "#lib/equipment/list/columns.ts";
 import { equipmentList } from "#lib/equipment/list/equipment-list.ts";
 import { gadgetsRating, widgetsNote } from "#unit/lib/modules/fakes.ts";
@@ -133,16 +131,7 @@ test("the category shows the tenant's name for it, and groups by its id", () => 
 	expect(shown(rows, { globalFilter: "koelmachine" })).toEqual(["CHL-1"]);
 });
 
-test("the table reads and writes the URL as the equipment list says", () => {
-	const table = createAppTable({
-		columns,
-		data: [],
-		initialState: { ...equipmentList.urlSpec.defaults },
-	});
-	expect(urlGrammar(tableUrlSpec(table))).toEqual(urlGrammar(equipmentList.urlSpec));
-});
-
-test("with the tenant's modules' columns, the table and the merged list agree on the URL", () => {
+test("the tenant's modules' columns go after the list's own, before the row actions", () => {
 	const modules = [gadgetsRating, widgetsNote];
 	const list = extendList(equipmentList, modules);
 	const withModules = withModuleTableColumns<EquipmentRow, (typeof columns)[number]>(
@@ -154,8 +143,6 @@ test("with the tenant's modules' columns, the table and the merged list agree on
 		data: [unit("GEN-1", { moduleValues: { "gadgets.rating": 7 } })],
 		initialState: { ...list.urlSpec.defaults },
 	});
-	expect(urlGrammar(tableUrlSpec(table))).toEqual(urlGrammar(list.urlSpec));
-	// After the list's own columns, before the row actions.
 	expect(
 		table
 			.getAllLeafColumns()

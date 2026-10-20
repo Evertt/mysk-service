@@ -6,8 +6,9 @@
 	number of matches, each with how many of the list's rows have it under its search and other
 	filters, most first; those no row has are greyed. The ticked ones are always shown, by name. The
 	column's filter values are the records' codes (or ids), as in the URL, e.g.
-	`?customer=CUST-0001,CUST-0007`. A column that can be empty gives `none` a label, and the rows
-	without a value are an option too (`?engineer=none`). For a column with a few fixed values, see
+	`?customer=CUST-0001,CUST-0007`. Its title is the column's label, and for a column that can be
+	empty the rows without a value are an option too (`?engineer=none`), named by its `meta.none`
+	(`ListToolbar` renders it for a list's set filter given a `load`). For a column with a few fixed values, see
 	`FacetedFilter`.
 	It goes inside the table's `Toolbar`, which lists it in its Filter menu and shows it as a pill
 	while records are chosen; this component renders nothing of its own.
@@ -21,7 +22,7 @@
 	import { formatNumber } from "#lib/i18n/format.ts";
 	import { cn } from "#lib/utils.ts";
 
-	import { registerTableFilter } from "./filters.svelte.ts";
+	import { filterColumn, registerTableFilter } from "./filters.svelte.ts";
 	import { recordOptionsInOrder } from "./record-facets.ts";
 	import type { LoadRecordOptions, RecordOption, RecordOptions } from "./server-table.svelte.ts";
 	import { useTableContext } from "./table.svelte.ts";
@@ -29,13 +30,14 @@
 
 	let {
 		columnId,
-		title,
+		title: givenTitle,
 		searchLabel,
 		load,
-		none,
+		none: givenNone,
 	}: {
 		columnId: string;
-		title: string;
+		/** The column's label if not given. */
+		title?: string;
 		/** The search box's placeholder and label, e.g. "Search customers…". */
 		searchLabel: string;
 		/**
@@ -46,16 +48,20 @@
 		load: LoadRecordOptions;
 		/**
 		 * For a column that can be empty: offers the rows without a value as the first option, with
-		 * this label, e.g. "Unassigned". Its value is `none` in the URL (`noneToken`).
+		 * this label, e.g. "Unassigned". Its value is `none` in the URL (`noneToken`). The column's
+		 * (`columnNone()`) if not given.
 		 */
-		none?: string;
+		none?: string | boolean;
 	} = $props();
 
 	/** How long typing waits before searching. */
 	const searchDelay = 250;
 
 	const table = useTableContext();
-	const column = $derived(table.getColumn(columnId));
+	const filter = filterColumn(table, () => ({ columnId, title: givenTitle, none: givenNone }));
+	const column = $derived(filter.column);
+	const title = $derived(filter.title);
+	const none = $derived(filter.none);
 	const selected = $derived((column?.getFilterValue() as string[] | undefined) ?? []);
 
 	/** Whether the options are on screen (in the Filter menu or the pill's popover). */

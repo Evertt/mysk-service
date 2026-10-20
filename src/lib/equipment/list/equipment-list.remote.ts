@@ -2,7 +2,6 @@ import { and, count } from "drizzle-orm";
 import * as v from "valibot";
 
 import { equipmentSubject } from "#lib/activity/index.ts";
-import { queryKey } from "#lib/components/data-table/list-definition.ts";
 import { equipmentStatuses, openOrderStatuses } from "#lib/models.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
@@ -26,7 +25,6 @@ import {
 	refreshRequested,
 	moduleFacets,
 	moduleValues,
-	pageGroupsOf,
 	planList,
 } from "#lib/server/lists/index.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
@@ -45,71 +43,59 @@ import { equipmentList } from "./equipment-list.ts";
  * sorted and grouped as the query says (see `equipmentList`), how many match in all, and, when
  * grouped, what the table needs to know of the page's groups.
  */
-export const getEquipmentList = forMembers.query(equipmentList.query, async (input) => {
+export const getEquipmentList = forMembers.query(equipmentList.query, (input) => {
 	const listSql = equipmentSql();
-	const plan = planList(listSql, input);
-	const [fetched, rowCount, counts] = await Promise.all([
-		plan.paged(
-			withEquipmentJoins(
-				db
-					.select({
-						id: equipment.id,
-						serialNumber: equipment.serialNumber,
-						name: equipment.name,
-						manufacturer: equipment.manufacturer,
-						model: equipment.model,
-						location: { id: equipmentLocation.id, name: equipmentLocation.name },
-						category: { id: equipmentCategory.id, name: equipmentCategory.name },
-						status: equipment.status,
-						installedAt: equipment.installedAt,
-						warrantyUntil: equipment.warrantyUntil,
-						customer: { id: customer.id, code: customer.code, name: customer.name },
-						site: { id: customerSite.id, name: customerSite.name, city: customerSite.city },
-					})
-					.from(equipment)
-					.$dynamic(),
-			),
+	return planList(listSql, input).answer(
+		withEquipmentJoins(
+			db
+				.select({
+					id: equipment.id,
+					serialNumber: equipment.serialNumber,
+					name: equipment.name,
+					manufacturer: equipment.manufacturer,
+					model: equipment.model,
+					location: { id: equipmentLocation.id, name: equipmentLocation.name },
+					category: { id: equipmentCategory.id, name: equipmentCategory.name },
+					status: equipment.status,
+					installedAt: equipment.installedAt,
+					warrantyUntil: equipment.warrantyUntil,
+					customer: { id: customer.id, code: customer.code, name: customer.name },
+					site: { id: customerSite.id, name: customerSite.name, city: customerSite.city },
+				})
+				.from(equipment)
+				.$dynamic(),
 		),
-		plan.count(),
-		plan.groupCounts(),
-	]);
-
-	// The page's open orders (only).
-	const ids = fetched.map((row) => row.id);
-	const open = ids.length
-		? await db
-				.select({ equipmentId: orderUnit.equipmentId, count: count() })
-				.from(orderUnit)
-				.innerJoin(...tenantJoin(order, orderUnit.orderId))
-				.where(
-					and(
-						inTenant(orderUnit),
-						inList(orderUnit.equipmentId, ids),
-						inList(order.status, openOrderStatuses),
-					),
-				)
-				.groupBy(orderUnit.equipmentId)
-		: [];
-	const openOf = new Map(open.map((row) => [row.equipmentId, row.count]));
-	// What the tenant's modules' columns show for them, e.g. the next maintenance.
-	const valuesOf = await moduleValues(listSql, ids);
-
-	const page = plan.page(
-		fetched.map((row) => ({
-			...row,
-			openOrders: openOf.get(row.id) ?? 0,
-			moduleValues: valuesOf.get(row.id) ?? {},
-		})),
+		{
+			// The page's open orders (only), and what the tenant's modules' columns show for them,
+			// e.g. the next maintenance.
+			enrich: async (rows) => {
+				const ids = rows.map((row) => row.id);
+				const [open, valuesOf] = await Promise.all([
+					ids.length
+						? db
+								.select({ equipmentId: orderUnit.equipmentId, count: count() })
+								.from(orderUnit)
+								.innerJoin(...tenantJoin(order, orderUnit.orderId))
+								.where(
+									and(
+										inTenant(orderUnit),
+										inList(orderUnit.equipmentId, ids),
+										inList(order.status, openOrderStatuses),
+									),
+								)
+								.groupBy(orderUnit.equipmentId)
+						: [],
+					moduleValues(listSql, ids),
+				]);
+				const openOf = new Map(open.map((row) => [row.equipmentId, row.count]));
+				return rows.map((row) => ({
+					...row,
+					openOrders: openOf.get(row.id) ?? 0,
+					moduleValues: valuesOf.get(row.id) ?? {},
+				}));
+			},
+		},
 	);
-	return {
-		rows: page.rows,
-		rowCount,
-		/** The query the rows are for (its `where` is the target of "select all matching"). */
-		query: input,
-		/** The same as a string, to tell whether the table is waiting for other rows (`isStale`). */
-		key: queryKey(input),
-		groups: pageGroupsOf(counts, page),
-	};
 });
 
 /**

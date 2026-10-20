@@ -1,11 +1,9 @@
-import { queryKey } from "#lib/components/data-table/list-definition.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, engineer, equipment, order } from "#lib/server/db/schema.ts";
 import {
 	customerRecords,
 	facetOptions,
 	facetOptionsInput,
-	pageGroupsOf,
 	planList,
 } from "#lib/server/lists/index.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
@@ -27,69 +25,56 @@ import { ordersList } from "./orders-list.ts";
  * filtered, sorted and grouped as the query says (see `ordersList`), how many orders match in all,
  * and, when grouped, what the table needs to know of the page's groups.
  */
-export const getOrders = forMembers.query(ordersList.query, async (input) => {
-	const plan = planList(ordersSql(), input);
-	const [rows, rowCount, counts] = await Promise.all([
-		plan.paged(
-			withOrderJoins(
-				db
-					.select({
-						id: order.id,
-						number: order.number,
-						type: order.type,
-						status: order.status,
-						priority: order.priority,
-						description: order.description,
-						scheduledFor: order.scheduledFor,
-						completedAt: order.completedAt,
-						createdAt: order.createdAt,
-						laborHours: order.laborHours,
-						customer: { id: customer.id, code: customer.code, name: customer.name },
-						/** The first of its units, if it has any. */
-						equipment: {
-							id: equipment.id,
-							name: equipment.name,
-							model: equipment.model,
-							manufacturer: equipment.manufacturer,
-							serialNumber: equipment.serialNumber,
-						},
-						/** How many units it's about, the first one included. */
-						unitCount: unitCount(),
-						engineer: { id: engineer.id, name: engineer.name, hourlyRate: engineer.hourlyRate },
-					})
-					.from(order)
-					.$dynamic(),
-			),
+export const getOrders = forMembers.query(ordersList.query, (input) =>
+	planList(ordersSql(), input).answer(
+		withOrderJoins(
+			db
+				.select({
+					id: order.id,
+					number: order.number,
+					type: order.type,
+					status: order.status,
+					priority: order.priority,
+					description: order.description,
+					scheduledFor: order.scheduledFor,
+					completedAt: order.completedAt,
+					createdAt: order.createdAt,
+					laborHours: order.laborHours,
+					customer: { id: customer.id, code: customer.code, name: customer.name },
+					/** The first of its units, if it has any. */
+					equipment: {
+						id: equipment.id,
+						name: equipment.name,
+						model: equipment.model,
+						manufacturer: equipment.manufacturer,
+						serialNumber: equipment.serialNumber,
+					},
+					/** How many units it's about, the first one included. */
+					unitCount: unitCount(),
+					engineer: { id: engineer.id, name: engineer.name, hourlyRate: engineer.hourlyRate },
+				})
+				.from(order)
+				.$dynamic(),
 		),
-		plan.count(),
-		plan.groupCounts(),
-	]);
-
-	// The page's orders (only, with the rows around it when grouped) priced and tagged.
-	const facts = (await withUnitIds(rows)).map((row) => ({
-		...row,
-		hourlyRate: row.engineer?.hourlyRate,
-	}));
-	const [prices, tags] = await Promise.all([priceOrders(facts), tagOrders(facts)]);
-	const priced = plan.page(
-		rows.map((row, i) => ({
-			...row,
-			laborTotal: prices[i].labor,
-			total: prices[i].total,
-			/** From the tenant's modules, e.g. a response time about to be missed. */
-			tags: tags[i],
-		})),
-	);
-	return {
-		rows: priced.rows,
-		rowCount,
-		/** The query the rows are for (its `where` is the target of "select all matching"). */
-		query: input,
-		/** The same as a string, to tell whether the table is waiting for other rows (`isStale`). */
-		key: queryKey(input),
-		groups: pageGroupsOf(counts, priced),
-	};
-});
+		{
+			// The page's orders (only, with the rows around it when grouped) priced and tagged.
+			enrich: async (rows) => {
+				const facts = (await withUnitIds(rows)).map((row) => ({
+					...row,
+					hourlyRate: row.engineer?.hourlyRate,
+				}));
+				const [prices, tags] = await Promise.all([priceOrders(facts), tagOrders(facts)]);
+				return rows.map((row, i) => ({
+					...row,
+					laborTotal: prices[i].labor,
+					total: prices[i].total,
+					/** From the tenant's modules, e.g. a response time about to be missed. */
+					tags: tags[i],
+				}));
+			},
+		},
+	),
+);
 
 /**
  * How many orders have each type, status and priority, for the counts in the list's filters: of

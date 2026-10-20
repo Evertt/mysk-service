@@ -22,6 +22,7 @@ import {
 	sortFn_text,
 	tableFeatures,
 } from "@tanstack/svelte-table";
+import type { Component } from "svelte";
 
 import { defaultColumnPinningFeature } from "./default-pinning.ts";
 import { sortGroupsFirst } from "./grouping.ts";
@@ -29,6 +30,24 @@ import { inAnyRange, type RangeGrammar } from "./ranges.ts";
 import { filterFn_allWords } from "./search-filter.ts";
 import { noneToken } from "./url-state.ts";
 
+/** An option of a filter on a fixed set of values (`FacetedFilter`), e.g. a status. */
+export interface FilterOption {
+	value: string;
+	label: string;
+	icon?: Component;
+	/** What the search box finds it by, if not only its label, e.g. a customer's code too. */
+	keywords?: string[];
+	/**
+	 * How many rows have it, rather than the filter's `counts`; greyed at 0, as a `RecordFilter`'s
+	 * options are (`recordFacets()`' options have it).
+	 */
+	count?: number;
+}
+
+/**
+ * A column's meta. What its list's definition says (`param`, `filter`, `filterValues`,
+ * `filterNone`) a list's table takes from it (`withListColumns()`), never from its own columns.
+ */
 export interface DataTableColumnMeta {
 	/**
 	 * The column's name, for the header and the column visibility menu: a message function, e.g.
@@ -59,6 +78,16 @@ export interface DataTableColumnMeta {
 	 */
 	filterValues?: readonly string[];
 	/**
+	 * The options of its filter (`FacetedFilter`, in `ListToolbar`) when it has a fixed set of
+	 * values, e.g. an enum's (`column.enum()`), each with its label and icon.
+	 */
+	filterOptions?: readonly FilterOption[];
+	/**
+	 * What its rows without a value are called, e.g. "Unassigned": its filter's option for them, if
+	 * it takes `none` (`orNone()`). A message function, read when shown.
+	 */
+	none?: () => string;
+	/**
 	 * When the rows are grouped by another column, each group's header shows the sum of this
 	 * column over the group's rows, formatted with this (e.g. `formatCents`). Only where the table
 	 * has all the rows (not server-side tables, whose groups go on beyond the page).
@@ -79,19 +108,42 @@ export interface DataTableColumnMeta {
 	clickFilter?: (value: string) => string;
 }
 
+/** What the helpers below read of a column (one of TanStack's). */
+interface MetaColumn {
+	id: string;
+	columnDef: { meta?: DataTableColumnMeta };
+}
+
 /** A column's name as shown: its translated `meta.label`, or its id. */
-export function columnLabel(column: { id: string; columnDef: { meta?: DataTableColumnMeta } }) {
+export function columnLabel(column: MetaColumn) {
 	const label = column.columnDef.meta?.label;
 	return (typeof label === "function" ? label() : label) ?? column.id;
 }
 
+/** What a column calls its rows without a value: its `meta.none`, or a generic "(None)". */
+export const noneLabel = (column: MetaColumn | undefined) =>
+	column?.columnDef.meta?.none?.() ?? m.common_table_filter_none();
+
 /**
- * Keeps rows whose value is one of the selected values (used by the faceted filters); rows without
- * a value (`null` or `undefined`) are kept by `none` (`noneToken`, the filter's `none` option).
+ * What a column's filter calls the rows without a value (`noneLabel()`), if it takes `none`
+ * (`orNone()`); `undefined` for a filter that doesn't.
+ */
+export const columnNone = (column: MetaColumn | undefined) =>
+	column?.columnDef.meta?.filterNone ? noneLabel(column) : undefined;
+
+/**
+ * Keeps rows whose value is one of the selected values (used by the faceted filters), as the URL
+ * has them: the row's grouping value (`getGroupingValue`, e.g. a customer's code where the column
+ * shows the name; else its value) as text. Rows without one (`null` or `undefined`) are kept by
+ * `none` (`noneToken`, the filter's `none` option).
  */
 const filterFn_oneOf = constructFilterFn({
-	filter: (dataValue: unknown, filterValue: unknown[]) =>
-		filterValue.includes(dataValue ?? noneToken),
+	filter: (_value: unknown, filterValue: unknown[], row, columnId) => {
+		const value: unknown = row.getGroupingValue(columnId);
+		return filterValue.includes(
+			value === null || value === undefined ? noneToken : String(value as string | number),
+		);
+	},
 	autoRemove: (value: unknown[] | undefined) => !value?.length,
 });
 

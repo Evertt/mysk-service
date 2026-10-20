@@ -53,9 +53,14 @@ describe("column.enum", () => {
 		expect(priority.meta?.clickFilter?.("unknown")).toBe("unknown");
 		expect(other.meta).toEqual({
 			filterValues: orderPriorities,
+			filterOptions: orderPriorities.map((value) => ({ value, label: `(${value})` })),
 			label: other.meta?.label,
 			param: "o",
 		});
+		// The filter's options, with the badges' icons.
+		expect(priority.meta?.filterOptions?.find((option) => option.value === "urgent")).toMatchObject(
+			{ value: "urgent", label: "Urgent" },
+		);
 		expect(other.enableGrouping).toBe(false);
 	});
 

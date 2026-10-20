@@ -1,4 +1,3 @@
-import { queryKey } from "#lib/components/data-table/list-definition.ts";
 /** The partners list's queries (see `partners-list.ts`). */
 import { currentDay } from "#lib/dates.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -28,38 +27,32 @@ export const getPartners = query(partnersList.query, async (input) => {
 	const now = currentDay();
 	const rules = await rulesFor(now.year);
 	const listSql = partnersSql(rules, now);
-	const plan = planList(listSql, input);
 	const { joins } = listSql;
-	const [rows, rowCount] = await Promise.all([
-		plan.paged(
-			joins.join(
-				db
-					.select({
-						id: partnerAccount.id,
-						acceptedOn: partnerAccount.acceptedOn,
-						customer: { code: customer.code, name: customer.name },
-						revenue: joins.revenue,
-						wallet: joins.wallet,
-					})
-					.from(partnerAccount)
-					.$dynamic(),
-			),
-		),
-		plan.count(),
-	]);
 	const tiers = rules?.tiers ?? [];
-	return {
-		rows: rows.map((row) => {
-			const level = levelFor(tiers, row.revenue);
-			return {
-				...row,
-				level: level?.level ?? null,
-				colour: level ? levelColour(level) : undefined,
-				progress: progressFor(tiers, row.revenue),
-			};
-		}),
-		rowCount,
-		query: input,
-		key: queryKey(input),
-	};
+	return planList(listSql, input).answer(
+		joins.join(
+			db
+				.select({
+					id: partnerAccount.id,
+					acceptedOn: partnerAccount.acceptedOn,
+					customer: { code: customer.code, name: customer.name },
+					revenue: joins.revenue,
+					wallet: joins.wallet,
+				})
+				.from(partnerAccount)
+				.$dynamic(),
+		),
+		{
+			enrich: (rows) =>
+				rows.map((row) => {
+					const level = levelFor(tiers, row.revenue);
+					return {
+						...row,
+						level: level?.level ?? null,
+						colour: level ? levelColour(level) : undefined,
+						progress: progressFor(tiers, row.revenue),
+					};
+				}),
+		},
+	);
 });

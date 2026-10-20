@@ -1,5 +1,6 @@
 import { renderComponent } from "@tanstack/svelte-table";
 
+import { withListColumns } from "#lib/components/data-table/list-definition.ts";
 import { createAppColumnHelper } from "#lib/components/data-table/table.svelte.ts";
 import TwoLineCell from "#lib/components/data-table/two-line-cell.svelte";
 import { CustomerLink } from "#lib/customers/components.ts";
@@ -7,18 +8,19 @@ import { EquipmentLink } from "#lib/equipment/components.ts";
 import { label } from "#lib/i18n/index.ts";
 import { OrderLink } from "#lib/orders/components.ts";
 
-import { dueRanges, planOrderTypes } from "../model.ts";
+import { planOrderTypes } from "../model.ts";
 import NextDue from "../ui/next-due.svelte";
 import type { getDuePlans } from "./due-list.remote.ts";
+import { dueList } from "./due-list.ts";
 
 /** A row of the due list, a page of which comes from the server (see `dueList`). */
 export type DueRow = Awaited<ReturnType<typeof getDuePlans>>["rows"][number];
 
 const column = createAppColumnHelper<DueRow>();
 
-export const columns = column.columns([
-	column.select(),
-	column.accessor((row) => `${row.unit.manufacturer} ${row.unit.model}`, {
+export const columns = withListColumns(dueList, {
+	select: column.select(),
+	unit: column.accessor((row) => `${row.unit.manufacturer} ${row.unit.model}`, {
 		id: "unit",
 		cell: ({ getValue, row }) =>
 			renderComponent(EquipmentLink, {
@@ -29,7 +31,7 @@ export const columns = column.columns([
 		enableHiding: false,
 		meta: { label: m.maintenance_column_unit },
 	}),
-	column.accessor((row) => row.customer.name, {
+	customer: column.accessor((row) => row.customer.name, {
 		id: "customer",
 		cell: ({ row }) =>
 			renderComponent(CustomerLink, {
@@ -38,10 +40,10 @@ export const columns = column.columns([
 				withCode: true,
 			}),
 		// By the customer's code, e.g. `?customer=CUST-0001`.
-		filterFn: (row, _id, codes: string[]) => codes.includes(row.original.customer.code),
-		meta: { label: m.maintenance_column_customer, filter: "set" },
+		getGroupingValue: (row) => row.customer.code,
+		meta: { label: m.maintenance_column_customer },
 	}),
-	column.accessor("description", {
+	plan: column.accessor("description", {
 		id: "plan",
 		cell: ({ getValue, row }) =>
 			renderComponent(TwoLineCell, {
@@ -57,39 +59,38 @@ export const columns = column.columns([
 		meta: { label: m.maintenance_column_plan },
 	}),
 	// Hidden: for the order type filter.
-	column.accessor("orderType", {
+	type: column.enum("orderType", {
 		id: "type",
-		filterFn: "oneOf",
+		values: planOrderTypes,
+		label: (type) => label("orderType", type),
 		enableHiding: false,
-		enableSorting: false,
-		meta: { label: m.maintenance_field_order_type, filterValues: planOrderTypes },
+		meta: { label: m.maintenance_field_order_type },
 	}),
-	column.accessor("intervalMonths", {
+	interval: column.accessor("intervalMonths", {
 		id: "interval",
 		cell: ({ getValue }) => m.maintenance_every_months({ count: getValue() }),
 		enableGlobalFilter: false,
 		meta: { label: m.maintenance_column_interval },
 	}),
-	column.accessor("nextDueOn", {
+	nextDue: column.accessor("nextDueOn", {
 		id: "nextDue",
 		cell: ({ getValue }) => renderComponent(NextDue, { value: getValue() }),
 		enableGlobalFilter: false,
-		meta: { label: m.maintenance_column_next_due, param: "next-due" },
+		meta: { label: m.maintenance_column_next_due },
 	}),
-	column.accessor("lastOrder", {
+	lastOrder: column.accessor("lastOrder", {
 		cell: ({ getValue }) => {
 			const number = getValue();
 			return number ? renderComponent(OrderLink, { number }) : "—";
 		},
 		enableGlobalFilter: false,
-		meta: { label: m.maintenance_column_last_order, param: "last-order" },
+		meta: { label: m.maintenance_column_last_order },
 	}),
 	// Hidden: the range of due dates (`?due=`), chosen in the toolbar.
-	column.accessor("nextDueOn", {
+	due: column.accessor("nextDueOn", {
 		id: "due",
 		enableHiding: false,
-		enableSorting: false,
 		enableGlobalFilter: false,
-		meta: { label: m.maintenance_range, filter: "set", filterValues: dueRanges },
+		meta: { label: m.maintenance_range },
 	}),
-]);
+});

@@ -1,19 +1,8 @@
 <script lang="ts">
-	import BulkActionBar from "#lib/components/data-table/bulk-action-bar.svelte";
-	import DateRangeFilter from "#lib/components/data-table/date-range-filter.svelte";
-	import FacetedFilter from "#lib/components/data-table/faceted-filter.svelte";
-	import { whereOf } from "#lib/components/data-table/list-definition.ts";
-	import NumberRangeFilter from "#lib/components/data-table/number-range-filter.svelte";
-	import RecordFilter from "#lib/components/data-table/record-filter.svelte";
-	import {
-		recordOptions,
-		scrollPages,
-		serverTableLoading,
-	} from "#lib/components/data-table/server-table.svelte.ts";
-	import { createAppTable } from "#lib/components/data-table/table.svelte.ts";
+	import ListLayout from "#lib/components/data-table/list-layout.svelte";
+	import { createServerTable } from "#lib/components/data-table/server-table.svelte.ts";
 	import { extensionBulkActions } from "#lib/extensions/bulk-actions.svelte.ts";
 
-	import { priorityOptions, statusOptions, typeOptions } from "../display.ts";
 	import { list as bulkTable } from "../extensions.ts";
 	import { assignEngineer, changeStatus, deleteOrders } from "./bulk-actions.ts";
 	import { columns } from "./columns.ts";
@@ -27,7 +16,7 @@
 	import { ordersList } from "./orders-list.ts";
 	import { setStatusCellQuery } from "./status-cell.svelte";
 
-	// The table is created here rather than in the page because `createAppTable` sets context,
+	// The table is created here rather than in the page because making the table sets context,
 	// which Svelte doesn't allow after the page's `await`.
 	let {
 		orders,
@@ -42,121 +31,57 @@
 		facets: Awaited<ReturnType<typeof getOrderFacets>>;
 	} = $props();
 
-	const pages = scrollPages({ first: () => orders, fetch: getOrders });
-
-	const table = createAppTable({
+	const table = createServerTable({
+		list: ordersList,
+		first: () => orders,
+		fetch: getOrders,
 		columns,
-		serverSide: true,
-		scroll: pages,
-		get data() {
-			return pages.rows;
-		},
-		get rowCount() {
-			return pages.rowCount;
-		},
-		getRowId: (row) => String(row.id),
 		// Newest first: the default the server has too.
-		initialState: { ...ordersList.urlSpec.defaults, columnVisibility: { createdAt: false } },
+		initialState: { columnVisibility: { createdAt: false } },
 	});
 
 	// The status cells change an order's status, showing it at once in the page of rows it's on.
-	setStatusCellQuery((id) => pages.queryOf(id));
-
-	// Until the rows for a new search, filter or sort are in.
-	const loading = serverTableLoading(table, ordersList, () => pages.key);
-
-	// The filters on related records, counted under the list's search and other filters.
-	const where = () => whereOf(orders.query);
-	const customerOptions = recordOptions(getOrderCustomerOptions, where, "customer");
-	const engineerOptions = recordOptions(getOrderEngineerOptions, where, "engineer");
-	const equipmentOptions = recordOptions(getOrderEquipmentOptions, where, "equipment");
+	setStatusCellQuery((id) => table.pages.queryOf(id));
 
 	// The tenant's modules add theirs (e.g. "Create invoice") before the delete.
 	const moduleActions = extensionBulkActions(bulkTable);
 	const actions = $derived([assignEngineer, changeStatus, ...moduleActions.current, deleteOrders]);
 </script>
 
-<table.AppTable>
-	<div class="flex min-h-0 flex-1 flex-col gap-4">
-		<table.Toolbar searchLabel={m.orders_search()}>
-			<FacetedFilter
-				columnId="status"
-				title={m.orders_column_status()}
-				options={statusOptions}
-				counts={facets.status}
-			/>
-			<FacetedFilter
-				columnId="type"
-				title={m.orders_column_type()}
-				options={typeOptions}
-				counts={facets.type}
-			/>
-			<FacetedFilter
-				columnId="priority"
-				title={m.orders_column_priority()}
-				options={priorityOptions}
-				counts={facets.priority}
-			/>
-			<RecordFilter
-				columnId="customer"
-				title={m.orders_column_customer()}
-				searchLabel={m.common_table_search_customers()}
-				load={customerOptions.current}
-			/>
-			<RecordFilter
-				columnId="engineer"
-				title={m.orders_column_engineer()}
-				searchLabel={m.common_table_search_engineers()}
-				load={engineerOptions.current}
-				none={m.common_unassigned()}
-			/>
-			<RecordFilter
-				columnId="equipment"
-				title={m.orders_column_equipment()}
-				searchLabel={m.common_table_search_equipment()}
-				load={equipmentOptions.current}
-				none={m.orders_new_installation()}
-			/>
-			<DateRangeFilter
-				columnId="scheduledFor"
-				title={m.orders_column_scheduled()}
-				none={m.orders_unscheduled()}
-				presets={[
-					"today",
-					"tomorrow",
-					"this-week",
-					"next-week",
-					"next-7-days",
-					"this-month",
-					"before-today",
-					"from-today",
-				]}
-			/>
-			<DateRangeFilter
-				columnId="createdAt"
-				title={m.orders_column_created()}
-				presets={[
-					"today",
-					"yesterday",
-					"this-week",
-					"last-week",
-					"last-7-days",
-					"last-30-days",
-					"this-month",
-					"last-month",
-				]}
-			/>
-			<NumberRangeFilter columnId="total" title={m.orders_column_total()} money min={0} />
-		</table.Toolbar>
-		<table.Table
-			emptyTitle={m.orders_empty()}
-			fillViewport
-			loading={loading.current}
-			groups={pages.groups}
-		/>
-		<BulkActionBar
-			{actions}
-			matching={{ where: whereOf(orders.query), key: orders.key, count: orders.rowCount }}
-		/>
-	</div>
-</table.AppTable>
+<ListLayout
+	{table}
+	{facets}
+	{actions}
+	searchLabel={m.orders_search()}
+	emptyTitle={m.orders_empty()}
+	filters={{
+		customer: { load: getOrderCustomerOptions, searchLabel: m.common_table_search_customers() },
+		engineer: { load: getOrderEngineerOptions, searchLabel: m.common_table_search_engineers() },
+		equipment: { load: getOrderEquipmentOptions, searchLabel: m.common_table_search_equipment() },
+		scheduledFor: {
+			presets: [
+				"today",
+				"tomorrow",
+				"this-week",
+				"next-week",
+				"next-7-days",
+				"this-month",
+				"before-today",
+				"from-today",
+			],
+		},
+		createdAt: {
+			presets: [
+				"today",
+				"yesterday",
+				"this-week",
+				"last-week",
+				"last-7-days",
+				"last-30-days",
+				"this-month",
+				"last-month",
+			],
+		},
+		total: { min: 0 },
+	}}
+/>

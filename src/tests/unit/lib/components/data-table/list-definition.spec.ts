@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 
+import type { TableState } from "@tanstack/svelte-table";
 import * as v from "valibot";
 import { afterEach, beforeEach, describe, expect, expectTypeOf, test, vi } from "vite-plus/test";
 
@@ -9,6 +10,7 @@ import {
 	dateRange,
 	defineList,
 	id,
+	type List,
 	type ListQuery,
 	type ListWhere,
 	listLimits,
@@ -21,9 +23,13 @@ import {
 	toListQuery,
 	toUrlSpec,
 	whereOf,
+	withListColumns,
 } from "#lib/components/data-table/list-definition.ts";
 import type { DateRange, NumberRange } from "#lib/components/data-table/ranges.ts";
+import { urlGrammar } from "#lib/components/data-table/server-table.svelte.ts";
+import { createAppColumnHelper, createAppTable } from "#lib/components/data-table/table.svelte.ts";
 import { parseTableUrl, type TableUrlState } from "#lib/components/data-table/url-state.ts";
+import { tableUrlSpec } from "#lib/components/data-table/url-sync.svelte.ts";
 import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.ts";
 import { at, freezeNow } from "#unit/temporal-support.ts";
 
@@ -772,5 +778,136 @@ describe("range filters", () => {
 			scheduledFor: ["this-week"],
 		};
 		expect(filters).toBeDefined();
+	});
+});
+
+describe("withListColumns", () => {
+	const list = defineList({
+		columns: {
+			name: { sort: true },
+			customer: { sort: true, group: true, filter: code },
+			status: { group: true, filter: orNone(oneOf(["open", "closed"])) },
+			dueOn: { param: "due", sort: true, filter: orNone(dateRange) },
+			total: { filter: moneyRange },
+		},
+		defaults: { sort: [{ id: "name", desc: false }] },
+	});
+	interface Row {
+		id: number;
+		name: string;
+		customer: { code: string; name: string };
+		status: "open" | "closed" | null;
+		dueOn: string | null;
+		total: number;
+	}
+	const column = createAppColumnHelper<Row>();
+	const columns = withListColumns(list, {
+		select: column.select(),
+		name: column.accessor("name", { meta: { label: "Name" } }),
+		customer: column.accessor((row) => row.customer.name, {
+			id: "customer",
+			getGroupingValue: (row) => row.customer.code,
+		}),
+		status: column.accessor("status", {}),
+		dueOn: column.accessor("dueOn", {}),
+		total: column.accessor("total", {}),
+		actions: column.display({ id: "actions" }),
+	});
+	const rows: Row[] = [
+		{
+			id: 1,
+			name: "B",
+			customer: { code: "C-1", name: "Acme" },
+			status: "open",
+			dueOn: null,
+			total: 500,
+		},
+		{
+			id: 2,
+			name: "A",
+			customer: { code: "C-2", name: "Bolt" },
+			status: null,
+			dueOn: "2026-10-20",
+			total: 100,
+		},
+	];
+	const shown = (state: Partial<TableState<never>>) =>
+		createAppTable({ columns, data: rows, initialState: state })
+			.getRowModel()
+			.rows.map((row) => row.original.name);
+
+	test("gives each column what the definition says of it, in the order given", () => {
+		expect(columns.map((each) => each.id)).toEqual([
+			"select",
+			"name",
+			"customer",
+			"status",
+			"dueOn",
+			"total",
+			"actions",
+		]);
+		const [, name, customer, status, dueOn, total] = columns;
+		expect(name).toMatchObject({
+			enableSorting: true,
+			enableGrouping: false,
+			meta: { label: "Name" },
+		});
+		expect(customer).toMatchObject({
+			enableGrouping: true,
+			filterFn: "oneOf",
+			meta: { filter: "set" },
+		});
+		expect(status.meta).toEqual({
+			filter: "set",
+			filterValues: ["open", "closed", "none"],
+			filterNone: true,
+		});
+		expect(dueOn).toMatchObject({
+			filterFn: "inDateRange",
+			meta: { param: "due", filter: "dateRange", filterNone: true },
+		});
+		expect(total).toMatchObject({ enableSorting: false, filterFn: "inMoneyRange" });
+	});
+
+	test("a table of them reads and writes the URL as the list says", () => {
+		const table = createAppTable({ columns, data: [], initialState: { ...list.urlSpec.defaults } });
+		expect(urlGrammar(tableUrlSpec(table))).toEqual(urlGrammar(list.urlSpec));
+	});
+
+	test("a set filter keeps the rows by their grouping value, as the URL has it", () => {
+		expect(shown({ columnFilters: [{ id: "customer", value: ["C-2"] }] })).toEqual(["A"]);
+		expect(shown({ columnFilters: [{ id: "status", value: ["none"] }] })).toEqual(["A"]);
+		expect(shown({ columnFilters: [{ id: "status", value: ["open", "none"] }] })).toEqual([
+			"B",
+			"A",
+		]);
+	});
+
+	test("refuses a column the list doesn't have, or one named otherwise", () => {
+		expect(() =>
+			// @ts-expect-error: the list has no `other` column.
+			withListColumns(list, { other: column.accessor("name", {}) }),
+		).toThrow('The list has no column "other"');
+		expect(() =>
+			withListColumns(list, { customer: column.accessor("name", { id: "name" }) }),
+		).toThrow('The column "customer" is called "name"');
+	});
+});
+
+describe("a client-side list", () => {
+	const columns = { name: { sort: true }, status: { filter: oneOf(["open", "closed"]) } } as const;
+
+	test("has the URL grammar a server-side one has", () => {
+		const client = defineList({ mode: "client", columns });
+		expect(client.mode).toBe("client");
+		expect(defineList({ columns }).mode).toBe("server");
+		expect(client.urlSpec).toEqual(defineList({ columns }).urlSpec);
+	});
+
+	test("isn't taken for a server-side one", () => {
+		const client = defineList({ mode: "client", columns });
+		// @ts-expect-error: a server-side table (`createServerTable()`) takes a server-side list.
+		const server: List<typeof columns> = client;
+		expect(server.mode).toBe("client");
 	});
 });
