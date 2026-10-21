@@ -55,5 +55,8 @@ test("a format with a name in #lib/i18n/format.ts isn't made again", () => {
 			offences.push(`${path}:${source.slice(0, index).split("\n").length} repeats ${name}`);
 		}
 	}
-	expect(offences, "use the named format from #lib/i18n/format.ts (see AGENTS.md)").toEqual([]);
+	expect(
+		offences,
+		"use the named format from #lib/i18n/format.ts (see docs/agents/kit.md)",
+	).toEqual([]);
 });

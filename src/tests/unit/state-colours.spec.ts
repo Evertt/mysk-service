@@ -70,7 +70,7 @@ test("states are coloured with the theme's tone tokens, not a raw palette", () =
 			offences.push(`${path}:${source.slice(0, index).split("\n").length} ${name}`);
 		}
 	}
-	expect(offences, "use text-success, bg-warning/10, … (see AGENTS.md)").toEqual([]);
+	expect(offences, "use text-success, bg-warning/10, … (see docs/agents/kit.md)").toEqual([]);
 });
 
 test.each(Object.entries(allowed))("the exception for %s is still needed", (path, { classes }) => {
