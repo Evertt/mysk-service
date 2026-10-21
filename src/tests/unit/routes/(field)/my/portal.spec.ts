@@ -9,7 +9,7 @@ import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { getCurrentUser } from "#lib/auth/session.remote.ts";
 import type { Change } from "#lib/server/changes.ts";
-import { fieldChanges } from "#routes/(field)/my/changes.server.ts";
+import { feedFor } from "#lib/server/live.ts";
 import {
 	addNote,
 	completeWork,
@@ -204,18 +204,59 @@ describe("the portal's feed of changes", () => {
 			`select id from "order" where organization_id = ? and engineer_id is not ? limit 1`,
 			[northId, mine],
 		);
+		const [unit] = await rows<{ id: number }>(
+			`select id from equipment where organization_id = ? limit 1`,
+			[northId],
+		);
 		const told = await as(erik, () =>
-			fieldChanges([
+			feedFor()([
 				change("order", own.id, "scheduled"),
 				change("order", others.id),
 				change("order", southern.id),
-				change("equipment", 1, "deleted"),
-				change("customer", 1),
+				change("equipment", unit.id),
+				change("member", 1),
 			]),
 		);
-		expect(told).toEqual([
-			{ type: "order", id: String(own.id), action: "updated", name: "", mine: false, at: 1 },
-			{ type: "equipment", id: "1", action: "deleted", name: "", mine: false, at: 1 },
+		expect(told.map((heard) => `${heard.type}/${heard.id}`)).toEqual([
+			`order/${own.id}`,
+			`equipment/${unit.id}`,
 		]);
+		// Neither who made it nor what was done, only that it changed.
+		expect(told[0]).toEqual({
+			type: "order",
+			id: String(own.id),
+			action: "updated",
+			name: "",
+			mine: false,
+			at: 1,
+		});
+	});
+
+	test("tells that a change is their own, and a deletion as one", async () => {
+		const [user] = await rows<{ id: string }>(`select id from user where email = ?`, [erik.email]);
+		const told = await as(erik, () =>
+			feedFor()([{ ...change("order", own.id, "deleted"), user: { id: user.id, name: "Erik" } }]),
+		);
+		expect(told).toEqual([
+			{ type: "order", id: String(own.id), action: "deleted", name: "", mine: true, at: 1 },
+		]);
+	});
+
+	test("keeps only what they read of a burst that mixes both", async () => {
+		const burst = [change("order", southern.id), change("member", 1)];
+		expect(await as(erik, () => feedFor()(burst))).toEqual([]);
+		const mixed = await as(erik, () => feedFor()([...burst, change("order", own.id)]));
+		expect(mixed.map((heard) => heard.id)).toEqual([String(own.id)]);
+	});
+
+	test("doesn't tell of an order once it is taken off them, nor of a change for its type only", async () => {
+		const mixed: Change[] = [change("order", own.id), { type: "order", at: 1 }];
+		expect(await as(erik, () => feedFor()(mixed))).toHaveLength(1);
+		await rows(`update "order" set engineer_id = null where id = ?`, [own.id]);
+		try {
+			expect(await as(erik, () => feedFor()(mixed))).toEqual([]);
+		} finally {
+			await rows(`update "order" set engineer_id = ? where id = ?`, [mine, own.id]);
+		}
 	});
 });

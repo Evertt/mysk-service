@@ -18,8 +18,9 @@ import {
 } from "#lib/components/activity/activity.remote.ts";
 import { updateCustomer } from "#lib/customers/customers.remote.ts";
 import { updateOrder } from "#lib/orders/order.remote.ts";
-import { announceChange, watchSubject } from "#lib/server/changes.ts";
+import { announceChange, type Change, watchSubject } from "#lib/server/changes.ts";
 import { demoUsers } from "#lib/server/db/demo.ts";
+import { feedFor } from "#lib/server/live.ts";
 import {
 	as,
 	call,
@@ -328,5 +329,50 @@ describe("a record's open pages", () => {
 		expect(await as(north.engineer, () => call(watchTenantChanges))).toMatchObject({
 			status: 403,
 		});
+	});
+});
+
+describe("the office's feed of changes", () => {
+	const change = (type: Change["type"], id: number, action = "updated"): Change => ({
+		type,
+		id: String(id),
+		action,
+		user: { id: "someone-else", name: "Pieter" },
+		at: 1,
+	});
+
+	test("tells every member of what its tenant's records, with who made it and what was done", async () => {
+		const burst = [
+			change("order", 1, "scheduled"),
+			change("customer", 2),
+			{ type: "order", at: 2 },
+		];
+		const told = await as(north.member, () => feedFor()(burst as Change[]));
+		expect(told).toEqual([
+			{ type: "order", id: "1", action: "scheduled", name: "Pieter", mine: false, at: 1 },
+			{ type: "customer", id: "2", action: "updated", name: "Pieter", mine: false, at: 1 },
+			{ type: "order", id: null, action: "updated", name: "", mine: false, at: 2 },
+		]);
+	});
+
+	test("tells of the records of the modules it has, not of those it doesn't", async () => {
+		const burst = [change("contract", 1), change("order", 1)];
+		// North has the contracts module, South hasn't.
+		expect(await as(north.owner, () => feedFor()(burst))).toHaveLength(2);
+		expect(await as(south.owner, () => feedFor()(burst))).toEqual([
+			expect.objectContaining({ type: "order" }),
+		]);
+		expect(await as(south.owner, () => feedFor()([{ type: "contract", at: 1 }]))).toEqual([]);
+	});
+
+	test("tells of a manager's types to a manager only, and of a deletion to the office", async () => {
+		const burst = [change("member", 1), change("order", 99_999, "deleted")];
+		expect((await as(north.owner, () => feedFor()(burst))).map((heard) => heard.type)).toEqual([
+			"member",
+			"order",
+		]);
+		expect(await as(north.member, () => feedFor()(burst))).toEqual([
+			expect.objectContaining({ type: "order", action: "deleted" }),
+		]);
 	});
 });
