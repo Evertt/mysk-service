@@ -75,16 +75,13 @@ interface SourceFile {
 const infrastructure: Record<string, string> = {
 	"src/lib/server/activity/log.ts": "writes the entries (`recordActivity()`): no viewer reads here",
 	"src/lib/server/changes.ts": "the registry of changes the feeds and `recordChangedAt()` read",
-	// Step 4 (the feed presenter) removes this one: `feedFor(viewer)` asks `readable()`.
-	"src/lib/server/live.ts": "`liveFeed()` itself, until its presenter asks the registry",
 	"src/lib/server/activity/feed.ts": "`present()` shows entries its caller already chose",
 	"src/lib/server/notifications/notifications.ts": "the bell's tray: rules pick its entries",
 	"src/lib/server/notifications/rules.ts": "the rules that pick the bells' entries",
-	// Step 4 moves `watchFieldChanges` onto `feedFor(viewer)`.
-	"src/routes/(field)/my/portal.remote.ts":
-		"`watchFieldChanges` feeds `fieldChanges()` until step 4",
 	// Step 5 makes its `exists` from `visible("order")`.
 	"src/lib/server/auth/engineer.ts": "`engineerActivity()` is scoped to the engineer's orders",
+	"src/routes/(field)/my/portal.remote.ts":
+		"`watchFieldChanges` filters through `feedFor()` (`live.ts`), which asks the registry",
 	"src/modules/checklists/server/notifications.ts":
 		"a notification rule: it picks entries of a fixed type for the bell",
 	"src/modules/condition/server/history.ts":

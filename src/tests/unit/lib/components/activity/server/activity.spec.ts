@@ -349,7 +349,7 @@ const idsOf = async (table: string, where = "") =>
 	).map((row) => String(row.id));
 
 /** Announces a change to each record, so it has a time worth asking for. */
-const touch = (type: string, ids: readonly string[]) => {
+const touch = (type: Change["type"], ids: readonly string[]) => {
 	for (const id of ids) announceChange(northId, type, { id });
 };
 
