@@ -298,13 +298,30 @@ describe("the portal's feed of changes", () => {
 		]);
 	});
 
-	test("tells that a change is their own, and a deletion as one", async () => {
+	test("tells that a change is their own", async () => {
 		const [user] = await rows<{ id: string }>(`select id from user where email = ?`, [erik.email]);
 		const told = await as(erik, () =>
-			feedFor()([{ ...change("order", own.id, "deleted"), user: { id: user.id, name: "Erik" } }]),
+			feedFor()([{ ...change("order", own.id, "updated"), user: { id: user.id, name: "Erik" } }]),
 		);
 		expect(told).toEqual([
-			{ type: "order", id: String(own.id), action: "deleted", name: "", mine: true, at: 1 },
+			{ type: "order", id: String(own.id), action: "updated", name: "", mine: true, at: 1 },
+		]);
+	});
+
+	test("doesn't tell the deletion of an order: a deleted row can't be checked against their scope", async () => {
+		const gone = 987_654;
+		expect(await value(`select count(*) from "order" where id = ?`, [gone])).toBe(0);
+		expect(await as(erik, () => feedFor()([change("order", gone, "deleted")]))).toEqual([]);
+	});
+
+	test("tells the deletion of a unit, as the engineer's rule reads every unit whole", async () => {
+		// Decision 14 once said it isn't: the `equipment` rule became `"all"` (step 5), which
+		// `readable()` trusts without a query, so the removed row is announced.
+		const gone = 987_654;
+		expect(await value(`select count(*) from equipment where id = ?`, [gone])).toBe(0);
+		const told = await as(erik, () => feedFor()([change("equipment", gone, "deleted")]));
+		expect(told).toEqual([
+			{ type: "equipment", id: String(gone), action: "deleted", name: "", mine: false, at: 1 },
 		]);
 	});
 
@@ -421,9 +438,13 @@ describe("the portal's feed of changes", () => {
 		});
 
 		test("stays the engineer's latest news of the order when a later change comes in a later burst", async () => {
+			const unitId = await value<number>(
+				`select id from equipment where organization_id = ? limit 1`,
+				[northId],
+			);
 			await released(async () => {
 				await as(erik, async () => {
-					const feed = liveFeed(["order"], feedFor());
+					const feed = liveFeed(["order", "equipment"], feedFor());
 					await feed.next();
 					const revoked = feed.next();
 					announceChange(northId, "order", {
@@ -435,14 +456,17 @@ describe("the portal's feed of changes", () => {
 						expect.objectContaining({ id: String(own.id), action: "access_revoked" }),
 					]);
 					// A later change to the order is unreadable to them: nothing to say, the notice stays.
+					// Then a change they do hear, to see what the answer holds: not the order's later change
+					// (the feed answers only when something is told, so it comes with this one).
 					const next = feed.next();
 					announceChange(northId, "order", { id: String(own.id), action: "cancelled" });
 					announceChange(northId, "order", { id: String(southern.id), action: "cancelled" });
-					const idle = await Promise.race([
-						next,
-						new Promise((r) => setTimeout(() => r("waiting"), 50)),
+					announceChange(northId, "equipment", { id: String(unitId), action: "updated" });
+					const { changes } = (await next).value!;
+					expect(changes.map(({ type, id, action }) => `${type}/${id}/${action}`)).toEqual([
+						`order/${own.id}/access_revoked`,
+						`equipment/${unitId}/updated`,
 					]);
-					expect(idle).toBe("waiting");
 				});
 			});
 		});

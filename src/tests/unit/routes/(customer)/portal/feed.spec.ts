@@ -65,15 +65,19 @@ describe("the customer portal's feed of changes", () => {
 		});
 	});
 
-	test("tells a deletion as one, and nothing of a change for its type only", async () => {
+	test("tells an update without the action, and nothing of a change for its type only", async () => {
 		const mine = String(await customerIdOf(contactor));
 		const [own] = await idsOf("order", "org-north", "and customer_id = ?", [mine]);
 		const told = await as(contactor, () =>
-			feedFor()([change("order", own, "deleted"), change("order", null)]),
+			feedFor()([change("order", own, "scheduled"), change("order", null)]),
 		);
 		expect(told).toEqual([
-			{ type: "order", id: own, action: "deleted", name: "", mine: false, at: 1 },
+			{ type: "order", id: own, action: "updated", name: "", mine: false, at: 1 },
 		]);
+	});
+
+	test("doesn't tell the deletion of an order: a deleted row can't be checked against their scope", async () => {
+		expect(await heardBy([change("order", 987_654, "deleted")])).toEqual([]);
 	});
 
 	test("reaches the live query: a change to their order is told, one to another's is not", async () => {

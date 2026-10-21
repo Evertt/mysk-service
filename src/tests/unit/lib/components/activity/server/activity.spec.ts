@@ -23,6 +23,7 @@ import { updateOrder } from "#lib/orders/order.remote.ts";
 import { announceChange, type Change, watchSubject } from "#lib/server/changes.ts";
 import { demoUsers } from "#lib/server/db/demo.ts";
 import { feedFor } from "#lib/server/live.ts";
+import { idsOf } from "#unit/lib/server/access/support.ts";
 import {
 	as,
 	call,
@@ -337,15 +338,6 @@ describe("a record's open pages", () => {
 	});
 });
 
-/** The ids of North's records of a table, as text (`where` is more SQL on it). */
-const idsOf = async (table: string, where = "") =>
-	(
-		await rows<{ id: number | string }>(
-			`select id from "${table}" where organization_id = ? ${where} order by id`,
-			[northId],
-		)
-	).map((row) => String(row.id));
-
 /** Announces a change to each record, so it has a time worth asking for. */
 const touch = (type: Change["type"], ids: readonly string[]) => {
 	for (const id of ids) announceChange(northId, type, { id });
@@ -391,7 +383,7 @@ describe("what getRecordChangedAt answers", () => {
 	});
 
 	test("is 0 for a customer's contact asking after an office-only record", async () => {
-		const [member] = await idsOf("member");
+		const [member] = await idsOf("member", northId);
 		touch("member", [member]);
 		const answers = await ask(north.customer, { type: "member", id: member });
 		expect(answers).toMatchObject([{ status: 200, data: 0 }]);
@@ -401,7 +393,7 @@ describe("what getRecordChangedAt answers", () => {
 	});
 
 	test("is 0 for a record of a module that is off, and the time again when it is on", async () => {
-		const [invoice] = await idsOf("invoice");
+		const [invoice] = await idsOf("invoice", northId);
 		expect(invoice).toBeDefined();
 		touch("invoice", [invoice]);
 		expect((await ask(north.owner, { type: "invoice", id: invoice }))[0].data).toBeGreaterThan(0);
@@ -433,8 +425,8 @@ describe("a record's activity card", () => {
 	});
 
 	test("is a 404 for a record of a module that is off, and for one the asker may not read", async () => {
-		const [invoice] = await idsOf("invoice");
-		const [member] = await idsOf("member");
+		const [invoice] = await idsOf("invoice", northId);
+		const [member] = await idsOf("member", northId);
 		await as(north.owner, async () => {
 			expect(await call(getSubjectActivity, { type: "invoice", id: invoice })).toMatchObject({
 				status: 200,
@@ -464,8 +456,8 @@ describe("the log's readers", () => {
 	let managerOnly: string;
 
 	beforeAll(async () => {
-		const [member] = await idsOf("member");
-		const [invoice] = await idsOf("invoice");
+		const [member] = await idsOf("member", northId);
+		const [invoice] = await idsOf("invoice", northId);
 		managerOnly = await value<string>(
 			`select id from user where id not in (select user_id from activity where user_id is not null) limit 1`,
 		);
