@@ -13,7 +13,9 @@
  *   `order.engineerId`, no `inTenant(order)`, no `tenantJoin(order, …)`, no
  *   `idsInTenant(order, …)`, and `idInTenant(order, …)` only to write the order it found through
  *   the scope (`idInTenant(order, found.id)`, where `found` is `findEngineerOrder()`'s or a read
- *   with `engineerOrder()`; a review keeps it so).
+ *   with `engineerOrder()`; a review keeps it so). `findEngineerOrder()` asks the access registry
+ *   (`visible("order", "change")`, whose engineer rule is `engineerOrders()`), so the scope is still
+ *   this one, written once.
  *
  * The office's filters by an engineer it was given (the orders list's `?engineer=`, the planner)
  * aren't engineer-gated and hold no signed-in engineer's id: none of these match them. Run on
