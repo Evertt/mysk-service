@@ -9,7 +9,12 @@ import { and, asc, eq, type SQL, sql } from "drizzle-orm";
 import type { SelectResultFields } from "drizzle-orm/query-builders/select.types";
 import type { SQLiteSelect } from "drizzle-orm/sqlite-core";
 
-import { type SiteDetail, siteColumns } from "#lib/customers/server/index.ts";
+import {
+	type SiteColumnsWhere,
+	type SiteDetail,
+	siteColumns,
+	siteColumnsWhere,
+} from "#lib/customers/server/index.ts";
 import { visible } from "#lib/server/access/index.ts";
 import { type Viewer, viewerAs } from "#lib/server/access/viewer.ts";
 import { type CustomerAccess, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
@@ -24,8 +29,12 @@ import {
 
 /** What an audience sees of a unit or location. */
 interface Policy {
-	/** Of a site, what's needed on it (contacts, time slot, access) or only its address. */
-	site: SiteDetail;
+	/**
+	 * Of a site, what's needed on it (contacts, time slot, access) or only its address; `"where"`:
+	 * what's needed only at the sites its scope's `sites` condition holds for (the engineer's: those
+	 * of their orders), else only the address.
+	 */
+	site: SiteDetail | "where";
 	/** Whose site it is (a contact knows: their own customer's). */
 	owner: boolean;
 	/** Until when each unit is under warranty. */
@@ -37,7 +46,9 @@ interface Policy {
 /** What each audience sees of the units and locations: the only place it's declared. */
 const audiences = {
 	office: { site: "onSite", owner: true, warranty: true, qrToken: true },
-	engineer: { site: "onSite", owner: true, warranty: false, qrToken: false },
+	engineer: { site: "where", owner: true, warranty: false, qrToken: false },
+	// An engineer's own order's units: their sites are the order's, so what's needed on them is theirs.
+	engineerAtOrder: { site: "onSite", owner: true, warranty: false, qrToken: false },
 	customer: { site: "address", owner: false, warranty: false, qrToken: false },
 } as const satisfies Record<string, Policy>;
 
@@ -53,7 +64,10 @@ export interface UnitScope<A extends UnitAudience> {
 	readonly audience: A;
 	/** Picks the units the audience sees, on `equipment`. */
 	readonly units: SQL;
-	/** Picks the sites the audience sees, on `customerSite`. */
+	/**
+	 * Picks the sites the audience sees, on `customerSite`: for the engineer, whose units and
+	 * locations are the tenant's, those of their orders, where they see what's needed on a site.
+	 */
 	readonly sites: SQL;
 	/** Picks the locations the audience sees, on `equipmentLocation`. */
 	readonly locations: SQL;
@@ -111,7 +125,9 @@ const ownColumns = {
 };
 
 /** The columns of a site as audience `A` sees it. */
-type SiteColumns<A extends UnitAudience> = (typeof siteColumns)[PolicyOf<A>["site"]] &
+type SiteColumns<A extends UnitAudience> = (PolicyOf<A>["site"] extends "where"
+	? SiteColumnsWhere
+	: (typeof siteColumns)[Extract<PolicyOf<A>["site"], SiteDetail>]) &
 	(PolicyOf<A>["owner"] extends true ? { customer: typeof ownerColumns } : {});
 
 /** The columns of a unit as audience `A` sees it, its site's among them. */
@@ -125,11 +141,15 @@ export type SiteOf<A extends UnitAudience> = SelectResultFields<SiteColumns<A>>;
 /** A unit as audience `A` sees it: a key its policy says no to isn't in the type. */
 export type UnitOf<A extends UnitAudience> = SelectResultFields<UnitColumns<A>>;
 
-/** The columns of a site as `audience` sees it, for a query joined by `withUnitDetails()`. */
-export function siteColumnsOf<A extends UnitAudience>(audience: A): SiteColumns<A> {
+/**
+ * The columns of a site as `audience` sees it, for a query joined by `withUnitDetails()`; `onSite`
+ * (on `customerSite`) is where an audience that sees what's needed on a site only in some (the
+ * engineer) does, its scope's `sites`.
+ */
+export function siteColumnsOf<A extends UnitAudience>(audience: A, onSite?: SQL): SiteColumns<A> {
 	const policy: Policy = audiences[audience];
 	return {
-		...siteColumns[policy.site],
+		...(policy.site === "where" ? siteColumnsWhere(onSite ?? sql`0`) : siteColumns[policy.site]),
 		...(policy.owner && { customer: ownerColumns }),
 	} as SiteColumns<A>;
 }
@@ -138,11 +158,11 @@ export function siteColumnsOf<A extends UnitAudience>(audience: A): SiteColumns<
  * The columns of a unit as `audience` sees it, for a query on `equipment` joined by
  * `withUnitDetails()`: its category, location and site (`listedUnitsOf()`'s `columns`, too).
  */
-export function unitColumns<A extends UnitAudience>(audience: A): UnitColumns<A> {
+export function unitColumns<A extends UnitAudience>(audience: A, onSite?: SQL): UnitColumns<A> {
 	const policy: Policy = audiences[audience];
 	return {
 		...ownColumns,
-		site: siteColumnsOf(audience),
+		site: siteColumnsOf(audience, onSite),
 		...(policy.warranty && { warrantyUntil: equipment.warrantyUntil }),
 	} as UnitColumns<A>;
 }
@@ -152,7 +172,7 @@ export function unitColumns<A extends UnitAudience>(audience: A): UnitColumns<A>
  * `listedUnitsOf(orderIds, seenBy(scope))` (`#lib/orders/server`).
  */
 export const seenBy = <A extends UnitAudience>(scope: UnitScope<A>) => ({
-	columns: unitColumns(scope.audience),
+	columns: unitColumns(scope.audience, scope.sites),
 	where: scope.units,
 });
 
@@ -173,7 +193,7 @@ export async function readUnits<A extends UnitAudience>(
 	where?: SQL,
 ): Promise<UnitOf<A>[]> {
 	const rows = await withUnitDetails(
-		db.select(unitColumns(scope.audience)).from(equipment).$dynamic(),
+		db.select(unitColumns(scope.audience, scope.sites)).from(equipment).$dynamic(),
 	)
 		.where(and(scope.units, where))
 		.orderBy(
@@ -219,7 +239,7 @@ export async function readLocation<A extends UnitAudience>(
 			name: equipmentLocation.name,
 			description: equipmentLocation.description,
 			// Typed as any audience's: the result is `LocationOf<A>`.
-			site: siteColumnsOf<UnitAudience>(scope.audience),
+			site: siteColumnsOf<UnitAudience>(scope.audience, scope.sites),
 			...(policy.qrToken && { qrToken: equipmentLocation.qrToken }),
 		})
 		.from(equipmentLocation)

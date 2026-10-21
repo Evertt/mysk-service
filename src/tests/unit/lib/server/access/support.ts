@@ -61,3 +61,24 @@ export const contactOf = async (actor: Actor) => {
 
 /** The customer the actor is a contact of. */
 export const customerIdOf = async (actor: Actor) => (await contactOf(actor)).customerId;
+
+/**
+ * The ids of the sites of engineer `engineerId`'s orders, by SQL of the spec's own (not the rule's):
+ * a site with a unit on one of their orders, or for an order without units the customer's only site.
+ */
+export async function sitesOfOrdersOf(engineerId: number) {
+	const withUnits = await rows<{ id: number }>(
+		`select distinct e.site_id as id from order_unit ou join "order" o on o.id = ou.order_id
+		 join equipment e on e.id = ou.equipment_id where o.engineer_id = ?`,
+		[engineerId],
+	);
+	const unitless = await rows<{ id: number }>(
+		`select distinct s.id from "order" o join customer_site s on s.customer_id = o.customer_id
+		 where o.engineer_id = ? and not exists (select 1 from order_unit u where u.order_id = o.id)
+		 and (select count(*) from customer_site x where x.customer_id = o.customer_id) = 1`,
+		[engineerId],
+	);
+	return [...new Set([...withUnits, ...unitless].map((row) => String(row.id)))].toSorted(
+		(a, b) => Number(a) - Number(b),
+	);
+}

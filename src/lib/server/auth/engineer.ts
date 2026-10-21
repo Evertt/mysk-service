@@ -12,14 +12,22 @@
  * the engineer takes them from the order it reached (`order.engineerId`).
  */
 import { error } from "@sveltejs/kit";
-import { and, eq, type SQL, sql } from "drizzle-orm";
+import { and, eq, ne, or, type SQL, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 
 import type { EngineerActivity } from "#lib/notifications/extensions.ts";
 import { db } from "#lib/server/db/index.ts";
 import { literal } from "#lib/server/db/parameters.ts";
-import { activity, engineer, order } from "#lib/server/db/schema.ts";
+import {
+	activity,
+	customerSite,
+	engineer,
+	equipment,
+	order,
+	orderUnit,
+} from "#lib/server/db/schema.ts";
 
-import { idInTenant, inTenant, requireEngineer } from "./session.ts";
+import { idInTenant, inTenant, requireEngineer, tenantJoin } from "./session.ts";
 
 /** How a request named an order: by id (a form's) or by number (the URL's). */
 export type OrderRef = { id: number } | { number: string };
@@ -38,6 +46,26 @@ export async function engineerOrders(): Promise<SQL> {
 export async function engineerSelf(): Promise<SQL> {
 	const { engineer: self } = await requireEngineer();
 	return idInTenant(engineer, self.id);
+}
+
+/**
+ * For a query on `customerSite`: the sites of the signed-in engineer's orders, which is where they
+ * see what's needed on a site (contacts, access notes). A site with a unit on one of their orders,
+ * or, for an order without units, its customer's only site: the sites the work record finds
+ * (`readWorkRecord()`). The units and locations stay the tenant's for every engineer (the QR pages).
+ */
+export async function engineerSites(): Promise<SQL> {
+	const mine = await engineerOrders();
+	const [, unitOfLink] = tenantJoin(equipment, orderUnit.equipmentId);
+	const otherSite = alias(customerSite, "other_site");
+	const withUnit = sql`exists (select 1 from ${orderUnit} inner join ${order} on ${eq(orderUnit.orderId, order.id)} inner join ${equipment} on ${unitOfLink} where ${and(eq(equipment.siteId, customerSite.id), inTenant(orderUnit), mine)})`;
+	const withoutUnits = sql`exists (select 1 from ${order} where ${and(
+		mine,
+		eq(order.customerId, customerSite.customerId),
+		sql`not exists (select 1 from ${orderUnit} where ${and(eq(orderUnit.orderId, order.id), inTenant(orderUnit))})`,
+		sql`not exists (select 1 from ${customerSite} ${sql.identifier("other_site")} where ${and(eq(otherSite.customerId, customerSite.customerId), ne(otherSite.id, customerSite.id), inTenant(otherSite))})`,
+	)})`;
+	return and(inTenant(customerSite), or(withUnit, withoutUnits))!;
 }
 
 /** The one order `ref` names, if it's one of `engineerOrders()`. */

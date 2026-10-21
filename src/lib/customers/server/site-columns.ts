@@ -4,6 +4,8 @@
  * come, how to get in). The work record (`readWorkRecord()`) and the unit reads (`readUnits()`)
  * select one of these, by their audience's policy.
  */
+import { type GetColumnData, type SQL, sql } from "drizzle-orm";
+
 import { customerSite } from "#lib/server/db/schema.ts";
 
 /** Where a site is. */
@@ -36,3 +38,25 @@ export const siteColumns = {
 
 /** How much of a site the reader sees. */
 export type SiteDetail = keyof typeof siteColumns;
+
+/** What `onSite` has besides the address. */
+type OnSiteOnly = Omit<typeof siteColumns.onSite, keyof typeof addressColumns>;
+
+/** A site's columns for a reader who sees what's needed on it only where a rule holds. */
+export type SiteColumnsWhere = typeof addressColumns & {
+	[K in keyof OnSiteOnly]: SQL<GetColumnData<OnSiteOnly[K], "query"> | null>;
+};
+
+/**
+ * A site's columns for a reader who sees what's needed on it only at the sites `where` holds for
+ * (a condition on `customerSite`, joined to the query): the address everywhere, the `onSite`
+ * columns there and null elsewhere.
+ */
+export function siteColumnsWhere(where: SQL): SiteColumnsWhere {
+	const only = Object.fromEntries(
+		Object.entries(siteColumns.onSite)
+			.filter(([key]) => !(key in addressColumns))
+			.map(([key, column]) => [key, sql`case when ${where} then ${column} end`.mapWith(column)]),
+	);
+	return { ...addressColumns, ...only } as SiteColumnsWhere;
+}

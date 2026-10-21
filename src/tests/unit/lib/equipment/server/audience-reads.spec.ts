@@ -18,6 +18,7 @@ import {
 } from "#lib/equipment/server/index.ts";
 import type { CustomerAccess } from "#lib/server/auth/index.ts";
 import { equipment } from "#lib/server/db/schema.ts";
+import { engineerIdOf, sitesOfOrdersOf } from "#unit/lib/server/access/support.ts";
 import { as, north, organizationId, rows } from "#unit/lib/server/harness/index.ts";
 
 const [northId, southId] = [organizationId("north"), organizationId("south")];
@@ -92,7 +93,25 @@ describe("the office", () => {
 });
 
 describe("a field engineer", () => {
-	test("sees the tenant's units and the sites' onSite columns, no warranty or QR token", async () => {
+	/** A unit at a site of one of Erik's orders, and one at a site that isn't. */
+	let there: Placed;
+	let elsewhere: Placed;
+
+	beforeAll(async () => {
+		const erik = await engineerIdOf(north.engineer);
+		const sites = (await sitesOfOrdersOf(erik)).map(Number);
+		const placed = await placedIn(northId);
+		there = placed.find((unit) => sites.includes(unit.siteId))!;
+		elsewhere = placed.find((unit) => !sites.includes(unit.siteId))!;
+		expect(there && elsewhere, "units at both kinds of site").toBeTruthy();
+		// What the engineer needs on a site, so that its absence is the rule's.
+		await rows(
+			`update customer_site set access_notes = 'Key safe 1234', contact_name = 'Gate keeper' where id in (?, ?)`,
+			[there.siteId, elsewhere.siteId],
+		);
+	});
+
+	test("sees the tenant's units, no warranty or QR token", async () => {
 		const [unit] = await as(north.engineer, async () =>
 			readUnits(await engineerUnits(), bySerial(mine.serial)),
 		);
@@ -100,7 +119,6 @@ describe("a field engineer", () => {
 		expect(unit).not.toHaveProperty("warrantyUntil");
 		// @ts-expect-error An engineer's units have no warranty.
 		void unit.warrantyUntil;
-		expect(unit.site).toHaveProperty("accessNotes");
 		expect(unit.site.customer.id).toBe(mine.customerId);
 		const read = await as(north.engineer, async () =>
 			readLocation(await engineerUnits(), mine.locationId),
@@ -111,6 +129,29 @@ describe("a field engineer", () => {
 				readLocation(await engineerUnits(), southern.locationId),
 			),
 		).toBe(undefined);
+	});
+
+	test("sees what's needed on a site only where they have an order, else its address", async () => {
+		const read = (placed: Placed) =>
+			as(north.engineer, async () =>
+				readUnits(await engineerUnits(), bySerial(placed.serial)),
+			).then(([unit]) => unit);
+		const onSite = await read(there);
+		expect(onSite.site).toMatchObject({ accessNotes: "Key safe 1234", contactName: "Gate keeper" });
+		const off = await read(elsewhere);
+		expect(off.site).toMatchObject({
+			id: elsewhere.siteId,
+			accessNotes: null,
+			contactName: null,
+			contactPhone: null,
+		});
+		expect(off.site.address).toBeTruthy();
+		// A location shows its site the same way.
+		const location = await as(north.engineer, async () =>
+			readLocation(await engineerUnits(), elsewhere.locationId),
+		);
+		expect(location?.location.site.accessNotes).toBeNull();
+		expect(location?.units.map((unit) => unit.id)).toContain(elsewhere.id);
 	});
 });
 

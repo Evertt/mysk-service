@@ -23,6 +23,7 @@ import {
 	customerSites,
 	engineerOrders,
 	engineerSelf,
+	engineerSites,
 	idInTenant,
 	inTenant,
 } from "#lib/server/auth/index.ts";
@@ -65,7 +66,7 @@ export const coreRules = {
 	}),
 	site: rows(customerSite, customerSite.id, {
 		office: true,
-		engineer: true,
+		engineer: () => engineerSites(),
 		customer: ({ access }) => customerSites(access),
 	}),
 	engineer: rows(engineer, engineer.id, { office: true, engineer: () => engineerSelf() }),

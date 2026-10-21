@@ -76,10 +76,9 @@ const infrastructure: Record<string, string> = {
 	"src/lib/server/activity/log.ts": "writes the entries (`recordActivity()`): no viewer reads here",
 	"src/lib/server/changes.ts": "the registry of changes the feeds and `recordChangedAt()` read",
 	"src/lib/server/activity/feed.ts": "`present()` shows entries its caller already chose",
-	"src/lib/server/notifications/notifications.ts": "the bell's tray: rules pick its entries",
 	"src/lib/server/notifications/rules.ts": "the rules that pick the bells' entries",
-	// Step 5 makes its `exists` from `visible("order")`.
-	"src/lib/server/auth/engineer.ts": "`engineerActivity()` is scoped to the engineer's orders",
+	"src/lib/server/auth/engineer.ts":
+		'`engineerActivity()` is scoped to the orders it is handed (`visible("order")`: it can\'t import the registry)',
 	"src/routes/(field)/my/portal.remote.ts":
 		"`watchFieldChanges` filters through `feedFor()` (`live.ts`), which asks the registry",
 	"src/modules/checklists/server/notifications.ts":

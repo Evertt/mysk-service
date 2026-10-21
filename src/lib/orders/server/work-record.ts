@@ -60,7 +60,7 @@ interface Policy {
 /** What each audience sees of an order's work record: the only place it's declared. */
 const audiences = {
 	office: { notes: true, collectedBy: true, engineer: "full", units: "office" },
-	engineer: { notes: true, collectedBy: false, engineer: "omit", units: "engineer" },
+	engineer: { notes: true, collectedBy: false, engineer: "omit", units: "engineerAtOrder" },
 	customer: { notes: false, collectedBy: false, engineer: "first", units: "customer" },
 	// Handed to the customer: their view of its units.
 	workOrder: { notes: false, collectedBy: false, engineer: "full", units: "customer" },
