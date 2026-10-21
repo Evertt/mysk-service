@@ -80,10 +80,6 @@ const infrastructure: Record<string, string> = {
 	"src/lib/server/notifications/rules.ts": "the rules that pick the bells' entries",
 	"src/lib/server/auth/engineer.ts":
 		'`engineerActivity()` is scoped to the orders it is handed (`visible("order")`: it can\'t import the registry)',
-	"src/routes/(field)/my/portal.remote.ts":
-		"`watchFieldChanges` filters through `feedFor()` (`live.ts`), which asks the registry",
-	"src/routes/(customer)/portal/client.remote.ts":
-		"`watchPortalChanges` filters through `feedFor()` (`live.ts`), which asks the registry",
 	"src/modules/checklists/server/notifications.ts":
 		"a notification rule: it picks entries of a fixed type for the bell",
 	"src/modules/condition/server/history.ts":
@@ -157,12 +153,8 @@ describe("record-generic code asks the registry", () => {
 				)
 			);
 		});
-		// `live.ts`, `changes.ts` and `feed.ts` define what the rule is about, not import it.
-		const defining = new Set([
-			"src/lib/server/live.ts",
-			"src/lib/server/changes.ts",
-			"src/lib/server/activity/feed.ts",
-		]);
+		// `changes.ts` and `feed.ts` define what the rule is about, not import it.
+		const defining = new Set(["src/lib/server/changes.ts", "src/lib/server/activity/feed.ts"]);
 		expect(stale.filter((path) => !defining.has(path))).toEqual([]);
 	});
 

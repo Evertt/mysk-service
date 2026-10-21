@@ -28,12 +28,8 @@ import {
 	requestOrder,
 } from "#lib/orders/server/index.ts";
 import { id, text } from "#lib/schema.ts";
-import {
-	currentCustomer,
-	type CustomerAccess,
-	customerOrders,
-	sameTenant,
-} from "#lib/server/auth/index.ts";
+import { visibleOrNone } from "#lib/server/access/index.ts";
+import { currentCustomer, type CustomerAccess, sameTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customerSite, equipment, order, orderRequest } from "#lib/server/db/schema.ts";
@@ -73,7 +69,7 @@ const selectOrders = () =>
 /** The customer's orders that `where` picks and the contact sees, newest first, with their units. */
 async function ordersWhere(access: CustomerAccess, where?: SQL, limit = 200) {
 	const rows = await selectOrders()
-		.where(and(customerOrders(access), where))
+		.where(and(await visibleOrNone("order"), where))
 		.orderBy(desc(order.createdAt), desc(order.id))
 		.limit(limit);
 	const units = await listedUnitsOf(

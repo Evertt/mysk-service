@@ -18,11 +18,11 @@ import {
 	transitionOrder,
 } from "#lib/orders/server/index.ts";
 import { id, laborHours, text } from "#lib/schema.ts";
+import { visibleOrNone } from "#lib/server/access/index.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import {
 	currentTenant,
 	engineerOrderNotFound,
-	engineerOrders,
 	idInTenant,
 	tenantJoin,
 } from "#lib/server/auth/index.ts";
@@ -49,7 +49,7 @@ const listColumns = {
 
 /** The engineer's open work (scheduled or under way), and what they completed recently. */
 export const getMyWork = forEngineers.query(async () => {
-	const mine = await engineerOrders();
+	const mine = await visibleOrNone("order");
 	const [open, recent] = await Promise.all([
 		db
 			.select(listColumns)
