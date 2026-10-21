@@ -16,6 +16,8 @@ import {
 	type NotificationRule,
 	notificationRules,
 } from "#lib/notifications/extensions.ts";
+import { visible } from "#lib/server/access/index.ts";
+import { viewerAs } from "#lib/server/access/viewer.ts";
 import { type ActivityEntry, present } from "#lib/server/activity/index.ts";
 import { currentTenant, engineerActivity, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -70,6 +72,11 @@ export interface Notifications {
 	): Promise<{ id: number; category: NotificationCategory }[]>;
 }
 
+/** The orders the signed-in engineer reads: the access registry's `order` rule for them. */
+async function theirOrders() {
+	return (await visible("order", "read", await viewerAs("engineer"))) ?? sql`0`;
+}
+
 /**
  * The signed-in user's notifications in the current tenant, of `audience`. Everything it needs from
  * the request (the tenant, the user, the modules, the rules' conditions) is read here, once, so a
@@ -81,7 +88,7 @@ export async function notificationsFor(audience: NotificationAudience): Promise<
 	const rules = rulesFor(audience, modules);
 	const context = {
 		userId: user.id,
-		engineer: audience === "engineer" ? await engineerActivity() : null,
+		engineer: audience === "engineer" ? await engineerActivity(await theirOrders()) : null,
 	};
 	const category = sql<NotificationCategory | null>`case ${sql.join(
 		rules.map((rule) => sql`when ${rule.where(context)} then ${literal(rule.category)}`),

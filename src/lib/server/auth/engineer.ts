@@ -60,19 +60,21 @@ export function engineerOrderNotFound(ref: OrderRef): never {
 /**
  * For the engineer's notifications (`#lib/server/notifications/`): conditions on an `activity`
  * entry about one of the tenant's orders that gave it to the signed-in engineer, took it off them,
- * or is about an order of theirs now. The entries record the engineer as `changes.engineerId`
+ * or is about an order of theirs now (`theirOrders`, a condition on `order`: the access registry's
+ * `visible("order")` for them, which this file can't import without a cycle). The entries record the engineer as `changes.engineerId`
  * (before, after): an assignment, a plan, the order form, a creation with an engineer and a
  * deletion of an assigned order all do.
  */
-export async function engineerActivity(): Promise<EngineerActivity> {
+export async function engineerActivity(theirOrders: SQL): Promise<EngineerActivity> {
 	const { engineer } = await requireEngineer();
 	const engineerWas = (side: 0 | 1) =>
 		sql`json_extract(${activity.changes}, ${sql.raw(`'$.engineerId[${side}]'`)}) = ${engineer.id}`;
 	const isOrder = sql`${activity.subjectType} = ${literal("order")}`;
+	// Their orders now: `theirOrders`.
 	const theirs = db
 		.select({ id: order.id })
 		.from(order)
-		.where(and(eq(order.id, sql`cast(${activity.subjectId} as integer)`), await engineerOrders()));
+		.where(and(eq(order.id, sql`cast(${activity.subjectId} as integer)`), theirOrders));
 	return {
 		assigned: sql`(${isOrder} and ${engineerWas(1)})`,
 		unassigned: sql`(${isOrder} and ${engineerWas(0)})`,
