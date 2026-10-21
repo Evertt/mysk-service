@@ -9,7 +9,7 @@ import { and, eq, type SQL, sql } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import { type AccessRule, partOf, tenantWide } from "#lib/server/access/rules.ts";
-import { engineerOrders, inTenant } from "#lib/server/auth/index.ts";
+import { engineerOrders, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { order, orderUnit } from "#lib/server/db/schema.ts";
 
 import type { conditionSubjects } from "../activity.ts";
@@ -17,10 +17,7 @@ import { component, unitCondition } from "./schema.ts";
 
 /** The unit `equipmentId` is on one of the signed-in engineer's orders. */
 const onTheirOrders = async (equipmentId: SQLiteColumn): Promise<SQL> =>
-	sql`exists (select 1 from ${orderUnit} inner join ${order} on ${and(
-		eq(order.id, orderUnit.orderId),
-		inTenant(order),
-	)} where ${and(eq(orderUnit.equipmentId, equipmentId), inTenant(orderUnit), await engineerOrders())})`;
+	sql`exists (select 1 from ${orderUnit} inner join ${order} on ${tenantJoin(order, orderUnit.orderId)[1]} where ${and(eq(orderUnit.equipmentId, equipmentId), inTenant(orderUnit), await engineerOrders())})`;
 
 export const conditionAccess = {
 	unitCondition: partOf("equipment", unitCondition, unitCondition.equipmentId, {
