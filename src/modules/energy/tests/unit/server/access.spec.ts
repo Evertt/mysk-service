@@ -8,14 +8,13 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { mayChange, mayRead } from "#lib/server/access/index.ts";
-import { readOneByOne } from "#unit/lib/server/access/support.ts";
+import { contactOf, customerIdOf, idsOf, readOneByOne } from "#unit/lib/server/access/support.ts";
 import {
 	as,
 	demoAccount,
 	north,
 	rows,
 	shltr,
-	value,
 	withoutModule,
 } from "#unit/lib/server/harness/index.ts";
 
@@ -23,13 +22,8 @@ const riedel = demoAccount("facilitair@riedel.example");
 const weggemans = demoAccount("rob@weggemans.example");
 
 /** The ids of `table`'s records in SHLTR, by `column`, as text; `where` is more SQL. */
-const ids = async (table: string, column = "id", where = "", args: (string | number)[] = []) =>
-	(
-		await rows<{ id: number | string }>(
-			`select ${column} as id from "${table}" where organization_id = 'org-shltr' ${where} order by 1`,
-			args,
-		)
-	).map((row) => String(row.id));
+const ids = (table: string, column = "id", where = "", args: (string | number)[] = []) =>
+	idsOf(table, "org-shltr", where, args, column);
 
 /** Energy types: the subject type, its table, and the column its subject id is. */
 const types = [
@@ -42,11 +36,7 @@ const types = [
 ] as const;
 
 /** Riedel's customer, and the energy site's id. */
-const customerId = () =>
-	value<number>(
-		`select c.customer_id from portal_contact c join "user" u on u.id = c.user_id where u.email = ?`,
-		[riedel.email],
-	);
+const customerId = () => customerIdOf(riedel);
 
 describe("the office", () => {
 	test("reads every record of its tenant, and another tenant's office none", async () => {
@@ -138,10 +128,7 @@ describe("a customer's contact", () => {
 			 values ('org-shltr', ?, 'Annex', 'Ede', 'NL') returning id`,
 			[mine],
 		);
-		const [contact] = await rows<{ id: number }>(
-			`select c.id from portal_contact c join "user" u on u.id = c.user_id where u.email = ?`,
-			[riedel.email],
-		);
+		const contact = await contactOf(riedel);
 		await rows(`update portal_contact set all_sites = 0 where id = ?`, [contact.id]);
 		await rows(
 			`insert into portal_contact_site (organization_id, contact_id, customer_id, site_id)

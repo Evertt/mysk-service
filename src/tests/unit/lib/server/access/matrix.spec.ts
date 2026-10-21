@@ -22,7 +22,15 @@ import {
 import type { Actor } from "#unit/lib/server/harness/actors.ts";
 import { as, asSystem, north, rows, south, value } from "#unit/lib/server/harness/index.ts";
 
-import { idsOf, keys, readOneByOne, subjects } from "./support.ts";
+import {
+	contactOf,
+	customerIdOf,
+	engineerIdOf,
+	idsOf,
+	keys,
+	readOneByOne,
+	subjects,
+} from "./support.ts";
 
 /** The tables of the core's subject types that have a row of their own, by type. */
 const tables = {
@@ -159,13 +167,7 @@ describe("saved views", () => {
 });
 
 describe("a field engineer", () => {
-	const engineerOf = async () => {
-		await as(north.engineer, () => null);
-		return value<number>(
-			`select e.id from engineer e join user u on u.id = e.user_id where u.email = ?`,
-			[north.engineer.email],
-		);
-	};
+	const engineerOf = () => engineerIdOf(north.engineer);
 
 	test("reads their own orders, in any status, and no one else's", async () => {
 		const me = String(await engineerOf());
@@ -214,13 +216,7 @@ describe("a field engineer", () => {
 });
 
 describe("a customer's contact", () => {
-	const customerOf = async () => {
-		await as(north.customer, () => null);
-		return value<number>(
-			`select c.customer_id from portal_contact c join user u on u.id = c.user_id where u.email = ?`,
-			[north.customer.email],
-		);
-	};
+	const customerOf = () => customerIdOf(north.customer);
 
 	test("reads their customer's orders, units, sites and locations, and no one else's", async () => {
 		const mine = await customerOf();
@@ -272,11 +268,7 @@ describe("a customer's contact", () => {
 	test("limited to some sites, reads only those sites' records", async () => {
 		// North's customer contact, moved to a customer with units at several sites.
 		const contactor = north.customer;
-		await as(contactor, () => null);
-		const [contact] = await rows<{ id: number }>(
-			`select c.id from portal_contact c join "user" u on u.id = c.user_id where u.email = ?`,
-			[contactor.email],
-		);
+		const contact = await contactOf(contactor);
 		const [multi] = await rows<{ customer_id: number }>(
 			`select customer_id from equipment where organization_id = 'org-north'
 			 group by customer_id having count(distinct site_id) > 1 order by customer_id limit 1`,

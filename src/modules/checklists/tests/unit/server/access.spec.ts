@@ -7,15 +7,13 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { mayChange, mayRead } from "#lib/server/access/index.ts";
-import { idsOf, readOneByOne } from "#unit/lib/server/access/support.ts";
 import {
-	as,
-	demoAccount,
-	north,
-	shltr,
-	value,
-	withoutModule,
-} from "#unit/lib/server/harness/index.ts";
+	customerIdOf,
+	engineerIdOf,
+	idsOf,
+	readOneByOne,
+} from "#unit/lib/server/access/support.ts";
+import { as, demoAccount, north, shltr, withoutModule } from "#unit/lib/server/harness/index.ts";
 
 const riedel = demoAccount("facilitair@riedel.example");
 
@@ -64,11 +62,7 @@ describe("the office", () => {
 
 describe("a field engineer", () => {
 	test("reads the checklists of their own orders, not another engineer's, and no templates", async () => {
-		await as(shltr.engineer, () => null);
-		const me = await value<number>(
-			`select e.id from engineer e join "user" u on u.id = e.user_id where u.email = ?`,
-			[shltr.engineer.email],
-		);
+		const me = await engineerIdOf(shltr.engineer);
 		const all = await idsOf("checklist", "org-shltr");
 		const mine = await idsOf(
 			"checklist",
@@ -90,11 +84,7 @@ describe("a field engineer", () => {
 
 describe("a customer's contact", () => {
 	test("reads the completed checklists of their customer's orders, no drafts, no one else's", async () => {
-		await as(riedel, () => null);
-		const customer = await value<number>(
-			`select c.customer_id from portal_contact c join "user" u on u.id = c.user_id where u.email = ?`,
-			[riedel.email],
-		);
+		const customer = await customerIdOf(riedel);
 		const all = await idsOf("checklist", "org-shltr");
 		const completed = await idsOf(
 			"checklist",

@@ -7,14 +7,13 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { mayChange, mayRead } from "#lib/server/access/index.ts";
-import { idsOf, readOneByOne } from "#unit/lib/server/access/support.ts";
+import { contactOf, customerIdOf, idsOf, readOneByOne } from "#unit/lib/server/access/support.ts";
 import {
 	as,
 	demoAccount,
 	north,
 	rows,
 	shltr,
-	value,
 	withoutModule,
 } from "#unit/lib/server/harness/index.ts";
 
@@ -81,10 +80,7 @@ describe("a customer's contact", () => {
 	});
 
 	test("reads their customer's shop orders, no one else's", async () => {
-		const customer = await value<number>(
-			`select c.customer_id from portal_contact c join "user" u on u.id = c.user_id where u.email = ?`,
-			[riedel.email],
-		);
+		const customer = await customerIdOf(riedel);
 		const all = await idsOf("shop_order", "org-shltr");
 		const mine = await idsOf("shop_order", "org-shltr", "and customer_id = ?", [customer]);
 		expect(mine.length).toBeGreaterThan(0);
@@ -96,23 +92,20 @@ describe("a customer's contact", () => {
 	});
 
 	test("limited to some sites, still reads their customer's shop orders", async () => {
-		const [contact] = await rows<{ id: number; customer_id: number }>(
-			`select c.id, c.customer_id from portal_contact c join "user" u on u.id = c.user_id where u.email = ?`,
-			[riedel.email],
-		);
+		const contact = await contactOf(riedel);
 		const [{ id: site }] = await rows<{ id: number }>(
 			`insert into customer_site (organization_id, customer_id, name, city, country)
 			 values ('org-shltr', ?, 'Annex', 'Ede', 'NL') returning id`,
-			[contact.customer_id],
+			[contact.customerId],
 		);
 		await rows(`update portal_contact set all_sites = 0 where id = ?`, [contact.id]);
 		await rows(
 			`insert into portal_contact_site (organization_id, contact_id, customer_id, site_id)
 			 values ('org-shltr', ?, ?, ?)`,
-			[contact.id, contact.customer_id, site],
+			[contact.id, contact.customerId, site],
 		);
 		const mine = await idsOf("shop_order", "org-shltr", "and customer_id = ?", [
-			contact.customer_id,
+			contact.customerId,
 		]);
 		expect(await readOneByOne(riedel, "shop_order", mine)).toEqual(mine);
 	});

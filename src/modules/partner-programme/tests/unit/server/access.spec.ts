@@ -9,16 +9,8 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { currentDay } from "#lib/dates.ts";
 import { mayChange, mayRead } from "#lib/server/access/index.ts";
-import { readOneByOne } from "#unit/lib/server/access/support.ts";
-import {
-	as,
-	demoAccount,
-	north,
-	rows,
-	shltr,
-	value,
-	withoutModule,
-} from "#unit/lib/server/harness/index.ts";
+import { customerIdOf, idsOf, readOneByOne } from "#unit/lib/server/access/support.ts";
+import { as, demoAccount, north, shltr, withoutModule } from "#unit/lib/server/harness/index.ts";
 
 const riedel = demoAccount("facilitair@riedel.example");
 const weggemans = demoAccount("rob@weggemans.example");
@@ -34,25 +26,15 @@ const types = [
 ] as const;
 
 /** The ids of `table`'s records in `organization`, by `column`, as text. */
-const ids = async (
+const ids = (
 	table: string,
 	column: string,
 	where = "",
 	args: (string | number)[] = [],
 	organization = "org-shltr",
-) =>
-	(
-		await rows<{ id: number | string }>(
-			`select ${column} as id from "${table}" where organization_id = ? ${where} order by 1`,
-			[organization, ...args],
-		)
-	).map((row) => String(row.id));
+) => idsOf(table, organization, where, args, column);
 
-const customerOf = (actor: { email: string }) =>
-	value<number>(
-		`select c.customer_id from portal_contact c join "user" u on u.id = c.user_id where u.email = ?`,
-		[actor.email],
-	);
+const customerOf = customerIdOf;
 
 describe("the office", () => {
 	test("reads the records of its tenant, and another tenant's office none", async () => {
