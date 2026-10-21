@@ -6,12 +6,7 @@
 import { and, count, desc, eq, gt, isNotNull, lt, max, or } from "drizzle-orm";
 import * as v from "valibot";
 
-import {
-	everyLoggedType,
-	subjectTypeLabel,
-	subjectTypes,
-	type TenantChange,
-} from "#lib/activity/index.ts";
+import { everyLoggedType, subjectTypeLabel, subjectTypes } from "#lib/activity/index.ts";
 import { isDay } from "#lib/dates.ts";
 import { intlLocale } from "#lib/i18n/index.ts";
 import { recordId } from "#lib/schema.ts";
@@ -23,7 +18,7 @@ import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { activity } from "#lib/server/db/schema.ts";
 import { inDays } from "#lib/server/lists/index.ts";
-import { liveFeed } from "#lib/server/live.ts";
+import { feedFor, liveFeed } from "#lib/server/live.ts";
 import { forAnyRole, forMembers } from "#lib/server/remote-functions.ts";
 
 /** Entries per page of the feed. */
@@ -190,21 +185,10 @@ export const getActivityFilters = forMembers.query(async () => {
  * Every change to the tenant's records, for the one live query an office tab shares
  * (`provideChangeFeed()`, `change-feed.svelte.ts`), which tells the components that watch a record
  * (`onRecordChange()`): one stream, whose key never changes, however many records the page shows
- * and however often it navigates. See `liveFeed()` for its answers.
+ * and however often it navigates. It tells what the member may read (`feedFor()`: not the records of
+ * a module that is off, nor a manager's types to another member); see `liveFeed()` for its answers.
  */
-export const watchTenantChanges = forMembers.query.live(() => {
-	const { user } = currentTenant();
-	return liveFeed(loggedTypes, (changes) =>
-		changes.map((change): TenantChange => ({
-			type: change.type,
-			id: change.id ?? null,
-			action: change.action ?? "updated",
-			name: change.user?.name ?? "",
-			mine: change.user?.id === user.id,
-			at: change.at,
-		})),
-	);
-});
+export const watchTenantChanges = forMembers.query.live(() => liveFeed(loggedTypes, feedFor()));
 
 /**
  * When a record of the tenant last changed (epoch ms, 0 if not since the server started), for a

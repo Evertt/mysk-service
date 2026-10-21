@@ -29,10 +29,9 @@ import {
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customer, order, orderNote } from "#lib/server/db/schema.ts";
-import { live, liveFeed } from "#lib/server/live.ts";
+import { feedFor, live, liveFeed } from "#lib/server/live.ts";
 import { forEngineers } from "#lib/server/remote-functions.ts";
 
-import { fieldChanges } from "./changes.server.ts";
 import { signature } from "./work.ts";
 
 /** The columns of an order in the lists. */
@@ -106,11 +105,11 @@ export const watchMyWork = forEngineers.query.live(() => live(portalTypes));
 /**
  * The changes to the engineer's own orders and to the tenant's units, for the one live query a
  * portal tab shares (`provideChangeFeed()` in its layout), which tells the cards that follow one
- * of them (`refreshOnRecordChange()`). See `fieldChanges()` for what it tells, `liveFeed()` for its
- * answers.
+ * of them (`refreshOnRecordChange()`). What it tells is what the engineer may read (`feedFor()`:
+ * their own orders and the units), without who made it; see `liveFeed()` for its answers.
  */
 export const watchFieldChanges = forEngineers.query.live(() =>
-	liveFeed(["order", "equipment"], fieldChanges),
+	liveFeed(["order", "equipment"], feedFor()),
 );
 
 /**
