@@ -1,8 +1,8 @@
 /**
  * The engineer portal's notifications (`#lib/server/notifications/`): the orders assigned or
  * planned to the engineer, moved, taken off them, or cancelled or deleted while theirs. The dot's
- * count is a plain query that the portal's live query has refresh (`watchMyWork`, which its pages
- * hold already: one stream per tab, as before).
+ * count is a plain query that the portal's feed of changes has refresh (`refreshOnActivity()` in the
+ * bell; one stream per tab).
  */
 import { and } from "drizzle-orm";
 

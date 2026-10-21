@@ -1,6 +1,6 @@
 /**
  * Keeps a page up to date with a live query that answers when its records last changed (`live()`
- * in `#lib/server/live.ts`, e.g. `watchPortal`): when the answer changes, the page looks again.
+ * in `#lib/server/live.ts`, e.g. `watchSchedule`): when the answer changes, the page looks again.
  */
 import { untrack } from "svelte";
 
@@ -10,7 +10,7 @@ type LiveAnswer = { readonly current: number | undefined };
 /**
  * Calls `refresh` when a live query's answer changes. Call it while a component initializes.
  *
- * - `watch` gives the live query (`watchPortal`), or none yet (`() => docked && watchDocks()`); a
+ * - `watch` gives the live query (`watchSchedule`), or none yet (`() => docked && watchDocks()`); a
  *   different one starts over. Each call of a live query gives a new handle, which counts as a
  *   different one: so the getter reads only what decides whether there is one (`docked`, a
  *   `$derived` boolean), never a value that changes with every answer (the dock itself).

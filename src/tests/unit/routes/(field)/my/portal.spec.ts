@@ -273,6 +273,31 @@ describe("the portal's feed of changes", () => {
 		});
 	});
 
+	test("tells of the customers, and of the sites of their orders only", async () => {
+		const sites = (await sitesOfOrdersOf(mine)).map(Number);
+		const all = await rows<{ id: number }>(
+			`select id from customer_site where organization_id = ? order by id`,
+			[northId],
+		);
+		const elsewhere = all.find((site) => !sites.includes(site.id))!;
+		const [customer] = await rows<{ id: number }>(
+			`select id from customer where organization_id = ? limit 1`,
+			[northId],
+		);
+		expect(sites.length).toBeGreaterThan(0);
+		const told = await as(erik, () =>
+			feedFor()([
+				change("customer", customer.id),
+				change("site", sites[0]),
+				change("site", elsewhere.id),
+			]),
+		);
+		expect(told.map((heard) => `${heard.type}/${heard.id}`)).toEqual([
+			`customer/${customer.id}`,
+			`site/${sites[0]}`,
+		]);
+	});
+
 	test("tells that a change is their own, and a deletion as one", async () => {
 		const [user] = await rows<{ id: string }>(`select id from user where email = ?`, [erik.email]);
 		const told = await as(erik, () =>

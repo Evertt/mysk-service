@@ -1,7 +1,7 @@
 /**
  * A tab's one feed of the tenant's changes, for the components that follow a record:
  * `provideChangeFeed()` in a shell's layout opens it (the office's `watchTenantChanges`, the
- * engineer portal's `watchFieldChanges`), and
+ * engineer portal's `watchFieldChanges`, the customer portal's `watchPortalChanges`), and
  * `onRecordChange()` / `refreshOnRecordChange()` subscribe a component to a record for as long as
  * it's mounted (`onAnyChange()` to all of them). See `change-feed.ts` for why one feed.
  */
@@ -43,7 +43,7 @@ export function provideChangeFeed(watch: () => { readonly current: TenantChanges
 /**
  * Calls `listener` on each change to the record `subject` gives (none: no record yet), while the
  * component is mounted (see `ChangeFeed.subscribe()` for `readTime`). Call it while a component
- * initializes, inside a shell with a feed (the office, the engineer portal). `listener` runs
+ * initializes, inside a shell with a feed (every shell has one). `listener` runs
  * untracked.
  */
 export function onRecordChange(

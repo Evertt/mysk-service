@@ -2,17 +2,16 @@
 	@component
 	The engineer portal's bell: orders assigned or planned to the engineer, moved, taken off them, or
 	cancelled or deleted while theirs. Its dot is a query the portal's live query refreshes
-	(`watchMyWork`, which the portal's pages hold already: the same stream), and each entry links to
+	(the portal's one feed of changes, `refreshOnActivity()`), and each entry links to
 	its order's page in the portal while the order is theirs.
 -->
 <script lang="ts">
 	import { browser } from "$app/env";
 	import { resolve } from "$app/paths";
 
+	import { refreshOnActivity } from "#lib/components/activity/live-activity.svelte.ts";
 	import NotificationBell from "#lib/components/notifications/notification-bell.svelte";
-	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 
-	import { watchMyWork } from "./my/portal.remote.ts";
 	import {
 		getMyNotifications,
 		getMyUnreadNotifications,
@@ -20,7 +19,7 @@
 	} from "./notifications.remote.ts";
 
 	const unread = getMyUnreadNotifications();
-	refreshOnChange(watchMyWork, () => unread.refresh());
+	refreshOnActivity(() => unread.refresh());
 
 	/** The tray, read afresh. */
 	async function load() {

@@ -570,7 +570,7 @@ agreed by the owner.
 Status of 22 October 2026. Steps 1 to 6 are built on the branch `permissions-access-registry`
 (from `permissions-design`). Steps 1 and 2 were reviewed and the review's findings fixed; steps 3 to 6
 were built by parallel sessions and merged, not yet reviewed (nor run in e2e). Step 7 (docs and the
-customer portal's feed) is not started. The log's readers, `getRecordChangedAt`, the feeds, the portals'
+portals' feeds) is built, on `access-step-7-docs-and-portal-feeds`, its e2e not run. The log's readers, `getRecordChangedAt`, the feeds, the portals'
 work-record and unit scopes, the QR codes, the tray and the saved views ask the registry.
 
 **Built**
@@ -594,7 +594,7 @@ work-record and unit scopes, the QR codes, the tray and the saved views ask the 
 - Step 4: `feedFor(viewer)` and the `hears` table in `src/lib/server/live.ts` present each shell's feed
   (`readable()` filters a burst; the office hears the name and the full action, an engineer or customer
   neither). `watchTenantChanges` and `watchFieldChanges` use it; `src/routes/(field)/my/changes.server.ts`
-  is deleted. `watchSchedule`, `watchPortal` and `watchMyWork` are untouched.
+  is deleted. `watchSchedule` is untouched.
 
 **Decisions made while building** (beyond the owner's answers above)
 
@@ -672,12 +672,27 @@ work-record and unit scopes, the QR codes, the tray and the saved views ask the 
     when engineers get a log, re-key the subject to a composite id; the registry shouldn't judge parts by a
     parent the feed doesn't carry.
 
+21. **Step 7: both portals' pages are on their shell's feed.** `watchPortal` and `watchMyWork` are gone.
+    `watchPortalChanges` (`forCustomers`, `liveFeed(["order", "customer", "site", "equipment",
+"location"], feedFor())`) is the customer portal's, opened in `(customer)/+layout.svelte`; the
+    engineer's `watchFieldChanges` now carries `order`, `customer`, `site` and `equipment` (it had the
+    first and last). Record pages follow their record with `refreshOnRecordChange()` (the order
+    page: the order and its customer; the customer portal's order and unit pages: the order or
+    unit). What isn't keyed by an id on the page (a list, a bell, the units and sites an order
+    shows, a unit's orders) uses the type-level subscription: `refreshOnActivity(refresh, { types })`
+    (`live-activity.svelte.ts` gained the `types` option and takes `{ delay, types }`), one refresh
+    for a burst. The engineer's list and bell refresh on any change they hear, `ACCESS_REVOKED`
+    included, so an order taken from them leaves their list at once.
+22. **The engineer's order page** refreshes on its order through `refreshOnRecordChange()`, which skips
+    `ACCESS_REVOKED`, and on any `equipment`/`site` change through `onAnyChange()`, which stops once
+    the notice has come (`revoked`), so nothing refreshes it into a 404 before the notice's toast and
+    `goto("/my")`.
+23. **Known loss against the old timestamps:** the deletion of an order is not told to an engineer or a
+    contact (decision 14), so a list or bell learns of it at the next change they hear, not at once.
+    Before, any change of the type refreshed them.
+
 **Open / for the steps to come**
 
-- Step 7: the kit entry, `modules.md` (the `access.rules` point), `tenancy.md` (the registry) and
-  `AGENTS.md`; the customer portal's feed (`watchPortalChanges`) and the engineer portal's
-  `watchMyWork` pages moved onto `refreshOnRecordChange()` (which also removes the race between the
-  order page's refresh and decision 16's notice).
 - Not switched on (guard rules 1 to 6 are all in `access.spec.ts`, but a few files are on their
   allow-lists with a reason each: read those when touching them).
 - The settings page's team card lists customers' contacts to managers (`getOrganizationSettings` has no

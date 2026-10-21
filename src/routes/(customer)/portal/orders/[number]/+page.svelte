@@ -13,16 +13,17 @@
 	import CircleXIcon from "@lucide/svelte/icons/circle-x";
 
 	import { order as orderParts } from "#lib/client/extensions.ts";
+	import { refreshOnRecordChange } from "#lib/components/activity/change-feed.svelte.ts";
+	import { refreshOnActivity } from "#lib/components/activity/live-activity.svelte.ts";
 	import Callout from "#lib/components/callout.svelte";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
-	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatDate, formatDateTime, label } from "#lib/i18n/index.ts";
 	import { SignOff, WorkUnits } from "#lib/orders/components.ts";
 
 	import { clientStatus, clientStatusDisplay } from "../../client-status.ts";
-	import { getPortalOrder, watchPortal } from "../../client.remote.ts";
+	import { getPortalOrder } from "../../client.remote.ts";
 	import type { PageProps } from "./$types";
 
 	let { params }: PageProps = $props();
@@ -33,7 +34,15 @@
 	// Just reported from the form.
 	const reported = $derived(page.url.searchParams.has("reported"));
 
-	refreshOnChange(watchPortal, () => getPortalOrder(params.number).refresh());
+	// Live: the order itself, and the units and sites it shows (not keyed to the page: any change
+	// of one the contact may read).
+	refreshOnRecordChange(
+		() => ({ type: "order", id: order.id }),
+		() => getPortalOrder(params.number).refresh(),
+	);
+	refreshOnActivity(() => getPortalOrder(params.number).refresh(), {
+		types: ["equipment", "site", "location"],
+	});
 </script>
 
 <svelte:head>

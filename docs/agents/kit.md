@@ -179,8 +179,19 @@ A portal's own select of them is refused (`hand-written.spec.ts`).
 
 A page or card that shows one record stays live by it through its shell's one feed of changes:
 `refreshOnRecordChange(() => ({ type, id }), () => getX(key).refresh())`
-(`#lib/components/activity/change-feed.svelte.ts`). This works in the office and the engineer
-portal. A part is logged with its record as its parent, so its changes count too.
+(`#lib/components/activity/change-feed.svelte.ts`). This works in every shell: the office, the
+engineer portal and the customer portal each have one (`provideChangeFeed()` in the layout), and
+they tell a viewer only the records `#lib/server/access` lets them read ("Permissions"). A part is
+logged with its record as its parent, so its changes count too.
+
+A list, a bell or a page that shows records it doesn't key by id refreshes with
+`refreshOnActivity(() => getX().refresh(), { types })` (`live-activity.svelte.ts`: any change the
+feed tells, of those `types` if given, one refresh for a burst). A page of an order that can be
+taken off the viewer (the engineer's) leaves on `ACCESS_REVOKED` (`onRecordChange()`), which
+`refreshOnRecordChange()` skips, so nothing refreshes it into a 404 first.
+
+The only live queries left outside a shell's feed are those of a whole type for a module's own
+page (`watchSchedule`, `watchEnergy`, `watchDocks`); a portal page never uses `live()` directly.
 
 There is no live query per record: SvelteKit keeps its stream open until the browser collects it
 (`docs/upstream-bugs/README.md`, 14). So:

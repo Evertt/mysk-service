@@ -1,18 +1,19 @@
 <script lang="ts">
 	import CalendarCheckIcon from "@lucide/svelte/icons/calendar-check";
 
-	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
+	import { refreshOnActivity } from "#lib/components/activity/live-activity.svelte.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
 
-	import { getMyWork, watchMyWork } from "./portal.remote.ts";
+	import { getMyWork } from "./portal.remote.ts";
 	import WorkCard from "./work-card.svelte";
 	import { groupByDay } from "./work.ts";
 
 	const work = $derived(await getMyWork());
 	const days = $derived(groupByDay(work.open));
 
-	// Live: the office assigning, rescheduling or cancelling an order shows without a reload.
-	refreshOnChange(watchMyWork, () => getMyWork().refresh());
+	// Live: the office assigning, rescheduling or cancelling an order shows without a reload, also
+	// one taken off the engineer (the feed tells them once).
+	refreshOnActivity(() => getMyWork().refresh());
 </script>
 
 <svelte:head>

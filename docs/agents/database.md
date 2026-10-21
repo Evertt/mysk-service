@@ -107,12 +107,13 @@ every request inside one Durable Object, `AppDatabase`, whose SQLite is the app'
   (`src/lib/server/live.ts`), which watches before the first answer, stops when the request ends
   and answers later changes inside the Cloudflare request:
   - `live(types)` answers when the tenant's records of those types last changed (the schedule's
-    `watchSchedule`, the portals' `watchMyWork` and `watchPortal`);
+    `watchSchedule`);
   - `live(watched, answer)` answers what `answer` makes of nothing first (`null`: a check that
     refuses goes there), then of each change, to records of some types or to one record, with who
     changed it (`getSimulation`);
   - `liveFeed(types, present)` answers every change to the tenant's records, for a shell's one
-    feed (the office's `watchTenantChanges`, the engineer portal's `watchFieldChanges`), which a
+    feed (the office's `watchTenantChanges`, the engineer portal's `watchFieldChanges`, the customer
+    portal's `watchPortalChanges`), which a
     record's cards and `<ChangedElsewhere>` follow with `refreshOnRecordChange()` /
     `onRecordChange()` (`#lib/components/activity/change-feed.svelte.ts`): no live query per record.
 

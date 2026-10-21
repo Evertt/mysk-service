@@ -37,7 +37,7 @@ import {
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customerSite, equipment, order, orderRequest } from "#lib/server/db/schema.ts";
-import { live } from "#lib/server/live.ts";
+import { feedFor, liveFeed } from "#lib/server/live.ts";
 import { orNotFound } from "#lib/server/records.ts";
 import { forCustomers } from "#lib/server/remote-functions.ts";
 
@@ -223,13 +223,14 @@ export const reportBreakdown = forCustomers.form(
 
 // --- Live ----------------------------------------------------------------------------------
 
-/** The records the portal shows: a change to any of them may outdate it. */
-const portalTypes = ["order", "customer", "site", "equipment", "location"] as const;
-
 /**
- * When the records the portal shows last changed (epoch ms, 0 if not since the server started),
- * sent again on each change, so an open portal shows a planner accepting, rejecting or planning
- * an order without a reload. Any change of those types in the tenant: it says only that something
- * changed, and the queries it has the portal refresh are gated and scoped again.
+ * The changes to what the portal shows, for the one live query a portal tab shares
+ * (`provideChangeFeed()` in its layout), which tells the pages and cards that follow a record
+ * (`refreshOnRecordChange()`, the lists `refreshOnActivity()`) when a planner accepts, rejects or
+ * plans an order, or a unit moves. What it tells is what the contact may read (`feedFor()`: their
+ * customer's records, at their sites if limited to some), without who made it; see `liveFeed()`
+ * for its answers.
  */
-export const watchPortal = forCustomers.query.live(() => live(portalTypes));
+export const watchPortalChanges = forCustomers.query.live(() =>
+	liveFeed(["order", "customer", "site", "equipment", "location"], feedFor()),
+);

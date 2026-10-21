@@ -82,6 +82,8 @@ const infrastructure: Record<string, string> = {
 		'`engineerActivity()` is scoped to the orders it is handed (`visible("order")`: it can\'t import the registry)',
 	"src/routes/(field)/my/portal.remote.ts":
 		"`watchFieldChanges` filters through `feedFor()` (`live.ts`), which asks the registry",
+	"src/routes/(customer)/portal/client.remote.ts":
+		"`watchPortalChanges` filters through `feedFor()` (`live.ts`), which asks the registry",
 	"src/modules/checklists/server/notifications.ts":
 		"a notification rule: it picks entries of a fixed type for the bell",
 	"src/modules/condition/server/history.ts":

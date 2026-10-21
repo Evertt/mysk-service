@@ -350,8 +350,8 @@ Already reported: the `$effect.pending()` leak, https://github.com/sveltejs/svel
   portal's `watchFieldChanges`, keys that never change), and components subscribe to their record
   in it for as long as they're mounted (`src/lib/components/activity/change-feed.ts`).
   `orders.live.test.ts` checks that going from record to record opens no stream. The live queries
-  of a whole type (`watchSchedule`, `watchEnergy`, `watchDocks`, the portals' `watchMyWork` and
-  `watchPortal`; the activity log's pages follow the office's feed, `onAnyChange()`)
+  of a whole type (`watchSchedule`, `watchEnergy`, `watchDocks`; the activity log's pages follow the office's feed,
+  `onAnyChange()`, the portals' pages their shell's)
   still stay open after their page until a collection, one each at most.
 - **Expected / possible fix:** a live query's connection follows the effects that read it: when
   the last one is destroyed, interrupt the connection (after a tick, so a navigation that reads it

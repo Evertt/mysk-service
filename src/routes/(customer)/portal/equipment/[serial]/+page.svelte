@@ -8,12 +8,13 @@
 	import SirenIcon from "@lucide/svelte/icons/siren";
 
 	import { unit as unitParts } from "#lib/client/extensions.ts";
+	import { refreshOnRecordChange } from "#lib/components/activity/change-feed.svelte.ts";
+	import { refreshOnActivity } from "#lib/components/activity/live-activity.svelte.ts";
 	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { unitLine, unitTitle, equipmentStatusDisplay } from "#lib/equipment/index.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
-	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 
-	import { getPortalUnit, watchPortal } from "../../client.remote.ts";
+	import { getPortalUnit } from "../../client.remote.ts";
 	import OrderList from "../../order-list.svelte";
 	import type { PageProps } from "./$types";
 
@@ -22,7 +23,14 @@
 	const data = $derived(await getPortalUnit(params.serial));
 	const unit = $derived(data.unit);
 
-	refreshOnChange(watchPortal, () => getPortalUnit(params.serial).refresh());
+	// Live: the unit, and its service history (the orders at it) and place.
+	refreshOnRecordChange(
+		() => ({ type: "equipment", id: unit.id }),
+		() => getPortalUnit(params.serial).refresh(),
+	);
+	refreshOnActivity(() => getPortalUnit(params.serial).refresh(), {
+		types: ["order", "site", "location"],
+	});
 </script>
 
 <svelte:head>
