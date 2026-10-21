@@ -84,28 +84,78 @@ const infrastructure: Record<string, string> = {
 		"a notification rule: it picks entries of a fixed type for the bell",
 	"src/modules/condition/server/history.ts":
 		"the unit history reads entries of three fixed types, of orders its caller read",
+	"src/modules/docks/docks.remote.ts":
+		"`watchDocks` answers when the dock types last changed, behind the office's gate: no record is named",
+	"src/modules/energy/energy.remote.ts":
+		"`watchEnergy` answers when the energy types last changed, behind the module's gate: no record is named",
+	"src/modules/schedule/schedule.remote.ts":
+		"`watchSchedule` answers when the board's types last changed, behind the office's gate (its permission work is open: `docs/plans/permissions.md`)",
+	"src/routes/(app)/shell.remote.ts":
+		"`watchShell` answers the office's own counts (awaiting orders, the bell's dot), each read through its own gated query",
+	"src/lib/components/simulation/simulation.remote.ts":
+		"`getSimulation` answers the module's simulation of the tenant, for a member, on the `simulation` type's change",
 	"src/modules/docks/board/board.remote.ts":
 		"the dock board reads the `dock` entries of its own module's records, for the office",
 };
 
-/** The source without its comments. */
-const code = (source: string) =>
-	source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+/**
+ * The source without its comments, found as a scanner does: a `/*` or `//` inside a string
+ * (`"**\/*.ts"`, a URL) starts none, and a string's text stays for the checks that look at it.
+ */
+function code(source: string) {
+	let out = "";
+	let i = 0;
+	while (i < source.length) {
+		const c = source[i];
+		if (c === "/" && source[i + 1] === "/") {
+			while (i < source.length && source[i] !== "\n") i++;
+		} else if (c === "/" && source[i + 1] === "*") {
+			const end = source.indexOf("*/", i + 2);
+			i = end < 0 ? source.length : end + 2;
+			out += " ";
+		} else if (c === '"' || c === "'" || c === "`") {
+			// A quoted string ends at its quote or the line (markup's apostrophes); a template at its quote.
+			const start = i++;
+			while (i < source.length && source[i] !== c && (c === "`" || source[i] !== "\n")) {
+				if (source[i] === "\\") i++;
+				i++;
+			}
+			i++;
+			out += source.slice(start, i);
+		} else {
+			out += c;
+			i++;
+		}
+	}
+	return out;
+}
 
-/** Whether the file imports `name` (not merely uses or declares it). */
-const imports = (text: string, name: string) =>
-	new RegExp(`import\\s+(?:type\\s+)?\\{[^}]*\\b${name}\\b[^}]*\\}\\s*from`).test(text);
+/** Whether the file imports `name` (not merely uses or declares it), from a module matching `from`. */
+const imports = (text: string, name: string, from = String.raw`["']`) =>
+	new RegExp(`import\\s+(?:type\\s+)?\\{[^}]*\\b${name}\\b[^}]*\\}\\s*from\\s*${from}`).test(text);
+
+/** A module of the feeds: `live.ts` or `changes.ts`. */
+const feedModule = String.raw`["'][^"']*\/(?:live|changes)\.ts["']`;
+
+/** What makes a file record-generic (reads the log or the changes), if it does. */
+function recordGeneric(text: string) {
+	return (
+		["recordChangedAt", "liveFeed", "watchEvery", "activity"].find((name) => imports(text, name)) ??
+		["live", "watchChanges", "watchSubject"].find((name) => imports(text, name, feedModule)) ??
+		(new RegExp(String.raw`import\s+\*\s+as\s+\w+\s+from\s*${feedModule}`).test(text)
+			? "import * from the feeds"
+			: undefined) ??
+		(/\b(?:db|tx)\.query\.activity\b/.test(text) ? "db.query.activity" : undefined) ??
+		(/\bv\.picklist\(\s*loggedTypes\s*\)/.test(text) ? "v.picklist(loggedTypes)" : undefined)
+	);
+}
 
 /** What breaks rules 2 and 3 in `files`, as `path: what`. */
 function breaches(files: readonly SourceFile[]) {
 	return files.flatMap(({ path, source }) => {
 		const text = code(source);
 		const found: string[] = [];
-		const generic =
-			["recordChangedAt", "liveFeed", "watchEvery", "activity"].find((name) =>
-				imports(text, name),
-			) ??
-			(/\bv\.picklist\(\s*loggedTypes\s*\)/.test(text) ? "v.picklist(loggedTypes)" : undefined);
+		const generic = recordGeneric(text);
 		const asks = /from\s+["']#lib\/server\/access\/index\.ts["']/.test(text);
 		if (generic && !asks && !Object.hasOwn(infrastructure, path)) {
 			found.push(`${generic} without #lib/server/access`);
@@ -148,9 +198,7 @@ describe("record-generic code asks the registry", () => {
 			return (
 				text === undefined ||
 				/from\s+["']#lib\/server\/access\/index\.ts["']/.test(text) ||
-				!["recordChangedAt", "liveFeed", "watchEvery", "activity"].some((name) =>
-					imports(text, name),
-				)
+				recordGeneric(text) === undefined
 			);
 		});
 		// `changes.ts` and `feed.ts` define what the rule is about, not import it.
@@ -181,6 +229,51 @@ describe("record-generic code asks the registry", () => {
 			`${changed.path}: recordChangedAt without #lib/server/access`,
 			`${feed.path}: liveFeed without #lib/server/access`,
 			`${picked.path}: v.picklist(loggedTypes) without #lib/server/access`,
+		]);
+	});
+
+	test("finds the other ways to reach the log, the changes and the feeds", () => {
+		const query = {
+			path: "src/lib/widgets/q.remote.ts",
+			source: `const rows = await db.query.activity.findMany({});`,
+		};
+		const namespace = {
+			path: "src/lib/widgets/ns.remote.ts",
+			source: `import * as changes from "#lib/server/changes.ts";`,
+		};
+		const live = {
+			path: "src/modules/widgets/live.remote.ts",
+			source: `import { live } from "#lib/server/live.ts";`,
+		};
+		const watching = {
+			path: "src/modules/widgets/watch.remote.ts",
+			source: `import { watchChanges, watchSubject } from "./../../lib/server/changes.ts";`,
+		};
+		// A name from elsewhere is not the feeds'.
+		const other = {
+			path: "src/lib/widgets/other.ts",
+			source: `import { live } from "#lib/widgets/streams.ts";`,
+		};
+		expect(breaches([query, namespace, live, watching, other])).toEqual([
+			`${query.path}: db.query.activity without #lib/server/access`,
+			`${namespace.path}: import * from the feeds without #lib/server/access`,
+			`${live.path}: live without #lib/server/access`,
+			`${watching.path}: watchChanges without #lib/server/access`,
+		]);
+	});
+
+	test("takes a comment's start inside a string for none, and still finds what follows", () => {
+		const glob = {
+			path: "src/lib/widgets/glob.remote.ts",
+			source: `const files = import.meta.glob("**/*.ts");
+				import { recordChangedAt } from "#lib/server/changes.ts";`,
+		};
+		const trailing = {
+			path: "src/lib/widgets/trailing.ts",
+			source: `const a = 1; // import { liveFeed } from "#lib/server/live.ts";`,
+		};
+		expect(breaches([glob, trailing])).toEqual([
+			`${glob.path}: recordChangedAt without #lib/server/access`,
 		]);
 	});
 
@@ -237,6 +330,10 @@ const roleComparison = new RegExp(
 		`[!=]==?\\s*["'](?:owner|admin)["']`,
 		`["'](?:owner|admin)["']\\s*[!=]==?`,
 		`\\.includes\\(\\s*["'](?:owner|admin)["']\\s*\\)`,
+		`\\.indexOf\\(\\s*["'](?:owner|admin)["']`,
+		`\\bcase\\s+["'](?:owner|admin)["']\\s*:`,
+		`\\[\\s*["']owner["']\\s*,\\s*["']admin["']\\s*\\]\\.includes\\(`,
+		`\\[\\s*["']admin["']\\s*,\\s*["']owner["']\\s*\\]\\.includes\\(`,
 	].join("|"),
 );
 
@@ -287,6 +384,26 @@ describe("managers by one function", () => {
 		]);
 	});
 
+	test("finds a switch on a role, a list asked for the role, and an index of it", () => {
+		const switched = {
+			path: "src/lib/widgets/switch.ts",
+			source: `switch (role) { case "owner": return 1; }`,
+		};
+		const listed = {
+			path: "src/lib/widgets/list.ts",
+			source: `if (["owner", "admin"].includes(role)) return;`,
+		};
+		const indexed = {
+			path: "src/lib/widgets/index.ts",
+			source: `if (roles.indexOf("owner") >= 0) return;`,
+		};
+		expect(roleBreaches([switched, listed, indexed])).toEqual([
+			`${switched.path}: case "owner":`,
+			`${listed.path}: ["owner", "admin"].includes(`,
+			`${indexed.path}: .indexOf("owner"`,
+		]);
+	});
+
 	test("lets through the roles' own files, comments, labels and the seed's assignments", () => {
 		expect(
 			roleBreaches([
@@ -325,14 +442,33 @@ describe("managers by one function", () => {
  * The tenant-only scopings in portal-gated files that may stay, as `path: fn(table, …)`, and why
  * each does. Not a place to add a read: a read that picks records for the viewer asks the registry.
  */
-const tenantOnly: Record<string, string> = {
-	"src/routes/(field)/my/portal.remote.ts: idInTenant(order, …)":
-		"writes the order it found through the engineer's scope (`idInTenant(order, found.id)`)",
-	"src/modules/materials/portal/field-materials.remote.ts: inTenant(orderLine, …)":
-		"the lines of the order it found through the engineer's scope; the `order_line` rule is the office's only (access.ts there), so it can't be asked for them",
-	"src/modules/parts-shop/suggestions/suggested-parts.remote.ts: idInTenant(shopProduct, …)":
-		"the office's `addSuggestedPart` in a file that also holds the customer's `getClientSuggestedParts` (which reads the catalogue, as the `shop_product` rule has it)",
+const tenantOnly: Record<string, { times: number; why: string }> = {
+	"src/routes/(field)/my/portal.remote.ts: idInTenant(order, …)": {
+		times: 1,
+		why: "writes the order it found through the engineer's scope (`idInTenant(order, found.id)`)",
+	},
+	"src/modules/materials/portal/field-materials.remote.ts: inTenant(orderLine, …)": {
+		times: 1,
+		why: "the lines of the order it found through the engineer's scope; the `order_line` rule is the office's only (access.ts there), so it can't be asked for them",
+	},
+	"src/modules/parts-shop/suggestions/suggested-parts.remote.ts: idInTenant(shopProduct, …)": {
+		times: 1,
+		why: "the office's `addSuggestedPart` in a file that also holds the customer's `getClientSuggestedParts` (which reads the catalogue, as the `shop_product` rule has it)",
+	},
 };
+
+/**
+ * The scopings of `found` (each occurrence, from `portalBreaches()`) beyond the list's: a listed
+ * `path: fn(table, …)` allows its `times` occurrences, so a second one in the same file is refused.
+ */
+function beyondTenantOnly(found: readonly string[]) {
+	const seen = new Map<string, number>();
+	return found.filter((breach) => {
+		const n = (seen.get(breach) ?? 0) + 1;
+		seen.set(breach, n);
+		return n > (tenantOnly[breach]?.times ?? 0);
+	});
+}
 
 /** The table names of the rules, as the variables that name them in source (`customer_site` → `customerSite`). */
 async function ruledTables() {
@@ -367,15 +503,14 @@ const portalFile = (path: string, text: string) =>
 /** What breaks rule 4 in `files` for the tables `ruled`, as `path: fn(table, …)`. */
 function portalBreaches(files: readonly SourceFile[], ruled: readonly string[]) {
 	const scoping = new RegExp(
-		`\\b(inTenant|idInTenant|idsInTenant)\\(\\s*(${ruled.join("|")})\\b`,
+		`\\b(inTenant|idInTenant|idsInTenant)\\(\\s*(?:\\w+\\.)?(${ruled.join("|")})\\b`,
 		"g",
 	);
 	return files.flatMap(({ path, source }) => {
 		const text = code(source);
 		if (!portalFile(path, text)) return [];
-		return [
-			...new Set([...text.matchAll(scoping)].map(([, fn, table]) => `${fn}(${table}, …)`)),
-		].map((what) => `${path}: ${what}`);
+		// Each occurrence, so a second scoping of the same table in a listed file shows.
+		return [...text.matchAll(scoping)].map(([, fn, table]) => `${path}: ${fn}(${table}, …)`);
 	});
 }
 
@@ -388,7 +523,9 @@ function contactLookups(files: readonly SourceFile[]) {
 		) {
 			return [];
 		}
-		return /\.from\(\s*portalContact\s*\)|\bdb\.query\.portalContact\b/.test(code(source))
+		return /\.(?:from|innerJoin|leftJoin|rightJoin)\(\s*portalContact(?:Site)?\s*[,)]|\b(?:db|tx)\.query\.portalContact(?:Site)?\b/.test(
+			code(source),
+		)
 			? [`${path}: a second contact lookup`]
 			: [];
 	});
@@ -399,16 +536,36 @@ describe("portals never scope by tenant alone", () => {
 		const ruled = await ruledTables();
 		// It knows the tables the portals read (an empty list would pass too).
 		expect(ruled).toEqual(expect.arrayContaining(["order", "equipment", "customerSite"]));
-		const found = portalBreaches(sources(), ruled).filter(
-			(breach) => !Object.hasOwn(tenantOnly, breach),
-		);
-		expect(found).toEqual([]);
+		expect(beyondTenantOnly(portalBreaches(sources(), ruled))).toEqual([]);
 	});
 
-	test("every file on the tenant-only list exists and still needs to be there", async () => {
+	test("every file on the tenant-only list exists and still needs to be there, as often as it says", async () => {
 		const ruled = await ruledTables();
-		const now = new Set(portalBreaches(sources(), ruled));
-		expect(Object.keys(tenantOnly).filter((breach) => !now.has(breach))).toEqual([]);
+		const now = portalBreaches(sources(), ruled);
+		const stale = Object.entries(tenantOnly)
+			.filter(([breach, { times }]) => now.filter((each) => each === breach).length !== times)
+			.map(([breach]) => breach);
+		expect(stale).toEqual([]);
+	});
+
+	test("lets a listed scoping through once, not the file's next one, and sees a schema-qualified table", () => {
+		const ruled = ["order", "equipment", "shopProduct"];
+		const listed = "src/modules/parts-shop/suggestions/suggested-parts.remote.ts";
+		const twice = {
+			path: listed,
+			source: `forEngineers.query(() => {
+				idInTenant(shopProduct, a);
+				idInTenant(shopProduct, b);
+			});`,
+		};
+		expect(beyondTenantOnly(portalBreaches([twice], ruled))).toEqual([
+			`${listed}: idInTenant(shopProduct, …)`,
+		]);
+		const qualified = {
+			path: "src/routes/(field)/my/q.remote.ts",
+			source: `db.select().from(schema.order).where(inTenant(schema.order));`,
+		};
+		expect(portalBreaches([qualified], ruled)).toEqual([`${qualified.path}: inTenant(order, …)`]);
 	});
 
 	test("finds a portal file that scopes a table of a rule by the tenant alone", () => {
@@ -480,9 +637,23 @@ describe("no second contact lookup", () => {
 			path: "src/routes/invite/[id]/invite.remote.ts",
 			source: `tx.update(portalContact).set({})`,
 		};
-		expect(contactLookups([hand, query, auth, feature, write])).toEqual([
-			`${hand.path}: a second contact lookup`,
-			`${query.path}: a second contact lookup`,
-		]);
+		const joined = {
+			path: "src/lib/equipment/server/joined.ts",
+			source: `db.select().from(order).innerJoin(portalContact, eq(portalContact.customerId, order.customerId));
+				db.select().from(order).leftJoin(portalContact, on);`,
+		};
+		const sites = {
+			path: "src/lib/equipment/server/sites.ts",
+			source: `db.select().from(portalContactSite).where(x);`,
+		};
+		const transaction = {
+			path: "src/lib/equipment/server/tx.ts",
+			source: `await tx.query.portalContact.findFirst({});`,
+		};
+		expect(contactLookups([hand, query, auth, feature, write, joined, sites, transaction])).toEqual(
+			[hand, query, joined, sites, transaction].map(
+				({ path }) => `${path}: a second contact lookup`,
+			),
+		);
 	});
 });
