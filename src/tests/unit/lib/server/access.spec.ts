@@ -20,6 +20,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, posix } from "node:path";
 
+import { getTableName } from "drizzle-orm";
 import { describe, expect, test } from "vite-plus/test";
 
 import { coreSubjectTypes, everyLoggedType } from "#lib/activity/subjects.ts";
@@ -219,6 +220,187 @@ describe("record-generic code asks the registry", () => {
 		};
 		expect(breaches([remote, plain, label])).toEqual([
 			`${remote.path}: a hand-written module check (subjectTypes)`,
+		]);
+	});
+});
+
+// --- Rules 4 and 5: the portals' reads and the contact lookup ---------------------------------
+//
+// 4. portals never scope by tenant alone: in the files that serve an engineer or a customer's
+//    contact (`src/routes/(field)/`, `src/routes/(customer)/`, a module's `portal/` and `client/`,
+//    and any file that makes remote functions with `forEngineers` or `forCustomers`), `inTenant(`,
+//    `idInTenant(` and `idsInTenant(` on a table that has an access rule are refused: they read
+//    through `visible()` (the registry's condition for the viewer) or the audience scopes (the work
+//    record's, the units'), which are made from it. This generalises `engineer-scope.spec.ts` from
+//    `order` to every type, and covers the modules' portal files that `hand-written.spec.ts`'s
+//    units-by-audience check doesn't. `tenantOnly` lists the few reads that legitimately are the
+//    tenant's alone, each with its reason.
+// 5. no second contact lookup: `.from(portalContact)` and `db.query.portalContact` outside
+//    `src/lib/server/auth/` (`customerAccessIn()`, the one lookup) and the portal-access feature
+//    (the office's own page of its contacts) are refused (`customerSees` was one).
+
+/**
+ * The tenant-only scopings in portal-gated files that may stay, as `path: fn(table, …)`, and why
+ * each does. Not a place to add a read: a read that picks records for the viewer asks the registry.
+ */
+const tenantOnly: Record<string, string> = {
+	"src/routes/(field)/my/portal.remote.ts: idInTenant(order, …)":
+		"writes the order it found through the engineer's scope (`idInTenant(order, found.id)`)",
+	"src/modules/materials/portal/field-materials.remote.ts: inTenant(orderLine, …)":
+		"the lines of the order it found through the engineer's scope; the `order_line` rule is the office's only (access.ts there), so it can't be asked for them",
+	"src/modules/parts-shop/suggestions/suggested-parts.remote.ts: idInTenant(shopProduct, …)":
+		"the office's `addSuggestedPart` in a file that also holds the customer's `getClientSuggestedParts` (which reads the catalogue, as the `shop_product` rule has it)",
+};
+
+/** The table names of the rules, as the variables that name them in source (`customer_site` → `customerSite`). */
+async function ruledTables() {
+	const camel = (name: string) =>
+		name.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
+	const rules = await as(north.owner, () => [
+		...Object.values(coreRules),
+		...modules.flatMap((module) =>
+			generatedServerModules()
+				.filter((each) => each.id === module.id)
+				.flatMap(({ contributions }) => contributions)
+				.filter(({ point }) => point.id === "access.rules")
+				.flatMap(({ answer }) => Object.values((answer as () => object)())),
+		),
+	]);
+	return [
+		...new Set(
+			rules.flatMap((rule) =>
+				"row" in rule && rule.row ? [camel(getTableName(rule.row.table))] : [],
+			),
+		),
+	];
+}
+
+/** Whether `path` serves an engineer or a customer's contact (by its place, or by the sets it uses). */
+const portalFile = (path: string, text: string) =>
+	path.startsWith("src/routes/(field)/") ||
+	path.startsWith("src/routes/(customer)/") ||
+	/^src\/modules\/[^/]+\/(portal|client)\//.test(path) ||
+	/\bfor(Engineers|Customers)\./.test(text);
+
+/** What breaks rule 4 in `files` for the tables `ruled`, as `path: fn(table, …)`. */
+function portalBreaches(files: readonly SourceFile[], ruled: readonly string[]) {
+	const scoping = new RegExp(
+		`\\b(inTenant|idInTenant|idsInTenant)\\(\\s*(${ruled.join("|")})\\b`,
+		"g",
+	);
+	return files.flatMap(({ path, source }) => {
+		const text = code(source);
+		if (!portalFile(path, text)) return [];
+		return [
+			...new Set([...text.matchAll(scoping)].map(([, fn, table]) => `${fn}(${table}, …)`)),
+		].map((what) => `${path}: ${what}`);
+	});
+}
+
+/** What breaks rule 5 in `files`, as `path: what`. */
+function contactLookups(files: readonly SourceFile[]) {
+	return files.flatMap(({ path, source }) => {
+		if (
+			path.startsWith("src/lib/server/auth/") ||
+			path.startsWith("src/lib/customers/detail/portal-access")
+		) {
+			return [];
+		}
+		return /\.from\(\s*portalContact\s*\)|\bdb\.query\.portalContact\b/.test(code(source))
+			? [`${path}: a second contact lookup`]
+			: [];
+	});
+}
+
+describe("portals never scope by tenant alone", () => {
+	test("the portal files read through the registry or the audience scopes", async () => {
+		const ruled = await ruledTables();
+		// It knows the tables the portals read (an empty list would pass too).
+		expect(ruled).toEqual(expect.arrayContaining(["order", "equipment", "customerSite"]));
+		const found = portalBreaches(sources(), ruled).filter(
+			(breach) => !Object.hasOwn(tenantOnly, breach),
+		);
+		expect(found).toEqual([]);
+	});
+
+	test("every file on the tenant-only list exists and still needs to be there", async () => {
+		const ruled = await ruledTables();
+		const now = new Set(portalBreaches(sources(), ruled));
+		expect(Object.keys(tenantOnly).filter((breach) => !now.has(breach))).toEqual([]);
+	});
+
+	test("finds a portal file that scopes a table of a rule by the tenant alone", () => {
+		const ruled = ["order", "equipment", "customerSite"];
+		const field = {
+			path: "src/routes/(field)/my/work.remote.ts",
+			source: `db.select().from(equipment).where(inTenant(equipment));
+				db.select().from(customerSite).where(idInTenant(customerSite, id));
+				db.select().from(customerSite).where(idsInTenant(customerSite, ids));`,
+		};
+		const modulePortal = {
+			path: "src/modules/widgets/client/client-widgets.remote.ts",
+			source: `db.select().from(order).where(inTenant(order));`,
+		};
+		const gated = {
+			path: "src/modules/widgets/widgets.remote.ts",
+			source: `export const get = forCustomers.query(() => db.select().from(equipment).where(inTenant(equipment)));`,
+		};
+		expect(portalBreaches([field, modulePortal, gated], ruled)).toEqual([
+			`${field.path}: inTenant(equipment, …)`,
+			`${field.path}: idInTenant(customerSite, …)`,
+			`${field.path}: idsInTenant(customerSite, …)`,
+			`${modulePortal.path}: inTenant(order, …)`,
+			`${gated.path}: inTenant(equipment, …)`,
+		]);
+	});
+
+	test("lets through the office, a table without a rule, a comment, and the registry's conditions", () => {
+		const ruled = ["order", "equipment"];
+		const office = {
+			path: "src/lib/equipment/equipment.remote.ts",
+			source: `forMembers.query(() => db.select().from(equipment).where(inTenant(equipment)));`,
+		};
+		const other = {
+			path: "src/routes/(field)/my/hours.remote.ts",
+			source: `forEngineers.query(() => db.select().from(timeEntry).where(inTenant(timeEntry)));`,
+		};
+		const read = {
+			path: "src/routes/(customer)/portal/client.remote.ts",
+			source: `// not inTenant(order) here
+				const where = and(await visible("order"), eq(order.number, number));`,
+		};
+		expect(portalBreaches([office, other, read], ruled)).toEqual([]);
+	});
+});
+
+describe("no second contact lookup", () => {
+	test("only the auth folder and the portal-access feature look a portal contact up", () => {
+		const files = sources();
+		expect(files.map((file) => file.path)).toContain("src/lib/server/auth/session.ts");
+		expect(contactLookups(files)).toEqual([]);
+	});
+
+	test("finds a lookup outside them", () => {
+		const hand = {
+			path: "src/lib/equipment/server/qr.ts",
+			source: `const [contact] = await db.select({ id: portalContact.id }).from(portalContact).where(eq(portalContact.userId, userId));`,
+		};
+		const query = {
+			path: "src/routes/(customer)/portal/client.remote.ts",
+			source: `await db.query.portalContact.findFirst({});`,
+		};
+		const auth = { path: "src/lib/server/auth/session.ts", source: hand.source };
+		const feature = {
+			path: "src/lib/customers/detail/portal-access.remote.ts",
+			source: hand.source,
+		};
+		const write = {
+			path: "src/routes/invite/[id]/invite.remote.ts",
+			source: `tx.update(portalContact).set({})`,
+		};
+		expect(contactLookups([hand, query, auth, feature, write])).toEqual([
+			`${hand.path}: a second contact lookup`,
+			`${query.path}: a second contact lookup`,
 		]);
 	});
 });

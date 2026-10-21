@@ -19,7 +19,7 @@
  * entry, the records of a module the tenant lacks included, is unknown, and unknown is not found.
  */
 import { error } from "@sveltejs/kit";
-import type { SQL } from "drizzle-orm";
+import { type SQL, sql } from "drizzle-orm";
 
 import { accessRules } from "#lib/access/extensions.ts";
 import { asSystem, tenantOf } from "#lib/server/auth/index.ts";
@@ -145,4 +145,16 @@ export async function visible(
 	const rule: AccessRule | undefined = rules(type);
 	const where: Condition | undefined = rule && (await rule[which](as ?? (await viewer()), rules));
 	return where && rule ? rule.scope(where) : undefined;
+}
+
+/**
+ * `visible()` for a query's `where`: a viewer who reads none of the type gets a condition that
+ * holds for no record, where `undefined` in an `and()` would let every record through.
+ */
+export async function visibleOrNone(
+	type: string,
+	which: Which = "read",
+	as?: Viewer,
+): Promise<SQL> {
+	return (await visible(type, which, as)) ?? sql`0`;
 }

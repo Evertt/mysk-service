@@ -17,7 +17,7 @@ import {
 	type UnitOf,
 } from "#lib/equipment/server/index.ts";
 import { doneOrderStatuses } from "#lib/models.ts";
-import { visible } from "#lib/server/access/index.ts";
+import { visibleOrNone } from "#lib/server/access/index.ts";
 import { type Viewer, viewerAs } from "#lib/server/access/viewer.ts";
 import {
 	atSites,
@@ -84,7 +84,7 @@ const scope = <A extends Audience>(audience: A, where: SQL, unitsAt?: SQL) =>
 	({ audience, where: and(where, inTenant(order))!, unitsAt }) as WorkScope<A>;
 
 /** The orders `viewer` may read (the access registry's `order` rule); none if it has no rule. */
-const ordersOf = async (viewer: Viewer) => (await visible("order", "read", viewer)) ?? sql`0`;
+const ordersOf = (viewer: Viewer) => visibleOrNone("order", "read", viewer);
 
 /** The office's order `number`. */
 export const officeOrder = async (number: string) =>

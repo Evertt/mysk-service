@@ -4,10 +4,10 @@
  * count is a plain query that the portal's live query has refresh (`watchMyWork`, which its pages
  * hold already: one stream per tab, as before).
  */
-import { and, sql } from "drizzle-orm";
+import { and } from "drizzle-orm";
 
 import { recordId } from "#lib/schema.ts";
-import { visible } from "#lib/server/access/index.ts";
+import { visibleOrNone } from "#lib/server/access/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { order } from "#lib/server/db/schema.ts";
@@ -42,7 +42,7 @@ export const getMyNotifications = forEngineers.query(async () => {
 		? await db
 				.select({ id: order.id, number: order.number })
 				.from(order)
-				.where(and((await visible("order")) ?? sql`0`, inList(order.id, ids)))
+				.where(and(await visibleOrNone("order"), inList(order.id, ids)))
 		: [];
 	const numbers = new Map(theirs.map((each) => [String(each.id), each.number]));
 	return {

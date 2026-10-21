@@ -33,6 +33,8 @@ import {
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals }) }));
+// The work record's scopes ask the registry, which these templates don't.
+vi.mock("#lib/server/access/index.ts", () => ({}));
 
 // A temporary database made by the app's migrations. Not an in-memory one: libsql gives a
 // transaction a connection of its own, which wouldn't see it.

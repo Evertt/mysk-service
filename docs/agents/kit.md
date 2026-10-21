@@ -107,8 +107,8 @@ references are composite foreign keys that include the tenant.
 
 **Units and locations** are read by audience, as the work record is with `readWorkRecord()`:
 
-- `readUnits(scope, where)` and `readLocation(scope, id)`, with `officeUnits()`, `engineerUnits()`
-  or `customerUnits(access)` (`#lib/equipment/server`);
+- `readUnits(scope, where)` and `readLocation(scope, id)`, with `await officeUnits()`,
+  `await engineerUnits()` or `await customerUnits(access)` (`#lib/equipment/server`);
 - the units of orders: `listedUnitsOf(ids, seenBy(scope))`;
 - shown with `<WorkUnits>` and `<UnitRow>`.
 

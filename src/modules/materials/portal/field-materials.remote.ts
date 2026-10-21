@@ -5,6 +5,7 @@ import * as v from "valibot";
 import { fieldActions } from "#lib/orders/index.ts";
 import { findEngineerOrder } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
+import { visibleOrNone } from "#lib/server/access/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 
@@ -40,7 +41,7 @@ export const getUsableMaterials = forEngineers.query(async () => {
 	return db
 		.select({ id: material.id, sku: material.sku, name: material.name, unit: material.unit })
 		.from(material)
-		.where(inTenant(material))
+		.where(await visibleOrNone("material"))
 		.orderBy(asc(material.name));
 });
 
