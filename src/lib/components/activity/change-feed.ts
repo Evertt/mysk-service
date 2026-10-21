@@ -28,6 +28,8 @@ interface Subscriber {
 	listener: ChangeListener;
 	/** Up to when (the server's clock) its changes have been told, or not known yet. */
 	known: number | undefined;
+	/** Whether it has been told within a stream, not only read before one (set by `#catchUp`). */
+	following?: boolean;
 }
 
 const keyOf = (subject: { type: string; id: string | number | null }) =>
@@ -121,6 +123,9 @@ export class ChangeFeed {
 	/** Tells `subscriber` of what it hasn't heard of yet, up to `answer`. */
 	#catchUp(subscriber: Subscriber, answer: TenantChanges) {
 		const from = subscriber.known!;
+		// Followed through a stream already (told up to a point within one), not just read before it.
+		const following = subscriber.following === true;
+		if (from >= answer.since) subscriber.following = true;
 		subscriber.known = Math.max(from, answer.now);
 		const key = keyOf(subscriber.subject);
 		const last = this.#lastChanges.get(key);
@@ -133,8 +138,14 @@ export class ChangeFeed {
 				asked = this.#changedAt(subscriber.subject).catch(() => 0);
 				this.#changedBefore.set(key, asked);
 			}
+			// A record that never changed (0) is also one the viewer may no longer read (`getRecordChangedAt`
+			// answers 0 for both, so as not to tell they exist): for a listener that followed it through
+			// an earlier stream, the page looks again, and its query says (an order taken off an
+			// engineer who was offline: a 404). A first load read fresh data, so 0 needs no look.
 			void asked.then((at) => {
-				if (at > from && this.#subscribers.get(key)?.has(subscriber)) subscriber.listener(null);
+				if ((at > from || (at === 0 && following)) && this.#subscribers.get(key)?.has(subscriber)) {
+					subscriber.listener(null);
+				}
 			});
 		}
 	}
