@@ -7,6 +7,7 @@
  */
 import { and, eq, gte, lte } from "drizzle-orm";
 
+import { accessRules } from "#lib/access/extensions.ts";
 import { formatDate, formatDateTime } from "#lib/i18n/format.ts";
 import { adjustPrices, type OrderFacts, type OrderTag, tag } from "#lib/orders/extensions.ts";
 import { inTenant } from "#lib/server/auth/session.ts";
@@ -16,6 +17,7 @@ import { billableItems } from "#modules/invoices/api/extensions.ts";
 
 import { coveredAmount, coveredBy, includedLabel, responseDeadline } from "../coverage.ts";
 import { contractLabels } from "../labels.ts";
+import { contractAccess } from "./access.ts";
 import { contractMonths, monthlyFee } from "./billing.ts";
 import { type Coverage, coverageOf } from "./contracts.ts";
 import { contract } from "./schema.ts";
@@ -40,6 +42,7 @@ function responseTag(
 }
 
 export default defineServerModule("contracts", [
+	contribute(accessRules, () => contractAccess),
 	contribute(adjustPrices, async (orders) => {
 		const coverage = await coverageOf(orders);
 		return new Map(
