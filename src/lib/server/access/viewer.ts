@@ -57,3 +57,19 @@ export async function viewer(): Promise<Viewer> {
 			return { audience };
 	}
 }
+
+/**
+ * The request's viewer, if it is `audience`'s: for a scope maker named by its audience (the work
+ * record's `engineerWork()`, the units' `officeUnits()`), which asks the registry as that
+ * audience. A request of another audience (a gate that admits it, or the system) is refused, so
+ * the scope of one audience is never read as another's.
+ */
+export async function viewerAs<A extends "office" | "engineer">(
+	audience: A,
+): Promise<Extract<Viewer, { audience: A }>> {
+	const asking = await viewer();
+	if (asking.audience !== audience) {
+		throw new Error(`A ${audience} scope was asked for in a request of the ${asking.audience}`);
+	}
+	return asking as Extract<Viewer, { audience: A }>;
+}

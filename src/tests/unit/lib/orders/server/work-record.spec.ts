@@ -5,7 +5,6 @@
  * by first name and no notes; the printed work order the units its caller sees. An order the scope
  * doesn't reach reads as nothing. The type check (svelte-check) runs the `@ts-expect-error`s.
  */
-import { eq } from "drizzle-orm";
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import {
@@ -19,8 +18,7 @@ import {
 	type WorkRecord,
 } from "#lib/orders/server/index.ts";
 import type { CustomerAccess } from "#lib/server/auth/index.ts";
-import { inList } from "#lib/server/db/parameters.ts";
-import { equipment, order } from "#lib/server/db/schema.ts";
+import type { Actor } from "#unit/lib/server/harness/actors.ts";
 import { as, north, organizationId, rows, value } from "#unit/lib/server/harness/index.ts";
 import { drawn } from "#unit/signature.test-support.ts";
 
@@ -95,7 +93,9 @@ beforeAll(async () => {
 
 describe("the office", () => {
 	test("sees the units in their order at their sites, the notes and who took the sign-off", async () => {
-		const record = await as(north.member, () => readWorkRecord(officeOrder(job.number)));
+		const record = await as(north.member, async () =>
+			readWorkRecord(await officeOrder(job.number)),
+		);
 		const stored = await unitsOf(job.id);
 		expect(record?.units.map((unit) => unit.serialNumber)).toEqual(stored.map((u) => u.serial));
 		expect(record?.sites.map((site) => site.id)).toEqual([...new Set(stored.map((u) => u.siteId))]);
@@ -120,7 +120,9 @@ describe("the office", () => {
 			 limit 1`,
 			[southId, northId],
 		);
-		expect(await as(north.member, () => readWorkRecord(officeOrder(southern)))).toBeUndefined();
+		expect(
+			await as(north.member, async () => readWorkRecord(await officeOrder(southern))),
+		).toBeUndefined();
 	});
 });
 
@@ -141,10 +143,10 @@ describe("several of the office's orders at once", () => {
 		expect(bare).toHaveLength(2);
 		for (const { id } of bare) await rows(`delete from order_unit where order_id = ?`, [id]);
 		const numbers = [job.number, other, ...bare.map((one) => one.number)];
-		const [together, ...alone] = await as(north.member, () =>
+		const [together, ...alone] = await as(north.member, async () =>
 			Promise.all([
-				readWorkRecords(officeOrders([...numbers, "ORD-0000-00000"])),
-				...numbers.map((number) => readWorkRecord(officeOrder(number))),
+				readWorkRecords(await officeOrders([...numbers, "ORD-0000-00000"])),
+				...numbers.map(async (number) => readWorkRecord(await officeOrder(number))),
 			]),
 		);
 		expect([...together.keys()].toSorted()).toEqual(numbers.toSorted());
@@ -193,7 +195,9 @@ describe("a customer's contact", () => {
 
 	test("sees only the units at their sites and those sites, the engineer by first name, no notes", async () => {
 		const access = await limited();
-		const record = await as(north.customer, () => readWorkRecord(customerWork(access, job.number)));
+		const record = await as(north.customer, async () =>
+			readWorkRecord(await customerWork(access, job.number)),
+		);
 		const theirs = (await unitsOf(job.id)).filter((unit) => access.siteIds?.includes(unit.siteId));
 		expect(record?.units.map((unit) => unit.serialNumber)).toEqual(theirs.map((u) => u.serial));
 		expect(record?.sites.map((site) => site.id)).toEqual(access.siteIds);
@@ -213,8 +217,8 @@ describe("a customer's contact", () => {
 			[northId, job.customerId],
 		);
 		expect(
-			await as(north.customer, () =>
-				readWorkRecord(customerWork({ ...access, siteIds: null }, others)),
+			await as(north.customer, async () =>
+				readWorkRecord(await customerWork({ ...access, siteIds: null }, others)),
 			),
 		).toBeUndefined();
 	});
@@ -233,13 +237,25 @@ describe("the printed work order", () => {
 		return found;
 	}
 
-	test("shows the units its caller sees, at their sites' addresses, and the engineer in full", async () => {
-		const [first] = await unitsOf(job.id);
-		const record = await as(north.customer, () =>
+	/** The printed work order of `number` as `actor` has it. */
+	const printed = (actor: Actor, number: string, access?: CustomerAccess) =>
+		as(actor, async () =>
 			readWorkRecord(
-				printedWorkOrder(eq(order.number, job.number), inList(equipment.siteId, [first.siteId])),
+				await printedWorkOrder(
+					number,
+					access ? { audience: "customer", access } : { audience: "office", manager: false },
+				),
 			),
 		);
+
+	test("shows a customer's contact the units at their sites' addresses, and the engineer in full", async () => {
+		const [first] = await unitsOf(job.id);
+		await rows(`update "order" set status = 'completed' where id = ?`, [job.id]);
+		const record = await printed(north.customer, job.number, {
+			contactId: 0,
+			customer: { id: job.customerId, code: "", name: "" },
+			siteIds: [first.siteId],
+		});
 		const there = (await unitsOf(job.id)).filter((unit) => unit.siteId === first.siteId);
 		expect(record?.units.map((unit) => unit.serialNumber)).toEqual(there.map((u) => u.serial));
 		expect(there.length).toBeLessThan((await unitsOf(job.id)).length);
@@ -249,13 +265,25 @@ describe("the printed work order", () => {
 		expect(record?.sites[0]).not.toHaveProperty("accessNotes");
 	});
 
+	test("shows a customer's contact only done orders, the office any", async () => {
+		const access: CustomerAccess = {
+			contactId: 0,
+			customer: { id: job.customerId, code: "", name: "" },
+			siteIds: null,
+		};
+		await rows(`update "order" set status = 'in_progress' where id = ?`, [job.id]);
+		expect(await printed(north.customer, job.number, access)).toBeUndefined();
+		expect(await printed(north.member, job.number)).toBeDefined();
+		await rows(`update "order" set status = 'invoiced' where id = ?`, [job.id]);
+		expect(await printed(north.customer, job.number, access)).toBeDefined();
+	});
+
 	test("of an order without units, shows the customer's site only when it has one", async () => {
 		const [single, double] = [await unitless(1), await unitless(2)];
 		const site = await value<number>(`select id from customer_site where customer_id = ?`, [
 			single.customerId,
 		]);
-		const sitesOf = (number: string) =>
-			as(north.member, () => readWorkRecord(printedWorkOrder(eq(order.number, number), undefined)));
+		const sitesOf = (number: string) => printed(north.member, number);
 		expect((await sitesOf(single.number))?.sites.map((each) => each.id)).toEqual([site]);
 		expect((await sitesOf(double.number))?.sites).toEqual([]);
 	});

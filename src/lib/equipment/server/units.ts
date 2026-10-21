@@ -10,14 +10,9 @@ import type { SelectResultFields } from "drizzle-orm/query-builders/select.types
 import type { SQLiteSelect } from "drizzle-orm/sqlite-core";
 
 import { type SiteDetail, siteColumns } from "#lib/customers/server/index.ts";
-import {
-	atSites,
-	type CustomerAccess,
-	idInTenant,
-	inTenant,
-	ofCustomer,
-	tenantJoin,
-} from "#lib/server/auth/index.ts";
+import { visible } from "#lib/server/access/index.ts";
+import { type Viewer, viewerAs } from "#lib/server/access/viewer.ts";
+import { type CustomerAccess, idInTenant, inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import {
 	customer,
@@ -52,35 +47,51 @@ type PolicyOf<A extends UnitAudience> = (typeof audiences)[A];
 
 declare const scoped: unique symbol;
 
-/** Which units and sites, and who reads them: made only by the scopes below. */
+/** Which units and locations, and who reads them: made only by the scopes below. */
 export interface UnitScope<A extends UnitAudience> {
 	readonly [scoped]: A;
 	readonly audience: A;
 	/** Picks the units the audience sees, on `equipment`. */
 	readonly units: SQL;
-	/** Picks the sites the audience sees (and so their locations), on `customerSite`. */
+	/** Picks the sites the audience sees, on `customerSite`. */
 	readonly sites: SQL;
+	/** Picks the locations the audience sees, on `equipmentLocation`. */
+	readonly locations: SQL;
 }
 
-const scope = <A extends UnitAudience>(audience: A, units: SQL, sites: SQL) =>
-	({ audience, units, sites }) as UnitScope<A>;
+/**
+ * The scope of `audience`: what the access registry says `as` reads of the tenant's units, sites and
+ * locations (the `equipment`, `site` and `location` rules), so a unit page, a list and `mayRead()`
+ * agree. This file keeps what of them each audience sees (`audiences`).
+ */
+async function scope<A extends UnitAudience>(audience: A, as: Viewer) {
+	const [units, sites, locations] = await Promise.all([
+		visible("equipment", "read", as),
+		visible("site", "read", as),
+		visible("location", "read", as),
+	]);
+	// A rule that reads none leaves a condition that holds for none.
+	const none = sql`0`;
+	return {
+		audience,
+		units: units ?? none,
+		sites: sites ?? none,
+		locations: locations ?? none,
+	} as UnitScope<A>;
+}
 
 /** The tenant's units, as the office sees them. */
-export const officeUnits = () => scope("office", inTenant(equipment), inTenant(customerSite));
+export const officeUnits = async () => scope("office", await viewerAs("office"));
 
 /**
  * The tenant's units, as a field engineer sees them: any of them, as a QR code anywhere leads them
  * to it; their own orders on it are theirs to scope (`engineerOrders()`).
  */
-export const engineerUnits = () => scope("engineer", inTenant(equipment), inTenant(customerSite));
+export const engineerUnits = async () => scope("engineer", await viewerAs("engineer"));
 
 /** The customer's units the contact sees: at the sites they see. */
 export const customerUnits = (access: CustomerAccess) =>
-	scope(
-		"customer",
-		and(ofCustomer(access, equipment), atSites(access, equipment.siteId))!,
-		and(ofCustomer(access, customerSite), atSites(access, customerSite.id))!,
-	);
+	scope("customer", { audience: "customer", access });
 
 /** Whose a site is, as the office's links name a customer. */
 const ownerColumns = { id: customer.id, code: customer.code, name: customer.name };
@@ -173,7 +184,7 @@ export async function readUnits<A extends UnitAudience>(
 	return rows as UnitOf<A>[];
 }
 
-/** The locations at the sites the scope sees (and `where` holds for), in the order the office keeps. */
+/** The locations the scope sees (and `where` holds for), in the order the office keeps. */
 export const readLocations = <A extends UnitAudience>(scope: UnitScope<A>, where?: SQL) =>
 	db
 		.select({
@@ -182,8 +193,7 @@ export const readLocations = <A extends UnitAudience>(scope: UnitScope<A>, where
 			siteId: equipmentLocation.siteId,
 		})
 		.from(equipmentLocation)
-		.innerJoin(...tenantJoin(customerSite, equipmentLocation.siteId))
-		.where(and(inTenant(equipmentLocation), scope.sites, where))
+		.where(and(inTenant(equipmentLocation), scope.locations, where))
 		.orderBy(asc(equipmentLocation.position), asc(equipmentLocation.id));
 
 /** A location as audience `A` sees it, with its site. */
@@ -195,7 +205,7 @@ export type LocationOf<A extends UnitAudience> = {
 } & (PolicyOf<A>["qrToken"] extends true ? { qrToken: string } : {});
 
 /**
- * The location `id` at a site the scope sees, as its audience sees it, with its site and the units
+ * The location `id` the scope sees, as its audience sees it, with its site and the units
  * there it sees (`readUnits()`); `undefined` for any other (the caller 404s, with its message).
  */
 export async function readLocation<A extends UnitAudience>(
@@ -215,7 +225,7 @@ export async function readLocation<A extends UnitAudience>(
 		.from(equipmentLocation)
 		.innerJoin(...tenantJoin(customerSite, equipmentLocation.siteId))
 		.innerJoin(...tenantJoin(customer, customerSite.customerId))
-		.where(and(idInTenant(equipmentLocation, id), scope.sites));
+		.where(and(idInTenant(equipmentLocation, id), scope.locations));
 	if (!location) return undefined;
 	const units = await readUnits(scope, eq(equipment.locationId, location.id));
 	return { location: location as LocationOf<A>, units };

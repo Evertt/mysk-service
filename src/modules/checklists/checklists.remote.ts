@@ -8,7 +8,7 @@ import * as v from "valibot";
 
 import { unitBySerial } from "#lib/equipment/server/index.ts";
 import { orderByNumber } from "#lib/orders/server/index.ts";
-import { order } from "#lib/server/db/schema.ts";
+import { viewer } from "#lib/server/access/viewer.ts";
 import { readAt } from "#lib/server/live.ts";
 import { orNotFound } from "#lib/server/records.ts";
 
@@ -39,7 +39,7 @@ export const getOrderChecklists = query(v.string(), async (number) => {
  * sites of its units, its engineer, every checklist and the sign-off with both signatures.
  */
 export const getWorkOrder = query(v.string(), async (number) => {
-	return orNotFound(await loadWorkOrder(eq(order.number, number)), m.orders_not_found({ number }));
+	return orNotFound(await loadWorkOrder(number, await viewer()), m.orders_not_found({ number }));
 });
 
 /**

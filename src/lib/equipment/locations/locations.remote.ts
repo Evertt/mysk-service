@@ -65,7 +65,7 @@ export const getCustomerLocations = forMembers.query(v.string(), async (code) =>
  */
 export const getLocation = forMembers.query(id(), async (locationId) => {
 	const { location, units } = orNotFound(
-		await readLocation(officeUnits(), locationId),
+		await readLocation(await officeUnits(), locationId),
 		m.equipment_location_not_found(),
 	);
 

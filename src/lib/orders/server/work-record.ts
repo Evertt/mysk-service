@@ -6,7 +6,7 @@
  * isn't the work record stays with each caller: the order's own columns, its customer and request,
  * prices, tags, history and checklists.
  */
-import { and, asc, eq, type SQL } from "drizzle-orm";
+import { and, asc, eq, type SQL, sql } from "drizzle-orm";
 
 import { firstName } from "#lib/engineers/index.ts";
 import {
@@ -16,11 +16,12 @@ import {
 	unitColumns,
 	type UnitOf,
 } from "#lib/equipment/server/index.ts";
+import { doneOrderStatuses } from "#lib/models.ts";
+import { visible } from "#lib/server/access/index.ts";
+import { type Viewer, viewerAs } from "#lib/server/access/viewer.ts";
 import {
 	atSites,
 	type CustomerAccess,
-	customerOrders,
-	engineerOrder,
 	inTenant,
 	type OrderRef,
 	tenantJoin,
@@ -82,27 +83,50 @@ export interface WorkScope<A extends Audience> {
 const scope = <A extends Audience>(audience: A, where: SQL, unitsAt?: SQL) =>
 	({ audience, where: and(where, inTenant(order))!, unitsAt }) as WorkScope<A>;
 
+/** The orders `viewer` may read (the access registry's `order` rule); none if it has no rule. */
+const ordersOf = async (viewer: Viewer) => (await visible("order", "read", viewer)) ?? sql`0`;
+
 /** The office's order `number`. */
-export const officeOrder = (number: string) => scope("office", eq(order.number, number));
+export const officeOrder = async (number: string) =>
+	scope("office", and(eq(order.number, number), await ordersOf(await viewerAs("office")))!);
 
 /** The office's orders `numbers`, read together (`readWorkRecords()`). */
-export const officeOrders = (numbers: readonly string[]) =>
-	scope("office", inList(order.number, numbers));
+export const officeOrders = async (numbers: readonly string[]) =>
+	scope("office", and(inList(order.number, numbers), await ordersOf(await viewerAs("office")))!);
 
 /** The signed-in engineer's order `ref`. */
-export const engineerWork = async (ref: OrderRef) => scope("engineer", await engineerOrder(ref));
+export const engineerWork = async (ref: OrderRef) => {
+	const named = "id" in ref ? eq(order.id, ref.id) : eq(order.number, ref.number);
+	return scope("engineer", and(named, await ordersOf(await viewerAs("engineer")))!);
+};
 
 /** The customer's order `number` the contact sees, with only the units at their sites. */
-export const customerWork = (access: CustomerAccess, number: string) =>
+export const customerWork = async (access: CustomerAccess, number: string) =>
 	scope(
 		"customer",
-		and(eq(order.number, number), customerOrders(access))!,
+		and(eq(order.number, number), await ordersOf({ audience: "customer", access }))!,
 		atSites(access, equipment.siteId),
 	);
 
-/** The order `where` picks as its work order prints, with only the units `unitsAt` holds for. */
-export const printedWorkOrder = (where: SQL, unitsAt: SQL | undefined) =>
-	scope("workOrder", where, unitsAt);
+/**
+ * The order `number` as it prints (its work order), as `viewer` may have it: the office's any of
+ * the tenant's, a customer's contact's their done orders only (a work order is what the engineer
+ * signed off), with only the units at their sites. Anyone else's: none.
+ */
+export async function printedWorkOrder(number: string, viewer: Viewer) {
+	const named = eq(order.number, number);
+	if (viewer.audience === "customer") {
+		return scope(
+			"workOrder",
+			and(named, await ordersOf(viewer), inList(order.status, doneOrderStatuses))!,
+			atSites(viewer.access, equipment.siteId),
+		);
+	}
+	if (viewer.audience === "office") {
+		return scope("workOrder", and(named, await ordersOf(viewer))!);
+	}
+	return scope("workOrder", sql`0`);
+}
 
 /** The sites of these customers as `audience` sees them, for the orders without units. */
 const customerSitesOf = (customerIds: number[], audience: UnitAudience) =>

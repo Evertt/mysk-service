@@ -62,7 +62,9 @@ const bySerial = (serial: string) => eq(equipment.serialNumber, serial);
 
 describe("the office", () => {
 	test("sees the tenant's units with their warranty, and the sites' onSite columns and customer", async () => {
-		const [unit] = await as(north.member, () => readUnits(officeUnits(), bySerial(mine.serial)));
+		const [unit] = await as(north.member, async () =>
+			readUnits(await officeUnits(), bySerial(mine.serial)),
+		);
 		expect(unit).toMatchObject({
 			id: mine.id,
 			site: { id: mine.siteId },
@@ -72,25 +74,27 @@ describe("the office", () => {
 		expect(unit.site).toHaveProperty("accessNotes");
 		expect(unit.site.customer.id).toBe(mine.customerId);
 		expect(
-			await as(north.member, () => readUnits(officeUnits(), bySerial(southern.serial))),
+			await as(north.member, async () => readUnits(await officeUnits(), bySerial(southern.serial))),
 		).toEqual([]);
 	});
 
 	test("reads a location with its QR code's token and its units, none of another tenant", async () => {
-		const read = await as(north.member, () => readLocation(officeUnits(), mine.locationId));
+		const read = await as(north.member, async () =>
+			readLocation(await officeUnits(), mine.locationId),
+		);
 		expect(read?.location).toMatchObject({ id: mine.locationId, site: { id: mine.siteId } });
 		expect(read?.location).toHaveProperty("qrToken");
 		expect(read?.units.map((unit) => unit.id)).toContain(mine.id);
-		expect(await as(north.member, () => readLocation(officeUnits(), southern.locationId))).toBe(
-			undefined,
-		);
+		expect(
+			await as(north.member, async () => readLocation(await officeUnits(), southern.locationId)),
+		).toBe(undefined);
 	});
 });
 
 describe("a field engineer", () => {
 	test("sees the tenant's units and the sites' onSite columns, no warranty or QR token", async () => {
-		const [unit] = await as(north.engineer, () =>
-			readUnits(engineerUnits(), bySerial(mine.serial)),
+		const [unit] = await as(north.engineer, async () =>
+			readUnits(await engineerUnits(), bySerial(mine.serial)),
 		);
 		expect(unit.id).toBe(mine.id);
 		expect(unit).not.toHaveProperty("warrantyUntil");
@@ -98,18 +102,22 @@ describe("a field engineer", () => {
 		void unit.warrantyUntil;
 		expect(unit.site).toHaveProperty("accessNotes");
 		expect(unit.site.customer.id).toBe(mine.customerId);
-		const read = await as(north.engineer, () => readLocation(engineerUnits(), mine.locationId));
-		expect(read?.location).not.toHaveProperty("qrToken");
-		expect(await as(north.engineer, () => readLocation(engineerUnits(), southern.locationId))).toBe(
-			undefined,
+		const read = await as(north.engineer, async () =>
+			readLocation(await engineerUnits(), mine.locationId),
 		);
+		expect(read?.location).not.toHaveProperty("qrToken");
+		expect(
+			await as(north.engineer, async () =>
+				readLocation(await engineerUnits(), southern.locationId),
+			),
+		).toBe(undefined);
 	});
 });
 
 describe("a customer's contact", () => {
 	test("sees their customer's units at their sites, with the sites' address only", async () => {
 		const access = contact([mine.siteId]);
-		const units = await as(north.customer, () => readUnits(customerUnits(access)));
+		const units = await as(north.customer, async () => readUnits(await customerUnits(access)));
 		expect(units.map((unit) => unit.id)).toContain(mine.id);
 		expect(units.every((unit) => unit.site.id === mine.siteId)).toBe(true);
 		expect(units[0]).not.toHaveProperty("warrantyUntil");
@@ -127,10 +135,12 @@ describe("a customer's contact", () => {
 			[elsewhere, mine],
 		] as const) {
 			const scope = () => customerUnits(access);
-			expect(await as(north.customer, () => readUnits(scope(), bySerial(unit.serial)))).toEqual([]);
-			expect(await as(north.customer, () => readLocation(scope(), unit.locationId))).toBe(
-				undefined,
-			);
+			expect(
+				await as(north.customer, async () => readUnits(await scope(), bySerial(unit.serial))),
+			).toEqual([]);
+			expect(
+				await as(north.customer, async () => readLocation(await scope(), unit.locationId)),
+			).toBe(undefined);
 		}
 	});
 });

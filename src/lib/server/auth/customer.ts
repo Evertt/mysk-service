@@ -13,7 +13,7 @@ import { and, eq, type SQL, sql } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import { inList } from "#lib/server/db/parameters.ts";
-import { equipment, order, orderUnit } from "#lib/server/db/schema.ts";
+import { customerSite, equipment, order, orderUnit } from "#lib/server/db/schema.ts";
 
 import { type CustomerAccess, inTenant, tenantJoin } from "./session.ts";
 
@@ -33,6 +33,14 @@ export const ofCustomer = (access: CustomerAccess, table: CustomerTable): SQL =>
  */
 export const atSites = (access: CustomerAccess, siteId: SQLiteColumn): SQL | undefined =>
 	access.siteIds === null ? undefined : inList(siteId, access.siteIds);
+
+/** For a query on `equipment`: the contact's customer's units at the sites they see. */
+export const customerEquipment = (access: CustomerAccess): SQL =>
+	and(ofCustomer(access, equipment), atSites(access, equipment.siteId))!;
+
+/** For a query on `customerSite`: the contact's customer's sites they see. */
+export const customerSites = (access: CustomerAccess): SQL =>
+	and(ofCustomer(access, customerSite), atSites(access, customerSite.id))!;
 
 /** Whether the contact sees the site `siteId`, one of their customer's (checked apart). */
 export const seesSite = (access: CustomerAccess, siteId: number) =>
