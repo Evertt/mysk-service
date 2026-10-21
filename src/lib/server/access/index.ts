@@ -8,6 +8,7 @@
  * - `readable(subjects)`: of a batch the tenant's own (a feed's burst, a catch-up query's subjects),
  *   those the viewer may read, as `type/id` keys, in one statement per type. A type the viewer
  *   reads whole answers without a query, so an entry of a deleted record stays;
+ * - `readableTypes()`: the types the viewer reads at all, for the log's readers to drop the rest;
  * - `visible(type)`: the viewer's condition on the type's table, for a list's `scope`, a join or a
  *   subquery, where a record is read through its table;
  * - `mayChange`, `changeOrNotFound`, `changeable`: the same for a change. (Status rules stay in
@@ -46,7 +47,7 @@ function rulesOf(): Rules {
 }
 
 /** `type/id`, the key of a subject in what `readable()` answers. */
-const keyOf = ({ type, id }: RecordRef) => `${type}/${id}`;
+export const keyOf = ({ type, id }: RecordRef) => `${type}/${id}`;
 
 /**
  * Of `subjects`, the keys the viewer may `which`, a statement per type. With `trust` a rule that
@@ -81,6 +82,26 @@ export async function readOrNotFound(subject: RecordRef) {
 
 /** Of `subjects` (the tenant's own), those the viewer may read, as `type/id` keys. */
 export const readable = (subjects: readonly RecordRef[]) => allowed(subjects, "read", true);
+
+/**
+ * The subject types the viewer may read at all in this tenant: those with a rule whose read
+ * condition for them isn't none. A type of a module the tenant lacks has no rule, and one only
+ * managers read (`member`, …) none for anyone else, so neither is here. For the log's readers,
+ * which hide the entries of the other types without asking per entry (so the entry of a deleted
+ * record stays wherever the viewer reads its type whole).
+ */
+export async function readableTypes(): Promise<string[]> {
+	const rules = rulesOf();
+	const asking = await viewer();
+	const names = [
+		...Object.keys(coreRules),
+		...collectNow(accessRules, undefined).flatMap((own) => Object.keys(own)),
+	];
+	const answers = await Promise.all(
+		names.map(async (type) => ((await rules(type)?.read(asking, rules)) ? type : undefined)),
+	);
+	return answers.filter((type) => type !== undefined);
+}
 
 /** Whether the viewer may change the record. */
 export async function mayChange(subject: RecordRef) {

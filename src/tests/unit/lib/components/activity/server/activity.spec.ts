@@ -7,10 +7,12 @@
  * `src/tests/e2e/activity.test.ts` and `orders.live.test.ts`, which keep the feed, the cards and
  * the live notice.
  */
-import { beforeAll, describe, expect, test } from "vite-plus/test";
+import { afterAll, beforeAll, describe, expect, test } from "vite-plus/test";
 
 import {
+	countNewActivity,
 	getActivity,
+	getActivityFilters,
 	getRecentActivity,
 	getRecordChangedAt,
 	getSubjectActivity,
@@ -23,6 +25,7 @@ import { demoUsers } from "#lib/server/db/demo.ts";
 import {
 	as,
 	call,
+	callBatch,
 	data,
 	north,
 	organizationId,
@@ -30,6 +33,7 @@ import {
 	south,
 	submit,
 	value,
+	withoutModule,
 } from "#unit/lib/server/harness/index.ts";
 
 import { editForm } from "../../../orders/server/order-form.test-support.ts";
@@ -268,7 +272,10 @@ describe("in South", () => {
 				["order", fromNorth.order],
 			] as const) {
 				expect((await data(getActivity, { type, id: String(id) })).entries).toEqual([]);
-				expect(await data(getSubjectActivity, { type, id: String(id) })).toEqual([]);
+				// Not found, as the record is: it isn't South's.
+				expect(await call(getSubjectActivity, { type, id: String(id) })).toMatchObject({
+					status: 404,
+				});
 			}
 			// South's own customer with the same code has none of North's changes to theirs.
 			const own = await value<number>(
@@ -327,6 +334,175 @@ describe("a record's open pages", () => {
 	test("are the office's: a field engineer gets no feed", async () => {
 		expect(await as(north.engineer, () => call(watchTenantChanges))).toMatchObject({
 			status: 403,
+		});
+	});
+});
+
+/** The ids of North's records of a table, as text (`where` is more SQL on it). */
+const idsOf = async (table: string, where = "") =>
+	(
+		await rows<{ id: number | string }>(
+			`select id from "${table}" where organization_id = ? ${where} order by id`,
+			[northId],
+		)
+	).map((row) => String(row.id));
+
+/** Announces a change to each record, so it has a time worth asking for. */
+const touch = (type: string, ids: readonly string[]) => {
+	for (const id of ids) announceChange(northId, type, { id });
+};
+
+describe("what getRecordChangedAt answers", () => {
+	const ask = (actor: typeof north.owner, ...subjects: { type: string; id: string | number }[]) =>
+		as(actor, async () => {
+			const { answers } = await callBatch(getRecordChangedAt, subjects as never);
+			return answers;
+		});
+
+	test("is the time for a record the asker may read, and 0 for another engineer's order", async () => {
+		const [mine] = await rows<{ id: number }>(
+			`select o.id from "order" o join engineer e on e.id = o.engineer_id
+			 join "user" u on u.id = e.user_id where u.email = ? and o.organization_id = ? limit 1`,
+			[north.engineer.email, northId],
+		);
+		const [theirs] = await rows<{ id: number }>(
+			`select o.id from "order" o where o.organization_id = ?
+			 and (o.engineer_id is null or o.engineer_id not in (
+			   select e.id from engineer e join "user" u on u.id = e.user_id where u.email = ?)) limit 1`,
+			[northId, north.engineer.email],
+		);
+		touch("order", [String(mine.id), String(theirs.id)]);
+		const before = Date.now() - 60_000;
+		const answers = await ask(
+			north.engineer,
+			{ type: "order", id: mine.id },
+			{ type: "order", id: theirs.id },
+		);
+		// Neither is refused, the batch goes on: one answer is a time, the other 0.
+		expect(answers.map((answer) => answer.status)).toEqual([200, 200]);
+		expect(answers[0].data).toBeGreaterThan(before);
+		expect(answers[1].data).toBe(0);
+		// The office reads both.
+		const office = await ask(
+			north.owner,
+			{ type: "order", id: mine.id },
+			{ type: "order", id: theirs.id },
+		);
+		expect(office.map((answer) => answer.data! > before)).toEqual([true, true]);
+	});
+
+	test("is 0 for a customer's contact asking after an office-only record", async () => {
+		const [member] = await idsOf("member");
+		touch("member", [member]);
+		const answers = await ask(north.customer, { type: "member", id: member });
+		expect(answers).toMatchObject([{ status: 200, data: 0 }]);
+		// A manager reads the member, a planner doesn't.
+		expect((await ask(north.owner, { type: "member", id: member }))[0].data).toBeGreaterThan(0);
+		expect((await ask(north.member, { type: "member", id: member }))[0].data).toBe(0);
+	});
+
+	test("is 0 for a record of a module that is off, and the time again when it is on", async () => {
+		const [invoice] = await idsOf("invoice");
+		expect(invoice).toBeDefined();
+		touch("invoice", [invoice]);
+		expect((await ask(north.owner, { type: "invoice", id: invoice }))[0].data).toBeGreaterThan(0);
+		await withoutModule("north", "invoices", async () => {
+			expect(await ask(north.owner, { type: "invoice", id: invoice })).toMatchObject([
+				{ status: 200, data: 0 },
+			]);
+		});
+	});
+});
+
+describe("a record's activity card", () => {
+	test("is a 404 for a record of a module that is off, and for one the asker may not read", async () => {
+		const [invoice] = await idsOf("invoice");
+		const [member] = await idsOf("member");
+		await as(north.owner, async () => {
+			expect(await call(getSubjectActivity, { type: "invoice", id: invoice })).toMatchObject({
+				status: 200,
+			});
+			expect(await call(getSubjectActivity, { type: "member", id: member })).toMatchObject({
+				status: 200,
+			});
+		});
+		await withoutModule("north", "invoices", () =>
+			as(north.owner, async () => {
+				expect(await call(getSubjectActivity, { type: "invoice", id: invoice })).toMatchObject({
+					status: 404,
+				});
+			}),
+		);
+		// A planner is not a manager: a member's card is not theirs.
+		await as(north.member, async () => {
+			expect(await call(getSubjectActivity, { type: "member", id: member })).toMatchObject({
+				status: 404,
+			});
+		});
+	});
+});
+
+describe("the log's readers", () => {
+	beforeAll(async () => {
+		const [member] = await idsOf("member");
+		const [invoice] = await idsOf("invoice");
+		for (const [type, id] of [
+			["member", member],
+			["invoice", invoice],
+		]) {
+			await rows(
+				`insert into activity (organization_id, user_name, action, subject_type, subject_id, subject_label)
+				 values (?, 'Planted', 'updated', ?, ?, 'planted')`,
+				[northId, type, id],
+			);
+		}
+	});
+	afterAll(async () => {
+		await rows(`delete from activity where organization_id = ? and user_name = 'Planted'`, [
+			northId,
+		]);
+	});
+
+	const types = (entries: { subject: { type: string } }[]) => entries.map((e) => e.subject.type);
+	const readersAs = (actor: typeof north.owner) =>
+		as(actor, async () => ({
+			feed: (await data(getActivity, {})).entries,
+			recent: await data(getRecentActivity),
+			filters: (await data(getActivityFilters)).types.map((type) => type.value),
+			ofMembers: (await data(getActivity, { type: "member" })).entries,
+			newMembers: await data(countNewActivity, { type: "member", after: null }),
+		}));
+
+	test("show an owner every type, a planner not the manager-only ones", async () => {
+		const owner = await readersAs(north.owner);
+		expect(types(owner.feed)).toEqual(expect.arrayContaining(["member", "invoice"]));
+		expect(owner.filters).toEqual(expect.arrayContaining(["member", "invoice"]));
+		expect(owner.ofMembers.length).toBeGreaterThan(0);
+		expect(owner.newMembers).toBeGreaterThan(0);
+
+		const planner = await readersAs(north.member);
+		expect(types(planner.feed)).not.toContain("member");
+		expect(types(planner.feed)).toContain("invoice");
+		expect(types(planner.recent)).not.toContain("member");
+		expect(planner.filters).not.toContain("member");
+		expect(planner.filters).toContain("invoice");
+		expect(planner.ofMembers).toEqual([]);
+		expect(planner.newMembers).toBe(0);
+	});
+
+	test("hide the entries of a module that is off, and show them when it is on again", async () => {
+		await withoutModule("north", "invoices", () =>
+			as(north.owner, async () => {
+				expect(types((await data(getActivity, {})).entries)).not.toContain("invoice");
+				expect((await data(getActivity, { type: "invoice" })).entries).toEqual([]);
+				expect(types(await data(getRecentActivity))).not.toContain("invoice");
+				expect((await data(getActivityFilters)).types.map((t) => t.value)).not.toContain("invoice");
+				expect(await data(countNewActivity, { type: "invoice", after: null })).toBe(0);
+			}),
+		);
+		// Switched on again, they are still there.
+		await as(north.owner, async () => {
+			expect(types((await data(getActivity, { type: "invoice" })).entries)).toContain("invoice");
 		});
 	});
 });
