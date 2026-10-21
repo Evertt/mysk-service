@@ -565,6 +565,72 @@ agreed by the owner.
      this place" is visible and deliberate. It's a small change, in step 5's session
      (`portal.remote.ts:59,65`, `places.remote.ts:36`).
 
+## Progress
+
+Status of 21 October 2026. Steps 1 and 2 are built on the branch `permissions-access-registry`
+(from `permissions-design`), reviewed, and the review's findings fixed. Steps 3 to 7 are not started.
+The registry is used by nothing but its tests yet.
+
+**Built**
+
+- `src/lib/server/access/`: `viewer.ts` (the audience a gate admits, `admitAs()`/`viewer()`),
+  `rules.ts` (the makers `rows`, `partOf`, `tenantWide`), `core.ts` (the 15 core types), `index.ts`
+  (`mayRead`, `readOrNotFound`, `readable`, `mayChange`, `changeOrNotFound`, `changeable`, `visible`).
+- `remoteSet(gate, admits)`: every gated set names its audience (`forAnyRole`, `forUsers`,
+  `forDevelopers` and `forAnyone` say `"by-role"`: the stronger role decides).
+- `src/lib/access/extensions.ts`: the `access.rules` collector. Every module with `subjects` contributes
+  its rules from `server/access.ts` (all 10 do).
+- Guard `src/tests/unit/lib/server/access.spec.ts` (rule 1 of section 6, core and every module);
+  `access/matrix.spec.ts` for the core; one `tests/unit/server/access.spec.ts` per module; shared
+  helpers in `src/tests/unit/lib/server/access/support.ts`.
+
+**Decisions made while building** (beyond the owner's answers above)
+
+1. **The point is declared in `src/lib/access/extensions.ts`**, not `src/lib/server/access/`: the
+   generator only scans `src/lib/<domain>/extensions.ts`.
+2. **Modules import the makers from `#lib/server/access/rules.ts`**, not the barrel: the barrel pulls
+   in the extension kernel, which imports the modules, a cycle.
+3. **`AccessRule.read`/`change` take the registry's lookup as a second argument**, so a part can ask its
+   parent's rule without a global. `change` is required (the makers fill it), not optional.
+4. **`readable()`/`changeable()` and `"all"`.** `readable()` answers an `"all"` rule without a query, for a
+   feed's or the log's own-tenant subjects (its comment says so); `mayRead()`, `mayChange()` and
+   `changeable()` always check the record against its table, so another tenant's id is never readable.
+5. **`partOf(parentType, table, parentColumn, narrowedBy?)`**: a part may be narrowed by an audience's
+   own condition on the part.
+6. **Ids are plain integers** for an integer id column (`/^[1-9]\d{0,14}$/`); `"1e3"`, `" 12"` and the
+   like are not ids.
+7. **The system audience reads and changes everything of its tenant** unless an entry says otherwise.
+8. **`saved_view`'s own-or-shared rule is in step 1**, not step 6 (it was needed for every type to have a
+   rule): the office reads its own and shared views; it changes its own, and a manager the shared ones.
+   `views.remote.ts` still has its three hand-written copies; step 6 replaces them.
+9. **`order_line` is the office's only.** Its activity subject id is the material's, not the line's, so
+   an engineer rule "lines on my orders" would open that material's line on every order. Engineers see
+   their lines through the order. (Review finding A1.) Fixing it properly would mean logging the line
+   under its own id, which the log's readers and `about()` would then have to follow.
+10. **Four rules narrower than the plan's "a part follows its parent", kept on the owner's word:**
+    - an engineer reads only their own `engineer` record (`engineerSelf()` in `auth/engineer.ts`);
+    - a customer's contact reads an order's checklists once completed (drafts are the office's);
+    - an engineer reads a unit's conditions and components only for units on their own orders;
+    - a customer's contact reads only the current year's `partner_programme_year` row.
+
+    Each matches what its portal reads today, so none widens access.
+
+11. **Today's portal behaviour kept where a rule could have been wider or narrower** (from the module
+    sessions): parts-shop orders ignore a contact's site limits (`ofCustomer` only); customers read
+    energy thresholds through the zone and site (the portal's figures include them); a customer may
+    change their own partner bonus year while the choice is unmade. Invoices, credit notes, contracts,
+    docks, maintenance and the energy consumers and alerts are the office's only.
+12. **Engineers read every `customer`** (decision 2 above: the owner's name on a unit's page).
+
+**Open / for the steps to come**
+
+- Step 3 onward: `getRecordChangedAt` and the log through `readable()`; the feeds' presenter; the
+  portals' reads through the registry (decision 2's site narrowing, decision 7's status sets); change
+  rules and the manager; docs. The kit entry, `modules.md` (the `access.rules` point) and `tenancy.md`
+  are step 7 and still to write.
+- Guard rules 2 to 6 of section 6 are not switched on.
+- Shop orders ignoring site limits (11) is a candidate to decide when step 5 meets the portals.
+
 ## Later: an engineer asks for a site's on-site details
 
 An idea of the owner's, to explore deeper later; not part of the migration. After decision 2, an
