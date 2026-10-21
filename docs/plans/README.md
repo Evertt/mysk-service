@@ -19,6 +19,7 @@ status.
 | [hide-unavailable-modules.md](hide-unavailable-modules.md)       | To do: hide which modules exist from tenants without them (route manifest, manifests, precache)                |
 | [table-wishes.md](table-wishes.md)                               | Wishes: row actions from bulk actions, inline editing, infinite scroll, click to filter                        |
 | [cloudflare.md](cloudflare.md)                                   | The app on Cloudflare Workers, its database in one Durable Object; live queries (built)                        |
+| [permissions.md](permissions.md)                                 | One way to ask who may read or change a record by its subject: a registry of rules per type (design)           |
 
 ## The decisions in short
 
