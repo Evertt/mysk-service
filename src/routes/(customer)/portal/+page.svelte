@@ -20,7 +20,9 @@
 	const data = $derived(await getPortalHome());
 
 	// Live: a planner accepting, rejecting or planning a report shows without a reload.
-	refreshOnActivity(() => getPortalHome().refresh());
+	refreshOnActivity(() => getPortalHome().refresh(), {
+		types: ["order", "equipment", "site", "location"],
+	});
 </script>
 
 <svelte:head>

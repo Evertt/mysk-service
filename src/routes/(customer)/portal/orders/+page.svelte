@@ -18,7 +18,9 @@
 	const orders = $derived(await getPortalOrders());
 
 	// Live: a planner accepting, rejecting or planning a report shows without a reload.
-	refreshOnActivity(() => getPortalOrders().refresh());
+	refreshOnActivity(() => getPortalOrders().refresh(), {
+		types: ["order", "equipment", "site", "location"],
+	});
 
 	const tabs = {
 		open: {

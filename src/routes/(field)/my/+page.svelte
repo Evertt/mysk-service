@@ -13,7 +13,7 @@
 
 	// Live: the office assigning, rescheduling or cancelling an order shows without a reload, also
 	// one taken off the engineer (the feed tells them once).
-	refreshOnActivity(() => getMyWork().refresh());
+	refreshOnActivity(() => getMyWork().refresh(), { types: ["order", "customer"] });
 </script>
 
 <svelte:head>

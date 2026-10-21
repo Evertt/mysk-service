@@ -19,7 +19,8 @@
 	} from "./notifications.remote.ts";
 
 	const unread = getMyUnreadNotifications();
-	refreshOnActivity(() => unread.refresh());
+	// Its notifications are about orders (`engineerActivity()`).
+	refreshOnActivity(() => unread.refresh(), { types: ["order"] });
 
 	/** The tray, read afresh. */
 	async function load() {
