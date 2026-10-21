@@ -15,7 +15,6 @@ import {
 	north,
 	rows,
 	shltr,
-	value,
 	withoutModule,
 } from "#unit/lib/server/harness/index.ts";
 
@@ -56,41 +55,15 @@ describe("the office", () => {
 });
 
 describe("a field engineer", () => {
-	test("reads every material, and the lines on their own orders only", async () => {
+	test("reads every material, and no order line: the subject doesn't say whose order", async () => {
 		await as(shltr.engineer, () => null);
-		const me = await value<number>(
-			`select e.id from engineer e join "user" u on u.id = e.user_id where u.email = ?`,
-			[shltr.engineer.email],
-		);
-		// A material that only another engineer's order uses.
-		await rows(
-			`insert into material (organization_id, sku, name, unit, unit_price, stock)
-			 values ('org-shltr', 'ACCESS-1', 'Access test', 'piece', 100, 5)`,
-		);
-		const [other] = await rows<{ id: number }>(
-			`select id from "order" where organization_id = 'org-shltr' and engineer_id != ? order by id limit 1`,
-			[me],
-		);
-		await rows(
-			`insert into order_line (organization_id, order_id, material_id, quantity, unit_price)
-			 values ('org-shltr', ?, (select id from material where sku = 'ACCESS-1'), 1, 100)`,
-			[other.id],
-		);
 		const materials = await idsOf("material", "org-shltr");
 		expect(await readOneByOne(shltr.engineer, "material", materials)).toEqual(materials);
-		const all = await usedMaterials("org-shltr");
-		const mine = await usedMaterials(
-			"org-shltr",
-			`and order_id in (select id from "order" where engineer_id = ?)`,
-			[me],
-		);
-		expect(mine.length).toBeGreaterThan(0);
-		// A material used by someone else's orders only is none of theirs.
-		const notMine = all.filter((id) => !mine.includes(id));
-		expect(notMine.length).toBeGreaterThan(0);
-		expect(await readOneByOne(shltr.engineer, "order_line", all)).toEqual(mine);
+		const used = await usedMaterials("org-shltr");
+		expect(used.length).toBeGreaterThan(0);
+		expect(await readOneByOne(shltr.engineer, "order_line", used)).toEqual([]);
 		await as(shltr.engineer, async () => {
-			expect(await mayChange({ type: "order_line", id: mine[0] })).toBe(true);
+			expect(await mayChange({ type: "order_line", id: used[0] })).toBe(false);
 			expect(await mayChange({ type: "material", id: materials[0] })).toBe(false);
 		});
 	});

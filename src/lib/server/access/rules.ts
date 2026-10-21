@@ -106,7 +106,23 @@ function changeEntries(read: ByAudience, { change }: Options): ByAudience {
 /** The ids of `column`'s type: numbers for an integer column, which a subject's id carries as text. */
 function keysOf(column: SQLiteColumn, ids: readonly string[]): (string | number)[] {
 	if (column.dataType !== "number") return [...ids];
-	return ids.map(Number).filter(Number.isInteger);
+	return ids.filter((id) => /^[1-9]\d{0,14}$/.test(id)).map(Number);
+}
+
+/** Of `ids`, those in `table` (by `idColumn`) in the tenant that meet `where`: one statement. */
+async function existing(
+	table: SQLiteTable & { organizationId: SQLiteColumn },
+	idColumn: SQLiteColumn,
+	ids: readonly string[],
+	where: SQL,
+) {
+	const keys = keysOf(idColumn, ids);
+	if (!keys.length) return new Set<string>();
+	const found = await db
+		.select({ id: idColumn })
+		.from(table)
+		.where(and(inList(idColumn, keys), inTenant(table), where));
+	return new Set(found.map((row) => String(row.id)));
 }
 
 /**
@@ -127,15 +143,7 @@ export function rows(
 		change: async (viewer) => conditionOf(changing, viewer),
 		scope,
 		row: { table, idColumn },
-		async check(ids, where) {
-			const keys = keysOf(idColumn, ids);
-			if (!keys.length) return new Set();
-			const found = await db
-				.select({ id: idColumn })
-				.from(table)
-				.where(and(inList(idColumn, keys), inTenant(table), scope(where)));
-			return new Set(found.map((row) => String(row.id)));
-		},
+		check: (ids, where) => existing(table, idColumn, ids, scope(where)),
 	};
 }
 
@@ -175,20 +183,13 @@ export function partOf(
 				sql`exists (select 1 from ${parentTable} where ${and(eq(idColumn, parentColumn), where)})`,
 			)!;
 		};
+	const scope = (where: Condition) => (where === "all" ? inTenant(table) : where);
 	return {
 		read: through("read"),
 		change: through("change"),
-		scope: (where) => (where === "all" ? inTenant(table) : where),
+		scope,
 		row: { table, idColumn: table.id },
-		async check(ids, where) {
-			const keys = keysOf(table.id, ids);
-			if (!keys.length) return new Set();
-			const found = await db
-				.select({ id: table.id })
-				.from(table)
-				.where(and(inList(table.id, keys), inTenant(table), where === "all" ? undefined : where));
-			return new Set(found.map((row) => String(row.id)));
-		},
+		check: (ids, where) => existing(table, table.id, ids, scope(where)),
 	};
 }
 

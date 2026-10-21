@@ -50,7 +50,6 @@ describe("the office", () => {
 	test("finds none of them in a tenant without the module", async () => {
 		const [checklist] = await idsOf("checklist", "org-shltr");
 		const [template] = await idsOf("checklist_template", "org-shltr");
-		expect(await mayRead({ type: "checklist", id: checklist }).catch(() => null)).toBeDefined();
 		await withoutModule("shltr", "checklists", async () => {
 			await as(shltr.owner, async () => {
 				expect(await mayRead({ type: "checklist", id: checklist })).toBe(false);

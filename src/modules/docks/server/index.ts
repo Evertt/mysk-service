@@ -1,4 +1,3 @@
-import { accessRules } from "#lib/access/extensions.ts";
 /**
  * The docks module's contributions to the core's hooks: the daily job runs the door rules and
  * prunes the feed's old events (`jobs.daily`), the demo's simulation drives the Salvo docks
@@ -6,6 +5,7 @@ import { accessRules } from "#lib/access/extensions.ts";
  * deleted (`customers.removingSite`, `site-removal.ts`). Its door alerts ring the office's bell
  * (`notifications.rules`, `notifications.ts`).
  */
+import { accessRules } from "#lib/access/extensions.ts";
 import { removingSite } from "#lib/customers/extensions.ts";
 import { daily } from "#lib/jobs/extensions.ts";
 import { notificationRules } from "#lib/notifications/extensions.ts";

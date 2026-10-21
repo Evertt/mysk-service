@@ -1,4 +1,3 @@
-import { accessRules } from "#lib/access/extensions.ts";
 /**
  * The energy module's contributions to the core's hooks: the demo's simulation of its P1 meters
  * and door sensors, for an organization that's offered one (`simulation.run`,
@@ -6,6 +5,7 @@ import { accessRules } from "#lib/access/extensions.ts";
  * (`customers.removingSite`, `site-removal.ts`). The alerts its readings raise ring the office's
  * bell (`notifications.rules`, `notifications.ts`).
  */
+import { accessRules } from "#lib/access/extensions.ts";
 import { removingSite } from "#lib/customers/extensions.ts";
 import { notificationRules } from "#lib/notifications/extensions.ts";
 import { contribute, defineServerModule } from "#lib/server/extensions.ts";

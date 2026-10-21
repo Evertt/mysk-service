@@ -92,8 +92,8 @@ export async function changeOrNotFound(subject: RecordRef) {
 	if (!(await mayChange(subject))) error(404, m.common_error_not_found());
 }
 
-/** Of `subjects` (the tenant's own), those the viewer may change, as `type/id` keys. */
-export const changeable = (subjects: readonly RecordRef[]) => allowed(subjects, "change", true);
+/** Of `subjects`, those the viewer may change, as `type/id` keys: each is checked against its table. */
+export const changeable = (subjects: readonly RecordRef[]) => allowed(subjects, "change", false);
 
 /**
  * The viewer's condition on the table of `type`, to `read` or `change` (`undefined`: none, also for

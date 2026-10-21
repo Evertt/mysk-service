@@ -44,7 +44,7 @@ import { type AccessRule, rows, tenantWide } from "./rules.ts";
  * A location's rule: it's at a site the audience reads (`sites`, a condition on `customerSite`,
  * from the unit scopes), so its answer is its site's.
  */
-const atSites = (sites: SQL) =>
+const locationsAt = (sites: SQL) =>
 	and(
 		inTenant(equipmentLocation),
 		sql`${equipmentLocation.siteId} in (select ${customerSite.id} from ${customerSite} where ${sites})`,
@@ -73,8 +73,8 @@ export const coreRules = {
 	}),
 	location: rows(equipmentLocation, equipmentLocation.id, {
 		office: true,
-		engineer: () => atSites(engineerUnits().sites),
-		customer: ({ access }) => atSites(customerUnits(access).sites),
+		engineer: () => locationsAt(engineerUnits().sites),
+		customer: ({ access }) => locationsAt(customerUnits(access).sites),
 	}),
 	equipment_category: rows(
 		equipmentCategory,

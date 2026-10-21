@@ -8,7 +8,7 @@
 import { and, sql } from "drizzle-orm";
 
 import { type AccessRule, partOf, rows } from "#lib/server/access/rules.ts";
-import { atSites, inTenant, ofCustomer } from "#lib/server/auth/index.ts";
+import { atSites, type CustomerAccess, inTenant, ofCustomer } from "#lib/server/auth/index.ts";
 import { customerSite } from "#lib/server/db/schema.ts";
 
 import type { energySubjects } from "../activity.ts";
@@ -21,10 +21,8 @@ import {
 	energyZone,
 } from "./schema.ts";
 
-type Access = Parameters<typeof ofCustomer>[0];
-
 /** The energy sites a contact sees: those at their customer's sites they see (as the portal reads). */
-const sitesOf = (access: Access) =>
+const sitesOf = (access: CustomerAccess) =>
 	and(
 		inTenant(energySite),
 		sql`${energySite.siteId} in (select ${customerSite.id} from ${customerSite} where ${and(

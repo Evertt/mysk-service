@@ -7,6 +7,7 @@
  */
 import { describe, expect, test } from "vite-plus/test";
 
+import { currentDay } from "#lib/dates.ts";
 import { mayChange, mayRead } from "#lib/server/access/index.ts";
 import { readOneByOne } from "#unit/lib/server/access/support.ts";
 import {
@@ -122,7 +123,7 @@ describe("a partner's contact", () => {
 	});
 
 	test("reads this year's rules, and no classification", async () => {
-		const year = new Date().getFullYear();
+		const year = await as(riedel, () => currentDay().year);
 		const all = await ids("partner_programme_year", "id");
 		const thisYear = await ids("partner_programme_year", "id", "and year = ?", [year]);
 		expect(thisYear.length).toBeGreaterThan(0);

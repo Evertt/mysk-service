@@ -109,7 +109,7 @@ describe("the office", () => {
 		});
 	});
 
-	test("reads settings types without a row, and nothing of another tenant's through them", async () => {
+	test("reads the settings types without a row", async () => {
 		await as(north.member, async () => {
 			expect(await mayRead({ type: "module", id: "docks" })).toBe(true);
 			expect(await mayRead({ type: "order_type", id: "service" })).toBe(true);
