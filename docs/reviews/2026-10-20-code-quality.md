@@ -11,6 +11,49 @@ The review measured the code against two goals:
 - **DRY through composition, factories and codegen,** reaching for reputable third-party utilities
   such as runed before writing our own.
 
+## Status, 2026-10-21
+
+**Everything in this review is done and merged into `develop` except the renames (finding 7).**
+CI passed on `develop` at `0dfc3ce3` (run 39519143261), and it deployed to staging. Each
+convention landed with a line in AGENTS.md and a spec that refuses the hand-written form.
+
+| Finding                                                | Done in                                                         | Notes                                                                                                          |
+| ------------------------------------------------------ | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Quick fixes (settings links and gating, system tenant) | `fix-review-small-bugs`                                         | Module pages now come from file locations (`pages.gen.ts`). Every module settings page is readable by members. |
+| 1. Dialogs                                             | `form-dialogs`                                                  |                                                                                                                |
+| 2. Lists                                               | `list-definitions`                                              | Client-side tables kept by decision, with `defineList({ mode: "client" })`.                                    |
+| 3. Module settings and integrations                    | `module-settings-kit`                                           |                                                                                                                |
+| 4–5. Records toolkit, one refusal convention           | `record-toolkit`                                                |                                                                                                                |
+| 6. Enum display and generated labels                   | `enum-display`                                                  |                                                                                                                |
+| 7. Extension point ids (only this part)                | `record-page-shell`                                             | `defineRecordPoints()`.                                                                                        |
+| 8. Detail pages, forms, stats, titles                  | `record-page-shell`                                             |                                                                                                                |
+| 9. Portals and shells                                  | `portals-shells`                                                |                                                                                                                |
+| 10. Schema factories, seed                             | `schema-seed-kit`                                               |                                                                                                                |
+| 11. Theming                                            | `theme-tokens`                                                  | The CSS move failed the specificity check, so the rewriter was rebuilt on the Svelte parser instead.           |
+| 12–13. Smaller items, runed                            | `helpers-and-runed`, `billing-documents`, `modules-a-internals` | Condition's feed now reads the activity log, and the seed writes log entries.                                  |
+| Live-query streams outliving their page                | `live-stream-teardown`                                          | A SvelteKit issue, written up as upstream bug #14. The office follows records through one feed.                |
+
+App code is about 1,100 lines smaller than before the review, and tests and guard specs are about
+2,800 lines larger. The first batches rebuilt code into shared pieces at roughly equal size; the
+later ones deleted duplicates.
+
+**Left to do: the renames of finding 7.** They touch files everywhere, so they're best done alone,
+in one quiet window:
+
+- **"Portal" → `field` and `customer`.** This covers `#lib/portal` and `#lib/client`, the slot ids,
+  the modules' `portal/` and `client/` folders, the `portal_`/`client_` messages and the manifest's
+  `portal` key.
+- **Stored activity subject types.** `maintenancePlan`, `checklistTemplate`,
+  `checklistTemplateItem`, `unitCondition`, `component` and `checklist` become prefixed snake_case,
+  with a migration like `0008_rename-invoicing-module`.
+- **Module remote sets.** Modules should use `moduleSets(id)`, returning `{ forMembers,
+forManagers, … }` and named like core's, instead of bare `query` and locally redefined
+  `forManagers`.
+- **Message prefixes.** Make them follow the module ids: `partners_` → `partner_programme_` or
+  similar, `shop_` → `parts_shop_`, and any `invoicing*` names left.
+- **A record registry.** `records.<record>.{ href, keySchema, subject }` replaces the hard-coded
+  record routes and the hand-built engineer subjects.
+
 ## Verdict
 
 The TypeScript backbone is good. The gated remote sets, `defineList`/`planList`, extension
