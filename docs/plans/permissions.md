@@ -475,10 +475,9 @@ parts-shop, partner-programme and maintenance.
   `viewerIn(organizationId)`.
 - `src/routes/(field)/notifications.remote.ts`: the link check goes, replaced by `readable`.
 - `engineer.ts`'s `engineerActivity()`: its `exists` from `visible("order")`.
-- If decision 2 is confirmed: the engineer's `site` rule, and `units.ts`'s engineer audience reading
-  `onSite` only at those sites (`audience-reads.spec.ts` and
-  `src/tests/unit/routes/(field)/my/portal.spec.ts` cover it). If decision 7 is confirmed: the named
-  status sets for the engineer's lists.
+- Decision 2: the engineer's `site` rule, and `units.ts`'s engineer audience reading `onSite` only
+  at those sites (`audience-reads.spec.ts` and `src/tests/unit/routes/(field)/my/portal.spec.ts`
+  cover it). Decision 7: the named status sets for the engineer's lists.
 - Guard rules 4 and 5 switch on. This is the session most likely to find a portal query that
   disagrees with its rule. Stop and ask the owner then, don't pick.
 
@@ -503,13 +502,13 @@ parts-shop, partner-programme and maintenance.
 
 ## Decisions
 
-Owner's answers of 21 October 2026. Those marked _proposed_ are my recommendation, for the owner to
-confirm.
+The owner's answers of 21 October 2026. Decisions 2, 5 and 7 were recommended in the plan and then
+agreed by the owner.
 
 1. **A hybrid user's audience is the gate's.** A `forEngineers` call is the engineer's, even for an
    office member. On `forAnyRole`, the stronger role decides (`shellOf(roles)`).
-2. **_Proposed:_ engineers keep reading every unit and location, but a site's on-site details only
-   at their own orders' sites.**
+2. **Engineers keep reading every unit and location, but a site's on-site details only at their own
+   orders' sites.**
    - _For tenant-wide (today's):_ the QR code is the product. An engineer on site scans the
      neighbouring door that's also broken, or a colleague's unit, and needs its page and history.
      Narrowing the units would 404 those scans. The engineers are the tenant's own staff, and a
@@ -537,7 +536,7 @@ confirm.
 4. **`member`, `invitation`, `portal_contact` and `integration_token` are for managers.** Their
    office read rule is `manager` (step 1), so the log, the feed and the filters hide them from other
    office members.
-5. **_Proposed:_ an unreadable record answers 0, and the batch is not refused.**
+5. **An unreadable record answers 0, and the batch is not refused.**
    - The batch is `query.batch`, gathered from every component on the page that follows a record.
      One subject failing the check would fail the catch-up of all the others.
    - That happens in normal use, not only under tampering: an engineer is taken off an order while
@@ -548,8 +547,8 @@ confirm.
      message, which is where a refusal belongs.
 6. **The customer portal gets a feed,** in step 7. It's small: one live query, the layout and four
    pages, all on parts steps 1 and 4 build.
-7. **_Proposed:_ the engineer's `order` rule stays "assigned to me", in any status. The views name
-   their status sets.**
+7. **The engineer's `order` rule stays "assigned to me", in any status. The views name their status
+   sets.**
    - Reading is the record question, and an engineer has a reason to open their order in every
      status:
      - a quote just planned for them;
@@ -565,3 +564,34 @@ confirm.
      `myOpenOrders` already uses. Then the difference between "today's work" and "open orders at
      this place" is visible and deliberate. It's a small change, in step 5's session
      (`portal.remote.ts:59,65`, `places.remote.ts:36`).
+
+## Later: an engineer asks for a site's on-site details
+
+An idea of the owner's, to explore deeper later; not part of the migration. After decision 2, an
+engineer looking at a unit at a site that isn't one of their orders' sees only the site's address.
+In its place they'd get a button, "Ask for access". A request goes to whoever decides, who accepts
+or denies it, and an accepted one shows the engineer the on-site details.
+
+What the registry already makes easy, and what it would still take:
+
+- **The read side is small.** A grant is a row (`site_access_grant`: the engineer, the site, who
+  decided, when it lapses). The engineer's `site` rule gains `or exists (a live grant)`, and every
+  reader follows: the unit pages, the feed and `readable()`. No page checks it by hand.
+- **The request and the decision are the work.** A request is a record with its own lifecycle
+  (asked, accepted, denied, lapsed), logged with the site as its parent. Accepting and denying are
+  commands, and the engineer hears the answer on their feed and bell.
+- **Who decides is the open part.**
+  - _A planner:_ the office's bell already has rules, so it's one rule more.
+  - _The customer's contact:_ the customer portal has no notifications yet
+    (`NotificationAudience` is `office | engineer`, `src/lib/notifications/extensions.ts:20`), so
+    it needs a customer bell first. A contact limited to some sites decides only for theirs.
+- **Questions to settle then:**
+  - How long a grant lasts (a day, the visit, until revoked).
+  - Whether a grant opens every on-site column or only some (the contact, but not the access
+    notes).
+  - Whether an urgent breakdown skips the request (e.g. the planner assigns the engineer an order
+    there, which grants access through the existing rule anyway).
+
+The last point suggests the cheap version: a planner who wants an engineer at a site gives them an
+order there. The request button pays off when engineers act on their own on site (a scan of a unit
+next to theirs), which is worth confirming before building it.
