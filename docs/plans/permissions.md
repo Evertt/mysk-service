@@ -729,6 +729,10 @@ the saved views ask the registry.
     - Left to the owner and unchanged: the status lists `engineerWorkStatuses` and `plannedStatuses`
       (`src/modules/condition/server/status-sql.ts`) are two lists; five specs mock the registry barrel
       by hand.
+25. **Two review findings the owner chose to leave.** The "unshared" entry of a saved view stays in the
+    log for the office: only shared views are logged, so it was public when it was written, and
+    `saved_view` stays a readable log type. The energy and partner-programme specs keep their small
+    `ids` wrappers around `idsOf`.
 
 **Open / for the steps to come**
 
