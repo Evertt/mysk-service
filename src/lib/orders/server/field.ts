@@ -1,7 +1,7 @@
-import { and, eq } from "drizzle-orm";
+import { and } from "drizzle-orm";
 
 import { visible } from "#lib/server/access/index.ts";
-import { engineerOrderNotFound, type OrderRef } from "#lib/server/auth/index.ts";
+import { engineerOrderNotFound, type OrderRef, orderNamed } from "#lib/server/auth/index.ts";
 import type { db, Transaction } from "#lib/server/db/index.ts";
 import { order } from "#lib/server/db/schema.ts";
 import { Refused } from "#lib/server/refused.ts";
@@ -22,10 +22,9 @@ export async function findEngineerOrder(
 ) {
 	const theirs = await visible("order", "change");
 	if (!theirs) engineerOrderNotFound(ref);
-	const named = "id" in ref ? eq(order.id, ref.id) : eq(order.number, ref.number);
 	const found = await runner.query.order.findFirst({
 		columns: { id: true, number: true, status: true, laborHours: true },
-		where: and(named, theirs),
+		where: and(orderNamed(ref), theirs),
 	});
 	if (!found) engineerOrderNotFound(ref);
 	if (action && !fieldActions(found.status)[action]) throw new Refused(fieldRefusal(found.status));

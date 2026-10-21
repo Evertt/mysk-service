@@ -81,10 +81,13 @@ export async function isEngineer(id: number): Promise<boolean> {
 	return engineer.id === id;
 }
 
+/** For a query on `order`: the one order `ref` names, by its id or its number. */
+export const orderNamed = (ref: OrderRef): SQL =>
+	"id" in ref ? eq(order.id, ref.id) : eq(order.number, ref.number);
+
 /** The one order `ref` names, if it's one of `engineerOrders()`. */
 export async function engineerOrder(ref: OrderRef): Promise<SQL> {
-	const named = "id" in ref ? eq(order.id, ref.id) : eq(order.number, ref.number);
-	return and(named, await engineerOrders())!;
+	return and(orderNamed(ref), await engineerOrders())!;
 }
 
 /**

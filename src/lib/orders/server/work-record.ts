@@ -24,6 +24,7 @@ import {
 	type CustomerAccess,
 	inTenant,
 	type OrderRef,
+	orderNamed,
 	tenantJoin,
 } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -96,8 +97,7 @@ export const officeOrders = async (numbers: readonly string[]) =>
 
 /** The signed-in engineer's order `ref`. */
 export const engineerWork = async (ref: OrderRef) => {
-	const named = "id" in ref ? eq(order.id, ref.id) : eq(order.number, ref.number);
-	return scope("engineer", and(named, await ordersOf(await viewerAs("engineer")))!);
+	return scope("engineer", and(orderNamed(ref), await ordersOf(await viewerAs("engineer")))!);
 };
 
 /** The customer's order `number` the contact sees, with only the units at their sites. */
