@@ -2,6 +2,7 @@ import { expect, test } from "vite-plus/test";
 
 import {
 	doneOrderStatuses,
+	engineerWorkStatuses,
 	isAwaitingAcceptance,
 	isDoneOrder,
 	isEditableOrder,
@@ -25,6 +26,12 @@ test("every order status is awaiting acceptance, open, done or cancelled", () =>
 		expect(groups.filter(Boolean), status).toHaveLength(1);
 	}
 	expect(openOrderStatuses.length + doneOrderStatuses.length + 2).toBe(orderStatuses.length);
+});
+
+test("the engineer's work list is a view of the open orders: planned or under way, no quotes", () => {
+	expect(engineerWorkStatuses.every((status) => isOpenOrder(status))).toBe(true);
+	expect(isOpenOrder("quote")).toBe(true);
+	expect(engineerWorkStatuses).not.toContain("quote");
 });
 
 test("an order awaiting acceptance comes first, and isn't open work until it's accepted", () => {

@@ -19,14 +19,15 @@
  * entry, the records of a module the tenant lacks included, is unknown, and unknown is not found.
  */
 import { error } from "@sveltejs/kit";
-import type { SQL } from "drizzle-orm";
+import { type SQL, sql } from "drizzle-orm";
 
 import { accessRules } from "#lib/access/extensions.ts";
+import { asSystem, tenantOf } from "#lib/server/auth/index.ts";
 import { collectNow } from "#lib/server/extensions.ts";
 
 import { coreRules } from "./core.ts";
 import type { AccessRule, Condition, Rules } from "./rules.ts";
-import { viewer } from "./viewer.ts";
+import { type Viewer, viewer } from "./viewer.ts";
 
 /** A record by its type and id, as the log and the feeds name it. */
 export interface RecordRef {
@@ -53,9 +54,9 @@ export const keyOf = ({ type, id }: RecordRef) => `${type}/${id}`;
  * Of `subjects`, the keys the viewer may `which`, a statement per type. With `trust` a rule that
  * lets every record of the tenant through (`"all"`) answers without one.
  */
-async function allowed(subjects: readonly RecordRef[], which: Which, trust: boolean) {
+async function allowed(subjects: readonly RecordRef[], which: Which, trust: boolean, as?: Viewer) {
 	const rules = rulesOf();
-	const asking = await viewer();
+	const asking = as ?? (await viewer());
 	const byType = Map.groupBy(subjects, (subject) => subject.type);
 	const answers = await Promise.all(
 		[...byType].map(async ([type, ofType]) => {
@@ -70,9 +71,23 @@ async function allowed(subjects: readonly RecordRef[], which: Which, trust: bool
 	return new Set(answers.flat());
 }
 
-/** Whether the viewer may read the record: it exists in the tenant and a rule of theirs has it. */
-export async function mayRead(subject: RecordRef) {
-	return (await allowed([subject], "read", false)).has(keyOf(subject));
+/**
+ * Whether the viewer may read the record: it exists in the tenant and a rule of theirs has it.
+ * With `as`, whether that viewer may (`viewerIn()`, for another tenant's: run in it, see `mayReadIn()`).
+ */
+export async function mayRead(subject: RecordRef, as?: Viewer) {
+	return (await allowed([subject], "read", false, as)).has(keyOf(subject));
+}
+
+/**
+ * Whether `as` (`viewerIn()`: a member of organization `organizationId`, which needn't be the
+ * request's tenant) may read the record there: the rules run as the system in that tenant, with the
+ * modules it has on, but answer for `as`. For a viewer of the office or a customer's contact; an
+ * engineer's rules read the request's own user.
+ */
+export async function mayReadIn(organizationId: string, as: Viewer, subject: RecordRef) {
+	const tenant = await tenantOf(organizationId, { roles: [] });
+	return !!tenant && asSystem(tenant, () => mayRead(subject, as));
 }
 
 /** The same, or the 404 a record that doesn't exist gets. */
@@ -117,13 +132,29 @@ export async function changeOrNotFound(subject: RecordRef) {
 export const changeable = (subjects: readonly RecordRef[]) => allowed(subjects, "change", false);
 
 /**
- * The viewer's condition on the table of `type`, to `read` or `change` (`undefined`: none, also for
- * an unknown type), for a list's `scope`, a join or a subquery. A type without a row of its own
+ * The viewer's (or `as`'s: a scope maker names its audience's viewer) condition on the table of
+ * `type`, to `read` or `change` (`undefined`: none, also for an unknown type), for a list's `scope`, a join or a subquery. A type without a row of its own
  * (`order_type`, `module`) has no table to scope: a yes is a condition that holds.
  */
-export async function visible(type: string, which: Which = "read"): Promise<SQL | undefined> {
+export async function visible(
+	type: string,
+	which: Which = "read",
+	as?: Viewer,
+): Promise<SQL | undefined> {
 	const rules = rulesOf();
 	const rule: AccessRule | undefined = rules(type);
-	const where: Condition | undefined = rule && (await rule[which](await viewer(), rules));
+	const where: Condition | undefined = rule && (await rule[which](as ?? (await viewer()), rules));
 	return where && rule ? rule.scope(where) : undefined;
+}
+
+/**
+ * `visible()` for a query's `where`: a viewer who reads none of the type gets a condition that
+ * holds for no record, where `undefined` in an `and()` would let every record through.
+ */
+export async function visibleOrNone(
+	type: string,
+	which: Which = "read",
+	as?: Viewer,
+): Promise<SQL> {
+	return (await visible(type, which, as)) ?? sql`0`;
 }

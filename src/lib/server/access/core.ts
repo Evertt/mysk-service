@@ -2,8 +2,10 @@
  * The core's subject types' access rules, one entry each (a module's are in its
  * `server/access.ts`, see `#lib/access/extensions.ts`). The rules are the audience scopes that
  * exist, called from here: the office reads its tenant's records (`true`), a field engineer their
- * own orders (`engineerOrders()`) and every unit (`engineerUnits()`), a customer's contact their
- * customer's records at the sites they see (`customerOrders()`, `customerUnits()`). A type an
+ * own orders (`engineerOrders()`) and every unit, a customer's contact their customer's records at
+ * the sites they see (`customerOrders()`, `customerEquipment()`, `customerSites()`). The unit scopes
+ * (`#lib/equipment/server/units.ts`) and the work record's (`work-record.ts`) read these rules back,
+ * so the raw conditions are in `#lib/server/auth/`, which they all import without a cycle. A type an
  * audience has no entry for is one it doesn't read.
  *
  * - The tenant's settings (`order_type`, `equipment_category`, `module`, `simulation`) are read by
@@ -14,12 +16,14 @@
 import { and, eq, or, type SQL, sql } from "drizzle-orm";
 
 import type { coreSubjectTypes } from "#lib/activity/subjects.ts";
-import { customerUnits, engineerUnits } from "#lib/equipment/server/index.ts";
 import {
 	currentUser,
+	customerEquipment,
 	customerOrders,
+	customerSites,
 	engineerOrders,
 	engineerSelf,
+	engineerSites,
 	idInTenant,
 	inTenant,
 } from "#lib/server/auth/index.ts";
@@ -62,19 +66,19 @@ export const coreRules = {
 	}),
 	site: rows(customerSite, customerSite.id, {
 		office: true,
-		engineer: () => engineerUnits().sites,
-		customer: ({ access }) => customerUnits(access).sites,
+		engineer: () => engineerSites(),
+		customer: ({ access }) => customerSites(access),
 	}),
 	engineer: rows(engineer, engineer.id, { office: true, engineer: () => engineerSelf() }),
 	equipment: rows(equipment, equipment.id, {
 		office: true,
-		engineer: () => engineerUnits().units,
-		customer: ({ access }) => customerUnits(access).units,
+		engineer: true,
+		customer: ({ access }) => customerEquipment(access),
 	}),
 	location: rows(equipmentLocation, equipmentLocation.id, {
 		office: true,
-		engineer: () => locationsAt(engineerUnits().sites),
-		customer: ({ access }) => locationsAt(customerUnits(access).sites),
+		engineer: true,
+		customer: ({ access }) => locationsAt(customerSites(access)),
 	}),
 	equipment_category: rows(
 		equipmentCategory,

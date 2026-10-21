@@ -11,6 +11,8 @@ import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { getCurrentUser } from "#lib/auth/session.remote.ts";
 import { resolveQrCode } from "#lib/equipment/server/qr.ts";
+import { db } from "#lib/server/db/index.ts";
+import { member, portalContact, portalContactSite } from "#lib/server/db/schema.ts";
 import {
 	getPortalLocation,
 	getPortalOrder,
@@ -146,6 +148,61 @@ describe("a customer's contact of another tenant", () => {
 		expect(
 			await resolveQrCode(await tokenIn(shltrId), await userId(north.customer.email)),
 		).toBeUndefined();
+	});
+});
+
+describe("a contact in two organizations", () => {
+	test("is led by a code of the other organization by the sites they see there, before it's their current one", async () => {
+		// North's contact is also limited to one site of a SHLTR customer that has units at two.
+		const [pair] = await rows<{ customerId: number; first: number; second: number }>(
+			`select customer_id as customerId, min(site_id) as first, max(site_id) as second
+			 from equipment where organization_id = ? group by customer_id
+			 having count(distinct site_id) > 1 order by customer_id limit 1`,
+			[shltrId],
+		);
+		const contact = await userId(north.customer.email);
+		await db.insert(member).values({
+			id: crypto.randomUUID(),
+			organizationId: shltrId,
+			userId: contact,
+			role: "customer",
+			createdAt: new Date(),
+		});
+		const [added] = await db
+			.insert(portalContact)
+			.values({
+				organizationId: shltrId,
+				customerId: pair.customerId,
+				email: north.customer.email,
+				userId: contact,
+				allSites: false,
+			})
+			.returning();
+		await db.insert(portalContactSite).values({
+			organizationId: shltrId,
+			contactId: added.id,
+			customerId: pair.customerId,
+			siteId: pair.first,
+		});
+		const tokenAt = (siteId: number) =>
+			value<string>(`select qr_token from equipment where site_id = ? order by id limit 1`, [
+				siteId,
+			]);
+		const locationAt = (siteId: number) =>
+			value<string>(
+				`select qr_token from equipment_location where site_id = ? order by id limit 1`,
+				[siteId],
+			);
+		// The request is North's (their current tenant), the code SHLTR's.
+		await as(north.customer, async () => {
+			expect(await resolveQrCode(await tokenAt(pair.first), contact)).toMatchObject({
+				viewer: "customer",
+				target: { organizationId: shltrId },
+			});
+			expect(await resolveQrCode(await tokenAt(pair.second), contact)).toBeUndefined();
+			expect(await resolveQrCode(await locationAt(pair.second), contact)).toBeUndefined();
+			expect(await resolveQrCode(other.qr_token, contact)).toBeUndefined();
+		});
 	});
 });
 

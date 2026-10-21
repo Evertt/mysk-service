@@ -50,7 +50,7 @@ export const getOrder = forMembers.query.batch(v.string(), async (numbers) => {
 			where: and(inList(order.number, numbers), inTenant(order)),
 			with: { customer: true, engineer: true },
 		}),
-		readWorkRecords(officeOrders(numbers)),
+		officeOrders(numbers).then(readWorkRecords),
 	]);
 	const facts = found.map((one) => ({
 		...one,

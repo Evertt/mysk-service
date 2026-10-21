@@ -10,6 +10,7 @@ import { beforeAll, describe, expect, test } from "vite-plus/test";
 import { getCurrentUser } from "#lib/auth/session.remote.ts";
 import type { Change } from "#lib/server/changes.ts";
 import { feedFor } from "#lib/server/live.ts";
+import { getMyUnit } from "#routes/(field)/my/places.remote.ts";
 import {
 	addNote,
 	completeWork,
@@ -19,6 +20,7 @@ import {
 	startWork,
 	watchFieldChanges,
 } from "#routes/(field)/my/portal.remote.ts";
+import { sitesOfOrdersOf } from "#unit/lib/server/access/support.ts";
 import {
 	as,
 	call,
@@ -153,6 +155,43 @@ describe("an engineer's work", () => {
 				note: null,
 			},
 		]);
+	});
+});
+
+describe("an engineer's order in any status", () => {
+	test("is theirs to read, though their work list shows only the planned and under way", async () => {
+		const [cancelled] = await rows<Order>(
+			`select id, number from "order" where engineer_id = ? and id <> ? order by id limit 1`,
+			[mine, own.id],
+		);
+		await rows(`update "order" set status = 'cancelled' where id = ?`, [cancelled.id]);
+		await as(erik, async () => {
+			expect(await call(getMyOrder, cancelled.number)).toMatchObject({ status: 200 });
+			const { open, recent } = await data(getMyWork);
+			expect([...open, ...recent].map((one) => one.number)).not.toContain(cancelled.number);
+		});
+	});
+});
+
+describe("a scanned unit", () => {
+	test("shows its site's access notes only at a site of their orders, else the address", async () => {
+		const sites = (await sitesOfOrdersOf(mine)).map(Number);
+		const units = await rows<{ serial: string; siteId: number }>(
+			`select serial_number as serial, site_id as siteId from equipment where organization_id = ? order by id`,
+			[northId],
+		);
+		const there = units.find((unit) => sites.includes(unit.siteId))!;
+		const elsewhere = units.find((unit) => !sites.includes(unit.siteId))!;
+		await rows(`update customer_site set access_notes = 'Key safe 1234' where id in (?, ?)`, [
+			there.siteId,
+			elsewhere.siteId,
+		]);
+		await as(erik, async () => {
+			expect((await data(getMyUnit, there.serial)).unit.site.accessNotes).toBe("Key safe 1234");
+			const off = (await data(getMyUnit, elsewhere.serial)).unit;
+			expect(off.site.accessNotes).toBeNull();
+			expect(off.site.address).toBeTruthy();
+		});
 	});
 });
 

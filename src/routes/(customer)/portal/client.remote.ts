@@ -78,7 +78,7 @@ async function ordersWhere(access: CustomerAccess, where?: SQL, limit = 200) {
 		.limit(limit);
 	const units = await listedUnitsOf(
 		rows.map((row) => row.id),
-		seenBy(customerUnits(access)),
+		seenBy(await customerUnits(access)),
 	);
 	return rows.map((row) => ({ ...row, units: units.get(row.id) ?? [] }));
 }
@@ -121,7 +121,7 @@ export const getPortalOrders = forCustomers.query(async () => {
  * done its work order's sign-off.
  */
 export const getPortalOrder = forCustomers.query(v.string(), async (number) => {
-	const scope = customerWork(await currentCustomer(), number);
+	const scope = await customerWork(await currentCustomer(), number);
 	const [[found], record] = await Promise.all([
 		selectOrders().where(scope.where),
 		readWorkRecord(scope),
@@ -138,7 +138,7 @@ export const getPortalOrder = forCustomers.query(v.string(), async (number) => {
  * order the office keeps them.
  */
 export const getPortalSites = forCustomers.query(async () => {
-	const scope = customerUnits(await currentCustomer());
+	const scope = await customerUnits(await currentCustomer());
 	const [sites, locations, units] = await Promise.all([
 		db
 			.select(siteColumns.address)
@@ -162,7 +162,7 @@ export const getPortalSites = forCustomers.query(async () => {
 export const getPortalUnit = forCustomers.query(v.string(), async (serialNumber) => {
 	const access = await currentCustomer();
 	const unit = orNotFound(
-		await readUnits(customerUnits(access), eq(equipment.serialNumber, serialNumber)),
+		await readUnits(await customerUnits(access), eq(equipment.serialNumber, serialNumber)),
 		m.client_unit_not_found({ serial: serialNumber }),
 	);
 	const orders = await ordersWhere(access, onUnit(unit.id), 50);
@@ -172,7 +172,7 @@ export const getPortalUnit = forCustomers.query(v.string(), async (serialNumber)
 /** One of the customer's locations the contact sees (or a 404), its site and its units. */
 export const getPortalLocation = forCustomers.query(id(), async (locationId) =>
 	orNotFound(
-		await readLocation(customerUnits(await currentCustomer()), locationId),
+		await readLocation(await customerUnits(await currentCustomer()), locationId),
 		m.client_location_not_found(),
 	),
 );
@@ -202,7 +202,7 @@ export const reportBreakdown = forCustomers.form(
 				),
 			);
 		}
-		const [unit] = await readUnits(customerUnits(access), eq(equipment.id, input.unitId));
+		const [unit] = await readUnits(await customerUnits(access), eq(equipment.id, input.unitId));
 		if (!unit) {
 			invalid(issue.unitId(m.client_report_unit_unknown()));
 		}

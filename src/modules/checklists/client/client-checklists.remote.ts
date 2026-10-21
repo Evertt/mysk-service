@@ -11,10 +11,9 @@ import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { firstName } from "#lib/engineers/index.ts";
-import { doneOrderStatuses } from "#lib/models.ts";
+import { viewer } from "#lib/server/access/viewer.ts";
 import { atSites, currentCustomer, customerOrders, ofCustomer } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
-import { inList } from "#lib/server/db/parameters.ts";
 import { equipment, order } from "#lib/server/db/schema.ts";
 import { orNotFound } from "#lib/server/records.ts";
 
@@ -73,16 +72,8 @@ export const getClientOrderChecklists = forCustomers.query(v.string(), async (nu
  * checklist, not who.
  */
 export const getClientWorkOrder = forCustomers.query(v.string(), async (number) => {
-	const access = await currentCustomer();
 	const found = orNotFound(
-		await loadWorkOrder(
-			and(
-				eq(order.number, number),
-				customerOrders(access),
-				inList(order.status, doneOrderStatuses),
-			)!,
-			atSites(access, equipment.siteId),
-		),
+		await loadWorkOrder(number, await viewer()),
 		m.client_order_not_found({ number }),
 	);
 	return { ...found, checklists: officeUnnamed(found.checklists) };

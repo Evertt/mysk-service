@@ -29,6 +29,7 @@ import {
 	idsOf,
 	keys,
 	readOneByOne,
+	sitesOfOrdersOf,
 	subjects,
 } from "./support.ts";
 
@@ -188,7 +189,7 @@ describe("a field engineer", () => {
 
 	test("reads every unit, location and customer of the tenant, and their own record", async () => {
 		const me = String(await engineerOf());
-		for (const type of ["equipment", "location", "customer", "site", "equipment_category"]) {
+		for (const type of ["equipment", "location", "customer", "equipment_category"]) {
 			const own = (await idsOf(tables[type as keyof typeof tables] ?? type, "org-north")).slice(
 				0,
 				8,
@@ -202,6 +203,38 @@ describe("a field engineer", () => {
 		}
 		const engineers = await idsOf("engineer", "org-north");
 		expect(await readOneByOne(north.engineer, "engineer", engineers)).toEqual([me]);
+	});
+
+	/** An order of a North customer with `sites` sites, not the engineer's, its units taken off. */
+	async function bareOrder(sites: number) {
+		const [found] = await rows<{ id: number; customer_id: number }>(
+			`select o.id, o.customer_id from "order" o where o.organization_id = 'org-north'
+			 and (select count(*) from customer_site s where s.customer_id = o.customer_id) = ?
+			 order by o.id desc limit 1`,
+			[sites],
+		);
+		await rows(`delete from order_unit where order_id = ?`, [found.id]);
+		return found;
+	}
+
+	test("reads the sites of their orders, and no other", async () => {
+		const me = await engineerOf();
+		const [one, two] = [await bareOrder(1), await bareOrder(2)];
+		await rows(`update "order" set engineer_id = ? where id in (?, ?)`, [me, one.id, two.id]);
+		const theirs = await sitesOfOrdersOf(me);
+		const all = await idsOf("customer_site", "org-north");
+		// An order without units is at its customer's site if it has only one.
+		const only = await value<number>(`select id from customer_site where customer_id = ?`, [
+			one.customer_id,
+		]);
+		expect(theirs).toContain(String(only));
+		expect(theirs.length).toBeLessThan(all.length);
+		expect(await readOneByOne(north.engineer, "site", all)).toEqual(theirs);
+		expect(await as(north.engineer, () => readable(subjects("site", all)))).toEqual(
+			keys("site", theirs),
+		);
+		const southSites = await idsOf("customer_site", "org-south");
+		expect(await readOneByOne(north.engineer, "site", southSites)).toEqual([]);
 	});
 
 	test("changes nothing of a unit, a customer or the settings", async () => {
