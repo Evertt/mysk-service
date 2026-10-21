@@ -143,7 +143,7 @@ export function rows(
  * What an audience reads or changes of a part besides what its parent gives: a condition on the
  * part's own table (a customer sees an order's checklists once they're completed).
  */
-export type NarrowedBy = { [A in Audience]?: (viewer: Of<A>) => SQL };
+export type NarrowedBy = { [A in Audience]?: (viewer: Of<A>) => SQL | Promise<SQL> };
 
 /**
  * A part of a record of `parentType` (an order's line, an invoice's line): `parentColumn` of
@@ -164,9 +164,9 @@ export function partOf(
 			if (!parent?.row) return undefined;
 			const where = await parent[which](viewer, rules);
 			if (!where) return undefined;
-			const narrow = (narrowedBy[viewer.audience] as ((viewer: Viewer) => SQL) | undefined)?.(
-				viewer,
-			);
+			const narrow = await (
+				narrowedBy[viewer.audience] as ((viewer: Viewer) => SQL | Promise<SQL>) | undefined
+			)?.(viewer);
 			if (where === "all") return narrow ? and(inTenant(table), narrow)! : "all";
 			const { table: parentTable, idColumn } = parent.row;
 			return and(
