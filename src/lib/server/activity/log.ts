@@ -102,6 +102,16 @@ export interface Actor {
 }
 
 /**
+ * The engineer an order was taken off by a change (`changes.engineerId`, before and after), if it
+ * was: the one it had and no longer has.
+ */
+function engineerTakenFrom(type: string, changes: ActivityChanges | null) {
+	if (type !== "order") return undefined;
+	const [was, now] = (changes?.engineerId ?? []) as [unknown, unknown];
+	return typeof was === "number" && was !== now ? was : undefined;
+}
+
+/**
  * Logs a change to a record by the signed-in user, in the current tenant (or by `by`). Call it
  * inside the `db.transaction` that makes the change, after making it. With `before` and `after`,
  * logs the fields that changed, and nothing at all if none did (e.g. a form saved as it was).
@@ -140,8 +150,14 @@ export async function recordActivity(
 	// part deleted leaves the parent there.
 	const name = system ? m.activity_system_user() : user.name;
 	const made = { user: { id: user.id, name } };
+	const takenFrom = engineerTakenFrom(subject.type, changes);
 	afterCommit(() => {
-		announceChange(organizationId, subject.type, { ...made, action, id: String(subject.id) });
+		announceChange(organizationId, subject.type, {
+			...made,
+			action,
+			id: String(subject.id),
+			...(takenFrom === undefined ? {} : { takenFrom }),
+		});
 		if (parent) {
 			announceChange(organizationId, parent.type, {
 				...made,

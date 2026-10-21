@@ -17,11 +17,12 @@ import {
 	type FeedAnswer,
 	isGone,
 	type LoggedType,
+	TAKEN_AWAY,
 	type TenantChange,
 } from "#lib/activity/index.ts";
 import { readable, visible } from "#lib/server/access/index.ts";
 import { type Audience, type Viewer, viewer } from "#lib/server/access/viewer.ts";
-import { currentTenant } from "#lib/server/auth/index.ts";
+import { currentTenant, isEngineer } from "#lib/server/auth/index.ts";
 import {
 	type Change,
 	changedAt,
@@ -129,11 +130,11 @@ const hears = {
  * module that is off, a manager's types for another member, another engineer's orders and so on
  * are never heard of), as `hears` says their audience is told them.
  *
- * A change the viewer may not read is left out, also one that leaves their scope: an order taken
- * off the engineer is not told to them (the record is no longer theirs to know of, and their page
- * of it gets its 404 on the next refresh), nor is the deletion of a record outside the office's
- * (it can no longer be checked against the table). The office reads whole types, so it hears
- * deletions. `asking` is the viewer, the request's by default (call it in the live query).
+ * A change the viewer may not read is left out, with one exception: an order taken off the engineer
+ * is told to them once, as `TAKEN_AWAY` and nothing more (they knew the order, so it reveals
+ * nothing); after it the order is not readable and their page of it gets its 404 on the next
+ * refresh. Nor is the deletion of a record outside the office's told (it can no longer be checked
+ * against the table). The office reads whole types, so it hears deletions. `asking` is the viewer, the request's by default (call it in the live query).
  */
 export function feedFor(
 	asking: Viewer | Promise<Viewer> = viewer(),
@@ -150,15 +151,29 @@ export function feedFor(
 			const types = new Set(changes.filter((change) => !change.id).map((change) => change.type));
 			for (const type of types) if (await visible(type)) typesHeard.add(type);
 		}
+		// The one exception to reading: an engineer is told an order was taken off them, the one
+		// they knew, by the change's own account of who it was taken from.
+		const taken = new Set<Change>();
+		if (audience === "engineer") {
+			for (const change of named) {
+				const { takenFrom } = change;
+				if (change.type === "order" && takenFrom !== undefined && (await isEngineer(takenFrom))) {
+					taken.add(change);
+				}
+			}
+		}
 		return changes
 			.filter((change) =>
-				change.id ? heard.has(`${change.type}/${change.id}`) : typesHeard.has(change.type),
+				change.id
+					? heard.has(`${change.type}/${change.id}`) || taken.has(change)
+					: typesHeard.has(change.type),
 			)
 			.map((change) => ({
 				type: change.type,
 				id: change.id ?? null,
-				action:
-					hearing.action === "full"
+				action: taken.has(change)
+					? TAKEN_AWAY
+					: hearing.action === "full"
 						? (change.action ?? "updated")
 						: isGone(change.action)
 							? "deleted"
