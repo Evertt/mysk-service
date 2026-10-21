@@ -28,6 +28,12 @@ helpers are in `src/lib/server/auth/session.ts`:
   rules. A record written with the engineer takes them from the order it reached
   (`order.engineerId`). Units and locations (the QR pages) are the tenant's for every engineer.
   `src/tests/unit/lib/server/auth/engineer-scope.spec.ts` keeps the engineer's id in that file.
+- **Which records a viewer reaches** is asked of the access registry, `#lib/server/access`
+  (`kit.md`, "Permissions"): `mayRead(subject)`, `readable(subjects)`, `visible(type)` and the
+  change versions, with one entry per subject type and audience. Its entries call the scopes below
+  (`engineerOrders()`, `customerOrders()`, `inTenant()`), so a list's scope and the answer to "may
+  this contact read order 12?" are one condition. A function that takes a subject, reads the log or
+  feeds changes asks it (`access.spec.ts`); the gated sets only decide who may call.
 - **Customers' contacts** (the role `customer`, `isCustomerContact()` in `#lib/auth/roles.ts`) are
   members linked to one of the tenant's customers (`portal_contact`), for all of its sites or some
   (`portal_contact_site`). They use the customer portal only: `requireMember()` refuses them (so
