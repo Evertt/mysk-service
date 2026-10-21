@@ -7,7 +7,7 @@
 	import PlayIcon from "@lucide/svelte/icons/play";
 	import { toast } from "svelte-sonner";
 
-	import { TAKEN_AWAY } from "#lib/activity/index.ts";
+	import { ACCESS_REVOKED } from "#lib/activity/index.ts";
 	import { getCurrentUser } from "#lib/auth/session.remote.ts";
 	import { onRecordChange } from "#lib/components/activity/change-feed.svelte.ts";
 	import DetailItem from "#lib/components/detail-item.svelte";
@@ -50,8 +50,8 @@
 	onRecordChange(
 		() => ({ type: "order", id: order.id }),
 		(change) => {
-			if (change?.action !== TAKEN_AWAY) return;
-			toast.info(m.portal_order_taken_away({ number: order.number }));
+			if (change?.action !== ACCESS_REVOKED) return;
+			toast.info(m.portal_order_access_revoked({ number: order.number }));
 			void goto(resolve("/(field)/my"));
 		},
 	);

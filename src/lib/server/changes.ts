@@ -10,6 +10,12 @@
  */
 import type { ChangeType, LoggedType } from "#lib/activity/index.ts";
 
+/** Someone of an audience whose access to a record a change revoked: the engineer's id. */
+export interface Revoked {
+	audience: "engineer";
+	id: number;
+}
+
 /** A change as it's announced: the record (an activity subject's type and id) and who changed it. */
 export interface Change {
 	/** E.g. `order`. */
@@ -21,10 +27,11 @@ export interface Change {
 	/** Who did it. */
 	user?: { id: string; name: string };
 	/**
-	 * For an order taken off an engineer: that engineer's id. Only the engineer it was taken from is
-	 * told (`feedFor()`), as the one who knew the order; it names no one else.
+	 * Whose access to the record this change revoked (an order taken off an engineer): only they
+	 * are told (`feedFor()`), as the ones who knew the record; it names no one else. Kept when a
+	 * later change to the record replaces this one in a batch (`watch()`).
 	 */
-	takenFrom?: number;
+	revokedFrom?: Revoked[];
 	/** When it was announced (epoch ms). */
 	at: number;
 }
@@ -135,6 +142,9 @@ function watch(
 	const listener: Listener = (change) => {
 		if (!matches(change)) return;
 		const key = keyOf(change);
+		const earlier = pending.get(key)?.revokedFrom;
+		// A later change replaces the pending one, but a revocation is told once: it stays on it.
+		if (earlier) change = { ...change, revokedFrom: [...earlier, ...(change.revokedFrom ?? [])] };
 		// Deleted first, so the batch is in the order the changes came.
 		pending.delete(key);
 		pending.set(key, change);

@@ -25,7 +25,7 @@
 import type { LoggedType } from "#lib/activity/index.ts";
 import type { ActivityAction } from "#lib/models.ts";
 import { isSystemUser, requireTenant } from "#lib/server/auth/index.ts";
-import { announceChange } from "#lib/server/changes.ts";
+import { announceChange, type Revoked } from "#lib/server/changes.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { activity, type ActivityChanges } from "#lib/server/db/schema.ts";
 import { afterCommit } from "#lib/server/db/serialize.ts";
@@ -102,13 +102,13 @@ export interface Actor {
 }
 
 /**
- * The engineer an order was taken off by a change (`changes.engineerId`, before and after), if it
- * was: the one it had and no longer has.
+ * Whose access a change revoked, from the entry's before side: the engineer an order had
+ * (`changes.engineerId`, before and after) and no longer has.
  */
-function engineerTakenFrom(type: string, changes: ActivityChanges | null) {
+function revokedBy(type: string, changes: ActivityChanges | null): Revoked[] | undefined {
 	if (type !== "order") return undefined;
 	const [was, now] = (changes?.engineerId ?? []) as [unknown, unknown];
-	return typeof was === "number" && was !== now ? was : undefined;
+	return typeof was === "number" && was !== now ? [{ audience: "engineer", id: was }] : undefined;
 }
 
 /**
@@ -150,13 +150,13 @@ export async function recordActivity(
 	// part deleted leaves the parent there.
 	const name = system ? m.activity_system_user() : user.name;
 	const made = { user: { id: user.id, name } };
-	const takenFrom = engineerTakenFrom(subject.type, changes);
+	const revokedFrom = revokedBy(subject.type, changes);
 	afterCommit(() => {
 		announceChange(organizationId, subject.type, {
 			...made,
 			action,
 			id: String(subject.id),
-			...(takenFrom === undefined ? {} : { takenFrom }),
+			...(revokedFrom ? { revokedFrom } : {}),
 		});
 		if (parent) {
 			announceChange(organizationId, parent.type, {

@@ -9,9 +9,9 @@ import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { getCurrentUser } from "#lib/auth/session.remote.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
-import { type Change, watchEvery } from "#lib/server/changes.ts";
+import { announceChange, type Change, watchEvery } from "#lib/server/changes.ts";
 import { db } from "#lib/server/db/index.ts";
-import { feedFor } from "#lib/server/live.ts";
+import { feedFor, liveFeed } from "#lib/server/live.ts";
 import { getMyUnit } from "#routes/(field)/my/places.remote.ts";
 import {
 	addNote,
@@ -297,9 +297,9 @@ describe("the portal's feed of changes", () => {
 
 	describe("when an order is taken off the engineer", () => {
 		/** The change that took the order off engineer `from`. */
-		const takenFrom = (from: number, id = own.id): Change => ({
+		const revoking = (from: number, id = own.id): Change => ({
 			...change("order", id, "updated"),
-			takenFrom: from,
+			revokedFrom: [{ audience: "engineer", id: from }],
 		});
 
 		/** Takes `own` off Erik for the length of `work`. */
@@ -315,9 +315,16 @@ describe("the portal's feed of changes", () => {
 		test("tells the engineer once, as the minimum: that it is gone from them, not who did it", async () => {
 			await released(async () => {
 				// An ordinary change to it is no longer heard, the one that took it is.
-				const told = await as(erik, () => feedFor()([takenFrom(mine), change("order", own.id)]));
+				const told = await as(erik, () => feedFor()([revoking(mine), change("order", own.id)]));
 				expect(told).toEqual([
-					{ type: "order", id: String(own.id), action: "taken_away", name: "", mine: false, at: 1 },
+					{
+						type: "order",
+						id: String(own.id),
+						action: "access_revoked",
+						name: "",
+						mine: false,
+						at: 1,
+					},
 				]);
 				expect(await as(erik, () => feedFor()([change("order", own.id)]))).toEqual([]);
 			});
@@ -338,14 +345,14 @@ describe("the portal's feed of changes", () => {
 			);
 			await released(async () => {
 				// Taken from another engineer: not Erik's to hear.
-				expect(await as(erik, () => feedFor()([takenFrom(another.id)]))).toEqual([]);
+				expect(await as(erik, () => feedFor()([revoking(another.id)]))).toEqual([]);
 			});
 			// The order of South, taken from someone: never Erik's.
-			expect(await as(erik, () => feedFor()([takenFrom(another.id, southern.id)]))).toEqual([]);
+			expect(await as(erik, () => feedFor()([revoking(another.id, southern.id)]))).toEqual([]);
 		});
 
 		test("is told to the office as any change, with who made it", async () => {
-			const told = await as(north.member, () => feedFor()([takenFrom(mine)]));
+			const told = await as(north.member, () => feedFor()([revoking(mine)]));
 			expect(told).toEqual([
 				{
 					type: "order",
@@ -356,6 +363,63 @@ describe("the portal's feed of changes", () => {
 					at: 1,
 				},
 			]);
+		});
+
+		test("is still told once when a later change to the order comes in the same burst", async () => {
+			const heard = watchEvery(northId, ["order"]);
+			const pending = heard.next();
+			announceChange(northId, "order", {
+				id: String(own.id),
+				action: "updated",
+				user: { id: "someone-else", name: "Pieter" },
+				revokedFrom: [{ audience: "engineer", id: mine }],
+			});
+			announceChange(northId, "order", {
+				id: String(own.id),
+				action: "cancelled",
+				user: { id: "someone-else", name: "Pieter" },
+			});
+			const batch = (await pending).value as Change[];
+			heard.stop();
+			// The later change replaced the first in the batch, and kept what the first revoked.
+			expect(batch).toHaveLength(1);
+			expect(batch[0]).toMatchObject({ action: "cancelled", revokedFrom: [{ id: mine }] });
+			await released(async () => {
+				expect(await as(erik, () => feedFor()(batch))).toEqual([
+					expect.objectContaining({ id: String(own.id), action: "access_revoked", name: "" }),
+				]);
+			});
+			// The office hears the latest change as it is.
+			expect(await as(north.member, () => feedFor()(batch))).toEqual([
+				expect.objectContaining({ id: String(own.id), action: "cancelled", name: "Pieter" }),
+			]);
+		});
+
+		test("stays the engineer's latest news of the order when a later change comes in a later burst", async () => {
+			await released(async () => {
+				await as(erik, async () => {
+					const feed = liveFeed(["order"], feedFor());
+					await feed.next();
+					const revoked = feed.next();
+					announceChange(northId, "order", {
+						id: String(own.id),
+						action: "updated",
+						revokedFrom: [{ audience: "engineer", id: mine }],
+					});
+					expect((await revoked).value?.changes).toEqual([
+						expect.objectContaining({ id: String(own.id), action: "access_revoked" }),
+					]);
+					// A later change to the order is unreadable to them: nothing to say, the notice stays.
+					const next = feed.next();
+					announceChange(northId, "order", { id: String(own.id), action: "cancelled" });
+					announceChange(northId, "order", { id: String(southern.id), action: "cancelled" });
+					const idle = await Promise.race([
+						next,
+						new Promise((r) => setTimeout(() => r("waiting"), 50)),
+					]);
+					expect(idle).toBe("waiting");
+				});
+			});
 		});
 
 		test("is announced with the engineer it was taken from, by the log", async () => {
@@ -373,7 +437,12 @@ describe("the portal's feed of changes", () => {
 			);
 			const { value } = await pending;
 			heard.stop();
-			expect(value).toEqual([expect.objectContaining({ id: String(own.id), takenFrom: mine })]);
+			expect(value).toEqual([
+				expect.objectContaining({
+					id: String(own.id),
+					revokedFrom: [{ audience: "engineer", id: mine }],
+				}),
+			]);
 			// A change that doesn't take it from anyone says so by saying nothing.
 			const again = watchEvery(northId, ["order"]);
 			const next = again.next();
@@ -389,7 +458,7 @@ describe("the portal's feed of changes", () => {
 			);
 			const second = (await next).value as Change[];
 			again.stop();
-			expect(second[0].takenFrom).toBeUndefined();
+			expect(second[0].revokedFrom).toBeUndefined();
 		});
 	});
 });

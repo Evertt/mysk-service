@@ -642,6 +642,15 @@ readers, `getRecordChangedAt` and the office's and engineer's feeds ask the regi
     "reads the whole type" signal in the registry would bring the notice back.
 15. **Step 4: a change announced for its type only (no id) goes to the office alone**, and only if the
     viewer can read the type at all (`visible(type)`).
+16. **Step 4: revoked access is told once (decision 14's exception).** When a change takes a record
+    off someone who knew it (today: an order off its engineer), that person's feed gets one
+    `access_revoked` change (`ACCESS_REVOKED`): the type and id, no name of who did it, so it reveals
+    nothing they didn't know. No one else hears it (the office hears the change as usual), and after
+    it the record is unreadable, so the open page's next refresh is a 404 and later changes are
+    dropped. `recordActivity` derives it from the entry's before side (`changes.engineerId`) and
+    carries it on the in-memory bus event (`Change.revokedFrom`, `{ audience, id }`); the bus keeps
+    it when a later change to the record replaces the pending one in a batch, so a burst can't lose
+    it. Another audience's revocation (a contact's site, step 5's narrowing) adds an `audience` there.
 
 **Open / for the steps to come**
 
