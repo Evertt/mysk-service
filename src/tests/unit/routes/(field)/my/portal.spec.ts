@@ -8,7 +8,9 @@
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { getCurrentUser } from "#lib/auth/session.remote.ts";
-import type { Change } from "#lib/server/changes.ts";
+import { recordActivity } from "#lib/server/activity/index.ts";
+import { type Change, watchEvery } from "#lib/server/changes.ts";
+import { db } from "#lib/server/db/index.ts";
 import { feedFor } from "#lib/server/live.ts";
 import {
 	addNote,
@@ -249,14 +251,106 @@ describe("the portal's feed of changes", () => {
 		expect(mixed.map((heard) => heard.id)).toEqual([String(own.id)]);
 	});
 
-	test("doesn't tell of an order once it is taken off them, nor of a change for its type only", async () => {
+	test("doesn't tell of a change for its type only", async () => {
 		const mixed: Change[] = [change("order", own.id), { type: "order", at: 1 }];
 		expect(await as(erik, () => feedFor()(mixed))).toHaveLength(1);
-		await rows(`update "order" set engineer_id = null where id = ?`, [own.id]);
-		try {
-			expect(await as(erik, () => feedFor()(mixed))).toEqual([]);
-		} finally {
-			await rows(`update "order" set engineer_id = ? where id = ?`, [mine, own.id]);
+	});
+
+	describe("when an order is taken off the engineer", () => {
+		/** The change that took the order off engineer `from`. */
+		const takenFrom = (from: number, id = own.id): Change => ({
+			...change("order", id, "updated"),
+			takenFrom: from,
+		});
+
+		/** Takes `own` off Erik for the length of `work`. */
+		async function released<T>(work: () => Promise<T>) {
+			await rows(`update "order" set engineer_id = null where id = ?`, [own.id]);
+			try {
+				return await work();
+			} finally {
+				await rows(`update "order" set engineer_id = ? where id = ?`, [mine, own.id]);
+			}
 		}
+
+		test("tells the engineer once, as the minimum: that it is gone from them, not who did it", async () => {
+			await released(async () => {
+				// An ordinary change to it is no longer heard, the one that took it is.
+				const told = await as(erik, () => feedFor()([takenFrom(mine), change("order", own.id)]));
+				expect(told).toEqual([
+					{ type: "order", id: String(own.id), action: "taken_away", name: "", mine: false, at: 1 },
+				]);
+				expect(await as(erik, () => feedFor()([change("order", own.id)]))).toEqual([]);
+			});
+		});
+
+		test("is no reason to read it: the next refresh is a 404", async () => {
+			await released(async () => {
+				await as(erik, async () => {
+					expect(await call(getMyOrder, own.number)).toMatchObject({ status: 404 });
+				});
+			});
+		});
+
+		test("tells no other engineer, and no one of an order that was never theirs", async () => {
+			const [another] = await rows<{ id: number }>(
+				`select id from engineer where organization_id = ? and id is not ? limit 1`,
+				[northId, mine],
+			);
+			await released(async () => {
+				// Taken from another engineer: not Erik's to hear.
+				expect(await as(erik, () => feedFor()([takenFrom(another.id)]))).toEqual([]);
+			});
+			// The order of South, taken from someone: never Erik's.
+			expect(await as(erik, () => feedFor()([takenFrom(another.id, southern.id)]))).toEqual([]);
+		});
+
+		test("is told to the office as any change, with who made it", async () => {
+			const told = await as(north.member, () => feedFor()([takenFrom(mine)]));
+			expect(told).toEqual([
+				{
+					type: "order",
+					id: String(own.id),
+					action: "updated",
+					name: "Pieter",
+					mine: false,
+					at: 1,
+				},
+			]);
+		});
+
+		test("is announced with the engineer it was taken from, by the log", async () => {
+			const heard = watchEvery(northId, ["order"]);
+			const pending = heard.next();
+			await as(north.member, () =>
+				db.transaction((tx) =>
+					recordActivity(tx, {
+						action: "updated",
+						subject: { type: "order", id: own.id, label: own.number },
+						before: { engineerId: mine },
+						after: { engineerId: null },
+					}),
+				),
+			);
+			const { value } = await pending;
+			heard.stop();
+			expect(value).toEqual([expect.objectContaining({ id: String(own.id), takenFrom: mine })]);
+			// A change that doesn't take it from anyone says so by saying nothing.
+			const again = watchEvery(northId, ["order"]);
+			const next = again.next();
+			await as(north.member, () =>
+				db.transaction((tx) =>
+					recordActivity(tx, {
+						action: "updated",
+						subject: { type: "order", id: own.id, label: own.number },
+						before: { engineerId: null, laborHours: 1 },
+						after: { engineerId: mine, laborHours: 2 },
+					}),
+				),
+			);
+			const second = (await next).value as Change[];
+			again.stop();
+			expect(second[0].takenFrom).toBeUndefined();
+		});
 	});
 });

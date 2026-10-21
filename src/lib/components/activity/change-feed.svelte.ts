@@ -7,7 +7,7 @@
  */
 import { createContext, untrack } from "svelte";
 
-import { isGone, type TenantChange, type TenantChanges } from "#lib/activity/index.ts";
+import { isGone, TAKEN_AWAY, type TenantChange, type TenantChanges } from "#lib/activity/index.ts";
 
 import { getRecordChangedAt } from "./activity.remote.ts";
 import { type ChangeListener, ChangeFeed, type Subject } from "./change-feed.ts";
@@ -69,7 +69,7 @@ export function refreshOnRecordChange(
 	onRecordChange(
 		subject,
 		(change) => {
-			if (!isGone(change?.action)) refresh();
+			if (!isGone(change?.action) && change?.action !== TAKEN_AWAY) refresh();
 		},
 		readTime,
 	);

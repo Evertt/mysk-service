@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
 	import MailIcon from "@lucide/svelte/icons/mail";
@@ -6,7 +7,9 @@
 	import PlayIcon from "@lucide/svelte/icons/play";
 	import { toast } from "svelte-sonner";
 
+	import { TAKEN_AWAY } from "#lib/activity/index.ts";
 	import { getCurrentUser } from "#lib/auth/session.remote.ts";
+	import { onRecordChange } from "#lib/components/activity/change-feed.svelte.ts";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
@@ -41,6 +44,17 @@
 	// Live: the office rescheduling, changing or cancelling the order shows without a reload (one
 	// taken off the engineer is a 404 then, as on a reload).
 	refreshOnChange(watchMyWork, () => getMyOrder(params.number).refresh());
+
+	// The one thing the feed tells of an order that stops being theirs: it was taken off them. The
+	// page says so and leaves for the list, since it can read nothing more of the order.
+	onRecordChange(
+		() => ({ type: "order", id: order.id }),
+		(change) => {
+			if (change?.action !== TAKEN_AWAY) return;
+			toast.info(m.portal_order_taken_away({ number: order.number }));
+			void goto(resolve("/(field)/my"));
+		},
+	);
 </script>
 
 <svelte:head>

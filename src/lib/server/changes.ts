@@ -20,6 +20,11 @@ export interface Change {
 	action?: string;
 	/** Who did it. */
 	user?: { id: string; name: string };
+	/**
+	 * For an order taken off an engineer: that engineer's id. Only the engineer it was taken from is
+	 * told (`feedFor()`), as the one who knew the order; it names no one else.
+	 */
+	takenFrom?: number;
 	/** When it was announced (epoch ms). */
 	at: number;
 }

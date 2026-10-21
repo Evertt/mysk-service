@@ -40,6 +40,12 @@ export async function engineerSelf(): Promise<SQL> {
 	return idInTenant(engineer, self.id);
 }
 
+/** Whether `id` is the signed-in engineer's own id (for who an order was taken from). */
+export async function isEngineer(id: number): Promise<boolean> {
+	const { engineer } = await requireEngineer();
+	return engineer.id === id;
+}
+
 /** The one order `ref` names, if it's one of `engineerOrders()`. */
 export async function engineerOrder(ref: OrderRef): Promise<SQL> {
 	const named = "id" in ref ? eq(order.id, ref.id) : eq(order.number, ref.number);
