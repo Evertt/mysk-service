@@ -273,10 +273,8 @@ describe("in South", () => {
 				["order", fromNorth.order],
 			] as const) {
 				expect((await data(getActivity, { type, id: String(id) })).entries).toEqual([]);
-				// Not found, as the record is: it isn't South's.
-				expect(await call(getSubjectActivity, { type, id: String(id) })).toMatchObject({
-					status: 404,
-				});
+				// The office reads these types whole, and the card's query is South's: no entries.
+				expect(await data(getSubjectActivity, { type, id: String(id) })).toEqual([]);
 			}
 			// South's own customer with the same code has none of North's changes to theirs.
 			const own = await value<number>(
@@ -416,6 +414,24 @@ describe("what getRecordChangedAt answers", () => {
 });
 
 describe("a record's activity card", () => {
+	test("keeps the history of a deleted record for the office", async () => {
+		const gone = "987654";
+		await rows(
+			`insert into activity (organization_id, user_name, action, subject_type, subject_id, subject_label)
+			 values (?, 'Planted deleted', 'deleted', 'customer', ?, 'CUST-GONE')`,
+			[northId, gone],
+		);
+		try {
+			expect(await value(`select count(*) from customer where id = ?`, [gone])).toBe(0);
+			const card = await as(north.owner, () =>
+				data(getSubjectActivity, { type: "customer", id: gone }),
+			);
+			expect(card.map((entry) => entry.subject.label)).toEqual(["CUST-GONE"]);
+		} finally {
+			await rows(`delete from activity where user_name = 'Planted deleted'`);
+		}
+	});
+
 	test("is a 404 for a record of a module that is off, and for one the asker may not read", async () => {
 		const [invoice] = await idsOf("invoice");
 		const [member] = await idsOf("member");
@@ -444,17 +460,23 @@ describe("a record's activity card", () => {
 });
 
 describe("the log's readers", () => {
+	/** A user with no entry in North's log but the manager-only one planted for them. */
+	let managerOnly: string;
+
 	beforeAll(async () => {
 		const [member] = await idsOf("member");
 		const [invoice] = await idsOf("invoice");
-		for (const [type, id] of [
-			["member", member],
-			["invoice", invoice],
+		managerOnly = await value<string>(
+			`select id from user where id not in (select user_id from activity where user_id is not null) limit 1`,
+		);
+		for (const [type, id, userId] of [
+			["member", member, managerOnly],
+			["invoice", invoice, null],
 		]) {
 			await rows(
-				`insert into activity (organization_id, user_name, action, subject_type, subject_id, subject_label)
-				 values (?, 'Planted', 'updated', ?, ?, 'planted')`,
-				[northId, type, id],
+				`insert into activity (organization_id, user_id, user_name, action, subject_type, subject_id, subject_label)
+				 values (?, ?, 'Planted', 'updated', ?, ?, 'planted')`,
+				[northId, userId, type, id],
 			);
 		}
 	});
@@ -470,6 +492,7 @@ describe("the log's readers", () => {
 			feed: (await data(getActivity, {})).entries,
 			recent: await data(getRecentActivity),
 			filters: (await data(getActivityFilters)).types.map((type) => type.value),
+			users: (await data(getActivityFilters)).users.map((user) => user.value),
 			ofMembers: (await data(getActivity, { type: "member" })).entries,
 			newMembers: await data(countNewActivity, { type: "member", after: null }),
 		}));
@@ -480,6 +503,7 @@ describe("the log's readers", () => {
 		expect(owner.filters).toEqual(expect.arrayContaining(["member", "invoice"]));
 		expect(owner.ofMembers.length).toBeGreaterThan(0);
 		expect(owner.newMembers).toBeGreaterThan(0);
+		expect(owner.users).toContain(managerOnly);
 
 		const planner = await readersAs(north.member);
 		expect(types(planner.feed)).not.toContain("member");
@@ -487,6 +511,8 @@ describe("the log's readers", () => {
 		expect(types(planner.recent)).not.toContain("member");
 		expect(planner.filters).not.toContain("member");
 		expect(planner.filters).toContain("invoice");
+		// Nor is anyone listed whose only entries are of the manager-only types.
+		expect(planner.users).not.toContain(managerOnly);
 		expect(planner.ofMembers).toEqual([]);
 		expect(planner.newMembers).toBe(0);
 	});

@@ -104,6 +104,11 @@ export const readable = (subjects: readonly RecordRef[]) => allowed(subjects, "r
  * managers read (`member`, …) none for anyone else, so neither is here. For the log's readers,
  * which hide the entries of the other types without asking per entry (so the entry of a deleted
  * record stays wherever the viewer reads its type whole).
+ *
+ * A type read under a condition counts too (`saved_view`, own or shared), though not every record is
+ * theirs: the log holds only what was public when it was logged (a personal view is never logged,
+ * a shared one's entries are the office's to see, its "unshared" entry included), so no entry
+ * names a view that was private.
  */
 export async function readableTypes(): Promise<string[]> {
 	const rules = rulesOf();

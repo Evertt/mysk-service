@@ -3,6 +3,7 @@
  * it: entries newest first, each with its subject's noun, its changes and links ready to show, in
  * the request's language. `activity-list.svelte` puts them in the action's sentence.
  */
+import { error } from "@sveltejs/kit";
 import { and, count, desc, eq, gt, isNotNull, lt, max, or } from "drizzle-orm";
 import * as v from "valibot";
 
@@ -10,7 +11,7 @@ import { everyLoggedType, subjectTypeLabel, subjectTypes } from "#lib/activity/i
 import { isDay } from "#lib/dates.ts";
 import { intlLocale } from "#lib/i18n/index.ts";
 import { recordId } from "#lib/schema.ts";
-import { keyOf, readable, readableTypes, readOrNotFound } from "#lib/server/access/index.ts";
+import { keyOf, readable, readableTypes } from "#lib/server/access/index.ts";
 import { present } from "#lib/server/activity/index.ts";
 import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
 import { recordChangedAt } from "#lib/server/changes.ts";
@@ -131,8 +132,12 @@ const subjectSchema = v.object({
 export const getSubjectActivity = forMembers.query(
 	v.object({ type: v.picklist(loggedTypes), id: v.string() }),
 	async ({ type, id }) => {
-		// A record the viewer may not read, or of a module the tenant lacks, is a 404.
-		await readOrNotFound({ type, id });
+		// A record the viewer may not read, or of a module the tenant lacks, is a 404. `readable()`
+		// trusts a rule that reads the type whole (the office's), so the history of a deleted record
+		// stays, and another tenant's id answers an empty list: the query is the tenant's.
+		if (!(await readable([{ type, id }])).has(keyOf({ type, id }))) {
+			error(404, m.common_error_not_found());
+		}
 		const rows = await db
 			.select()
 			.from(activity)
@@ -158,15 +163,17 @@ export const getRecentActivity = forMembers.query(async () => {
 export const getActivityFilters = forMembers.query(async () => {
 	const { modules } = currentTenant();
 	const types = subjectTypes(modules);
+	const readableEntries = await ofReadableTypes();
 	const [subjects, users] = await Promise.all([
 		db
 			.selectDistinct({ type: activity.subjectType })
 			.from(activity)
-			.where(and(...(await ofReadableTypes()))),
+			.where(and(...readableEntries)),
+		// Only those with an entry the viewer reads, so no one is listed for a manager-only type's.
 		db
 			.selectDistinct({ id: activity.userId, name: activity.userName })
 			.from(activity)
-			.where(and(inTenant(activity), isNotNull(activity.userId))),
+			.where(and(...readableEntries, isNotNull(activity.userId))),
 	]);
 	const byLabel = (a: { label: string }, b: { label: string }) =>
 		a.label.localeCompare(b.label, intlLocale());
