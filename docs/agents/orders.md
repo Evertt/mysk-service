@@ -80,14 +80,15 @@ customer, the request, prices, tags, history, checklists), on the scope's `where
   collected it, no engineer: it's them), `customer` (no notes, the engineer by first name) and
   `workOrder` (no notes, the engineer in full). Its units and their sites are as the units'
   audience it names sees them (`units`, see "Units and locations" below): the office's and the
-  engineer's (at their own order, so at its sites) with the sites' `onSite` columns, the customer's and the printed work order's with the
-  address; only the office sees a unit's warranty date. A key the table says no to isn't in
-  `WorkRecord<A>`'s type: a customer's record has no `notes`. A new column a portal mustn't see is a key in the table, not a select of its own; a key
-  that doesn't change the record's shape (prices) doesn't belong there.
+  engineer's (at their own order, so at its sites) with the sites' `onSite` columns, the customer's
+  and the printed work order's with the address; only the office sees a unit's warranty date. A key
+  the table says no to isn't in `WorkRecord<A>`'s type: a customer's record has no `notes`. A new
+  column a portal mustn't see is a key in the table, not a select of its own; a key that doesn't
+  change the record's shape (prices) doesn't belong there.
 - **A scope** finds the order and names its audience, and only these make one, each async: they take
   the order's condition from the access registry (`visibleOrNone("order", …)`, `#lib/server/access`),
-  so a page, a list and `mayRead()` agree. `await officeOrder(number)` (the tenant's), `await
-engineerWork(ref)` (the engineer's own), `await customerWork(access, number)` (with only the units
+  so a page, a list and `mayRead()` agree. `await officeOrder(number)` (the tenant's),
+  `await engineerWork(ref)` (the engineer's own), `await customerWork(access, number)` (with only the units
   at the contact's sites, `atSites()`) and `await printedWorkOrder(number, await viewer())` (the
   office's any, a contact's done orders only: that rule lives there). An order the scope doesn't
   reach reads as `undefined`: the caller 404s with its own message (`engineerOrderNotFound()` on

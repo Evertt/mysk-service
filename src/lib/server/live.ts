@@ -80,11 +80,11 @@ interface FeedChange {
 
 /**
  * Every change to the current tenant's records of `types`, for the one live query a tab shares
- * (`watchTenantChanges`, `watchFieldChanges`, `watchPortalChanges`): no changes at first, then after each burst, as
- * `present` makes them of its changes (leaving out those the user mustn't hear of: a burst with
- * none left answers nothing). An answer repeats the changes of the last `FEED_WINDOW` ms, so a
- * client that reads only the latest answer (a live query's `current`) misses none that came in
- * quick succession; it tells them apart by when they were made.
+ * (`watchTenantChanges`, `watchFieldChanges`, `watchPortalChanges`): no changes at first, then
+ * after each burst, as `present` makes them of its changes (leaving out those the user mustn't
+ * hear of: a burst with none left answers nothing). An answer repeats the changes of the last
+ * `FEED_WINDOW` ms, so a client that reads only the latest answer (a live query's `current`) misses
+ * none that came in quick succession; it tells them apart by when they were made.
  */
 export function liveFeed<T extends FeedChange>(
 	types: readonly ChangeType[],

@@ -567,11 +567,12 @@ agreed by the owner.
 
 ## Progress
 
-Status of 22 October 2026. Steps 1 to 6 are built on the branch `permissions-access-registry`
-(from `permissions-design`). Steps 1 and 2 were reviewed and the review's findings fixed; steps 3 to 6
-were built by parallel sessions and merged, not yet reviewed (nor run in e2e). Step 7 (docs and the
-portals' feeds) is built, on `access-step-7-docs-and-portal-feeds`, its e2e not run. The log's readers, `getRecordChangedAt`, the feeds, the portals'
-work-record and unit scopes, the QR codes, the tray and the saved views ask the registry.
+Status of 21 October 2026. Steps 1 to 7 are built on the branch `permissions-access-registry`
+(from `permissions-design`). Steps 1 and 2 were reviewed and the review's findings fixed; steps 3 to 7
+were built by parallel sessions and merged, then reviewed, and that review's findings were fixed on
+`access-review-fixes-3-7` (decision 24). None of it has run in e2e yet. The log's readers,
+`getRecordChangedAt`, the feeds, the portals' work-record and unit scopes, the QR codes, the tray and
+the saved views ask the registry.
 
 **Built**
 
@@ -587,10 +588,20 @@ work-record and unit scopes, the QR codes, the tray and the saved views ask the 
   helpers in `src/tests/unit/lib/server/access/support.ts`.
 
 - Step 3: `getRecordChangedAt` answers 0 for what the viewer may not read (the batch is not refused);
-  `getSubjectActivity` uses `readOrNotFound()`; the log's list readers keep only `readableTypes()` (new in
+  `getSubjectActivity` asks `readable()` (decision 13); the log's list readers keep only `readableTypes()` (new in
   `index.ts`: the type names the viewer's audience has a read rule for, modules that are off and the
   manager-only types for non-managers left out). Guard rules 2 and 3 are on in `access.spec.ts`, with an
   `infrastructure` allow-list that gives a reason per file.
+- Step 5 (the portals): the work record's and the units' scopes take their conditions from the
+  registry (`visible()`), the engineer's `site` rule is narrowed to the sites of their orders
+  (`engineerSites()`), a scanned code's reach for a contact is answered by the `location` and
+  `equipment` rules, the tray's order links and the engineer's order activity read through the
+  registry, and guard rules 4 and 5 (no tenant-only scoping in portal files, one contact lookup)
+  are on in `access.spec.ts`.
+- Step 6 (the hand-written checks): `saved_view`'s own-or-shared rule answers who sees and changes
+  a view (`canShareViews` is gone), the members page's invitations read through the `invitation`
+  rule, `findEngineerOrder()` is built on the `order` change rule, and guard rule 6 (no literal
+  `owner`/`admin` comparison outside the files that own roles) is on.
 - Step 4: `feedFor(viewer)` and the `hears` table in `src/lib/server/live.ts` present each shell's feed
   (`readable()` filters a burst; the office hears the name and the full action, an engineer or customer
   neither). `watchTenantChanges` and `watchFieldChanges` use it; `src/routes/(field)/my/changes.server.ts`
@@ -614,7 +625,7 @@ work-record and unit scopes, the QR codes, the tray and the saved views ask the 
 7. **The system audience reads and changes everything of its tenant** unless an entry says otherwise.
 8. **`saved_view`'s own-or-shared rule is in step 1**, not step 6 (it was needed for every type to have a
    rule): the office reads its own and shared views; it changes its own, and a manager the shared ones.
-   `views.remote.ts` still has its three hand-written copies; step 6 replaces them.
+   Step 6 made `views.remote.ts` ask it, in place of its three hand-written copies.
 9. **`order_line` is the office's only.** Its activity subject id is the material's, not the line's, so
    an engineer rule "lines on my orders" would open that material's line on every order. Engineers see
    their lines through the order. (Review finding A1.) Fixing it properly would mean logging the line
@@ -633,14 +644,18 @@ work-record and unit scopes, the QR codes, the tray and the saved views ask the 
     change their own partner bonus year while the choice is unmade. Invoices, credit notes, contracts,
     docks, maintenance and the energy consumers and alerts are the office's only.
 12. **Engineers read every `customer`** (decision 2 above: the owner's name on a unit's page).
-13. **Step 3's answers for other tenants and deleted records.** `getSubjectActivity` for another tenant's
-    id, or for a deleted record, is now a 404 (it was an empty list): `readOrNotFound()` checks the table.
-    `getRecordChangedAt` stays keyed by the tenant, so another tenant's id answers 0.
+13. **Step 3's answers for other tenants and deleted records.** `getSubjectActivity` asks `readable()`,
+    which trusts a rule that reads the type whole (`"all"`, the office's), so a deleted record's history
+    stays and another tenant's id answers an empty list (the activity query is the tenant's), as before.
+    A type that is unknown, of a module that is off, or not the viewer's to read is a 404.
+    `getRecordChangedAt` is keyed by the tenant, so another tenant's id answers 0.
 14. **Step 4: a change that leaves an engineer's scope is dropped from their feed** (an order taken off
     them is no longer `readable()`); the open page gets its 404 on the next refresh, and the bell's tray
-    still keeps the entry. **The deletion of a unit is no longer announced to an engineer**, because a
-    deleted row can't be checked against the engineer's unit condition; the office still hears it. A
-    "reads the whole type" signal in the registry would bring the notice back.
+    still keeps the entry. **The deletion of an order is not announced to an engineer or a contact**, because a
+    deleted row can't be checked against their order condition; the office still hears it. **The
+    deletion of a unit is announced to an engineer** (step 5 made their `equipment` rule `"all"`, which
+    `readable()` trusts without a query: `(field)/my/portal.spec.ts` fixes it); a contact's, whose
+    `equipment` rule has a condition, is not.
 15. **Step 4: a change announced for its type only (no id) goes to the office alone**, and only if the
     viewer can read the type at all (`visible(type)`).
 16. **Step 4: revoked access is told once (decision 14's exception).** When a change takes a record
@@ -651,7 +666,11 @@ work-record and unit scopes, the QR codes, the tray and the saved views ask the 
     dropped. `recordActivity` derives it from the entry's before side (`changes.engineerId`) and
     carries it on the in-memory bus event (`Change.revokedFrom`, `{ audience, id }`); the bus keeps
     it when a later change to the record replaces the pending one in a batch, so a burst can't lose
-    it. Another audience's revocation (a contact's site, step 5's narrowing) adds an `audience` there.
+    it. Another audience's revocation (a contact's site, step 5's narrowing) adds an `audience` there;
+    a customer who loses sight of a unit is deliberately not told yet. An engineer who was offline
+    (or whose feed was reconnecting) misses the notice, and the catch-up answers 0 for the order they
+    lost: so a page that followed a record through an earlier stream looks again when the catch-up
+    after a reconnect answers 0 (`ChangeFeed`), and its query says 404; a first load needs no look.
 
 17. **The team is the managers' to see, everywhere.** `getMembers` (the members page) is `forManagers`,
     and the settings page shows its team card to managers only (its list reads through `visible("member")`,
@@ -691,10 +710,30 @@ work-record and unit scopes, the QR codes, the tray and the saved views ask the 
     contact (decision 14), so a list or bell learns of it at the next change they hear, not at once.
     Before, any change of the type refreshed them.
 
+24. **The review's fixes (steps 3 to 7), the choices that aren't obvious.**
+    - The engineer's `engineerSites()` writes the tenant and the engineer in as constants
+      (`literal()`), not bound: `siteColumnsWhere()` repeats it behind ten columns, which bound came to
+      96 values in a unit's read (a Durable Object takes 100) and now 26. The meaning is the same; a
+      spec (`bind-counts.spec.ts`) keeps the margin.
+    - `readableTypes()` keeps counting a type with a conditional rule (`saved_view`) as readable: only
+      shared views are ever logged, so none of its entries names a private view, and dropping the type
+      would hide the shared views' entries from the office.
+    - The log's user filter lists only users with an entry the viewer reads (`ofReadableTypes()`).
+    - A revocation is merged onto a later change only on a per-record watch (`watchEvery`).
+    - `feedFor()` recognises the person of a revocation by audience (`isThem()`, exhaustive).
+    - The portals' order lists read through `visibleOrNone("order")`; `orderNamed(ref)` is the one
+      condition for an order named by id or number.
+    - Guards: the files that read `live()` for a timestamp or a count are on the `infrastructure` list
+      with a reason (they name no record); rule 4's `tenantOnly` allows a number of occurrences per
+      file; `code()` strips comments with a scanner that leaves strings alone.
+    - Left to the owner and unchanged: the status lists `engineerWorkStatuses` and `plannedStatuses`
+      (`src/modules/condition/server/status-sql.ts`) are two lists; five specs mock the registry barrel
+      by hand.
+
 **Open / for the steps to come**
 
-- Not switched on (guard rules 1 to 6 are all in `access.spec.ts`, but a few files are on their
-  allow-lists with a reason each: read those when touching them).
+- Guard rules 1 to 6 are all on in `access.spec.ts`. A few files are on its allow-lists (`infrastructure`,
+  `tenantOnly`, `roleOwners`) with a reason each: read the reason when touching one.
 - The settings page's team card lists customers' contacts to managers (`getOrganizationSettings` has no
   `isCustomerRole` filter, unlike `getMembers`): to settle.
 

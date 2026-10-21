@@ -56,8 +56,9 @@ export async function engineerSelf(): Promise<SQL> {
  */
 export async function engineerSites(): Promise<SQL> {
 	// This condition stands behind each of a site's on-site columns in one statement
-	// (`siteColumnsWhere()`), so its tenant and engineer are written in as constants, not bound: bound,
-	// they came to about 9 values a column and put a unit's read near the 100 a Durable Object takes.
+	// (`siteColumnsWhere()`), so its tenant and engineer are written in as constants, not bound:
+	// bound, they came to about 9 values a column and put a unit's read near the 100 a Durable
+	// Object takes.
 	const { engineer: self } = await requireEngineer();
 	const organizationId = literal(requireTenant().organizationId);
 	const inThisTenant = (table: { organizationId: SQLiteColumn }) =>
@@ -105,9 +106,9 @@ export function engineerOrderNotFound(ref: OrderRef): never {
  * For the engineer's notifications (`#lib/server/notifications/`): conditions on an `activity`
  * entry about one of the tenant's orders that gave it to the signed-in engineer, took it off them,
  * or is about an order of theirs now (`theirOrders`, a condition on `order`: the access registry's
- * `visible("order")` for them, which this file can't import without a cycle). The entries record the engineer as `changes.engineerId`
- * (before, after): an assignment, a plan, the order form, a creation with an engineer and a
- * deletion of an assigned order all do.
+ * `visible("order")` for them, which this file can't import without a cycle). The entries record
+ * the engineer as `changes.engineerId` (before, after): an assignment, a plan, the order form, a
+ * creation with an engineer and a deletion of an assigned order all do.
  */
 export async function engineerActivity(theirOrders: SQL): Promise<EngineerActivity> {
 	const { engineer } = await requireEngineer();

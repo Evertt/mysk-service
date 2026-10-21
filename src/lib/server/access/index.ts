@@ -138,8 +138,9 @@ export const changeable = (subjects: readonly RecordRef[]) => allowed(subjects, 
 
 /**
  * The viewer's (or `as`'s: a scope maker names its audience's viewer) condition on the table of
- * `type`, to `read` or `change` (`undefined`: none, also for an unknown type), for a list's `scope`, a join or a subquery. A type without a row of its own
- * (`order_type`, `module`) has no table to scope: a yes is a condition that holds.
+ * `type`, to `read` or `change` (`undefined`: none, also for an unknown type), for a list's `scope`,
+ * a join or a subquery. A type without a row of its own (`order_type`, `module`) has no table to
+ * scope: a yes is a condition that holds.
  */
 export async function visible(
 	type: string,
