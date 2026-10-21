@@ -6,9 +6,8 @@
  * Makers cover every type, so no entry is written by hand:
  *
  * - `rows(table, idColumn, byAudience, options?)`: a type with a row of its own (`order`, `customer`);
+ * - `partOf(parentType, table, parentColumn, narrowedBy?)`: a part, whose rule is its parent's (`order_line`);
  * - `tenantWide(byAudience, options?)`: a type without a row (`module`, `order_type`, `*_settings`).
- *
- * (A module's part of a record gets its maker with the modules' rules.)
  *
  * An audience has an entry for a type, or it doesn't read it: deny by default. An entry is `true`
  * (every record of the tenant), `"manager"` (the same, for owners and admins; the office only), or
@@ -16,7 +15,7 @@
  * built from the audience scopes that exist (`engineerOrders()`, `customerOrders()`, …). The system,
  * which works across the tenant, reads and changes everything unless an entry says otherwise.
  */
-import { and, type SQL, sql } from "drizzle-orm";
+import { and, eq, type SQL, sql } from "drizzle-orm";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 
 import { inTenant } from "#lib/server/auth/index.ts";
@@ -135,6 +134,59 @@ export function rows(
 				.select({ id: idColumn })
 				.from(table)
 				.where(and(inList(idColumn, keys), inTenant(table), scope(where)));
+			return new Set(found.map((row) => String(row.id)));
+		},
+	};
+}
+
+/**
+ * What an audience reads or changes of a part besides what its parent gives: a condition on the
+ * part's own table (a customer sees an order's checklists once they're completed).
+ */
+export type NarrowedBy = { [A in Audience]?: (viewer: Of<A>) => SQL };
+
+/**
+ * A part of a record of `parentType` (an order's line, an invoice's line): `parentColumn` of
+ * `table` is its parent's id, and its rules are its parent's, through `exists`, `narrowedBy` an
+ * audience's own condition on the part. A parent the tenant has no rule for (its module is off)
+ * leaves the part unreadable.
+ */
+export function partOf(
+	parentType: string,
+	table: SQLiteTable & { organizationId: SQLiteColumn; id: SQLiteColumn },
+	parentColumn: SQLiteColumn,
+	narrowedBy: NarrowedBy = {},
+): AccessRule {
+	const through =
+		(which: "read" | "change") =>
+		async (viewer: Viewer, rules: Rules): Promise<Condition | undefined> => {
+			const parent = rules(parentType);
+			if (!parent?.row) return undefined;
+			const where = await parent[which](viewer, rules);
+			if (!where) return undefined;
+			const narrow = (narrowedBy[viewer.audience] as ((viewer: Viewer) => SQL) | undefined)?.(
+				viewer,
+			);
+			if (where === "all") return narrow ? and(inTenant(table), narrow)! : "all";
+			const { table: parentTable, idColumn } = parent.row;
+			return and(
+				inTenant(table),
+				narrow,
+				sql`exists (select 1 from ${parentTable} where ${and(eq(idColumn, parentColumn), where)})`,
+			)!;
+		};
+	return {
+		read: through("read"),
+		change: through("change"),
+		scope: (where) => (where === "all" ? inTenant(table) : where),
+		row: { table, idColumn: table.id },
+		async check(ids, where) {
+			const keys = keysOf(table.id, ids);
+			if (!keys.length) return new Set();
+			const found = await db
+				.select({ id: table.id })
+				.from(table)
+				.where(and(inList(table.id, keys), inTenant(table), where === "all" ? undefined : where));
 			return new Set(found.map((row) => String(row.id)));
 		},
 	};

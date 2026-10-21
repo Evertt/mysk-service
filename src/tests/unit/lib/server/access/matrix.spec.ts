@@ -22,6 +22,8 @@ import {
 import type { Actor } from "#unit/lib/server/harness/actors.ts";
 import { as, asSystem, north, rows, south, value } from "#unit/lib/server/harness/index.ts";
 
+import { idsOf, keys, readOneByOne, subjects } from "./support.ts";
+
 /** The tables of the core's subject types that have a row of their own, by type. */
 const tables = {
 	order: "order",
@@ -32,25 +34,6 @@ const tables = {
 	location: "equipment_location",
 	equipment_category: "equipment_category",
 } as const;
-
-const idsOf = async (table: string, organization: string, where = "", args: string[] = []) =>
-	(
-		await rows<{ id: number | string }>(
-			`select id from "${table}" where organization_id = ? ${where} order by id`,
-			[organization, ...args],
-		)
-	).map((row) => String(row.id));
-
-const subjects = (type: string, ids: readonly string[]) => ids.map((id) => ({ type, id }));
-const keys = (type: string, ids: readonly string[]) => new Set(ids.map((id) => `${type}/${id}`));
-
-/** Which of `ids` the actor may read, by asking one record at a time (the table is asked). */
-const readOneByOne = (actor: Actor, type: string, ids: readonly string[]) =>
-	as(actor, async () => {
-		const read: string[] = [];
-		for (const id of ids) if (await mayRead({ type, id })) read.push(id);
-		return read;
-	});
 
 describe("the office", () => {
 	for (const [type, table] of Object.entries(tables)) {
