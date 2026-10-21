@@ -1,15 +1,13 @@
 /**
  * Keeps a page up to date with the activity log: when anyone in the organization changes something
- * (`watchActivity`), the page looks again (`refresh`). Light on purpose: a burst of changes (a bulk
+ * (the office tab's feed of changes, `onAnyChange()`), the page looks again (`refresh`). Light on purpose: a burst of changes (a bulk
  * action, several transactions in a row) brings one refresh, not one each. At most one refresh per
  * `delay`, never two at once (a change during one brings one more after it), and none while the
  * tab is hidden (one when it shows again).
  */
 import { onMount } from "svelte";
 
-import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
-
-import { watchActivity } from "./activity.remote.ts";
+import { onAnyChange } from "./change-feed.svelte.ts";
 
 /** How long a change waits for the rest of its burst before the page looks again (ms). */
 const defaultDelay = 400;
@@ -44,7 +42,7 @@ export function refreshOnActivity(refresh: () => Promise<unknown>, delay = defau
 		if (outdated) schedule();
 	}
 
-	refreshOnChange(watchActivity, schedule);
+	onAnyChange(schedule);
 
 	onMount(() => {
 		const onVisible = () => {

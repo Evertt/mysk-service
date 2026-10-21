@@ -23,7 +23,7 @@ import { recordChangedAt } from "#lib/server/changes.ts";
 import { db } from "#lib/server/db/index.ts";
 import { activity } from "#lib/server/db/schema.ts";
 import { inDays } from "#lib/server/lists/index.ts";
-import { live, liveFeed } from "#lib/server/live.ts";
+import { liveFeed } from "#lib/server/live.ts";
 import { forAnyRole, forMembers } from "#lib/server/remote-functions.ts";
 
 const allModules = appModules.map((module) => module.id);
@@ -120,13 +120,6 @@ const subjectSchema = v.object({
 	type: v.picklist(loggedTypes),
 	id: v.union([v.string(), v.number()]),
 });
-
-/**
- * When the tenant's log last had an entry (epoch ms, 0 if not since the server started), sent again
- * on each change (once per burst), so the feed and the dashboard look again when anyone changes
- * something. See `watchSchedule` in the schedule module.
- */
-export const watchActivity = forMembers.query.live(() => live(loggedTypes));
 
 /** The latest entries about a subject of the tenant and its parts, e.g. an order and its lines. */
 export const getSubjectActivity = forMembers.query(

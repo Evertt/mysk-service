@@ -3,11 +3,11 @@
  * `provideChangeFeed()` in a shell's layout opens it (the office's `watchTenantChanges`, the
  * engineer portal's `watchFieldChanges`), and
  * `onRecordChange()` / `refreshOnRecordChange()` subscribe a component to a record for as long as
- * it's mounted. See `change-feed.ts` for why one feed.
+ * it's mounted (`onAnyChange()` to all of them). See `change-feed.ts` for why one feed.
  */
 import { createContext, untrack } from "svelte";
 
-import { isGone, type TenantChanges } from "#lib/activity/index.ts";
+import { isGone, type TenantChange, type TenantChanges } from "#lib/activity/index.ts";
 
 import { getRecordChangedAt } from "./activity.remote.ts";
 import { type ChangeListener, ChangeFeed, type Subject } from "./change-feed.ts";
@@ -73,4 +73,14 @@ export function refreshOnRecordChange(
 		},
 		readTime,
 	);
+}
+
+/**
+ * Calls `listener` on each change the tab's feed tells (to any record), while the component is
+ * mounted: a page that shows the whole log (`refreshOnActivity()`). Call it while a component
+ * initializes, inside a shell with a feed. `listener` runs untracked.
+ */
+export function onAnyChange(listener: (change: TenantChange) => void) {
+	const feed = getChangeFeed();
+	$effect(() => untrack(() => feed.subscribeAll((change) => untrack(() => listener(change)))));
 }

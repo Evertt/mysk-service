@@ -81,6 +81,20 @@ describe("a listener", () => {
 	});
 });
 
+describe("a listener of every change", () => {
+	test("hears each change once, to any record or a whole type, from when it subscribed", () => {
+		const feed = new ChangeFeed(() => Promise.resolve(0));
+		feed.receive(answer(100, 110, [change(110)]));
+		const heard: string[] = [];
+		const stop = feed.subscribeAll((told) => heard.push(`${told.type}/${told.id}@${told.at}`));
+		feed.receive(answer(100, 120, [change(110), change(120, { type: "customer", id: null })]));
+		feed.receive(answer(100, 130, [change(120, { type: "customer", id: null }), change(130)]));
+		stop();
+		feed.receive(answer(100, 140, [change(140)]));
+		expect(heard).toEqual(["customer/null@120", "order/7@130"]);
+	});
+});
+
 describe("coming back to a record", () => {
 	test("with what it read before, hears of a change made while no one watched it", () => {
 		const { feed, heard, listen } = setUp();

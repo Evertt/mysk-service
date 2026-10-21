@@ -35,6 +35,11 @@ const keyOf = (subject: { type: string; id: string | number | null }) =>
 
 export class ChangeFeed {
 	readonly #subscribers = new Map<string, Set<Subscriber>>();
+	/** The listeners of every change (`subscribeAll()`), and up to when they've been told. */
+	readonly #everything = new Set<{
+		listener: (change: TenantChange) => void;
+		known: number | undefined;
+	}>();
 	/** The feed's latest answer. */
 	#latest: TenantChanges | undefined;
 	/**
@@ -75,6 +80,18 @@ export class ChangeFeed {
 		};
 	}
 
+	/**
+	 * Calls `listener` on each change the feed tells from now on (to any record, or to a type's),
+	 * until the returned function is called: for a page that shows the whole log.
+	 */
+	subscribeAll(listener: (change: TenantChange) => void) {
+		const subscriber = { listener, known: this.#latest?.now };
+		this.#everything.add(subscriber);
+		return () => {
+			this.#everything.delete(subscriber);
+		};
+	}
+
 	/** Takes the feed's latest answer (a live query's `current`, so some may have been skipped). */
 	receive(answer: TenantChanges) {
 		if (answer.since !== this.#latest?.since) {
@@ -93,6 +110,11 @@ export class ChangeFeed {
 				subscriber.known ??= answer.since;
 				this.#catchUp(subscriber, answer);
 			}
+		}
+		for (const subscriber of this.#everything) {
+			const from = (subscriber.known ??= answer.since);
+			subscriber.known = Math.max(from, answer.now);
+			for (const change of answer.changes) if (change.at > from) subscriber.listener(change);
 		}
 	}
 
