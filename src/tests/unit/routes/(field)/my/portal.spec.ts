@@ -158,6 +158,21 @@ describe("an engineer's work", () => {
 	});
 });
 
+describe("an engineer's order in any status", () => {
+	test("is theirs to read, though their work list shows only the planned and under way", async () => {
+		const [cancelled] = await rows<Order>(
+			`select id, number from "order" where engineer_id = ? and id <> ? order by id limit 1`,
+			[mine, own.id],
+		);
+		await rows(`update "order" set status = 'cancelled' where id = ?`, [cancelled.id]);
+		await as(erik, async () => {
+			expect(await call(getMyOrder, cancelled.number)).toMatchObject({ status: 200 });
+			const { open, recent } = await data(getMyWork);
+			expect([...open, ...recent].map((one) => one.number)).not.toContain(cancelled.number);
+		});
+	});
+});
+
 describe("a scanned unit", () => {
 	test("shows its site's access notes only at a site of their orders, else the address", async () => {
 		const sites = (await sitesOfOrdersOf(mine)).map(Number);

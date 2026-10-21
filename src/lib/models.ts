@@ -82,6 +82,14 @@ export const openOrderStatuses = [
 	"in_progress",
 ] as const satisfies OrderStatus[];
 
+/**
+ * The engineer's work list on the portal (`getMyWork`): their orders that are planned or under
+ * way. A quote isn't work yet, though it is open (`openOrderStatuses`, what the orders at a scanned
+ * place list). A view, not a permission: an engineer reads their orders in any status (the access
+ * registry's `order` rule), a cancelled one their bell told them about included.
+ */
+export const engineerWorkStatuses = ["scheduled", "in_progress"] as const satisfies OrderStatus[];
+
 /** Orders whose work is done, and which count towards revenue. */
 export const doneOrderStatuses = ["completed", "invoiced"] as const satisfies OrderStatus[];
 

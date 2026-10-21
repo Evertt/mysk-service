@@ -9,7 +9,7 @@ import * as v from "valibot";
 
 import { orderSubject } from "#lib/activity/index.ts";
 import { formatNumber } from "#lib/i18n/index.ts";
-import { doneOrderStatuses } from "#lib/models.ts";
+import { doneOrderStatuses, engineerWorkStatuses } from "#lib/models.ts";
 import {
 	engineerWork,
 	findEngineerOrder,
@@ -55,7 +55,7 @@ export const getMyWork = forEngineers.query(async () => {
 			.select(listColumns)
 			.from(order)
 			.innerJoin(...tenantJoin(customer, order.customerId))
-			.where(and(mine, inList(order.status, ["scheduled", "in_progress"])))
+			.where(and(mine, inList(order.status, engineerWorkStatuses)))
 			.orderBy(asc(order.scheduledFor)),
 		db
 			.select(listColumns)
