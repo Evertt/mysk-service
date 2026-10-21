@@ -567,9 +567,10 @@ agreed by the owner.
 
 ## Progress
 
-Status of 21 October 2026. Steps 1 and 2 are built on the branch `permissions-access-registry`
-(from `permissions-design`), reviewed, and the review's findings fixed. Steps 3 to 7 are not started.
-The registry is used by nothing but its tests yet.
+Status of 22 October 2026. Steps 1 to 4 are built on the branch `permissions-access-registry`
+(from `permissions-design`). Steps 1 and 2 were reviewed and the review's findings fixed; steps 3 and 4
+were built by two parallel sessions and merged, not yet reviewed. Steps 5 to 7 are not started. The log's
+readers, `getRecordChangedAt` and the office's and engineer's feeds ask the registry; no portal read does yet.
 
 **Built**
 
@@ -583,6 +584,16 @@ The registry is used by nothing but its tests yet.
 - Guard `src/tests/unit/lib/server/access.spec.ts` (rule 1 of section 6, core and every module);
   `access/matrix.spec.ts` for the core; one `tests/unit/server/access.spec.ts` per module; shared
   helpers in `src/tests/unit/lib/server/access/support.ts`.
+
+- Step 3: `getRecordChangedAt` answers 0 for what the viewer may not read (the batch is not refused);
+  `getSubjectActivity` uses `readOrNotFound()`; the log's list readers keep only `readableTypes()` (new in
+  `index.ts`: the type names the viewer's audience has a read rule for, modules that are off and the
+  manager-only types for non-managers left out). Guard rules 2 and 3 are on in `access.spec.ts`, with an
+  `infrastructure` allow-list that gives a reason per file.
+- Step 4: `feedFor(viewer)` and the `hears` table in `src/lib/server/live.ts` present each shell's feed
+  (`readable()` filters a burst; the office hears the name and the full action, an engineer or customer
+  neither). `watchTenantChanges` and `watchFieldChanges` use it; `src/routes/(field)/my/changes.server.ts`
+  is deleted. `watchSchedule`, `watchPortal` and `watchMyWork` are untouched.
 
 **Decisions made while building** (beyond the owner's answers above)
 
@@ -621,14 +632,23 @@ The registry is used by nothing but its tests yet.
     change their own partner bonus year while the choice is unmade. Invoices, credit notes, contracts,
     docks, maintenance and the energy consumers and alerts are the office's only.
 12. **Engineers read every `customer`** (decision 2 above: the owner's name on a unit's page).
+13. **Step 3's answers for other tenants and deleted records.** `getSubjectActivity` for another tenant's
+    id, or for a deleted record, is now a 404 (it was an empty list): `readOrNotFound()` checks the table.
+    `getRecordChangedAt` stays keyed by the tenant, so another tenant's id answers 0.
+14. **Step 4: a change that leaves an engineer's scope is dropped from their feed** (an order taken off
+    them is no longer `readable()`); the open page gets its 404 on the next refresh, and the bell's tray
+    still keeps the entry. **The deletion of a unit is no longer announced to an engineer**, because a
+    deleted row can't be checked against the engineer's unit condition; the office still hears it. A
+    "reads the whole type" signal in the registry would bring the notice back.
+15. **Step 4: a change announced for its type only (no id) goes to the office alone**, and only if the
+    viewer can read the type at all (`visible(type)`).
 
 **Open / for the steps to come**
 
-- Step 3 onward: `getRecordChangedAt` and the log through `readable()`; the feeds' presenter; the
-  portals' reads through the registry (decision 2's site narrowing, decision 7's status sets); change
-  rules and the manager; docs. The kit entry, `modules.md` (the `access.rules` point) and `tenancy.md`
+- Step 5 onward: the portals' reads through the registry (decision 2's site narrowing, decision 7's
+  status sets); change rules and the manager; docs and the customer portal's feed. The kit entry, `modules.md` (the `access.rules` point) and `tenancy.md`
   are step 7 and still to write.
-- Guard rules 2 to 6 of section 6 are not switched on.
+- Guard rules 4 to 6 of section 6 are not switched on (rules 1 to 3 are).
 - Shop orders ignoring site limits (11) is a candidate to decide when step 5 meets the portals.
 
 ## Later: an engineer asks for a site's on-site details
