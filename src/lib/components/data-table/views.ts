@@ -16,10 +16,6 @@ export const viewNameMax = 60;
 /** The longest query a view can save (a table's parameters are much shorter). */
 export const viewQueryMax = 4000;
 
-/** Whether a member with these roles may share views with the organization, and change shared ones. */
-export const canShareViews = (roles: readonly string[]) =>
-	roles.some((role) => role === "owner" || role === "admin");
-
 /**
  * Which table a view belongs to: its route (e.g. `/(app)/orders`), plus its URL prefix on a page
  * with more than one table.
