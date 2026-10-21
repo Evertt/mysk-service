@@ -153,7 +153,7 @@ describe("on made-up files", () => {
 				},
 				{
 					path: "src/lib/server/remote-functions.ts",
-					source: `export const forEngineers = remoteSet(requireEngineer);`,
+					source: `export const forEngineers = remoteSet(requireEngineer, "engineer");`,
 				},
 				{
 					path: "src/lib/orders/server/list-sql.ts",

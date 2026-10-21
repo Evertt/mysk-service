@@ -17,9 +17,9 @@ import { and, eq, type SQL, sql } from "drizzle-orm";
 import type { EngineerActivity } from "#lib/notifications/extensions.ts";
 import { db } from "#lib/server/db/index.ts";
 import { literal } from "#lib/server/db/parameters.ts";
-import { activity, order } from "#lib/server/db/schema.ts";
+import { activity, engineer, order } from "#lib/server/db/schema.ts";
 
-import { inTenant, requireEngineer } from "./session.ts";
+import { idInTenant, inTenant, requireEngineer } from "./session.ts";
 
 /** How a request named an order: by id (a form's) or by number (the URL's). */
 export type OrderRef = { id: number } | { number: string };
@@ -32,6 +32,12 @@ export type OrderRef = { id: number } | { number: string };
 export async function engineerOrders(): Promise<SQL> {
 	const { engineer } = await requireEngineer();
 	return and(inTenant(order), eq(order.engineerId, engineer.id))!;
+}
+
+/** For a query on `engineer`: the signed-in engineer's own record, which is all of them they read. */
+export async function engineerSelf(): Promise<SQL> {
+	const { engineer: self } = await requireEngineer();
+	return idInTenant(engineer, self.id);
 }
 
 /** The one order `ref` names, if it's one of `engineerOrders()`. */
