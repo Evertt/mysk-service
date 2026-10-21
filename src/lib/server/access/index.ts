@@ -22,6 +22,7 @@ import { error } from "@sveltejs/kit";
 import type { SQL } from "drizzle-orm";
 
 import { accessRules } from "#lib/access/extensions.ts";
+import { asSystem, tenantOf } from "#lib/server/auth/index.ts";
 import { collectNow } from "#lib/server/extensions.ts";
 
 import { coreRules } from "./core.ts";
@@ -76,6 +77,17 @@ async function allowed(subjects: readonly RecordRef[], which: Which, trust: bool
  */
 export async function mayRead(subject: RecordRef, as?: Viewer) {
 	return (await allowed([subject], "read", false, as)).has(keyOf(subject));
+}
+
+/**
+ * Whether `as` (`viewerIn()`: a member of organization `organizationId`, which needn't be the
+ * request's tenant) may read the record there: the rules run as the system in that tenant, with the
+ * modules it has on, but answer for `as`. For a viewer of the office or a customer's contact; an
+ * engineer's rules read the request's own user.
+ */
+export async function mayReadIn(organizationId: string, as: Viewer, subject: RecordRef) {
+	const tenant = await tenantOf(organizationId, { roles: [] });
+	return !!tenant && asSystem(tenant, () => mayRead(subject, as));
 }
 
 /** The same, or the 404 a record that doesn't exist gets. */

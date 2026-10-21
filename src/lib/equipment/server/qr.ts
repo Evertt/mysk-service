@@ -4,18 +4,13 @@
  * gets there through a membership of the record's tenant (`src/routes/q/[token]/+server.ts`), so
  * another tenant's code is a 404 for them, as if it didn't exist.
  */
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
-import { parseRoles, type ShellName, shellOf } from "#lib/auth/index.ts";
+import type { ShellName } from "#lib/auth/index.ts";
+import { mayReadIn } from "#lib/server/access/index.ts";
+import { viewerIn } from "#lib/server/access/viewer.ts";
 import { db } from "#lib/server/db/index.ts";
-import {
-	customerSite,
-	equipment,
-	equipmentLocation,
-	member,
-	portalContact,
-	portalContactSite,
-} from "#lib/server/db/schema.ts";
+import { equipment, equipmentLocation } from "#lib/server/db/schema.ts";
 
 import { qrTokenPattern } from "../qr.ts";
 
@@ -57,64 +52,13 @@ export async function findQrTarget(token: string): Promise<QrTarget | undefined>
 export type QrViewer = ShellName;
 
 /**
- * Whether the customer's contact `userId` sees the unit or location the code is on: it's their
- * customer's, at one of the sites they see. Looked up in the code's tenant by its id: the scan
- * may come before it's their current one.
- */
-async function customerSees(target: QrTarget, userId: string) {
-	const { organizationId } = target;
-	const [contact] = await db
-		.select({
-			id: portalContact.id,
-			customerId: portalContact.customerId,
-			allSites: portalContact.allSites,
-		})
-		.from(portalContact)
-		.where(and(eq(portalContact.organizationId, organizationId), eq(portalContact.userId, userId)));
-	if (!contact) return false;
-	const [place] =
-		target.kind === "unit"
-			? await db
-					.select({ customerId: equipment.customerId, siteId: equipment.siteId })
-					.from(equipment)
-					.where(and(eq(equipment.organizationId, organizationId), eq(equipment.id, target.id)))
-			: await db
-					.select({ customerId: customerSite.customerId, siteId: customerSite.id })
-					.from(equipmentLocation)
-					.innerJoin(
-						customerSite,
-						and(
-							eq(customerSite.id, equipmentLocation.siteId),
-							eq(customerSite.organizationId, organizationId),
-						),
-					)
-					.where(
-						and(
-							eq(equipmentLocation.organizationId, organizationId),
-							eq(equipmentLocation.id, target.id),
-						),
-					);
-	if (!place || place.customerId !== contact.customerId) return false;
-	if (contact.allSites) return true;
-	const [site] = await db
-		.select({ siteId: portalContactSite.siteId })
-		.from(portalContactSite)
-		.where(
-			and(
-				eq(portalContactSite.organizationId, organizationId),
-				eq(portalContactSite.contactId, contact.id),
-				eq(portalContactSite.siteId, place.siteId),
-			),
-		);
-	return !!site;
-}
-
-/**
  * What the code with `token` is on and who `userId` is there, if they're a member of its tenant;
  * nothing otherwise (no such code, or another tenant's), which is a 404 for them. By their shell
  * there (`shellOf()`): a field engineer is led to the portal, a customer's contact to the customer
  * portal if it's on their customer's unit or location at a site they see (another customer's is a
- * 404 for them too), everyone else to the office's pages.
+ * 404 for them too: the access registry's `equipment` and `location` rules, asked as them in the
+ * code's tenant, which the scan may come before it's their current one), everyone else to the
+ * office's pages.
  */
 export async function resolveQrCode(
 	token: string,
@@ -122,14 +66,13 @@ export async function resolveQrCode(
 ): Promise<{ target: QrTarget; viewer: QrViewer } | undefined> {
 	const target = await findQrTarget(token);
 	if (!target) return undefined;
-	const [membership] = await db
-		.select({ role: member.role })
-		.from(member)
-		.where(and(eq(member.userId, userId), eq(member.organizationId, target.organizationId)));
-	if (!membership) return undefined;
-	const viewer = shellOf(parseRoles(membership.role)).name;
-	if (viewer === "customer" && !(await customerSees(target, userId))) return undefined;
-	return { target, viewer };
+	const asking = await viewerIn(target.organizationId, userId);
+	if (!asking) return undefined;
+	if (asking.audience === "customer") {
+		const subject = { type: target.kind === "unit" ? "equipment" : "location", id: target.id };
+		if (!(await mayReadIn(target.organizationId, asking, subject))) return undefined;
+	}
+	return { target, viewer: asking.audience };
 }
 
 /**

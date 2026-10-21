@@ -7,15 +7,20 @@
  * role, the stronger role decides, as the page guard has it (`shellOf()`).
  */
 import { getRequestEvent } from "$app/server";
+import { and, eq } from "drizzle-orm";
 
+import { parseRoles } from "#lib/auth/index.ts";
 import { isManager } from "#lib/auth/roles.ts";
 import { type ShellName, shellOf } from "#lib/auth/shells.ts";
 import {
 	currentCustomer,
 	type CustomerAccess,
+	customerAccessIn,
 	requireTenant,
 	systemTenant,
 } from "#lib/server/auth/index.ts";
+import { db } from "#lib/server/db/index.ts";
+import { member } from "#lib/server/db/schema.ts";
 
 /** Whose records the request reads: the shell it works in, or the system's (the daily jobs). */
 export type Audience = ShellName | "system";
@@ -72,4 +77,32 @@ export async function viewerAs<A extends "office" | "engineer">(
 		throw new Error(`A ${audience} scope was asked for in a request of the ${asking.audience}`);
 	}
 	return asking as Extract<Viewer, { audience: A }>;
+}
+
+/** A viewer of a member: not the system's. */
+export type MemberViewer = Exclude<Viewer, { audience: "system" }>;
+
+/**
+ * `userId` as a viewer in organization `organizationId`, which needn't be the request's tenant (a
+ * scanned QR code may come before it's their current one): by the shell their roles there make
+ * (`shellOf()`, the stronger role wins), a customer's contact with the sites they see. Nothing if
+ * they aren't a member there. Ask the registry as them with `mayReadIn()`.
+ */
+export async function viewerIn(
+	organizationId: string,
+	userId: string,
+): Promise<MemberViewer | undefined> {
+	const [membership] = await db
+		.select({ role: member.role })
+		.from(member)
+		.where(and(eq(member.userId, userId), eq(member.organizationId, organizationId)));
+	if (!membership) return undefined;
+	const roles = parseRoles(membership.role);
+	const { name } = shellOf(roles);
+	if (name === "customer") {
+		const access = await customerAccessIn(organizationId, userId);
+		// A customer's role without a contact record reads nothing.
+		return access ? { audience: name, access } : undefined;
+	}
+	return name === "office" ? { audience: name, manager: isManager(roles) } : { audience: name };
 }
