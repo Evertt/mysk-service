@@ -18,6 +18,7 @@ import {
 } from "#lib/auth/index.ts";
 import { label } from "#lib/i18n/index.ts";
 import { email } from "#lib/schema.ts";
+import { visible } from "#lib/server/access/index.ts";
 import { recordActivityAfter, type Subject } from "#lib/server/activity/index.ts";
 import { auth, currentTenant, inTenant, idInTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -42,6 +43,8 @@ export const getMembers = forMembers.query(async () => {
 	const tenant = currentTenant();
 	const manager = isManager(tenant.roles);
 	const inviter = alias(user, "inviter");
+	// Invitations are the managers' to read: the `invitation` rule says so (none for other members).
+	const readableInvitations = await visible("invitation");
 	const [members, invitations] = await Promise.all([
 		db
 			.select({
@@ -56,7 +59,7 @@ export const getMembers = forMembers.query(async () => {
 			.innerJoin(user, eq(member.userId, user.id))
 			.where(and(inTenant(member), not(isCustomerRole(member.role))))
 			.orderBy(asc(user.name)),
-		manager
+		readableInvitations
 			? db
 					.select({
 						id: invitation.id,
@@ -71,7 +74,7 @@ export const getMembers = forMembers.query(async () => {
 					.leftJoin(inviter, eq(invitation.inviterId, inviter.id))
 					.where(
 						and(
-							inTenant(invitation),
+							readableInvitations,
 							eq(invitation.status, "pending"),
 							not(isCustomerRole(invitation.role)),
 						),
