@@ -8,12 +8,20 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { mayChange, mayRead } from "#lib/server/access/index.ts";
 import {
+	contactOf,
 	customerIdOf,
 	engineerIdOf,
 	idsOf,
 	readOneByOne,
 } from "#unit/lib/server/access/support.ts";
-import { as, demoAccount, north, shltr, withoutModule } from "#unit/lib/server/harness/index.ts";
+import {
+	as,
+	demoAccount,
+	north,
+	rows,
+	shltr,
+	withoutModule,
+} from "#unit/lib/server/harness/index.ts";
 
 const riedel = demoAccount("facilitair@riedel.example");
 
@@ -105,6 +113,68 @@ describe("a customer's contact", () => {
 		await as(riedel, async () => {
 			expect(await mayChange({ type: "checklist", id: completed[0] })).toBe(false);
 		});
+	});
+
+	test("limited to some sites, reads only the checklists of units at those sites", async () => {
+		const contact = await contactOf(riedel);
+		const mine = String(contact.customerId);
+		// A completed checklist of one of their orders, and the site of its unit.
+		const [first] = await rows<{ id: number; order_id: number; site_id: number }>(
+			`select c.id, c.order_id, e.site_id from checklist c join equipment e on e.id = c.equipment_id
+			 where c.organization_id = 'org-shltr' and c.status = 'completed'
+			   and c.order_id in (select id from "order" where customer_id = ?) order by c.id limit 1`,
+			[mine],
+		);
+		// The same order gets a second completed checklist, for a unit at another site.
+		const [annex] = await rows<{ id: number }>(
+			`insert into customer_site (organization_id, customer_id, name, city, country)
+			 values ('org-shltr', ?, 'Annex', 'Ede', 'NL') returning id`,
+			[mine],
+		);
+		const [other] = await rows<{ id: number }>(
+			`select id from equipment where organization_id = 'org-shltr' and customer_id = ?
+			   and id not in (select equipment_id from order_unit where order_id = ?) order by id limit 1`,
+			[mine, first.order_id],
+		);
+		await rows(`update equipment set site_id = ?, location_id = null where id = ?`, [
+			annex.id,
+			other.id,
+		]);
+		await rows(
+			`insert into order_unit (organization_id, order_id, customer_id, equipment_id, position)
+			 values ('org-shltr', ?, ?, ?, (select max(position) + 1 from order_unit where order_id = ?))`,
+			[first.order_id, mine, other.id, first.order_id],
+		);
+		await rows(
+			`insert into checklist (organization_id, order_id, equipment_id, template_id, name, norm,
+			                        validity_months, kind, status, completed_at)
+			 select organization_id, order_id, ?, template_id, name, norm, validity_months, kind,
+			        'completed', completed_at from checklist where id = ?`,
+			[other.id, first.id],
+		);
+		const [added] = await idsOf("checklist", "org-shltr", "and order_id = ? and equipment_id = ?", [
+			first.order_id,
+			other.id,
+		]);
+		expect(added).toBeDefined();
+		await rows(`update portal_contact set all_sites = 0 where id = ?`, [contact.id]);
+		await rows(
+			`insert into portal_contact_site (organization_id, contact_id, customer_id, site_id)
+			 values ('org-shltr', ?, ?, ?)`,
+			[contact.id, mine, first.site_id],
+		);
+		const all = await idsOf("checklist", "org-shltr");
+		const expected = await idsOf(
+			"checklist",
+			"org-shltr",
+			`and status = 'completed'
+			 and equipment_id in (select id from equipment where site_id = ?)
+			 and order_id in (select id from "order" where customer_id = ?)`,
+			[first.site_id, mine],
+		);
+		expect(expected).toContain(String(first.id));
+		expect(expected).not.toContain(added);
+		expect(await readOneByOne(riedel, "checklist", all)).toEqual(expected);
 	});
 });
 

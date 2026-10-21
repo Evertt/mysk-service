@@ -41,7 +41,11 @@ helpers are in `src/lib/server/auth/session.ts`:
   `src/lib/server/auth/customer.ts`: `ofCustomer(access, table)` (a table with `customerId`),
   `atSites(access, siteColumn)` (no condition for all sites), `seesSite()`, and
   `customerOrders(access)` for `order` (an order is at a site through its units: a site-limited
-  contact sees those with a unit at one of their sites, and of their units only those). The office
+  contact sees those with a unit at one of their sites, and of their units only those). The site
+  limit covers the records of a site (units, locations, orders, checklists, energy sites); the
+  customer's commercial records (shop orders, the partner account, bonus years and the parts credit's
+  wallet) are the customer's, whatever sites the contact sees: they have no site, and the wallet's
+  entries name the shop orders. The office
   invites them from the customer's page (`portal-access.remote.ts`: better-auth's invitation with
   the role `customer`; accepting it links the contact to the account, `/invite/[id]`), and they're
   not on the members page. A QR code (`/q/<token>`) leads them to "report a breakdown" when it's on

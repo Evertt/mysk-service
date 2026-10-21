@@ -3,7 +3,7 @@
  * effects, sending an invitation, changing a role, removing a member, are e2e's): inviting a
  * member or someone invited already, changing one's own role, leaving the organization without an
  * owner, a planner managing members, and South reaching North's invitations and members by their
- * ids; and that the page lists the team without the customers' contacts. The server side of
+ * ids; and that the page lists the team (to managers only) without the customers' contacts. The server side of
  * `src/tests/e2e/members.test.ts` and `client.access.test.ts`.
  */
 import { beforeAll, describe, expect, test } from "vite-plus/test";
@@ -17,8 +17,10 @@ import {
 	removeMember,
 	resendInvitation,
 } from "#routes/(app)/settings/members/members.remote.ts";
+import { getOrganizationSettings } from "#routes/(app)/settings/settings.remote.ts";
 import {
 	as,
+	call,
 	data,
 	north,
 	organizationId,
@@ -74,12 +76,22 @@ describe("the members page", () => {
 		// Nobody changes or removes themselves.
 		const you = members.find((member) => member.isYou)!;
 		expect(you).toMatchObject({ email: admin.email, roleOptions: [], canRemove: false });
-		// A planner sees it read-only.
-		const asPlanner = await as(north.member, () => data(getMembers));
-		expect(asPlanner.invitations).toEqual([]);
-		expect(
-			asPlanner.members.every((member) => !member.canRemove && !member.roleOptions.length),
-		).toBe(true);
+	});
+
+	test("is the managers': a planner, an engineer and a customer's contact don't have it", async () => {
+		for (const actor of [north.member, north.engineer, north.customer]) {
+			expect(await as(actor, () => call(getMembers))).toMatchObject({ status: 403 });
+		}
+	});
+
+	test("the settings page lists the team to managers only", async () => {
+		const asOwner = await as(north.owner, () => data(getOrganizationSettings));
+		expect(asOwner.members.map((member) => member.email)).toEqual(
+			expect.arrayContaining([admin.email, planner.email]),
+		);
+		const asPlanner = await as(north.member, () => data(getOrganizationSettings));
+		expect(asPlanner.members).toEqual([]);
+		expect(asPlanner.modules.length).toBeGreaterThan(0);
 	});
 });
 

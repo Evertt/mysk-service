@@ -58,48 +58,50 @@
 		</Card.Content>
 	</Card.Root>
 
-	<Card.Root>
-		<Card.Header>
-			<Card.Title>{m.settings_members()}</Card.Title>
-			<Card.Description>{m.settings_members_description()}</Card.Description>
-			<Card.Action>
-				<Button href={resolve("/(app)/settings/members")} variant="outline" size="sm">
-					{manager ? m.settings_manage_members() : m.settings_view_members()}
-				</Button>
-			</Card.Action>
-		</Card.Header>
-		<Card.Content>
-			<Table.Root>
-				<Table.Header>
-					<Table.Row>
-						<Table.Head>{m.settings_column_name()}</Table.Head>
-						<Table.Head>{m.settings_column_role()}</Table.Head>
-					</Table.Row>
-				</Table.Header>
-				<Table.Body>
-					{#each settings.members as member (member.id)}
+	{#if manager}
+		<Card.Root>
+			<Card.Header>
+				<Card.Title>{m.settings_members()}</Card.Title>
+				<Card.Description>{m.settings_members_description()}</Card.Description>
+				<Card.Action>
+					<Button href={resolve("/(app)/settings/members")} variant="outline" size="sm">
+						{m.settings_manage_members()}
+					</Button>
+				</Card.Action>
+			</Card.Header>
+			<Card.Content>
+				<Table.Root>
+					<Table.Header>
 						<Table.Row>
-							<Table.Cell>
-								<div class="flex flex-col">
-									<span class="font-medium">{member.name}</span>
-									<span class="text-xs text-muted-foreground">{member.email}</span>
-								</div>
-							</Table.Cell>
-							<Table.Cell>
-								<div class="flex gap-1">
-									{#each member.roles as role (role)}
-										<Badge variant={role === "member" ? "outline" : "secondary"}
-											>{labelOrValue("memberRole", role)}</Badge
-										>
-									{/each}
-								</div>
-							</Table.Cell>
+							<Table.Head>{m.settings_column_name()}</Table.Head>
+							<Table.Head>{m.settings_column_role()}</Table.Head>
 						</Table.Row>
-					{/each}
-				</Table.Body>
-			</Table.Root>
-		</Card.Content>
-	</Card.Root>
+					</Table.Header>
+					<Table.Body>
+						{#each settings.members as member (member.id)}
+							<Table.Row>
+								<Table.Cell>
+									<div class="flex flex-col">
+										<span class="font-medium">{member.name}</span>
+										<span class="text-xs text-muted-foreground">{member.email}</span>
+									</div>
+								</Table.Cell>
+								<Table.Cell>
+									<div class="flex gap-1">
+										{#each member.roles as role (role)}
+											<Badge variant={role === "member" ? "outline" : "secondary"}
+												>{labelOrValue("memberRole", role)}</Badge
+											>
+										{/each}
+									</div>
+								</Table.Cell>
+							</Table.Row>
+						{/each}
+					</Table.Body>
+				</Table.Root>
+			</Card.Content>
+		</Card.Root>
+	{/if}
 
 	<Card.Root data-testid="equipment-categories-summary">
 		<Card.Header>

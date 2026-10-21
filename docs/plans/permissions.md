@@ -567,10 +567,11 @@ agreed by the owner.
 
 ## Progress
 
-Status of 22 October 2026. Steps 1 to 4 are built on the branch `permissions-access-registry`
-(from `permissions-design`). Steps 1 and 2 were reviewed and the review's findings fixed; steps 3 and 4
-were built by two parallel sessions and merged, not yet reviewed. Steps 5 to 7 are not started. The log's
-readers, `getRecordChangedAt` and the office's and engineer's feeds ask the registry; no portal read does yet.
+Status of 22 October 2026. Steps 1 to 6 are built on the branch `permissions-access-registry`
+(from `permissions-design`). Steps 1 and 2 were reviewed and the review's findings fixed; steps 3 to 6
+were built by parallel sessions and merged, not yet reviewed (nor run in e2e). Step 7 (docs and the
+customer portal's feed) is not started. The log's readers, `getRecordChangedAt`, the feeds, the portals'
+work-record and unit scopes, the QR codes, the tray and the saved views ask the registry.
 
 **Built**
 
@@ -652,13 +653,35 @@ readers, `getRecordChangedAt` and the office's and engineer's feeds ask the regi
     it when a later change to the record replaces the pending one in a batch, so a burst can't lose
     it. Another audience's revocation (a contact's site, step 5's narrowing) adds an `audience` there.
 
+17. **The team is the managers' to see, everywhere.** `getMembers` (the members page) is `forManagers`,
+    and the settings page shows its team card to managers only (its list reads through `visible("member")`,
+    so none for the others). Decision 4 stands as it was: `member`, `invitation`, `portal_contact` and
+    `integration_token` are manager-only, in the log, the feed and the pages. (A planner used to see the
+    team read-only; the owner chose to take that away.)
+18. **A contact limited to some sites reads a checklist only for a unit at those sites** (it is of an order
+    and of one of its units; the order is visible by any one of its units). The `checklist` rule narrows
+    the part by the unit's site, as the portal's own query does (decision 10's second item).
+19. **Customer-level records aren't site-limited.** Shop orders, the partner account, the bonus years and
+    the wallet are the customer's, not a site's: a site-limited contact reads all of their customer's
+    (decision 11 stands, now as a rule, not an open point; written in `docs/agents/tenancy.md`). Narrowing
+    shop orders to those the contact placed (`placedBy`) is expressible with `narrowedBy` if it's wanted.
+20. **`order_line` stays the office's only (decision 9), and the screen is unaffected.** The engineer's
+    materials card reads its lines through the order's scope (`findEngineerOrder`), not the registry, and a
+    line's change is also announced as an update of its order, so the page stays live. The log subject's
+    key is the real issue (the material's id, while the line's identity is the pair order and material):
+    when engineers get a log, re-key the subject to a composite id; the registry shouldn't judge parts by a
+    parent the feed doesn't carry.
+
 **Open / for the steps to come**
 
-- Step 5 onward: the portals' reads through the registry (decision 2's site narrowing, decision 7's
-  status sets); change rules and the manager; docs and the customer portal's feed. The kit entry, `modules.md` (the `access.rules` point) and `tenancy.md`
-  are step 7 and still to write.
-- Guard rules 4 to 6 of section 6 are not switched on (rules 1 to 3 are).
-- Shop orders ignoring site limits (11) is a candidate to decide when step 5 meets the portals.
+- Step 7: the kit entry, `modules.md` (the `access.rules` point), `tenancy.md` (the registry) and
+  `AGENTS.md`; the customer portal's feed (`watchPortalChanges`) and the engineer portal's
+  `watchMyWork` pages moved onto `refreshOnRecordChange()` (which also removes the race between the
+  order page's refresh and decision 16's notice).
+- Not switched on (guard rules 1 to 6 are all in `access.spec.ts`, but a few files are on their
+  allow-lists with a reason each: read those when touching them).
+- The settings page's team card lists customers' contacts to managers (`getOrganizationSettings` has no
+  `isCustomerRole` filter, unlike `getMembers`): to settle.
 
 ## Later: an engineer asks for a site's on-site details
 

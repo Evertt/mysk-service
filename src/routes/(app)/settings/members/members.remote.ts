@@ -9,7 +9,6 @@ import {
 	assignableRoles,
 	invitationState,
 	isOwner,
-	isManager,
 	type MemberChange,
 	type MemberRole,
 	parseRoles,
@@ -26,7 +25,7 @@ import { db } from "#lib/server/db/index.ts";
 import { invitation, member, user } from "#lib/server/db/schema.ts";
 import { orNotFound } from "#lib/server/records.ts";
 import { Refused } from "#lib/server/refused.ts";
-import { forManagers, forMembers } from "#lib/server/remote-functions.ts";
+import { forManagers } from "#lib/server/remote-functions.ts";
 
 /**
  * Whether a member's or an invitation's roles (stored comma-separated, `owner,engineer`) include
@@ -36,15 +35,13 @@ const isCustomerRole = (role: typeof member.role | typeof invitation.role) =>
 	sql`(',' || replace(coalesce(${role}, ''), ' ', '') || ',') like '%,customer,%'`;
 
 /**
- * The organization's team, and for owners and admins its pending invitations, with what the
- * signed-in user may do to each. Members see the list read-only, as on the settings page.
- * Customers' contacts aren't part of it (see `isCustomerRole`).
+ * The organization's team and its pending invitations, with what the signed-in manager may do to
+ * each: the team is the managers' to see (the `member` and `invitation` rules), so the other
+ * members don't have this page. Customers' contacts aren't part of it (see `isCustomerRole`).
  */
-export const getMembers = forMembers.query(async () => {
+export const getMembers = forManagers.query(async () => {
 	const tenant = currentTenant();
-	const manager = isManager(tenant.roles);
 	const inviter = alias(user, "inviter");
-	// Invitations are the managers' to read: the `invitation` rule says so (none for other members).
 	const readableInvitations = await visible("invitation");
 	const [members, invitations] = await Promise.all([
 		db
@@ -101,8 +98,8 @@ export const getMembers = forMembers.query(async () => {
 				...m,
 				roles,
 				isYou: m.userId === tenant.user.id,
-				roleOptions: manager && roleOptions.length > 1 ? roleOptions : [],
-				canRemove: manager && removalRefusal(change) === null,
+				roleOptions: roleOptions.length > 1 ? roleOptions : [],
+				canRemove: removalRefusal(change) === null,
 			};
 		}),
 		invitations: invitations.map((i) => ({
