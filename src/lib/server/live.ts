@@ -27,6 +27,7 @@ import {
 	type Change,
 	changedAt,
 	recordChangedAt,
+	type Revoked,
 	watchChanges,
 	watchEvery,
 	watchSubject,
@@ -159,7 +160,7 @@ export function feedFor(
 		for (const change of named) {
 			if (heard.has(`${change.type}/${change.id}`)) continue;
 			for (const from of change.revokedFrom ?? []) {
-				if (audience === from.audience && (await isEngineer(from.id))) revoked.add(change);
+				if (audience === from.audience && (await isThem(from))) revoked.add(change);
 			}
 		}
 		return changes
@@ -183,6 +184,21 @@ export function feedFor(
 				at: change.at,
 			}));
 	};
+}
+
+/**
+ * Whether the signed-in user is the one `from` names. By audience, exhaustively: a second audience
+ * in `Revoked` must say how to recognise its person here, not silently reuse the engineer check.
+ */
+async function isThem(from: Revoked): Promise<boolean> {
+	switch (from.audience) {
+		case "engineer":
+			return isEngineer(from.id);
+		default: {
+			const unknown: never = from.audience;
+			return unknown;
+		}
+	}
 }
 
 /** What a live query's `respond` returns to answer nothing this time (`answering()`). */

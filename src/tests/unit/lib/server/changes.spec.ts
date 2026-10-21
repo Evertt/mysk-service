@@ -83,6 +83,21 @@ describe("watchSubject", () => {
 		changes.stop();
 	});
 
+	it("doesn't carry one record's revocation onto another record's change", async () => {
+		const changes = watchChanges("org-q", ["order"]);
+		const revokedFrom = [{ audience: "engineer" as const, id: 3 }];
+		announceChange("org-q", "order", { id: "1", action: "updated", revokedFrom });
+		announceChange("org-q", "order", { id: "2", action: "updated" });
+		expect(await changes.next()).toMatchObject({ value: { id: "2" } });
+		changes.stop();
+		const first = watchChanges("org-r", ["order"]);
+		announceChange("org-r", "order", { id: "1", action: "updated", revokedFrom });
+		announceChange("org-r", "order", { id: "2", action: "updated" });
+		const { value } = await first.next();
+		expect(value?.revokedFrom).toBeUndefined();
+		first.stop();
+	});
+
 	it("keeps type watchers working on announcements that name a record", async () => {
 		const changes = watchChanges("org-l", ["order"]);
 		announceChange("org-l", "order", { id: "7", action: "updated", user: anna });
@@ -107,6 +122,20 @@ describe("watchEvery", () => {
 			["order", undefined, undefined],
 		]);
 		expect(await Promise.race([changes.next(), tick().then(() => "waiting")])).toBe("waiting");
+		changes.stop();
+	});
+
+	it("keeps a record's revocation when a later change to it replaces its change in a burst", async () => {
+		const changes = watchEvery("org-p", ["order"]);
+		const revokedFrom = [{ audience: "engineer" as const, id: 3 }];
+		announceChange("org-p", "order", { id: "1", action: "updated", revokedFrom });
+		announceChange("org-p", "order", { id: "2", action: "updated" });
+		announceChange("org-p", "order", { id: "1", action: "scheduled" });
+		const { value } = await changes.next();
+		expect(value?.map(({ id, revokedFrom }) => [id, revokedFrom])).toEqual([
+			["2", undefined],
+			["1", revokedFrom],
+		]);
 		changes.stop();
 	});
 

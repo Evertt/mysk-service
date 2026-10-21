@@ -10,7 +10,12 @@
  */
 import type { ChangeType, LoggedType } from "#lib/activity/index.ts";
 
-/** Someone of an audience whose access to a record a change revoked: the engineer's id. */
+/**
+ * Someone of an audience whose access to a record a change revoked: the engineer's id. Only the
+ * engineer exists because only they are told: an order is taken off a named engineer, and their
+ * open page and bell should say so. A customer's contact who loses sight of a unit (it moved to a
+ * site they don't see) is deliberately not told yet; their page gets its 404 on the next refresh.
+ */
 export interface Revoked {
 	audience: "engineer";
 	id: number;
@@ -115,6 +120,7 @@ export const watchEvery = (organizationId: string, types: readonly ChangeType[])
 		organizationId,
 		(change) => types.includes(change.type),
 		(change) => `${change.type}/${change.id ?? ""}`,
+		true,
 	);
 
 /** Each batch's last change, of a watch whose batches hold one (`keyOf` gives them all one key). */
@@ -135,6 +141,8 @@ function watch(
 	organizationId: string,
 	matches: (change: Change) => boolean,
 	keyOf: (change: Change) => string,
+	/** Whether `keyOf` is per record, so a replaced change's revocation belongs to the next one. */
+	perRecord = false,
 ) {
 	const pending = new Map<string, Change>();
 	let stopped = false;
@@ -142,8 +150,9 @@ function watch(
 	const listener: Listener = (change) => {
 		if (!matches(change)) return;
 		const key = keyOf(change);
-		const earlier = pending.get(key)?.revokedFrom;
-		// A later change replaces the pending one, but a revocation is told once: it stays on it.
+		const earlier = perRecord ? pending.get(key)?.revokedFrom : undefined;
+		// A later change to the record replaces the pending one, but a revocation is told once: it
+		// stays on it. (A watch of many records under one key replaces another record's change.)
 		if (earlier) change = { ...change, revokedFrom: [...earlier, ...(change.revokedFrom ?? [])] };
 		// Deleted first, so the batch is in the order the changes came.
 		pending.delete(key);
