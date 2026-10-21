@@ -3,7 +3,6 @@ import { and } from "drizzle-orm";
 import { visible } from "#lib/server/access/index.ts";
 import { engineerOrderNotFound, type OrderRef, orderNamed } from "#lib/server/auth/index.ts";
 import type { db, Transaction } from "#lib/server/db/index.ts";
-import { order } from "#lib/server/db/schema.ts";
 import { Refused } from "#lib/server/refused.ts";
 
 import { type FieldAction, fieldActions, fieldRefusal } from "../lifecycle.ts";
