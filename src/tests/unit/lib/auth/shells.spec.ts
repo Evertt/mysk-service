@@ -171,10 +171,6 @@ describe("one way to a shell's home and the login page", () => {
 		"src/lib/server/bug-reports/upload.ts": "a customer's contact may not send bug reports",
 		"src/routes/invite/[id]/invite.remote.ts":
 			"accepting a contact's invitation links their account to the contact",
-		"src/modules/materials/server/index.ts":
-			"a change by an engineer refreshes the engineer portal's queries",
-		"src/modules/checklists/server/index.ts":
-			"a change by an engineer refreshes the engineer portal's queries",
 	};
 	const roleCheck =
 		/(?<!\b(?:import|export)\s+(?:type\s+)?\{[^}]*)\b(?:isFieldEngineer|isCustomerContact)\b/;
