@@ -8,6 +8,7 @@ import * as v from "valibot";
 import {
 	assignableRoles,
 	invitationState,
+	isOwner,
 	isManager,
 	type MemberChange,
 	type MemberRole,
@@ -83,7 +84,7 @@ export const getMembers = forMembers.query(async () => {
 			: [],
 	]);
 
-	const owners = members.filter((m) => parseRoles(m.role).includes("owner")).length;
+	const owners = members.filter((m) => isOwner(parseRoles(m.role))).length;
 	const actor = { userId: tenant.user.id, roles: tenant.roles };
 	return {
 		name: tenant.name,
@@ -126,7 +127,7 @@ async function memberChange(memberId: string): Promise<MemberChange> {
 	return {
 		actor: { userId: tenant.user.id, roles: tenant.roles },
 		target: { userId: target.userId, roles: parseRoles(target.role) },
-		owners: members.filter((m) => parseRoles(m.role).includes("owner")).length,
+		owners: members.filter((m) => isOwner(parseRoles(m.role))).length,
 	};
 }
 
@@ -266,7 +267,7 @@ export const resendInvitation = forManagers.form(v.object({ id: v.string() }), a
 	const tenant = currentTenant();
 	const found = await findInvitation(id);
 	const role = parseRoles(found.role ?? "member") as MemberRole[];
-	if (role.includes("owner") && !tenant.roles.includes("owner")) {
+	if (isOwner(role) && !isOwner(tenant.roles)) {
 		throw new Refused(m.settings_only_owners_invite_owners());
 	}
 	await asUser(async (headers) => {

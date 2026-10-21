@@ -223,3 +223,91 @@ describe("record-generic code asks the registry", () => {
 		]);
 	});
 });
+
+/*
+ * Rule 6, managers by one function: a literal `"owner"`/`"admin"` compared with a role (`=== "owner"`,
+ * `.includes("admin")`) is refused outside the files that own roles. Who is a manager is
+ * `isManager()` (`#lib/auth/roles.ts`), or the viewer's `manager` in the access registry; the
+ * single role-of-its-own question (owner) is `isOwner()` (`members.ts`). It catches `canShareViews`.
+ */
+
+/** The files that may compare a literal role, and why. */
+const roleOwners: Record<string, string> = {
+	"src/lib/auth/roles.ts": "defines the roles and `isManager()`",
+	"src/lib/auth/members.ts":
+		"the rules of the team: the owner is the one role with rules of its own",
+};
+
+const roleComparison = new RegExp(
+	[
+		`[!=]==?\\s*["'](?:owner|admin)["']`,
+		`["'](?:owner|admin)["']\\s*[!=]==?`,
+		`\\.includes\\(\\s*["'](?:owner|admin)["']\\s*\\)`,
+	].join("|"),
+);
+
+/** What breaks rule 6 in `files`, as `path: what`. */
+function roleBreaches(files: readonly SourceFile[]) {
+	return files.flatMap(({ path, source }) => {
+		const found = code(source).match(roleComparison)?.[0];
+		return found && !Object.hasOwn(roleOwners, path) ? [`${path}: ${found}`] : [];
+	});
+}
+
+describe("managers by one function", () => {
+	test("the app compares no literal owner or admin role outside the files that own roles", () => {
+		const files = sources();
+		expect(files.map((file) => file.path)).toEqual(
+			expect.arrayContaining(["src/lib/auth/roles.ts", "src/lib/auth/members.ts"]),
+		);
+		expect(roleBreaches(files)).toEqual([]);
+	});
+
+	test("every file on the list exists and still compares a role", () => {
+		const files = new Map(sources().map((file) => [file.path, code(file.source)]));
+		const stale = Object.keys(roleOwners).filter((path) => {
+			const text = files.get(path);
+			return text === undefined || (path !== "src/lib/auth/roles.ts" && !roleComparison.test(text));
+		});
+		expect(stale).toEqual([]);
+	});
+
+	test("finds the comparisons of a role with a literal", () => {
+		const share = {
+			path: "src/lib/widgets/views.ts",
+			source: `export const canShare = (roles: readonly string[]) =>
+				roles.some((role) => role === "owner" || role === "admin");`,
+		};
+		const includes = {
+			path: "src/lib/widgets/menu.remote.ts",
+			source: `if (tenant.roles.includes("admin")) return all;`,
+		};
+		const reversed = {
+			path: "src/lib/widgets/badge.svelte",
+			source: `{#if 'owner' == role}…{/if}`,
+		};
+		expect(roleBreaches([share, includes, reversed])).toEqual([
+			`${share.path}: === "owner"`,
+			`${includes.path}: .includes("admin")`,
+			`${reversed.path}: 'owner' ==`,
+		]);
+	});
+
+	test("lets through the roles' own files, comments, labels and the seed's assignments", () => {
+		expect(
+			roleBreaches([
+				{ path: "src/lib/auth/members.ts", source: `roles.includes("owner")` },
+				{ path: "src/lib/widgets/doc.ts", source: `// an owner: role === "owner"` },
+				{
+					path: "src/lib/server/db/demo.ts",
+					source: `{ organizationId: "org-north", role: "owner" }`,
+				},
+				{
+					path: "src/lib/widgets/picker.ts",
+					source: `const roles = ["owner", "admin", "member"];`,
+				},
+				{ path: "src/lib/widgets/ok.ts", source: `if (isManager(roles)) return;` },
+			]),
+		).toEqual([]);
+	});
+});
