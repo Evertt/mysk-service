@@ -475,6 +475,10 @@ parts-shop, partner-programme and maintenance.
   `viewerIn(organizationId)`.
 - `src/routes/(field)/notifications.remote.ts`: the link check goes, replaced by `readable`.
 - `engineer.ts`'s `engineerActivity()`: its `exists` from `visible("order")`.
+- If decision 2 is confirmed: the engineer's `site` rule, and `units.ts`'s engineer audience reading
+  `onSite` only at those sites (`audience-reads.spec.ts` and
+  `src/tests/unit/routes/(field)/my/portal.spec.ts` cover it). If decision 7 is confirmed: the named
+  status sets for the engineer's lists.
 - Guard rules 4 and 5 switch on. This is the session most likely to find a portal query that
   disagrees with its rule. Stop and ask the owner then, don't pick.
 
@@ -489,27 +493,75 @@ parts-shop, partner-programme and maintenance.
 **7. Docs and the portal feed.**
 
 - `docs/agents/kit.md` (the entry above), `tenancy.md`, `AGENTS.md`.
-- If the owner wants it: the customer portal's feed (`provideChangeFeed` in
-  `src/routes/(customer)/+layout.svelte`). It retires `watchPortal` and `watchMyWork` and moves
-  their pages to `refreshOnRecordChange()`.
+- The customer portal's feed (decision 6): `watchPortalChanges` (`forCustomers`,
+  `liveFeed(types, feedFor)`) in `client.remote.ts`, `provideChangeFeed` in
+  `src/routes/(customer)/+layout.svelte`, and its four pages (`portal/+page.svelte`,
+  `orders/+page.svelte`, `orders/[number]/+page.svelte`, `equipment/[serial]/+page.svelte`) on
+  `refreshOnRecordChange()`. `watchPortal` goes. The engineer portal's `watchMyWork`
+  (`my/+page.svelte`, `my/[number]/+page.svelte`, `notification-bell.svelte`) moves the same way.
+  Small once step 4 is in: the rules and the presenter exist.
 
-## Open questions for the owner
+## Decisions
 
-1. **The audience of a hybrid user.** The plan takes the gate's audience (a `forEngineers` call is
-   the engineer's, even for an office member), and for `forAnyRole` the stronger role. Agreed?
-2. **What engineers may read beyond their orders.** Today every unit, location and site of the
-   tenant (the QR pages) and every customer's name on those. Keep that tenant-wide, or narrow it,
-   e.g. customers and sites to those of their orders?
-3. **Old log entries of an off module.** The plan drops them from the office's feed page, dashboard
-   and filters (today they show by label without a link). Or keep showing them, and 404 only the
-   record's own card?
-4. **The office's sensitive types.** `member`, `invitation`, `portal_contact` and
-   `integration_token` entries are readable by every office member in the log today, while
-   `getMembers` hides contacts and only managers manage these. Should their office read rule be
-   managers only?
-5. **Unreadable answers.** `getRecordChangedAt` answers 0 for an unreadable record, the same as
-   unchanged. Or should a batch refuse the whole call (a 404) if any subject is unreadable?
-6. **A customer portal feed** (step 7): wanted now, or later?
-7. **The engineer's status rules** (`getMyWork`, `myOpenOrders`, `getMyOrder`, three rules): should
-   the `order` engineer rule include a status condition (e.g. not `quote`), or stay "assigned to
-   me" with the views filtering?
+Owner's answers of 21 October 2026. Those marked _proposed_ are my recommendation, for the owner to
+confirm.
+
+1. **A hybrid user's audience is the gate's.** A `forEngineers` call is the engineer's, even for an
+   office member. On `forAnyRole`, the stronger role decides (`shellOf(roles)`).
+2. **_Proposed:_ engineers keep reading every unit and location, but a site's on-site details only
+   at their own orders' sites.**
+   - _For tenant-wide (today's):_ the QR code is the product. An engineer on site scans the
+     neighbouring door that's also broken, or a colleague's unit, and needs its page and history.
+     Narrowing the units would 404 those scans. The engineers are the tenant's own staff, and a
+     unit's name, serial and owner aren't sensitive.
+   - _For narrowing:_ least privilege, and engineers may be subcontractors. The real exposure isn't
+     the units but the site's `onSite` columns (`src/lib/customers/server/site-columns.ts:21-34`):
+     contact names, phone numbers and email, and `accessNotes`, which is where key-safe and alarm
+     codes end up. Today any engineer can read those for every site by typing serials into
+     `/my/equipment/[serial]`.
+   - _So:_
+     - `equipment` and `location` stay tenant-wide for engineers, and `customer` too (the owner's
+       name, as a unit's page shows it).
+     - The engineer's `site` rule becomes "a site of one of their orders": a site with a unit on
+       one of their orders, or the customer's only site for an order without units. These are the
+       sites the work record finds (`work-record.ts`, "Sites").
+     - The units' engineer audience (`units.ts:45`) reads `onSite` columns where the site passes
+       that rule, and `address` elsewhere, per row, by a `case when` on the rule. This is the one
+       place a row rule picks columns. `UnitOf<"engineer">`'s site then has the on-site keys as
+       optional.
+
+     Step 5 builds it.
+3. **Entries of an off module disappear from every screen and stay in the database.** The log's
+   readers filter them out (step 3), and nothing deletes them: switching the module back on shows
+   them again.
+4. **`member`, `invitation`, `portal_contact` and `integration_token` are for managers.** Their
+   office read rule is `manager` (step 1), so the log, the feed and the filters hide them from other
+   office members.
+5. **_Proposed:_ an unreadable record answers 0, and the batch is not refused.**
+   - The batch is `query.batch`, gathered from every component on the page that follows a record.
+     One subject failing the check would fail the catch-up of all the others.
+   - That happens in normal use, not only under tampering: an engineer is taken off an order while
+     its page is open, or a record is deleted or its module switched off.
+   - 0 already means "not changed since the server started", so it tells the asker nothing: no
+     probing whether an id exists.
+   - The page's own query is gated again on its next refresh and gives the 404 with the right
+     message, which is where a refusal belongs.
+6. **The customer portal gets a feed,** in step 7. It's small: one live query, the layout and four
+   pages, all on parts steps 1 and 4 build.
+7. **_Proposed:_ the engineer's `order` rule stays "assigned to me", in any status. The views name
+   their status sets.**
+   - Reading is the record question, and an engineer has a reason to open their order in every
+     status:
+     - a quote just planned for them;
+     - work in progress;
+     - a done order of the last ten (`getMyWork`);
+     - a cancelled one their bell just told them about (`orders.cancelled`).
+   - An order awaiting acceptance has no engineer, so it never matches.
+   - A status condition in the rule would make those pages 404 and drop their feed entries.
+   - What _changes_ with the status is the field work: `fieldActions` already decides that, and
+     `findEngineerOrder()` composes the two (step 6).
+   - The three lists' filters are views, not permissions. They get named sets beside the others in
+     `src/lib/models.ts`, e.g. `engineerWorkStatuses` for `getMyWork` and `openOrderStatuses`, which
+     `myOpenOrders` already uses. Then the difference between "today's work" and "open orders at
+     this place" is visible and deliberate. It's a small change, in step 5's session
+     (`portal.remote.ts:59,65`, `places.remote.ts:36`).
