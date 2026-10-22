@@ -40,7 +40,7 @@ async function myOpenOrders(ids: number[]) {
 /** One of the tenant's units by its serial number, at its site, and the engineer's open orders on it. */
 export const getMyUnit = forEngineers.query(v.string(), async (serialNumber) => {
 	const unit = orNotFound(
-		await readUnits(engineerUnits(), eq(equipment.serialNumber, serialNumber)),
+		await readUnits(await engineerUnits(), eq(equipment.serialNumber, serialNumber)),
 		m.equipment_serial_not_found({ serial: serialNumber }),
 	);
 	return { unit, orders: await myOpenOrders([unit.id]) };
@@ -49,7 +49,7 @@ export const getMyUnit = forEngineers.query(v.string(), async (serialNumber) => 
 /** One of the tenant's locations, its site and units, and the engineer's open orders on them. */
 export const getMyLocation = forEngineers.query(id(), async (locationId) => {
 	const { location, units } = orNotFound(
-		await readLocation(engineerUnits(), locationId),
+		await readLocation(await engineerUnits(), locationId),
 		m.equipment_location_not_found(),
 	);
 	return { location, units, orders: await myOpenOrders(units.map((unit) => unit.id)) };

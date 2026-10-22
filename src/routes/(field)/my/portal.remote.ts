@@ -9,7 +9,7 @@ import * as v from "valibot";
 
 import { orderSubject } from "#lib/activity/index.ts";
 import { formatNumber } from "#lib/i18n/index.ts";
-import { doneOrderStatuses } from "#lib/models.ts";
+import { doneOrderStatuses, engineerWorkStatuses } from "#lib/models.ts";
 import {
 	engineerWork,
 	findEngineerOrder,
@@ -18,21 +18,20 @@ import {
 	transitionOrder,
 } from "#lib/orders/server/index.ts";
 import { id, laborHours, text } from "#lib/schema.ts";
+import { visibleOrNone } from "#lib/server/access/index.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import {
 	currentTenant,
 	engineerOrderNotFound,
-	engineerOrders,
 	idInTenant,
 	tenantJoin,
 } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customer, order, orderNote } from "#lib/server/db/schema.ts";
-import { live, liveFeed } from "#lib/server/live.ts";
+import { feedFor, liveFeed } from "#lib/server/live.ts";
 import { forEngineers } from "#lib/server/remote-functions.ts";
 
-import { fieldChanges } from "./changes.server.ts";
 import { signature } from "./work.ts";
 
 /** The columns of an order in the lists. */
@@ -50,13 +49,13 @@ const listColumns = {
 
 /** The engineer's open work (scheduled or under way), and what they completed recently. */
 export const getMyWork = forEngineers.query(async () => {
-	const mine = await engineerOrders();
+	const mine = await visibleOrNone("order");
 	const [open, recent] = await Promise.all([
 		db
 			.select(listColumns)
 			.from(order)
 			.innerJoin(...tenantJoin(customer, order.customerId))
-			.where(and(mine, inList(order.status, ["scheduled", "in_progress"])))
+			.where(and(mine, inList(order.status, engineerWorkStatuses)))
 			.orderBy(asc(order.scheduledFor)),
 		db
 			.select(listColumns)
@@ -92,25 +91,16 @@ export const getMyOrder = forEngineers.query(v.string(), async (number) => {
 	return { order: { ...found, units }, sites, notes, signoff };
 });
 
-/** The records the portal shows: a change to any of them may outdate it. */
-const portalTypes = ["order", "customer", "site", "equipment"] as const;
-
 /**
- * When the records the portal shows last changed (epoch ms, 0 if not since the server started),
- * sent again on each change, so an open portal refreshes when the office assigns, reschedules,
- * changes or cancels an order. Any change of those types in the tenant, not only the engineer's:
- * it says only that something changed, and the queries it has the portal refresh are gated again.
- */
-export const watchMyWork = forEngineers.query.live(() => live(portalTypes));
-
-/**
- * The changes to the engineer's own orders and to the tenant's units, for the one live query a
- * portal tab shares (`provideChangeFeed()` in its layout), which tells the cards that follow one
- * of them (`refreshOnRecordChange()`). See `fieldChanges()` for what it tells, `liveFeed()` for its
- * answers.
+ * The changes to what the portal shows, for the one live query a portal tab shares
+ * (`provideChangeFeed()` in its layout), which tells the pages and cards that follow a record
+ * (`refreshOnRecordChange()`, the list `refreshOnActivity()`): the engineer's own orders (also
+ * one taken off them, once: `ACCESS_REVOKED`), the tenant's customers and units, and the sites of
+ * their orders. What it tells is what the engineer may read (`feedFor()`), without who made it; see
+ * `liveFeed()` for its answers.
  */
 export const watchFieldChanges = forEngineers.query.live(() =>
-	liveFeed(["order", "equipment"], fieldChanges),
+	liveFeed(["order", "customer", "site", "equipment"], feedFor()),
 );
 
 /**

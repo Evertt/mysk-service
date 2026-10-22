@@ -2,7 +2,6 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { parseTableUrl, type TableUrlSpec } from "#lib/components/data-table/url-state.ts";
 import {
-	canShareViews,
 	matchingViews,
 	tableViewsKey,
 	viewQuery,
@@ -117,11 +116,4 @@ describe("matchingViews", () => {
 test("tableViewsKey names a table by its route, and its prefix if it has one", () => {
 	expect(tableViewsKey("/(app)/orders")).toBe("/(app)/orders");
 	expect(tableViewsKey("/(app)/customers/[code]", "orders")).toBe("/(app)/customers/[code]#orders");
-});
-
-test("only owners and admins share views", () => {
-	expect(canShareViews(["owner"])).toBe(true);
-	expect(canShareViews(["member", "admin"])).toBe(true);
-	expect(canShareViews(["member"])).toBe(false);
-	expect(canShareViews(["engineer"])).toBe(false);
 });

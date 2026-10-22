@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { goto } from "$app/navigation";
 	import { resolve } from "$app/paths";
 	import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
 	import MailIcon from "@lucide/svelte/icons/mail";
@@ -6,7 +7,13 @@
 	import PlayIcon from "@lucide/svelte/icons/play";
 	import { toast } from "svelte-sonner";
 
+	import { ACCESS_REVOKED } from "#lib/activity/index.ts";
 	import { getCurrentUser } from "#lib/auth/session.remote.ts";
+	import {
+		onAnyChange,
+		onRecordChange,
+		refreshOnRecordChange,
+	} from "#lib/components/activity/change-feed.svelte.ts";
 	import DetailItem from "#lib/components/detail-item.svelte";
 	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
@@ -14,13 +21,12 @@
 	import { SiteCard } from "#lib/customers/components.ts";
 	import { dayOf } from "#lib/dates.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
-	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatTime } from "#lib/i18n/index.ts";
 	import { SignOff, TypeLabel, WorkUnits } from "#lib/orders/components.ts";
 	import { fieldActions, orderPriorityDisplay, orderStatusDisplay } from "#lib/orders/index.ts";
 	import { order as orderParts } from "#lib/portal/extensions.ts";
 
-	import { getMyOrder, startWork, watchMyWork } from "../portal.remote.ts";
+	import { getMyOrder, startWork } from "../portal.remote.ts";
 	import { dayLabel } from "../work.ts";
 	import type { PageProps } from "./$types";
 	import CompleteForm from "./complete-form.svelte";
@@ -38,9 +44,44 @@
 	// How often the modules' cards changed what the order may do (`changed()` of `portal.order`).
 	let partsChanged = $state(0);
 
-	// Live: the office rescheduling, changing or cancelling the order shows without a reload (one
-	// taken off the engineer is a 404 then, as on a reload).
-	refreshOnChange(watchMyWork, () => getMyOrder(params.number).refresh());
+	/** The order was taken off the engineer: nothing more of it can be read, so nothing refreshes. */
+	let revoked = false;
+
+	// Live: the office rescheduling or changing the order, or its customer, shows without a reload.
+	// A change that takes the order off the engineer refreshes nothing (it would be a 404 before the
+	// notice below): `refreshOnRecordChange()` skips it.
+	refreshOnRecordChange(
+		() => ({ type: "order", id: order.id }),
+		() => getMyOrder(params.number).refresh(),
+	);
+	refreshOnRecordChange(
+		() => ({ type: "customer", id: order.customerId }),
+		() => getMyOrder(params.number).refresh(),
+	);
+	// Its units and sites, as the work record found them (a unit added to the order is an order change).
+	const followed = $derived(
+		new Set([
+			...order.units.map((unit) => `equipment/${unit.id}`),
+			...data.sites.map((site) => `site/${site.id}`),
+		]),
+	);
+	onAnyChange((change) => {
+		if (!revoked && followed.has(`${change.type}/${change.id}`)) {
+			void getMyOrder(params.number).refresh();
+		}
+	});
+
+	// The one thing the feed tells of an order that stops being theirs: it was taken off them. The
+	// page says so and leaves for the list, since it can read nothing more of the order.
+	onRecordChange(
+		() => ({ type: "order", id: order.id }),
+		(change) => {
+			if (change?.action !== ACCESS_REVOKED) return;
+			revoked = true;
+			toast.info(m.portal_order_access_revoked({ number: order.number }));
+			void goto(resolve("/(field)/my"));
+		},
+	);
 </script>
 
 <svelte:head>

@@ -15,20 +15,32 @@ import { join, posix, relative } from "node:path";
 import { error, isHttpError } from "@sveltejs/kit";
 import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
+import { audienceOf } from "#lib/server/access/viewer.ts";
 import {
 	requireCustomer,
 	requireEngineer,
 	requireManager,
 	requireModule,
+	requireTenant,
 } from "#lib/server/auth/index.ts";
-import { forAnyone, forCustomers, moduleRemote, remoteSet } from "#lib/server/remote-functions.ts";
+import {
+	forAnyone,
+	forAnyRole,
+	forCustomers,
+	forEngineers,
+	forMembers,
+	moduleRemote,
+	remoteSet,
+} from "#lib/server/remote-functions.ts";
 
 /** SvelteKit's functions, as stand-ins that hand back what they were made with. */
 vi.mock("$app/server", () => {
 	const make =
 		(type: string) =>
 		(...args: unknown[]) => ({ type, args });
+	const event = {};
 	return {
+		getRequestEvent: () => event,
 		query: Object.assign(make("query"), { batch: make("query_batch"), live: make("query_live") }),
 		form: make("form"),
 		command: make("command"),
@@ -43,6 +55,8 @@ vi.mock("#lib/server/auth/index.ts", () => ({
 	requireTenant: vi.fn(),
 	requireUser: vi.fn(),
 	requireModule: vi.fn(),
+	currentCustomer: vi.fn(),
+	systemTenant: vi.fn(),
 }));
 
 /** What a stand-in was made with. */
@@ -82,7 +96,7 @@ describe("a gated set", () => {
 	});
 
 	test("passes the schema on and wraps the handler, the last argument, of every kind", () => {
-		const set = remoteSet(admit);
+		const set = remoteSet(admit, "office");
 		const schema = { "~standard": {} };
 		const made = [
 			set.query(schema as never, handler as never),
@@ -107,7 +121,7 @@ describe("a gated set", () => {
 	});
 
 	test("runs the gate before the handler, on every call, with the handler's arguments", () => {
-		const made = remoteSet(admit).form({} as never, handler as never);
+		const made = remoteSet(admit, "office").form({} as never, handler as never);
 		expect(calls).toEqual([]);
 		expect(handlerOf(made)("data", "issue")).toEqual(["data", "issue"]);
 		expect(handlerOf(made)("again")).toEqual(["again"]);
@@ -115,7 +129,7 @@ describe("a gated set", () => {
 	});
 
 	test("never runs the handler when the gate refuses", async () => {
-		const set = remoteSet(refuse);
+		const set = remoteSet(refuse, "office");
 		for (const made of [
 			set.query(handler as never),
 			set.query.batch("unchecked", handler as never),
@@ -129,16 +143,37 @@ describe("a gated set", () => {
 	});
 
 	test("waits for a gate that answers later, and stops at its refusal", async () => {
-		const admitted = remoteSet(async () => void calls.push("gate"));
+		const admitted = remoteSet(async () => void calls.push("gate"), "office");
 		expect(await handlerOf(admitted.query(handler as never))("arg")).toEqual(["arg"]);
-		const refused = remoteSet(async () => refuse());
+		const refused = remoteSet(async () => refuse(), "office");
 		expect(await statusOf(() => handlerOf(refused.command(handler as never))())).toBe(403);
 		expect(calls).toEqual(["gate", "handler", "gate"]);
 	});
 
 	test("keeps the handler synchronous behind a gate that answers right away", () => {
-		const made = remoteSet(admit).query(() => "now");
+		const made = remoteSet(admit, "office").query(() => "now");
 		expect(handlerOf(made)()).toBe("now");
+	});
+
+	test("runs the handler as the audience the gate admitted, else the member's strongest role's", async () => {
+		const audience = () => audienceOf();
+		vi.mocked(requireTenant).mockReturnValue({ roles: ["admin", "engineer"] } as never);
+		expect(handlerOf(forEngineers.query(audience as never))()).toBe("engineer");
+		expect(handlerOf(forMembers.query(audience as never))()).toBe("office");
+		expect(await handlerOf(forCustomers.query(audience as never))()).toBe("customer");
+		vi.mocked(requireTenant).mockReturnValue({ roles: ["engineer"] } as never);
+		expect(handlerOf(forAnyRole.query(audience as never))()).toBe("engineer");
+		vi.mocked(requireTenant).mockReturnValue({ roles: ["admin", "engineer"] } as never);
+		expect(handlerOf(forAnyRole.query(audience as never))()).toBe("office");
+		// Concurrent calls each keep their own, whatever runs in between.
+		const engineer = handlerOf(
+			forEngineers.query((async () => {
+				await new Promise((done) => setTimeout(done, 5));
+				return audienceOf();
+			}) as never),
+		)();
+		handlerOf(forMembers.query(audience as never))();
+		expect(await engineer).toBe("engineer");
 	});
 
 	test("forAnyone admits everyone", () => {

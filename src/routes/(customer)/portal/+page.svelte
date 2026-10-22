@@ -10,17 +10,19 @@
 	import SirenIcon from "@lucide/svelte/icons/siren";
 
 	import { home } from "#lib/client/extensions.ts";
+	import { refreshOnActivity } from "#lib/components/activity/live-activity.svelte.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
-	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
 
-	import { getPortalHome, watchPortal } from "./client.remote.ts";
+	import { getPortalHome } from "./client.remote.ts";
 	import OrderList from "./order-list.svelte";
 
 	const data = $derived(await getPortalHome());
 
 	// Live: a planner accepting, rejecting or planning a report shows without a reload.
-	refreshOnChange(watchPortal, () => getPortalHome().refresh());
+	refreshOnActivity(() => getPortalHome().refresh(), {
+		types: ["order", "equipment", "site", "location"],
+	});
 </script>
 
 <svelte:head>

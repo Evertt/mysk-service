@@ -19,7 +19,6 @@
 	"settings_members": "Members",
 	"settings_members_description": "People who can sign in to this organization.",
 	"settings_manage_members": "Manage members",
-	"settings_view_members": "View members",
 	"settings_column_name": "Name",
 	"settings_column_role": "Role",
 	"settings_column_joined": "Joined",

@@ -12,14 +12,22 @@
  * the engineer takes them from the order it reached (`order.engineerId`).
  */
 import { error } from "@sveltejs/kit";
-import { and, eq, type SQL, sql } from "drizzle-orm";
+import { and, eq, ne, or, type SQL, sql } from "drizzle-orm";
+import { alias, type SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import type { EngineerActivity } from "#lib/notifications/extensions.ts";
 import { db } from "#lib/server/db/index.ts";
 import { literal } from "#lib/server/db/parameters.ts";
-import { activity, order } from "#lib/server/db/schema.ts";
+import {
+	activity,
+	customerSite,
+	engineer,
+	equipment,
+	order,
+	orderUnit,
+} from "#lib/server/db/schema.ts";
 
-import { inTenant, requireEngineer } from "./session.ts";
+import { idInTenant, inTenant, requireEngineer, requireTenant, tenantJoin } from "./session.ts";
 
 /** How a request named an order: by id (a form's) or by number (the URL's). */
 export type OrderRef = { id: number } | { number: string };
@@ -34,10 +42,53 @@ export async function engineerOrders(): Promise<SQL> {
 	return and(inTenant(order), eq(order.engineerId, engineer.id))!;
 }
 
+/** For a query on `engineer`: the signed-in engineer's own record, which is all of them they read. */
+export async function engineerSelf(): Promise<SQL> {
+	const { engineer: self } = await requireEngineer();
+	return idInTenant(engineer, self.id);
+}
+
+/**
+ * For a query on `customerSite`: the sites of the signed-in engineer's orders, which is where they
+ * see what's needed on a site (contacts, access notes). A site with a unit on one of their orders,
+ * or, for an order without units, its customer's only site: the sites the work record finds
+ * (`readWorkRecord()`). The units and locations stay the tenant's for every engineer (the QR pages).
+ */
+export async function engineerSites(): Promise<SQL> {
+	// This condition stands behind each of a site's on-site columns in one statement
+	// (`siteColumnsWhere()`), so its tenant and engineer are written in as constants, not bound:
+	// bound, they came to about 9 values a column and put a unit's read near the 100 a Durable
+	// Object takes.
+	const { engineer: self } = await requireEngineer();
+	const organizationId = literal(requireTenant().organizationId);
+	const inThisTenant = (table: { organizationId: SQLiteColumn }) =>
+		sql`${table.organizationId} = ${organizationId}`;
+	const mine = and(inThisTenant(order), sql`${order.engineerId} = ${literal(self.id)}`)!;
+	const [, unitOfLink] = tenantJoin(equipment, orderUnit.equipmentId);
+	const otherSite = alias(customerSite, "other_site");
+	const withUnit = sql`exists (select 1 from ${orderUnit} inner join ${order} on ${eq(orderUnit.orderId, order.id)} inner join ${equipment} on ${unitOfLink} where ${and(eq(equipment.siteId, customerSite.id), inThisTenant(orderUnit), mine)})`;
+	const withoutUnits = sql`exists (select 1 from ${order} where ${and(
+		mine,
+		eq(order.customerId, customerSite.customerId),
+		sql`not exists (select 1 from ${orderUnit} where ${and(eq(orderUnit.orderId, order.id), inThisTenant(orderUnit))})`,
+		sql`not exists (select 1 from ${customerSite} ${sql.identifier("other_site")} where ${and(eq(otherSite.customerId, customerSite.customerId), ne(otherSite.id, customerSite.id), inThisTenant(otherSite))})`,
+	)})`;
+	return and(inTenant(customerSite), or(withUnit, withoutUnits))!;
+}
+
+/** Whether `id` is the signed-in engineer's own id (for who an order was taken from). */
+export async function isEngineer(id: number): Promise<boolean> {
+	const { engineer } = await requireEngineer();
+	return engineer.id === id;
+}
+
+/** For a query on `order`: the one order `ref` names, by its id or its number. */
+export const orderNamed = (ref: OrderRef): SQL =>
+	"id" in ref ? eq(order.id, ref.id) : eq(order.number, ref.number);
+
 /** The one order `ref` names, if it's one of `engineerOrders()`. */
 export async function engineerOrder(ref: OrderRef): Promise<SQL> {
-	const named = "id" in ref ? eq(order.id, ref.id) : eq(order.number, ref.number);
-	return and(named, await engineerOrders())!;
+	return and(orderNamed(ref), await engineerOrders())!;
 }
 
 /**
@@ -54,19 +105,21 @@ export function engineerOrderNotFound(ref: OrderRef): never {
 /**
  * For the engineer's notifications (`#lib/server/notifications/`): conditions on an `activity`
  * entry about one of the tenant's orders that gave it to the signed-in engineer, took it off them,
- * or is about an order of theirs now. The entries record the engineer as `changes.engineerId`
- * (before, after): an assignment, a plan, the order form, a creation with an engineer and a
- * deletion of an assigned order all do.
+ * or is about an order of theirs now (`theirOrders`, a condition on `order`: the access registry's
+ * `visible("order")` for them, which this file can't import without a cycle). The entries record
+ * the engineer as `changes.engineerId` (before, after): an assignment, a plan, the order form, a
+ * creation with an engineer and a deletion of an assigned order all do.
  */
-export async function engineerActivity(): Promise<EngineerActivity> {
+export async function engineerActivity(theirOrders: SQL): Promise<EngineerActivity> {
 	const { engineer } = await requireEngineer();
 	const engineerWas = (side: 0 | 1) =>
 		sql`json_extract(${activity.changes}, ${sql.raw(`'$.engineerId[${side}]'`)}) = ${engineer.id}`;
 	const isOrder = sql`${activity.subjectType} = ${literal("order")}`;
+	// Their orders now: `theirOrders`.
 	const theirs = db
 		.select({ id: order.id })
 		.from(order)
-		.where(and(eq(order.id, sql`cast(${activity.subjectId} as integer)`), await engineerOrders()));
+		.where(and(eq(order.id, sql`cast(${activity.subjectId} as integer)`), theirOrders));
 	return {
 		assigned: sql`(${isOrder} and ${engineerWas(1)})`,
 		unassigned: sql`(${isOrder} and ${engineerWas(0)})`,

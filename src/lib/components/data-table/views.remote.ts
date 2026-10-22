@@ -1,19 +1,23 @@
 /**
  * Saved views of the data tables (see `views.ts`): a member's own views of a table, and the views
  * owners and admins shared with the organization. A view is changed by its creator, or, if it's
- * shared, by an owner or admin too.
+ * shared, by an owner or admin too. Who reads and changes which is the `saved_view` rule of the
+ * access registry (`#lib/server/access/core.ts`); only whether a member may share is asked of
+ * `isManager`, since a view that isn't there yet has no rule to ask.
  *
  * Only shared views are in the activity log: a personal view concerns nobody else (and its name
  * would show in the organization's log), much like a column setting. Creating a shared view,
  * sharing and unsharing one, changing and deleting one are logged.
  */
 import { error, invalid } from "@sveltejs/kit";
-import { and, asc, eq, or, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import * as v from "valibot";
 
+import { isManager } from "#lib/auth/roles.ts";
 import { id, recordId, text, textMax } from "#lib/schema.ts";
+import { changeable, keyOf, mayChange, visible } from "#lib/server/access/index.ts";
 import { recordActivity, type Subject } from "#lib/server/activity/index.ts";
-import { currentTenant, inTenant, idInTenant } from "#lib/server/auth/index.ts";
+import { currentTenant, idInTenant } from "#lib/server/auth/index.ts";
 import { user } from "#lib/server/db/auth.schema.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { savedView } from "#lib/server/db/schema.ts";
@@ -25,7 +29,7 @@ import {
 	tableKeySchema as tableKey,
 	viewQuerySchema as viewQuery,
 } from "./views.server.ts";
-import { canShareViews, viewNameMax } from "./views.ts";
+import { viewNameMax } from "./views.ts";
 
 const viewName = v.pipe(text(m.common_views_name_required), textMax(viewNameMax));
 
@@ -51,6 +55,8 @@ export interface TableView {
 /** The views of a table the signed-in user sees: their own, and shared ones, by name. */
 export const getTableViews = forMembers.query(tableKey, async (key) => {
 	const tenant = currentTenant();
+	const readable = await visible("saved_view");
+	if (!readable) return { canShare: false, views: [] };
 	const rows = await db
 		.select({
 			id: savedView.id,
@@ -63,23 +69,17 @@ export const getTableViews = forMembers.query(tableKey, async (key) => {
 		})
 		.from(savedView)
 		.innerJoin(user, eq(user.id, savedView.userId))
-		.where(
-			and(
-				inTenant(savedView),
-				eq(savedView.tableKey, key),
-				or(eq(savedView.userId, tenant.user.id), eq(savedView.shared, true)),
-			),
-		)
+		.where(and(readable, eq(savedView.tableKey, key)))
 		.orderBy(sql`${savedView.name} collate nocase`, asc(savedView.id));
-	const canShare = canShareViews(tenant.roles);
+	const editable = await changeable(rows.map(({ id }) => ({ type: "saved_view", id })));
 	return {
 		/** Whether the user may share views with the organization. */
-		canShare,
+		canShare: isManager(tenant.roles),
 		views: rows.map(({ userId, owner, ...row }): TableView => ({
 			...row,
 			mine: userId === tenant.user.id,
 			owner: userId === tenant.user.id ? null : owner,
-			editable: userId === tenant.user.id || canShare,
+			editable: editable.has(keyOf({ type: "saved_view", id: row.id })),
 		})),
 	};
 });
@@ -89,21 +89,17 @@ export const getTableViews = forMembers.query(tableKey, async (key) => {
  * change, or a 403.
  */
 async function findView(viewId: number, { edit = false } = {}) {
-	const tenant = currentTenant();
+	const readable = await visible("saved_view");
 	const found = orNotFound(
-		await db
-			.select()
-			.from(savedView)
-			.where(
-				and(
-					eq(savedView.id, viewId),
-					inTenant(savedView),
-					or(eq(savedView.userId, tenant.user.id), eq(savedView.shared, true)),
-				),
-			),
+		readable
+			? await db
+					.select()
+					.from(savedView)
+					.where(and(eq(savedView.id, viewId), readable))
+			: [],
 		m.common_views_not_found(),
 	);
-	if (edit && found.userId !== tenant.user.id && !canShareViews(tenant.roles)) {
+	if (edit && !(await mayChange({ type: "saved_view", id: found.id }))) {
 		error(403, m.common_error_no_permission());
 	}
 	return found;
@@ -137,7 +133,7 @@ export const createView = forMembers.form(
 	}),
 	async (input, issue) => {
 		const tenant = currentTenant();
-		if (input.shared && !canShareViews(tenant.roles)) error(403, m.common_error_no_permission());
+		if (input.shared && !isManager(tenant.roles)) error(403, m.common_error_no_permission());
 		const created = await db.transaction(async (tx) => {
 			const view = { ...input, userId: tenant.user.id };
 			if (await viewNamed(tx, view)) {
@@ -211,7 +207,7 @@ export const shareView = forMembers.command(
 	v.object({ id: recordId(), shared: v.boolean() }),
 	async (input) => {
 		const tenant = currentTenant();
-		if (!canShareViews(tenant.roles)) error(403, m.common_error_no_permission());
+		if (!isManager(tenant.roles)) error(403, m.common_error_no_permission());
 		const existing = await findView(input.id, { edit: true });
 		if (existing.shared === input.shared) return;
 		await db.transaction(async (tx) => {

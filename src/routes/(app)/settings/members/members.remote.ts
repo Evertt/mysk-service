@@ -8,7 +8,7 @@ import * as v from "valibot";
 import {
 	assignableRoles,
 	invitationState,
-	isManager,
+	isOwner,
 	type MemberChange,
 	type MemberRole,
 	parseRoles,
@@ -18,13 +18,14 @@ import {
 } from "#lib/auth/index.ts";
 import { label } from "#lib/i18n/index.ts";
 import { email } from "#lib/schema.ts";
+import { visible } from "#lib/server/access/index.ts";
 import { recordActivityAfter, type Subject } from "#lib/server/activity/index.ts";
 import { auth, currentTenant, inTenant, idInTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { invitation, member, user } from "#lib/server/db/schema.ts";
 import { orNotFound } from "#lib/server/records.ts";
 import { Refused } from "#lib/server/refused.ts";
-import { forManagers, forMembers } from "#lib/server/remote-functions.ts";
+import { forManagers } from "#lib/server/remote-functions.ts";
 
 /**
  * Whether a member's or an invitation's roles (stored comma-separated, `owner,engineer`) include
@@ -34,14 +35,14 @@ const isCustomerRole = (role: typeof member.role | typeof invitation.role) =>
 	sql`(',' || replace(coalesce(${role}, ''), ' ', '') || ',') like '%,customer,%'`;
 
 /**
- * The organization's team, and for owners and admins its pending invitations, with what the
- * signed-in user may do to each. Members see the list read-only, as on the settings page.
- * Customers' contacts aren't part of it (see `isCustomerRole`).
+ * The organization's team and its pending invitations, with what the signed-in manager may do to
+ * each: the team is the managers' to see (the `member` and `invitation` rules), so the other
+ * members don't have this page. Customers' contacts aren't part of it (see `isCustomerRole`).
  */
-export const getMembers = forMembers.query(async () => {
+export const getMembers = forManagers.query(async () => {
 	const tenant = currentTenant();
-	const manager = isManager(tenant.roles);
 	const inviter = alias(user, "inviter");
+	const readableInvitations = await visible("invitation");
 	const [members, invitations] = await Promise.all([
 		db
 			.select({
@@ -56,7 +57,7 @@ export const getMembers = forMembers.query(async () => {
 			.innerJoin(user, eq(member.userId, user.id))
 			.where(and(inTenant(member), not(isCustomerRole(member.role))))
 			.orderBy(asc(user.name)),
-		manager
+		readableInvitations
 			? db
 					.select({
 						id: invitation.id,
@@ -71,7 +72,7 @@ export const getMembers = forMembers.query(async () => {
 					.leftJoin(inviter, eq(invitation.inviterId, inviter.id))
 					.where(
 						and(
-							inTenant(invitation),
+							readableInvitations,
 							eq(invitation.status, "pending"),
 							not(isCustomerRole(invitation.role)),
 						),
@@ -80,7 +81,7 @@ export const getMembers = forMembers.query(async () => {
 			: [],
 	]);
 
-	const owners = members.filter((m) => parseRoles(m.role).includes("owner")).length;
+	const owners = members.filter((m) => isOwner(parseRoles(m.role))).length;
 	const actor = { userId: tenant.user.id, roles: tenant.roles };
 	return {
 		name: tenant.name,
@@ -97,8 +98,8 @@ export const getMembers = forMembers.query(async () => {
 				...m,
 				roles,
 				isYou: m.userId === tenant.user.id,
-				roleOptions: manager && roleOptions.length > 1 ? roleOptions : [],
-				canRemove: manager && removalRefusal(change) === null,
+				roleOptions: roleOptions.length > 1 ? roleOptions : [],
+				canRemove: removalRefusal(change) === null,
 			};
 		}),
 		invitations: invitations.map((i) => ({
@@ -123,7 +124,7 @@ async function memberChange(memberId: string): Promise<MemberChange> {
 	return {
 		actor: { userId: tenant.user.id, roles: tenant.roles },
 		target: { userId: target.userId, roles: parseRoles(target.role) },
-		owners: members.filter((m) => parseRoles(m.role).includes("owner")).length,
+		owners: members.filter((m) => isOwner(parseRoles(m.role))).length,
 	};
 }
 
@@ -263,7 +264,7 @@ export const resendInvitation = forManagers.form(v.object({ id: v.string() }), a
 	const tenant = currentTenant();
 	const found = await findInvitation(id);
 	const role = parseRoles(found.role ?? "member") as MemberRole[];
-	if (role.includes("owner") && !tenant.roles.includes("owner")) {
+	if (isOwner(role) && !isOwner(tenant.roles)) {
 		throw new Refused(m.settings_only_owners_invite_owners());
 	}
 	await asUser(async (headers) => {

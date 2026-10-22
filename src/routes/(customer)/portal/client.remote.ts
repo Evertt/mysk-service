@@ -28,16 +28,12 @@ import {
 	requestOrder,
 } from "#lib/orders/server/index.ts";
 import { id, text } from "#lib/schema.ts";
-import {
-	currentCustomer,
-	type CustomerAccess,
-	customerOrders,
-	sameTenant,
-} from "#lib/server/auth/index.ts";
+import { visibleOrNone } from "#lib/server/access/index.ts";
+import { currentCustomer, type CustomerAccess, sameTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customerSite, equipment, order, orderRequest } from "#lib/server/db/schema.ts";
-import { live } from "#lib/server/live.ts";
+import { feedFor, liveFeed } from "#lib/server/live.ts";
 import { orNotFound } from "#lib/server/records.ts";
 import { forCustomers } from "#lib/server/remote-functions.ts";
 
@@ -73,12 +69,12 @@ const selectOrders = () =>
 /** The customer's orders that `where` picks and the contact sees, newest first, with their units. */
 async function ordersWhere(access: CustomerAccess, where?: SQL, limit = 200) {
 	const rows = await selectOrders()
-		.where(and(customerOrders(access), where))
+		.where(and(await visibleOrNone("order"), where))
 		.orderBy(desc(order.createdAt), desc(order.id))
 		.limit(limit);
 	const units = await listedUnitsOf(
 		rows.map((row) => row.id),
-		seenBy(customerUnits(access)),
+		seenBy(await customerUnits(access)),
 	);
 	return rows.map((row) => ({ ...row, units: units.get(row.id) ?? [] }));
 }
@@ -121,7 +117,7 @@ export const getPortalOrders = forCustomers.query(async () => {
  * done its work order's sign-off.
  */
 export const getPortalOrder = forCustomers.query(v.string(), async (number) => {
-	const scope = customerWork(await currentCustomer(), number);
+	const scope = await customerWork(await currentCustomer(), number);
 	const [[found], record] = await Promise.all([
 		selectOrders().where(scope.where),
 		readWorkRecord(scope),
@@ -138,7 +134,7 @@ export const getPortalOrder = forCustomers.query(v.string(), async (number) => {
  * order the office keeps them.
  */
 export const getPortalSites = forCustomers.query(async () => {
-	const scope = customerUnits(await currentCustomer());
+	const scope = await customerUnits(await currentCustomer());
 	const [sites, locations, units] = await Promise.all([
 		db
 			.select(siteColumns.address)
@@ -162,7 +158,7 @@ export const getPortalSites = forCustomers.query(async () => {
 export const getPortalUnit = forCustomers.query(v.string(), async (serialNumber) => {
 	const access = await currentCustomer();
 	const unit = orNotFound(
-		await readUnits(customerUnits(access), eq(equipment.serialNumber, serialNumber)),
+		await readUnits(await customerUnits(access), eq(equipment.serialNumber, serialNumber)),
 		m.client_unit_not_found({ serial: serialNumber }),
 	);
 	const orders = await ordersWhere(access, onUnit(unit.id), 50);
@@ -172,7 +168,7 @@ export const getPortalUnit = forCustomers.query(v.string(), async (serialNumber)
 /** One of the customer's locations the contact sees (or a 404), its site and its units. */
 export const getPortalLocation = forCustomers.query(id(), async (locationId) =>
 	orNotFound(
-		await readLocation(customerUnits(await currentCustomer()), locationId),
+		await readLocation(await customerUnits(await currentCustomer()), locationId),
 		m.client_location_not_found(),
 	),
 );
@@ -202,7 +198,7 @@ export const reportBreakdown = forCustomers.form(
 				),
 			);
 		}
-		const [unit] = await readUnits(customerUnits(access), eq(equipment.id, input.unitId));
+		const [unit] = await readUnits(await customerUnits(access), eq(equipment.id, input.unitId));
 		if (!unit) {
 			invalid(issue.unitId(m.client_report_unit_unknown()));
 		}
@@ -223,13 +219,14 @@ export const reportBreakdown = forCustomers.form(
 
 // --- Live ----------------------------------------------------------------------------------
 
-/** The records the portal shows: a change to any of them may outdate it. */
-const portalTypes = ["order", "customer", "site", "equipment", "location"] as const;
-
 /**
- * When the records the portal shows last changed (epoch ms, 0 if not since the server started),
- * sent again on each change, so an open portal shows a planner accepting, rejecting or planning
- * an order without a reload. Any change of those types in the tenant: it says only that something
- * changed, and the queries it has the portal refresh are gated and scoped again.
+ * The changes to what the portal shows, for the one live query a portal tab shares
+ * (`provideChangeFeed()` in its layout), which tells the pages and cards that follow a record
+ * (`refreshOnRecordChange()`, the lists `refreshOnActivity()`) when a planner accepts, rejects or
+ * plans an order, or a unit moves. What it tells is what the contact may read (`feedFor()`: their
+ * customer's records, at their sites if limited to some), without who made it; see `liveFeed()`
+ * for its answers.
  */
-export const watchPortal = forCustomers.query.live(() => live(portalTypes));
+export const watchPortalChanges = forCustomers.query.live(() =>
+	liveFeed(["order", "customer", "site", "equipment", "location"], feedFor()),
+);

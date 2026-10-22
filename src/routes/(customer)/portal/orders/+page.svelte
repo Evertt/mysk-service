@@ -7,17 +7,20 @@
 	import { page } from "$app/state";
 	import ClipboardListIcon from "@lucide/svelte/icons/clipboard-list";
 
+	import { refreshOnActivity } from "#lib/components/activity/live-activity.svelte.ts";
 	import FilterChips from "#lib/components/filter-chips.svelte";
-	import { refreshOnChange } from "#lib/hooks/refresh-on-change.svelte.ts";
 	import { isDoneOrder, type OrderStatus, pendingOrderStatuses } from "#lib/models.ts";
 	import { isOneOf } from "#lib/one-of.ts";
 
-	import { getPortalOrders, watchPortal } from "../client.remote.ts";
+	import { getPortalOrders } from "../client.remote.ts";
 	import OrderList from "../order-list.svelte";
 
 	const orders = $derived(await getPortalOrders());
 
-	refreshOnChange(watchPortal, () => getPortalOrders().refresh());
+	// Live: a planner accepting, rejecting or planning a report shows without a reload.
+	refreshOnActivity(() => getPortalOrders().refresh(), {
+		types: ["order", "equipment", "site", "location"],
+	});
 
 	const tabs = {
 		open: {

@@ -6,8 +6,10 @@
  * on, a unit's inspection status goes into its condition status (`condition.signals`), and a unit's template's
  * points are what its components can be checked by (`condition.checkpoints`). With the parts shop
  * on, its products are linked to the templates' points (`parts-shop.checkpoints`). A checklist
- * completed with rejected points rings the office's bell (`notifications.rules`).
+ * completed with rejected points rings the office's bell (`notifications.rules`). Its records' access
+ * rules are `access.ts`'s (`access.rules`).
  */
+import { accessRules } from "#lib/access/extensions.ts";
 import { notificationRules } from "#lib/notifications/extensions.ts";
 import { saving, units } from "#lib/orders/extensions.ts";
 import { contribute, defineServerModule } from "#lib/server/extensions.ts";
@@ -17,12 +19,14 @@ import {
 } from "#modules/condition/api/extensions.ts";
 import { checkpoints } from "#modules/parts-shop/api/extensions.ts";
 
+import { checklistAccess } from "./access.ts";
 import { saveOrderChecklists, saveUnitChecklists } from "./checklists.ts";
 import { inspectionSignal } from "./inspection-sql.ts";
 import { checklistNotificationRules } from "./notifications.ts";
 import { shopCheckpoints, unitCheckpoints } from "./shop.ts";
 
 export default defineServerModule("checklists", [
+	contribute(accessRules, () => checklistAccess),
 	contribute(units, saveUnitChecklists),
 	contribute(saving, saveOrderChecklists),
 	contribute(unitSignals, inspectionSignal),

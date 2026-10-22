@@ -17,6 +17,10 @@ const event = vi.hoisted(() => ({
 	request: { signal: new AbortController().signal },
 }));
 vi.mock("$app/server", () => ({ getRequestEvent: () => event }));
+// `feedFor()` (specs on the seeded database: `portal.spec.ts`, `activity.spec.ts`) asks the
+// registry, which pulls in the modules' remote functions; the stream is what's under test here.
+vi.mock("#lib/server/access/index.ts", () => ({ readable: vi.fn(), visible: vi.fn() }));
+vi.mock("#lib/server/access/viewer.ts", () => ({ viewer: vi.fn() }));
 
 let request: AbortController;
 /** Starts a request of the tenant `organizationId`'s (each test its own, so their changes don't meet). */

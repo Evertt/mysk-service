@@ -12,12 +12,22 @@
  */
 import { getRequestEvent } from "$app/server";
 
-import { type ChangeType, type FeedAnswer, isGone, type LoggedType } from "#lib/activity/index.ts";
-import { currentTenant } from "#lib/server/auth/index.ts";
+import {
+	ACCESS_REVOKED,
+	type ChangeType,
+	type FeedAnswer,
+	isGone,
+	type LoggedType,
+	type TenantChange,
+} from "#lib/activity/index.ts";
+import { readable, visible } from "#lib/server/access/index.ts";
+import { type Audience, type Viewer, viewer } from "#lib/server/access/viewer.ts";
+import { currentTenant, isEngineer } from "#lib/server/auth/index.ts";
 import {
 	type Change,
 	changedAt,
 	recordChangedAt,
+	type Revoked,
 	watchChanges,
 	watchEvery,
 	watchSubject,
@@ -70,11 +80,11 @@ interface FeedChange {
 
 /**
  * Every change to the current tenant's records of `types`, for the one live query a tab shares
- * (`watchTenantChanges`, `watchFieldChanges`): no changes at first, then after each burst, as
- * `present` makes them of its changes (leaving out those the user mustn't hear of: a burst with
- * none left answers nothing). An answer repeats the changes of the last `FEED_WINDOW` ms, so a
- * client that reads only the latest answer (a live query's `current`) misses none that came in
- * quick succession; it tells them apart by when they were made.
+ * (`watchTenantChanges`, `watchFieldChanges`, `watchPortalChanges`): no changes at first, then
+ * after each burst, as `present` makes them of its changes (leaving out those the user mustn't
+ * hear of: a burst with none left answers nothing). An answer repeats the changes of the last
+ * `FEED_WINDOW` ms, so a client that reads only the latest answer (a live query's `current`) misses
+ * none that came in quick succession; it tells them apart by when they were made.
  */
 export function liveFeed<T extends FeedChange>(
 	types: readonly ChangeType[],
@@ -99,6 +109,100 @@ export function liveFeed<T extends FeedChange>(
 		}
 		return { since, now, changes: [...recent.values()] };
 	});
+}
+
+/**
+ * What each audience hears of a change, the work record's `audiences` pattern: whether it is told
+ * who made it (`name`), what was done (`action`: `full`, the activity action, or `gone`: only
+ * whether the record is gone, `deleted`, or else `updated`), and whether it hears changes
+ * announced for a type only, without a record (`ofType`: those say that something of the type
+ * changed, which only the office is told). Whether the viewer made the change (`mine`) is told to
+ * all: it is their own act. The system has no feed; it hears what the office does.
+ */
+const hears = {
+	office: { name: true, action: "full", ofType: true },
+	engineer: { name: false, action: "gone", ofType: false },
+	customer: { name: false, action: "gone", ofType: false },
+} as const satisfies Record<Exclude<Audience, "system">, object>;
+
+/**
+ * The presenter of a shell's feed of changes, for `liveFeed(types, feedFor())`: of a burst, the
+ * changes to records the viewer may read (`readable()`, one statement per type: the records of a
+ * module that is off, a manager's types for another member, another engineer's orders and so on
+ * are never heard of), as `hears` says their audience is told them.
+ *
+ * A change the viewer may not read is left out, with one exception: when a change revoked their
+ * access (an order taken off the engineer: `revokedFrom`), they are told once, as `ACCESS_REVOKED`
+ * and nothing more (they knew the record, so it reveals nothing); after it the record is not
+ * readable and their page of it gets its 404 on the next refresh. Nor is the deletion of a record
+ * outside the office's told (it can no longer be checked against the table). The office reads
+ * whole types, so it hears deletions. `asking` is the viewer, the request's by default (call it
+ * in the live query).
+ */
+export function feedFor(
+	asking: Viewer | Promise<Viewer> = viewer(),
+): (changes: Change[]) => Promise<TenantChange[]> {
+	const { user } = currentTenant();
+	return async (changes) => {
+		const as = await asking;
+		const { audience } = as;
+		const hearing = hears[audience === "system" ? "office" : audience];
+		const named = changes.filter((change) => change.id);
+		const heard = await readable(
+			named.map((change) => ({ type: change.type, id: change.id! })),
+			as,
+		);
+		// A change for its type only is heard as far as the viewer reads the type at all.
+		const typesHeard = new Set<string>();
+		if (hearing.ofType) {
+			const types = new Set(changes.filter((change) => !change.id).map((change) => change.type));
+			for (const type of types) if (await visible(type, "read", as)) typesHeard.add(type);
+		}
+		// The one exception to reading: someone whose access the change revoked is told so, by the
+		// change's own account of whose it was (unless they have it again by the burst's end).
+		const revoked = new Set<Change>();
+		for (const change of named) {
+			if (heard.has(`${change.type}/${change.id}`)) continue;
+			for (const from of change.revokedFrom ?? []) {
+				if (audience === from.audience && (await isThem(from))) revoked.add(change);
+			}
+		}
+		return changes
+			.filter((change) =>
+				change.id
+					? heard.has(`${change.type}/${change.id}`) || revoked.has(change)
+					: typesHeard.has(change.type),
+			)
+			.map((change) => ({
+				type: change.type,
+				id: change.id ?? null,
+				action: revoked.has(change)
+					? ACCESS_REVOKED
+					: hearing.action === "full"
+						? (change.action ?? "updated")
+						: isGone(change.action)
+							? "deleted"
+							: "updated",
+				name: hearing.name ? (change.user?.name ?? "") : "",
+				mine: change.user?.id === user.id,
+				at: change.at,
+			}));
+	};
+}
+
+/**
+ * Whether the signed-in user is the one `from` names. By audience, exhaustively: a second audience
+ * in `Revoked` must say how to recognise its person here, not silently reuse the engineer check.
+ */
+async function isThem(from: Revoked): Promise<boolean> {
+	switch (from.audience) {
+		case "engineer":
+			return isEngineer(from.id);
+		default: {
+			const unknown: never = from.audience;
+			return unknown;
+		}
+	}
 }
 
 /** What a live query's `respond` returns to answer nothing this time (`answering()`). */

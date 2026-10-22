@@ -6,6 +6,7 @@
 -->
 <script lang="ts">
 	import { getCurrentUser } from "#lib/auth/session.remote.ts";
+	import { provideChangeFeed } from "#lib/components/activity/change-feed.svelte.ts";
 
 	import AppearanceSwitchers from "../appearance-switchers.svelte";
 	import { getViewAs } from "../demo.remote.ts";
@@ -15,8 +16,12 @@
 	import ViewAs from "../view-as.svelte";
 	import type { LayoutProps } from "./$types";
 	import PortalSidebar from "./portal-sidebar.svelte";
+	import { watchPortalChanges } from "./portal/client.remote.ts";
 
 	let { children }: LayoutProps = $props();
+
+	// One feed of the changes to the customer's records for the tab, which the pages follow.
+	provideChangeFeed(watchPortalChanges);
 
 	const orderTypes = useTenantOrderTypes();
 

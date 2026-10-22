@@ -25,6 +25,8 @@ const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 const logged = vi.fn();
 
 vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals }) }));
+// A customer's contact's scans are `portal.spec.ts`'s; this spec has no module kernel.
+vi.mock("#lib/server/access/index.ts", () => ({ mayReadIn: async () => false }));
 vi.mock("#lib/server/activity/log.ts", async (importOriginal) => ({
 	...(await importOriginal<object>()),
 	recordActivity: (_tx: unknown, record: unknown) => logged(record),

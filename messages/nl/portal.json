@@ -45,6 +45,7 @@
 	"portal_signature_too_large": "De handtekening is te groot; wis hem en teken opnieuw",
 	"portal_not_found": "Opdracht {number} niet gevonden",
 	"portal_not_found_plain": "Opdracht niet gevonden",
+	"portal_order_access_revoked": "Opdracht {number} is zojuist van je afgehaald",
 	"portal_start_first": "Start eerst de klus",
 	"portal_cant_change": "Deze opdracht is {status}; je kunt hem hier niet wijzigen",
 	"portal_hours_too_many": "Dat is meer dan twee weken",

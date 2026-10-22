@@ -9,7 +9,8 @@ import { isManager, type MemberRole, type TeamRole, teamRoles } from "./roles.ts
 
 export { type MemberRole, memberRoles } from "./roles.ts";
 
-const isOwner = (roles: string[]) => roles.includes("owner");
+/** Whether a member with these roles is an owner (the one role with rules of its own: see below). */
+export const isOwner = (roles: readonly string[]) => roles.includes("owner");
 
 export interface MemberChange {
 	/** The signed-in user making the change, and their roles in the organization. */

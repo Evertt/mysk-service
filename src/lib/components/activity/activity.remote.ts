@@ -7,26 +7,20 @@ import { error } from "@sveltejs/kit";
 import { and, count, desc, eq, gt, isNotNull, lt, max, or } from "drizzle-orm";
 import * as v from "valibot";
 
-import {
-	everyLoggedType,
-	subjectTypeLabel,
-	subjectTypes,
-	type TenantChange,
-} from "#lib/activity/index.ts";
+import { everyLoggedType, subjectTypeLabel, subjectTypes } from "#lib/activity/index.ts";
 import { isDay } from "#lib/dates.ts";
 import { intlLocale } from "#lib/i18n/index.ts";
-import { modules as appModules } from "#lib/modules/manifests.ts";
 import { recordId } from "#lib/schema.ts";
+import { keyOf, readable, readableTypes } from "#lib/server/access/index.ts";
 import { present } from "#lib/server/activity/index.ts";
 import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
 import { recordChangedAt } from "#lib/server/changes.ts";
 import { db } from "#lib/server/db/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import { activity } from "#lib/server/db/schema.ts";
 import { inDays } from "#lib/server/lists/index.ts";
-import { liveFeed } from "#lib/server/live.ts";
+import { feedFor, liveFeed } from "#lib/server/live.ts";
 import { forAnyRole, forMembers } from "#lib/server/remote-functions.ts";
-
-const allModules = appModules.map((module) => module.id);
 
 /** Entries per page of the feed. */
 const PAGE = 50;
@@ -55,9 +49,20 @@ const feedFilters = v.object({
 	to: v.optional(day),
 });
 
-/** The conditions of the feed's `filters`, in the tenant. */
-const matching = ({ type, id, user, from, to }: v.InferOutput<typeof feedFilters>) => [
+/**
+ * The tenant's entries the viewer may see: those of a subject type they read at all (not a module
+ * that's off, nor the managers' types for another member; the entries stay in the database, and
+ * show again when the module is on). The office reads its types whole, so the entry of a deleted
+ * record stays.
+ */
+const ofReadableTypes = async () => [
 	inTenant(activity),
+	inList(activity.subjectType, await readableTypes()),
+];
+
+/** The conditions of the feed's `filters`, in the tenant. */
+const matching = async ({ type, id, user, from, to }: v.InferOutput<typeof feedFilters>) => [
+	...(await ofReadableTypes()),
 	type && id ? about(type, id) : type ? eq(activity.subjectType, type) : undefined,
 	user ? eq(activity.userId, user) : undefined,
 	// The days in the user's time zone.
@@ -72,7 +77,7 @@ const matching = ({ type, id, user, from, to }: v.InferOutput<typeof feedFilters
 export const getActivity = forMembers.query(
 	v.object({ ...feedFilters.entries, before: v.optional(recordId()) }),
 	async ({ before, ...filters }) => {
-		const conditions = matching(filters);
+		const conditions = await matching(filters);
 		const rows = await db
 			.select()
 			.from(activity)
@@ -107,7 +112,9 @@ export const countNewActivity = forMembers.query(
 		const [found] = await db
 			.select({ count: count() })
 			.from(activity)
-			.where(and(...matching(filters), after === null ? undefined : gt(activity.id, after)));
+			.where(
+				and(...(await matching(filters)), after === null ? undefined : gt(activity.id, after)),
+			);
 		return found.count;
 	},
 );
@@ -125,9 +132,10 @@ const subjectSchema = v.object({
 export const getSubjectActivity = forMembers.query(
 	v.object({ type: v.picklist(loggedTypes), id: v.string() }),
 	async ({ type, id }) => {
-		const { modules } = currentTenant();
-		// A module's records are a 404 to a tenant without the module, like the rest of it.
-		if (!(type in subjectTypes(modules)) && type in subjectTypes(allModules)) {
+		// A record the viewer may not read, or of a module the tenant lacks, is a 404. `readable()`
+		// trusts a rule that reads the type whole (the office's), so the history of a deleted record
+		// stays, and another tenant's id answers an empty list: the query is the tenant's.
+		if (!(await readable([{ type, id }])).has(keyOf({ type, id }))) {
 			error(404, m.common_error_not_found());
 		}
 		const rows = await db
@@ -145,7 +153,7 @@ export const getRecentActivity = forMembers.query(async () => {
 	const rows = await db
 		.select()
 		.from(activity)
-		.where(inTenant(activity))
+		.where(and(...(await ofReadableTypes())))
 		.orderBy(desc(activity.id))
 		.limit(RECENT);
 	return present(rows);
@@ -155,12 +163,17 @@ export const getRecentActivity = forMembers.query(async () => {
 export const getActivityFilters = forMembers.query(async () => {
 	const { modules } = currentTenant();
 	const types = subjectTypes(modules);
+	const readableEntries = await ofReadableTypes();
 	const [subjects, users] = await Promise.all([
-		db.selectDistinct({ type: activity.subjectType }).from(activity).where(inTenant(activity)),
+		db
+			.selectDistinct({ type: activity.subjectType })
+			.from(activity)
+			.where(and(...readableEntries)),
+		// Only those with an entry the viewer reads, so no one is listed for a manager-only type's.
 		db
 			.selectDistinct({ id: activity.userId, name: activity.userName })
 			.from(activity)
-			.where(and(inTenant(activity), isNotNull(activity.userId))),
+			.where(and(...readableEntries, isNotNull(activity.userId))),
 	]);
 	const byLabel = (a: { label: string }, b: { label: string }) =>
 		a.label.localeCompare(b.label, intlLocale());
@@ -179,21 +192,10 @@ export const getActivityFilters = forMembers.query(async () => {
  * Every change to the tenant's records, for the one live query an office tab shares
  * (`provideChangeFeed()`, `change-feed.svelte.ts`), which tells the components that watch a record
  * (`onRecordChange()`): one stream, whose key never changes, however many records the page shows
- * and however often it navigates. See `liveFeed()` for its answers.
+ * and however often it navigates. It tells what the member may read (`feedFor()`: not the records of
+ * a module that is off, nor a manager's types to another member); see `liveFeed()` for its answers.
  */
-export const watchTenantChanges = forMembers.query.live(() => {
-	const { user } = currentTenant();
-	return liveFeed(loggedTypes, (changes) =>
-		changes.map((change): TenantChange => ({
-			type: change.type,
-			id: change.id ?? null,
-			action: change.action ?? "updated",
-			name: change.user?.name ?? "",
-			mine: change.user?.id === user.id,
-			at: change.at,
-		})),
-	);
-});
+export const watchTenantChanges = forMembers.query.live(() => liveFeed(loggedTypes, feedFor()));
 
 /**
  * When a record of the tenant last changed (epoch ms, 0 if not since the server started), for a
@@ -201,7 +203,12 @@ export const watchTenantChanges = forMembers.query.live(() => {
  * first load, and after the feed reconnected. For any role (the engineer portal's feed too): it
  * says only when, and the queries it has the component refresh are gated again.
  */
-export const getRecordChangedAt = forAnyRole.query.batch(subjectSchema, () => {
+export const getRecordChangedAt = forAnyRole.query.batch(subjectSchema, async (subjects) => {
 	const { organizationId } = currentTenant();
-	return ({ type, id }) => recordChangedAt(organizationId, { type, id: String(id) });
+	// A record the asker may not read (or that is of a module that's off) answers 0, like one that
+	// never changed, and the batch goes on. `readable()` trusts a rule that reads the tenant whole,
+	// so the answer is the tenant's own: another tenant's id has no time here.
+	const ok = await readable(subjects);
+	return ({ type, id }) =>
+		ok.has(keyOf({ type, id })) ? recordChangedAt(organizationId, { type, id: String(id) }) : 0;
 });

@@ -172,23 +172,41 @@ export const requireCustomer = perRequest(async () => {
 	const tenant = requireTenant();
 	// A customer contact only: an office member or engineer isn't one, even if linked.
 	if (!isCustomerContact(tenant.roles)) error(403, m.common_error_not_customer());
+	const access = await customerAccessIn(tenant.organizationId, tenant.user.id);
+	if (!access) error(403, m.common_error_not_customer());
+	return { ...tenant, ...access };
+});
+
+/**
+ * What the user may see as a customer's contact in organization `organizationId` (not necessarily
+ * the current tenant: a scanned QR code's, see `viewerIn()`), or nothing if they aren't a contact
+ * there. The one lookup of a contact: `requireCustomer()` and `viewerIn()` share it.
+ */
+export async function customerAccessIn(
+	organizationId: string,
+	userId: string,
+): Promise<CustomerAccess | undefined> {
 	const linked = await db.query.portalContact.findFirst({
 		columns: { id: true, allSites: true },
-		where: and(eq(portalContact.userId, tenant.user.id), inTenant(portalContact)),
+		where: and(eq(portalContact.userId, userId), eq(portalContact.organizationId, organizationId)),
 		with: { customer: { columns: { id: true, code: true, name: true } } },
 	});
-	if (!linked) error(403, m.common_error_not_customer());
+	if (!linked) return undefined;
 	const siteIds = linked.allSites
 		? null
 		: (
 				await db
 					.select({ id: portalContactSite.siteId })
 					.from(portalContactSite)
-					.where(and(eq(portalContactSite.contactId, linked.id), inTenant(portalContactSite)))
+					.where(
+						and(
+							eq(portalContactSite.contactId, linked.id),
+							eq(portalContactSite.organizationId, organizationId),
+						),
+					)
 			).map((row) => row.id);
-	const access: CustomerAccess = { contactId: linked.id, customer: linked.customer, siteIds };
-	return { ...tenant, ...access };
-});
+	return { contactId: linked.id, customer: linked.customer, siteIds };
+}
 
 /**
  * Scopes a query to the current tenant: `.where(and(inTenant(customer), …))`. Every query on a

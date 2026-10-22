@@ -28,6 +28,12 @@ helpers are in `src/lib/server/auth/session.ts`:
   rules. A record written with the engineer takes them from the order it reached
   (`order.engineerId`). Units and locations (the QR pages) are the tenant's for every engineer.
   `src/tests/unit/lib/server/auth/engineer-scope.spec.ts` keeps the engineer's id in that file.
+- **Which records a viewer reaches** is asked of the access registry, `#lib/server/access`
+  (`kit.md`, "Permissions"): `mayRead(subject)`, `readable(subjects)`, `visible(type)` and the
+  change versions, with one entry per subject type and audience. Its entries call the scopes below
+  (`engineerOrders()`, `customerOrders()`, `inTenant()`), so a list's scope and the answer to "may
+  this contact read order 12?" are one condition. A function that takes a subject, reads the log or
+  feeds changes asks it (`access.spec.ts`); the gated sets only decide who may call.
 - **Customers' contacts** (the role `customer`, `isCustomerContact()` in `#lib/auth/roles.ts`) are
   members linked to one of the tenant's customers (`portal_contact`), for all of its sites or some
   (`portal_contact_site`). They use the customer portal only: `requireMember()` refuses them (so
@@ -41,7 +47,11 @@ helpers are in `src/lib/server/auth/session.ts`:
   `src/lib/server/auth/customer.ts`: `ofCustomer(access, table)` (a table with `customerId`),
   `atSites(access, siteColumn)` (no condition for all sites), `seesSite()`, and
   `customerOrders(access)` for `order` (an order is at a site through its units: a site-limited
-  contact sees those with a unit at one of their sites, and of their units only those). The office
+  contact sees those with a unit at one of their sites, and of their units only those). The site
+  limit covers the records of a site (units, locations, orders, checklists, energy sites); the
+  customer's commercial records (shop orders, the partner account, bonus years and the parts credit's
+  wallet) are the customer's, whatever sites the contact sees: they have no site, and the wallet's
+  entries name the shop orders. The office
   invites them from the customer's page (`portal-access.remote.ts`: better-auth's invitation with
   the role `customer`; accepting it links the contact to the account, `/invite/[id]`), and they're
   not on the members page. A QR code (`/q/<token>`) leads them to "report a breakdown" when it's on

@@ -1,13 +1,18 @@
 /**
  * A tab's one feed of the tenant's changes, for the components that follow a record:
  * `provideChangeFeed()` in a shell's layout opens it (the office's `watchTenantChanges`, the
- * engineer portal's `watchFieldChanges`), and
+ * engineer portal's `watchFieldChanges`, the customer portal's `watchPortalChanges`), and
  * `onRecordChange()` / `refreshOnRecordChange()` subscribe a component to a record for as long as
  * it's mounted (`onAnyChange()` to all of them). See `change-feed.ts` for why one feed.
  */
 import { createContext, untrack } from "svelte";
 
-import { isGone, type TenantChange, type TenantChanges } from "#lib/activity/index.ts";
+import {
+	isGone,
+	ACCESS_REVOKED,
+	type TenantChange,
+	type TenantChanges,
+} from "#lib/activity/index.ts";
 
 import { getRecordChangedAt } from "./activity.remote.ts";
 import { type ChangeListener, ChangeFeed, type Subject } from "./change-feed.ts";
@@ -38,7 +43,7 @@ export function provideChangeFeed(watch: () => { readonly current: TenantChanges
 /**
  * Calls `listener` on each change to the record `subject` gives (none: no record yet), while the
  * component is mounted (see `ChangeFeed.subscribe()` for `readTime`). Call it while a component
- * initializes, inside a shell with a feed (the office, the engineer portal). `listener` runs
+ * initializes, inside a shell with a feed (every shell has one). `listener` runs
  * untracked.
  */
 export function onRecordChange(
@@ -69,7 +74,7 @@ export function refreshOnRecordChange(
 	onRecordChange(
 		subject,
 		(change) => {
-			if (!isGone(change?.action)) refresh();
+			if (!isGone(change?.action) && change?.action !== ACCESS_REVOKED) refresh();
 		},
 		readTime,
 	);

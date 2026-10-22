@@ -75,6 +75,13 @@ export const actionVerbs: Record<CoreActivityAction, Sentence> = {
 export const isGone = (action: string | undefined) => action === "deleted" || action === "removed";
 
 /**
+ * The action of a feed's change that tells someone their access to a record was revoked (an order
+ * taken off an engineer): the record is no longer theirs to read, so a page that shows it has
+ * nothing left to refresh either. Only the feed has it (`feedFor()`); the log has the plain update.
+ */
+export const ACCESS_REVOKED = "access_revoked";
+
+/**
  * The sentence of an action as logged: the core's, or one of an optional module's `actions` (of
  * all modules, not only the tenant's, so the log keeps reading the same after a module is switched
  * off); one this version doesn't know reads as its value.

@@ -4,9 +4,10 @@
  * checklist. The office reads any of the tenant's (`getWorkOrder`); a customer's contact their
  * customer's, with only the units at their sites (`getClientWorkOrder`).
  */
-import { eq, type SQL } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { printedWorkOrder, readWorkRecord } from "#lib/orders/server/index.ts";
+import type { Viewer } from "#lib/server/access/viewer.ts";
 import { currentTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { customer, order } from "#lib/server/db/schema.ts";
@@ -15,11 +16,11 @@ import { checklistRecords } from "./records.ts";
 import { checklist } from "./schema.ts";
 
 /**
- * The work order of the tenant's order that `where` (on `order`) picks, or nothing; with `unitsAt`
- * (on `equipment`), only its units (and their checklists) for which it holds.
+ * The work order of the tenant's order `number` as `viewer` may have it (`printedWorkOrder()`: the
+ * office's any, a contact's their done orders' with only the units at their sites), or nothing.
  */
-export async function loadWorkOrder(where: SQL, unitsAt?: SQL) {
-	const scope = printedWorkOrder(where, unitsAt);
+export async function loadWorkOrder(number: string, viewer: Viewer) {
+	const scope = await printedWorkOrder(number, viewer);
 	const [[found], record] = await Promise.all([
 		db
 			.select({

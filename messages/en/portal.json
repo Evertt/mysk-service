@@ -45,6 +45,7 @@
 	"portal_signature_too_large": "The signature is too large; clear it and sign again",
 	"portal_not_found": "Order {number} not found",
 	"portal_not_found_plain": "Order not found",
+	"portal_order_access_revoked": "Order {number} was just taken off you",
 	"portal_start_first": "Start the job first",
 	"portal_cant_change": "This order is {status}; it can't be changed here",
 	"portal_hours_too_many": "That's more than two weeks",

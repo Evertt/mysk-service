@@ -5,16 +5,19 @@
  * (`customers.removingSite`, `site-removal.ts`). The alerts its readings raise ring the office's
  * bell (`notifications.rules`, `notifications.ts`).
  */
+import { accessRules } from "#lib/access/extensions.ts";
 import { removingSite } from "#lib/customers/extensions.ts";
 import { notificationRules } from "#lib/notifications/extensions.ts";
 import { contribute, defineServerModule } from "#lib/server/extensions.ts";
 import { simulated, simulationRun } from "#lib/simulation/extensions.ts";
 
+import { energyAccess } from "./access.ts";
 import { energySimulation } from "./live-simulation.ts";
 import { energyNotificationRules } from "./notifications.ts";
 import { siteEnergyRefusal } from "./site-removal.ts";
 
 export default defineServerModule("energy", [
+	contribute(accessRules, () => energyAccess),
 	contribute(simulationRun, simulated(energySimulation)),
 	contribute(removingSite, siteEnergyRefusal),
 	contribute(notificationRules, energyNotificationRules),

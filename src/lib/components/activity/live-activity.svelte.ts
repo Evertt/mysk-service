@@ -12,8 +12,15 @@ import { onAnyChange } from "./change-feed.svelte.ts";
 /** How long a change waits for the rest of its burst before the page looks again (ms). */
 const defaultDelay = 400;
 
-/** Calls `refresh` after changes in the activity log. Call it while a component initializes. */
-export function refreshOnActivity(refresh: () => Promise<unknown>, delay = defaultDelay) {
+/**
+ * Calls `refresh` after changes the tab's feed tells, of the record types in `types` if given
+ * (a page that shows records through several queries: its list, its bell). Call it while a
+ * component initializes.
+ */
+export function refreshOnActivity(
+	refresh: () => Promise<unknown>,
+	{ delay = defaultDelay, types }: { delay?: number; types?: readonly string[] } = {},
+) {
 	/** A change came in that no refresh has answered yet. */
 	let outdated = false;
 	let running = false;
@@ -42,7 +49,9 @@ export function refreshOnActivity(refresh: () => Promise<unknown>, delay = defau
 		if (outdated) schedule();
 	}
 
-	onAnyChange(schedule);
+	onAnyChange((change) => {
+		if (!types || types.includes(change.type)) schedule();
+	});
 
 	onMount(() => {
 		const onVisible = () => {

@@ -61,6 +61,10 @@ Organizations own all business data.
   `await engineerOrder(ref)`, `engineerOrderNotFound(ref)` in `src/lib/server/auth/engineer.ts`),
   the customer portal's queries to the customer (`ofCustomer()`, `customerOrders()`, `atSites()`
   in `src/lib/server/auth/customer.ts`).
+- Which records a viewer may read or change is asked of the access registry, `#lib/server/access`
+  (`mayRead()`, `readable()`, `visible(type)`; the kit, "Permissions"), whose entry per subject type
+  a module adds with `contribute(accessRules, …)`. Anything that takes a subject, reads the log or
+  feeds changes asks it.
 - Every select, update and delete on a tenant table is scoped: `inTenant(table)`,
   `idInTenant(table, id)`, `idsInTenant(table, ids)`, and joins through `tenantJoin()` (or
   `sameTenant(a, b)`). Ids come from the client.

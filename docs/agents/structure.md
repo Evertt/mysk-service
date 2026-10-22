@@ -13,15 +13,16 @@ customer portal's). Whatever belongs to a core domain lives in that domain's fol
 - **A core domain's code** (`orders`, `customers`, `equipment`, `engineers`): in
   `src/lib/<domain>/`, in a folder by feature. Its tests are not in it: see `tests.md`.
   - `ui/`: the small pieces other sections reuse: links, badges, labels, cards, tags
-    (`#lib/orders/ui/order-link.svelte`). A record's link and its hover card (`order-preview.svelte`)
-    are on `RecordLink` (`src/lib/components/record-link/`), which reads the record's batch query.
+    (`#lib/orders/ui/order-link.svelte`). A record's link and its hover card
+    (`order-preview.svelte`) are on `RecordLink` (`src/lib/components/record-link/`), which reads
+    the record's batch query.
   - `list/`: the list definition (`orders-list.ts`), columns, table, cells, bulk actions, and the
     list's remote functions (`order-list.remote.ts`, `order-bulk.remote.ts`).
   - `form/`: the new/edit form, its fields and valibot schema.
   - `detail/`: what only the detail page shows: cards, history, dialogs, their helpers and remote
     functions.
-  - `server/`: server-only code: services (`pricing.ts`, `lifecycle.ts`), hooks, and the list's `ListSql`
-    in `list-sql.ts`.
+  - `server/`: server-only code: services (`pricing.ts`, `lifecycle.ts`), hooks, and the list's
+    `ListSql` in `list-sql.ts`.
   - at the root: `display.ts` (display maps, options, domain rules), `extensions.ts` (the domain's
     extension points), browser-safe rules the server shares (orders' `lifecycle.ts`, the transition
     table), `countries.ts`-like data, and the record's own remote functions
@@ -52,14 +53,16 @@ customer portal's). Whatever belongs to a core domain lives in that domain's fol
   keeps out of client bundles.
 - **Generic, domain-free code** (UI kit, data table, forms, themes, activity subjects, auth,
   i18n, module manifests, extension point declarations, errors and their boundary):
-  `src/lib/components/`, `src/lib/activity/`, `src/lib/auth/`, `src/lib/i18n/`, `src/lib/modules/`,
-  `src/lib/extensions/`, `src/lib/themes/`, `src/lib/errors/`;
+  `src/lib/components/`, `src/lib/access/` (the `access.rules` point), `src/lib/activity/`,
+  `src/lib/auth/`, `src/lib/i18n/`, `src/lib/modules/`, `src/lib/extensions/`, `src/lib/themes/`,
+  `src/lib/errors/`;
   the loose `src/lib/*.ts` that remain are domain enums (`models.ts`), valibot blocks
   (`schema.ts`), the time zone and Temporal's transport (`dates.ts`), code shapes (`numbering.ts`), what's billed besides
   orders (`billing.ts`, types the seed shares with invoicing) and shadcn's `cn` (`utils.ts`).
   Infrastructure on the server (database, auth, activity log, list plans and bulk helpers, mail,
-  the modules' route guards, the structured log lines): `src/lib/server/db/`, `server/auth/`,
-  `server/activity/`, `server/lists/`, `server/mail/`, `server/modules/`, `server/logs/`; the loose `src/lib/server/*.ts` that remain
+  the modules' route guards, the structured log lines): `src/lib/server/db/`, `server/access/` (who
+  may read or change a record), `server/auth/`, `server/activity/`, `server/lists/`,
+  `server/mail/`, `server/modules/`, `server/logs/`; the loose `src/lib/server/*.ts` that remain
   are `extensions.ts` (the hooks' dispatch), `forms.ts`, `records.ts` and `numbering.ts`.
 - **An optional module** (something a tenant can switch off, like contracts and invoices): everything of it in `src/modules/<id>/`, whoever uses it, see `modules.md`. Its server-only code is in the module's `server/` folder, and what other modules may use is in its `api/` folder. Core code never imports from `src/modules/`.
 

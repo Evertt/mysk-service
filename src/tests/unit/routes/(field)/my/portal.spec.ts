@@ -8,8 +8,11 @@
 import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { getCurrentUser } from "#lib/auth/session.remote.ts";
-import type { Change } from "#lib/server/changes.ts";
-import { fieldChanges } from "#routes/(field)/my/changes.server.ts";
+import { recordActivity } from "#lib/server/activity/index.ts";
+import { announceChange, type Change, watchEvery } from "#lib/server/changes.ts";
+import { db } from "#lib/server/db/index.ts";
+import { feedFor, liveFeed } from "#lib/server/live.ts";
+import { getMyUnit } from "#routes/(field)/my/places.remote.ts";
 import {
 	addNote,
 	completeWork,
@@ -19,6 +22,7 @@ import {
 	startWork,
 	watchFieldChanges,
 } from "#routes/(field)/my/portal.remote.ts";
+import { sitesOfOrdersOf } from "#unit/lib/server/access/support.ts";
 import {
 	as,
 	call,
@@ -156,6 +160,43 @@ describe("an engineer's work", () => {
 	});
 });
 
+describe("an engineer's order in any status", () => {
+	test("is theirs to read, though their work list shows only the planned and under way", async () => {
+		const [cancelled] = await rows<Order>(
+			`select id, number from "order" where engineer_id = ? and id <> ? order by id limit 1`,
+			[mine, own.id],
+		);
+		await rows(`update "order" set status = 'cancelled' where id = ?`, [cancelled.id]);
+		await as(erik, async () => {
+			expect(await call(getMyOrder, cancelled.number)).toMatchObject({ status: 200 });
+			const { open, recent } = await data(getMyWork);
+			expect([...open, ...recent].map((one) => one.number)).not.toContain(cancelled.number);
+		});
+	});
+});
+
+describe("a scanned unit", () => {
+	test("shows its site's access notes only at a site of their orders, else the address", async () => {
+		const sites = (await sitesOfOrdersOf(mine)).map(Number);
+		const units = await rows<{ serial: string; siteId: number }>(
+			`select serial_number as serial, site_id as siteId from equipment where organization_id = ? order by id`,
+			[northId],
+		);
+		const there = units.find((unit) => sites.includes(unit.siteId))!;
+		const elsewhere = units.find((unit) => !sites.includes(unit.siteId))!;
+		await rows(`update customer_site set access_notes = 'Key safe 1234' where id in (?, ?)`, [
+			there.siteId,
+			elsewhere.siteId,
+		]);
+		await as(erik, async () => {
+			expect((await data(getMyUnit, there.serial)).unit.site.accessNotes).toBe("Key safe 1234");
+			const off = (await data(getMyUnit, elsewhere.serial)).unit;
+			expect(off.site.accessNotes).toBeNull();
+			expect(off.site.address).toBeTruthy();
+		});
+	});
+});
+
 describe("South's order", () => {
 	test("is a 404 to read", async () => {
 		await as(erik, async () => {
@@ -204,18 +245,269 @@ describe("the portal's feed of changes", () => {
 			`select id from "order" where organization_id = ? and engineer_id is not ? limit 1`,
 			[northId, mine],
 		);
+		const [unit] = await rows<{ id: number }>(
+			`select id from equipment where organization_id = ? limit 1`,
+			[northId],
+		);
 		const told = await as(erik, () =>
-			fieldChanges([
+			feedFor()([
 				change("order", own.id, "scheduled"),
 				change("order", others.id),
 				change("order", southern.id),
-				change("equipment", 1, "deleted"),
-				change("customer", 1),
+				change("equipment", unit.id),
+				change("member", 1),
 			]),
 		);
-		expect(told).toEqual([
-			{ type: "order", id: String(own.id), action: "updated", name: "", mine: false, at: 1 },
-			{ type: "equipment", id: "1", action: "deleted", name: "", mine: false, at: 1 },
+		expect(told.map((heard) => `${heard.type}/${heard.id}`)).toEqual([
+			`order/${own.id}`,
+			`equipment/${unit.id}`,
 		]);
+		// Neither who made it nor what was done, only that it changed.
+		expect(told[0]).toEqual({
+			type: "order",
+			id: String(own.id),
+			action: "updated",
+			name: "",
+			mine: false,
+			at: 1,
+		});
+	});
+
+	test("tells of the customers, and of the sites of their orders only", async () => {
+		const sites = (await sitesOfOrdersOf(mine)).map(Number);
+		const all = await rows<{ id: number }>(
+			`select id from customer_site where organization_id = ? order by id`,
+			[northId],
+		);
+		const elsewhere = all.find((site) => !sites.includes(site.id))!;
+		const [customer] = await rows<{ id: number }>(
+			`select id from customer where organization_id = ? limit 1`,
+			[northId],
+		);
+		expect(sites.length).toBeGreaterThan(0);
+		const told = await as(erik, () =>
+			feedFor()([
+				change("customer", customer.id),
+				change("site", sites[0]),
+				change("site", elsewhere.id),
+			]),
+		);
+		expect(told.map((heard) => `${heard.type}/${heard.id}`)).toEqual([
+			`customer/${customer.id}`,
+			`site/${sites[0]}`,
+		]);
+	});
+
+	test("tells that a change is their own", async () => {
+		const [user] = await rows<{ id: string }>(`select id from user where email = ?`, [erik.email]);
+		const told = await as(erik, () =>
+			feedFor()([{ ...change("order", own.id, "updated"), user: { id: user.id, name: "Erik" } }]),
+		);
+		expect(told).toEqual([
+			{ type: "order", id: String(own.id), action: "updated", name: "", mine: true, at: 1 },
+		]);
+	});
+
+	test("doesn't tell the deletion of an order: a deleted row can't be checked against their scope", async () => {
+		const gone = 987_654;
+		expect(await value(`select count(*) from "order" where id = ?`, [gone])).toBe(0);
+		expect(await as(erik, () => feedFor()([change("order", gone, "deleted")]))).toEqual([]);
+	});
+
+	test("tells the deletion of a unit, as the engineer's rule reads every unit whole", async () => {
+		// Decision 14 once said it isn't: the `equipment` rule became `"all"` (step 5), which
+		// `readable()` trusts without a query, so the removed row is announced.
+		const gone = 987_654;
+		expect(await value(`select count(*) from equipment where id = ?`, [gone])).toBe(0);
+		const told = await as(erik, () => feedFor()([change("equipment", gone, "deleted")]));
+		expect(told).toEqual([
+			{ type: "equipment", id: String(gone), action: "deleted", name: "", mine: false, at: 1 },
+		]);
+	});
+
+	test("keeps only what they read of a burst that mixes both", async () => {
+		const burst = [change("order", southern.id), change("member", 1)];
+		expect(await as(erik, () => feedFor()(burst))).toEqual([]);
+		const mixed = await as(erik, () => feedFor()([...burst, change("order", own.id)]));
+		expect(mixed.map((heard) => heard.id)).toEqual([String(own.id)]);
+	});
+
+	test("doesn't tell of a change for its type only", async () => {
+		const mixed: Change[] = [change("order", own.id), { type: "order", at: 1 }];
+		expect(await as(erik, () => feedFor()(mixed))).toHaveLength(1);
+	});
+
+	describe("when an order is taken off the engineer", () => {
+		/** The change that took the order off engineer `from`. */
+		const revoking = (from: number, id = own.id): Change => ({
+			...change("order", id, "updated"),
+			revokedFrom: [{ audience: "engineer", id: from }],
+		});
+
+		/** Takes `own` off Erik for the length of `work`. */
+		async function released<T>(work: () => Promise<T>) {
+			await rows(`update "order" set engineer_id = null where id = ?`, [own.id]);
+			try {
+				return await work();
+			} finally {
+				await rows(`update "order" set engineer_id = ? where id = ?`, [mine, own.id]);
+			}
+		}
+
+		test("tells the engineer once, as the minimum: that it is gone from them, not who did it", async () => {
+			await released(async () => {
+				// An ordinary change to it is no longer heard, the one that took it is.
+				const told = await as(erik, () => feedFor()([revoking(mine), change("order", own.id)]));
+				expect(told).toEqual([
+					{
+						type: "order",
+						id: String(own.id),
+						action: "access_revoked",
+						name: "",
+						mine: false,
+						at: 1,
+					},
+				]);
+				expect(await as(erik, () => feedFor()([change("order", own.id)]))).toEqual([]);
+			});
+		});
+
+		test("is no reason to read it: the next refresh is a 404", async () => {
+			await released(async () => {
+				await as(erik, async () => {
+					expect(await call(getMyOrder, own.number)).toMatchObject({ status: 404 });
+				});
+			});
+		});
+
+		test("tells no other engineer, and no one of an order that was never theirs", async () => {
+			const [another] = await rows<{ id: number }>(
+				`select id from engineer where organization_id = ? and id is not ? limit 1`,
+				[northId, mine],
+			);
+			await released(async () => {
+				// Taken from another engineer: not Erik's to hear.
+				expect(await as(erik, () => feedFor()([revoking(another.id)]))).toEqual([]);
+			});
+			// The order of South, taken from someone: never Erik's.
+			expect(await as(erik, () => feedFor()([revoking(another.id, southern.id)]))).toEqual([]);
+		});
+
+		test("is told to the office as any change, with who made it", async () => {
+			const told = await as(north.member, () => feedFor()([revoking(mine)]));
+			expect(told).toEqual([
+				{
+					type: "order",
+					id: String(own.id),
+					action: "updated",
+					name: "Pieter",
+					mine: false,
+					at: 1,
+				},
+			]);
+		});
+
+		test("is still told once when a later change to the order comes in the same burst", async () => {
+			const heard = watchEvery(northId, ["order"]);
+			const pending = heard.next();
+			announceChange(northId, "order", {
+				id: String(own.id),
+				action: "updated",
+				user: { id: "someone-else", name: "Pieter" },
+				revokedFrom: [{ audience: "engineer", id: mine }],
+			});
+			announceChange(northId, "order", {
+				id: String(own.id),
+				action: "cancelled",
+				user: { id: "someone-else", name: "Pieter" },
+			});
+			const batch = (await pending).value as Change[];
+			heard.stop();
+			// The later change replaced the first in the batch, and kept what the first revoked.
+			expect(batch).toHaveLength(1);
+			expect(batch[0]).toMatchObject({ action: "cancelled", revokedFrom: [{ id: mine }] });
+			await released(async () => {
+				expect(await as(erik, () => feedFor()(batch))).toEqual([
+					expect.objectContaining({ id: String(own.id), action: "access_revoked", name: "" }),
+				]);
+			});
+			// The office hears the latest change as it is.
+			expect(await as(north.member, () => feedFor()(batch))).toEqual([
+				expect.objectContaining({ id: String(own.id), action: "cancelled", name: "Pieter" }),
+			]);
+		});
+
+		test("stays the engineer's latest news of the order when a later change comes in a later burst", async () => {
+			const unitId = await value<number>(
+				`select id from equipment where organization_id = ? limit 1`,
+				[northId],
+			);
+			await released(async () => {
+				await as(erik, async () => {
+					const feed = liveFeed(["order", "equipment"], feedFor());
+					await feed.next();
+					const revoked = feed.next();
+					announceChange(northId, "order", {
+						id: String(own.id),
+						action: "updated",
+						revokedFrom: [{ audience: "engineer", id: mine }],
+					});
+					expect((await revoked).value?.changes).toEqual([
+						expect.objectContaining({ id: String(own.id), action: "access_revoked" }),
+					]);
+					// A later change to the order is unreadable to them: nothing to say, the notice stays.
+					// Then a change they do hear, to see what the answer holds: not the order's later change
+					// (the feed answers only when something is told, so it comes with this one).
+					const next = feed.next();
+					announceChange(northId, "order", { id: String(own.id), action: "cancelled" });
+					announceChange(northId, "order", { id: String(southern.id), action: "cancelled" });
+					announceChange(northId, "equipment", { id: String(unitId), action: "updated" });
+					const { changes } = (await next).value!;
+					expect(changes.map(({ type, id, action }) => `${type}/${id}/${action}`)).toEqual([
+						`order/${own.id}/access_revoked`,
+						`equipment/${unitId}/updated`,
+					]);
+				});
+			});
+		});
+
+		test("is announced with the engineer it was taken from, by the log", async () => {
+			const heard = watchEvery(northId, ["order"]);
+			const pending = heard.next();
+			await as(north.member, () =>
+				db.transaction((tx) =>
+					recordActivity(tx, {
+						action: "updated",
+						subject: { type: "order", id: own.id, label: own.number },
+						before: { engineerId: mine },
+						after: { engineerId: null },
+					}),
+				),
+			);
+			const { value } = await pending;
+			heard.stop();
+			expect(value).toEqual([
+				expect.objectContaining({
+					id: String(own.id),
+					revokedFrom: [{ audience: "engineer", id: mine }],
+				}),
+			]);
+			// A change that doesn't take it from anyone says so by saying nothing.
+			const again = watchEvery(northId, ["order"]);
+			const next = again.next();
+			await as(north.member, () =>
+				db.transaction((tx) =>
+					recordActivity(tx, {
+						action: "updated",
+						subject: { type: "order", id: own.id, label: own.number },
+						before: { engineerId: null, laborHours: 1 },
+						after: { engineerId: mine, laborHours: 2 },
+					}),
+				),
+			);
+			const second = (await next).value as Change[];
+			again.stop();
+			expect(second[0].revokedFrom).toBeUndefined();
+		});
 	});
 });

@@ -5,11 +5,12 @@
  * Not in the activity log: like a personal view (see `views.remote.ts`), it concerns nobody else,
  * and it changes with every filter.
  */
-import { and, eq, or } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import * as v from "valibot";
 
 import { recordId } from "#lib/schema.ts";
-import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
+import { visible } from "#lib/server/access/index.ts";
+import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { savedView, tableMemory } from "#lib/server/db/schema.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
@@ -68,17 +69,12 @@ export const getTableMemory = forMembers.query(
 
 /** Whether the member sees a view of the table: their own, or a shared one. */
 async function seesView(viewId: number, key: string) {
-	const tenant = currentTenant();
+	const readable = await visible("saved_view");
+	if (!readable) return false;
 	const [found] = await db
 		.select({ id: savedView.id })
 		.from(savedView)
-		.where(
-			and(
-				idInTenant(savedView, viewId),
-				eq(savedView.tableKey, key),
-				or(eq(savedView.userId, tenant.user.id), eq(savedView.shared, true)),
-			),
-		);
+		.where(and(eq(savedView.id, viewId), eq(savedView.tableKey, key), readable));
 	return !!found;
 }
 

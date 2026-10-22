@@ -1,12 +1,11 @@
 <!--
 	@component
-	The organization's members and pending invitations. Owners and admins invite people, change roles
-	and remove members; everyone else sees the list.
+	The organization's members and pending invitations, for owners and admins, who invite people,
+	change roles and remove members.
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
-	import { canManage } from "#lib/auth/can-manage.ts";
 	import PageHeader from "#lib/components/page-header.svelte";
 
 	import InvitationsCard from "./invitations-card.svelte";
@@ -15,7 +14,6 @@
 	import { getMembers } from "./members.remote.ts";
 
 	const data = $derived(await getMembers());
-	const manager = $derived(await canManage());
 </script>
 
 <PageHeader
@@ -27,12 +25,8 @@
 	]}
 />
 
-{#if manager}
-	<InviteCard organization={data.name} roles={data.inviteRoles} />
-{/if}
+<InviteCard organization={data.name} roles={data.inviteRoles} />
 
 <MembersCard members={data.members} organization={data.name} />
 
-{#if manager}
-	<InvitationsCard invitations={data.invitations} />
-{/if}
+<InvitationsCard invitations={data.invitations} />

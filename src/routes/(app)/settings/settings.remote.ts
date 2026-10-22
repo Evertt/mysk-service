@@ -7,6 +7,7 @@ import { getCurrentTenant, getTenantModules } from "#lib/auth/session.remote.ts"
 import { changeModules, effectiveModules } from "#lib/modules/graph.ts";
 import { moduleGraph, moduleIds } from "#lib/modules/ids.ts";
 import { modules } from "#lib/modules/manifests.ts";
+import { visible } from "#lib/server/access/index.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -16,13 +17,17 @@ import { Refused } from "#lib/server/refused.ts";
 import { forManagers, forMembers } from "#lib/server/remote-functions.ts";
 
 export const getOrganizationSettings = forMembers.query(async () => {
+	// The team is the managers' to see (the `member` rule): none for the other members.
+	const readableMembers = await visible("member");
 	const [members, enabled] = await Promise.all([
-		db
-			.select({ id: member.id, name: user.name, email: user.email, role: member.role })
-			.from(member)
-			.innerJoin(user, eq(member.userId, user.id))
-			.where(inTenant(member))
-			.orderBy(asc(user.name)),
+		readableMembers
+			? db
+					.select({ id: member.id, name: user.name, email: user.email, role: member.role })
+					.from(member)
+					.innerJoin(user, eq(member.userId, user.id))
+					.where(readableMembers)
+					.orderBy(asc(user.name))
+			: [],
 		db
 			.select({ moduleId: organizationModule.moduleId, enabledAt: organizationModule.enabledAt })
 			.from(organizationModule)

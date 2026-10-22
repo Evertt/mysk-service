@@ -87,6 +87,59 @@ from `getCurrentTenant()`'s roles); a query never sends a `canManage` flag (`can
 It only hides controls: the gate (`forManagers`) still refuses everyone else. Portals don't use it,
 because `getCurrentTenant()` sends anyone outside the office to their own home.
 
+**Who may read or change a record** is `#lib/server/access` (the barrel, for pages and core). The
+gated sets still decide who may _call_ a function; this decides which _records_ they reach. Ask with:
+
+- `await mayRead(subject)`, or `await readOrNotFound(subject)` for its 404;
+- `await readable(subjects)` for a batch: the `type/id` keys the viewer may read, one statement per
+  type. It trusts a rule that reads the whole type, so a feed's or the log's own-tenant subjects
+  need no query (a single `mayRead` always checks the table);
+- `await visible(type)` for the viewer's condition on its table (`undefined`: none), for a list's
+  `scope`, a join or a subquery; `visibleOrNone(type)` is the same for a `where`, where `undefined`
+  in an `and()` would let everything through; `await readableTypes()` for the types the viewer reads
+  at all (the log's readers drop the rest);
+- `mayChange`, `changeOrNotFound`, `changeable` and `visible(type, "change")` for a change. Status
+  rules stay in `lifecycle.ts`: this says the record is theirs to touch, `can()` that the move is
+  allowed now;
+- `as`: `mayRead(subject, as)` and `visible(type, which, as)` answer for another viewer. A scope
+  maker names its audience's with `viewerAs("office" | "engineer")` (`#lib/server/access/viewer.ts`,
+  which refuses a request of another audience). `viewerIn(organizationId, userId)` (same file)
+  builds a member's viewer in a tenant that isn't the request's (the QR scan), and
+  `mayReadIn(organizationId, viewer, subject)` asks as them there.
+
+Each subject type has one entry of rules per audience (`office` with its managers, `engineer`,
+`customer`, `system`; no rule for an audience is no access). It is made from the audience scopes
+(`engineerOrders()`, `customerOrders()`, `customerUnits()`, …) with the makers in
+`src/lib/server/access/rules.ts`: `rows(table, idColumn, byAudience)` for a type with a row,
+`partOf(parentType, table, parentColumn, narrowedBy?)` for a part (its parent's rule, `narrowedBy`
+narrowing it per audience), `tenantWide(byAudience, { change: "manager" })` for a type without a row.
+The core's entries are in `src/lib/server/access/core.ts`. A module's are in its `server/access.ts`,
+contributed in its `server/index.ts` with `contribute(accessRules, () => rules)` (point
+`access.rules`, `modules.md`); it imports the makers from `#lib/server/access/rules.ts`, not the
+barrel, which is circular for modules. A type of a module the tenant lacks has no rule, and unknown
+is not found.
+
+`src/tests/unit/lib/server/access.spec.ts` guards it, with `access/matrix.spec.ts` and each module's
+`access.spec.ts` for the behaviour:
+
+1. every logged type has a rule (core and each module's `subjects`, no more, no fewer);
+2. a file that reads the log or feeds changes (`recordChangedAt`, `liveFeed`, `watchEvery`, the
+   `activity` table, a `v.picklist(loggedTypes)` input) imports the registry (an allow-list gives
+   a reason per file);
+3. no hand-written module check (`subjectTypes(…)`) in a `*.remote.ts`;
+4. portal files (`(field)`, `(customer)`, a module's `portal/` and `client/`) never scope a table
+   that has a rule by the tenant alone;
+5. `portal_contact` is looked up only in `server/auth/` and the portal-access feature;
+6. no literal `"owner"`/`"admin"` comparison outside the files that own roles (`isManager()`).
+
+**Feeds:** a shell's feed presents with `liveFeed(types, feedFor())` (`#lib/server/live.ts`).
+`feedFor(viewer)` keeps the changes to records the viewer may `readable()` and says what each
+audience hears of them (the `hears` table: the office the name of who did it and the full action,
+engineers and customers neither, and only the office changes announced for a type alone). When a
+change takes a record off someone who knew it (an order off its engineer), that person's feed gets
+one `access_revoked` change (`ACCESS_REVOKED`), then the record is unreadable; the open page handles
+it (see "Staying live").
+
 ## Server code
 
 Read `docs/agents/tenancy.md`, "One way"; `hand-written.spec.ts` refuses the rest.
@@ -107,8 +160,8 @@ references are composite foreign keys that include the tenant.
 
 **Units and locations** are read by audience, as the work record is with `readWorkRecord()`:
 
-- `readUnits(scope, where)` and `readLocation(scope, id)`, with `officeUnits()`, `engineerUnits()`
-  or `customerUnits(access)` (`#lib/equipment/server`);
+- `readUnits(scope, where)` and `readLocation(scope, id)`, with `await officeUnits()`,
+  `await engineerUnits()` or `await customerUnits(access)` (`#lib/equipment/server`);
 - the units of orders: `listedUnitsOf(ids, seenBy(scope))`;
 - shown with `<WorkUnits>` and `<UnitRow>`.
 
@@ -126,8 +179,19 @@ A portal's own select of them is refused (`hand-written.spec.ts`).
 
 A page or card that shows one record stays live by it through its shell's one feed of changes:
 `refreshOnRecordChange(() => ({ type, id }), () => getX(key).refresh())`
-(`#lib/components/activity/change-feed.svelte.ts`). This works in the office and the engineer
-portal. A part is logged with its record as its parent, so its changes count too.
+(`#lib/components/activity/change-feed.svelte.ts`). This works in every shell: the office, the
+engineer portal and the customer portal each have one (`provideChangeFeed()` in the layout), and
+they tell a viewer only the records `#lib/server/access` lets them read ("Permissions"). A part is
+logged with its record as its parent, so its changes count too.
+
+A list, a bell or a page that shows records it doesn't key by id refreshes with
+`refreshOnActivity(() => getX().refresh(), { types })` (`live-activity.svelte.ts`: any change the
+feed tells, of those `types` if given, one refresh for a burst). A page of an order that can be
+taken off the viewer (the engineer's) leaves on `ACCESS_REVOKED` (`onRecordChange()`), which
+`refreshOnRecordChange()` skips, so nothing refreshes it into a 404 first.
+
+The only live queries left outside a shell's feed are those of a whole type for a module's own
+page (`watchSchedule`, `watchEnergy`, `watchDocks`); a portal page never uses `live()` directly.
 
 There is no live query per record: SvelteKit keeps its stream open until the browser collects it
 (`docs/upstream-bugs/README.md`, 14). So:

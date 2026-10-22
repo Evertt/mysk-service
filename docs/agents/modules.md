@@ -89,6 +89,17 @@ true })`, whose contributors answer at once, without awaiting: for an owner that
   its category; a module that's off adds none. Docks' `server/notifications.ts` is the example; a
   rule that needs more than the entry says adds it to the entry (`changes`), not a record of its
   own.
+- **Access rules** (`access.rules`, an immediate `fail` collector in `src/lib/access/extensions.ts`):
+  who may read or change the records of the module's own subject types, per audience
+  (`#lib/server/access`, `kit.md`, "Permissions"). Every module with `subjects` contributes one
+  entry per type from `server/access.ts`: `contribute(accessRules, () => checklistAccess)`, the
+  entries made with `rows()`, `partOf()` and `tenantWide()` from `#lib/server/access/rules.ts`
+  (not the barrel, which is circular for modules). Deny by default: an audience with no rule reads
+  nothing of the type, and a module's rules cover its own types only. A module that's off adds none,
+  so its records are not found, in a single read, the log and the feeds alike; a rule that fails
+  fails the request, since a skipped check would be a way in. The docks' `server/access.ts` is the
+  smallest example. `access.spec.ts` fails a subject type without a rule, or a rule for a type the
+  module doesn't own.
 - **A record's points** (an order's, a customer's, a unit's, an engineer's, a contract's) are
   declared by one call in its owner's `extensions.ts`, named alike for every record:
   `export const points = defineRecordPoints("orders", { detail: slotProps<{ number: string }>(),

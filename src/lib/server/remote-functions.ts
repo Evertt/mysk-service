@@ -36,6 +36,7 @@
 import { command, form, query } from "$app/server";
 
 import type { ModuleId } from "#lib/modules/ids.ts";
+import { type Admits, asAdmitted } from "#lib/server/access/viewer.ts";
 import {
 	requireCustomer,
 	requireEngineer,
@@ -67,19 +68,17 @@ type Make = (...args: unknown[]) => unknown;
  * by throwing a `Refused` (`#lib/server/refused.ts`) becomes a form's issues, or a 400 for the
  * others (`kind`).
  */
-function gated<F>(make: F, gate: Gate, kind: "form" | "call" = "call"): F {
+function gated<F>(make: F, gate: Gate, admits: Admits, kind: "form" | "call" = "call"): F {
 	const wrapped: Make = (...args) => {
 		const handler = args.pop() as (...handlerArgs: unknown[]) => unknown;
 		const guardedHandler = (...handlerArgs: unknown[]) => {
 			const refused = (thrown: unknown) => answerRefusal(thrown, kind);
 			try {
 				const admitted = gate();
+				const start = () => asAdmitted(admits, () => handler(...handlerArgs));
 				// A gate that answers right away (all but the engineer's and the customer's) leaves the
 				// handler's start synchronous, as SvelteKit calls it.
-				const answer =
-					admitted instanceof Promise
-						? admitted.then(() => handler(...handlerArgs))
-						: handler(...handlerArgs);
+				const answer = admitted instanceof Promise ? admitted.then(start) : start();
 				return answer instanceof Promise ? answer.catch(refused) : answer;
 			} catch (thrown) {
 				refused(thrown);
@@ -90,25 +89,33 @@ function gated<F>(make: F, gate: Gate, kind: "form" | "call" = "call"): F {
 	return wrapped as F;
 }
 
-/** The remote function set whose calls `gate` admits. */
-export function remoteSet(gate: Gate): RemoteSet {
-	const gatedQuery = Object.assign(gated(query, gate), {
+/**
+ * The remote function set whose calls `gate` admits, as the audience `admits` (see
+ * `#lib/server/access/viewer.ts`): the handler's `viewer()` is who the gate admitted, so a member
+ * who is both an admin and an engineer is the engineer in the engineer portal's functions.
+ */
+export function remoteSet(gate: Gate, admits: Admits): RemoteSet {
+	const gatedQuery = Object.assign(gated(query, gate, admits), {
 		// The gate runs once per batch, before the handler that answers all of its calls.
-		batch: gated(query.batch, gate),
+		batch: gated(query.batch, gate, admits),
 		// The gate runs once per connection, before the handler starts the stream.
-		live: gated(query.live, gate),
+		live: gated(query.live, gate, admits),
 	});
-	return { query: gatedQuery, form: gated(form, gate, "form"), command: gated(command, gate) };
+	return {
+		query: gatedQuery,
+		form: gated(form, gate, admits, "form"),
+		command: gated(command, gate, admits),
+	};
 }
 
-export const forMembers = remoteSet(requireMember);
-export const forManagers = remoteSet(requireManager);
-export const forEngineers = remoteSet(requireEngineer);
-export const forCustomers = remoteSet(requireCustomer);
-export const forAnyRole = remoteSet(requireTenant);
-export const forUsers = remoteSet(requireUser);
-export const forDevelopers = remoteSet(requireDeveloper);
-export const forAnyone = remoteSet(() => {});
+export const forMembers = remoteSet(requireMember, "office");
+export const forManagers = remoteSet(requireManager, "office");
+export const forEngineers = remoteSet(requireEngineer, "engineer");
+export const forCustomers = remoteSet(requireCustomer, "customer");
+export const forAnyRole = remoteSet(requireTenant, "by-role");
+export const forUsers = remoteSet(requireUser, "by-role");
+export const forDevelopers = remoteSet(requireDeveloper, "by-role");
+export const forAnyone = remoteSet(() => {}, "by-role");
 
 /** Who may call a module's remote functions, besides the tenant having the module. */
 type ModuleRole = "member" | "manager" | "engineer" | "customer";
@@ -127,6 +134,7 @@ type ModuleRole = "member" | "manager" | "engineer" | "customer";
  * ```
  */
 export function moduleRemote(id: ModuleId, role: ModuleRole = "member"): RemoteSet {
+	const admits = role === "engineer" || role === "customer" ? role : "office";
 	return remoteSet(() => {
 		if (role === "engineer") {
 			requireModule(id, { anyRole: true });
@@ -138,5 +146,5 @@ export function moduleRemote(id: ModuleId, role: ModuleRole = "member"): RemoteS
 		}
 		requireModule(id);
 		if (role === "manager") requireManager();
-	});
+	}, admits);
 }

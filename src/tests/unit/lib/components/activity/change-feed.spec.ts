@@ -160,6 +160,25 @@ describe("what the feed can't tell", () => {
 		expect(heard).toEqual([null]);
 	});
 
+	test("after a reconnect, a record answered 0 (unchanged, or no longer readable) is looked at again", async () => {
+		const { feed, heard, listen } = setUp(0);
+		feed.receive(answer(100, 100));
+		listen();
+		feed.receive(answer(100, 120));
+		feed.receive(answer(200, 200));
+		await settle();
+		expect(heard).toEqual([null]);
+	});
+
+	test("a first load answered 0 needs no look: its data was just read", async () => {
+		const { feed, heard, listen } = setUp(0);
+		listen(90);
+		feed.receive(answer(100, 100));
+		feed.receive(answer(100, 120));
+		await settle();
+		expect(heard).toEqual([]);
+	});
+
 	test("an answer for a listener gone meanwhile is dropped", async () => {
 		const { feed, heard, listen } = setUp(95);
 		const stop = listen(90);

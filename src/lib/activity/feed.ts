@@ -2,7 +2,7 @@
  * A shell's feed of the tenant's changes, as its tab hears them: `liveFeed()` on the server
  * (`#lib/server/live.ts`) answers it, `ChangeFeed` (`#lib/components/activity/change-feed.ts`)
  * tells the components that follow a record. The office's is `watchTenantChanges`, the engineer
- * portal's `watchFieldChanges` (`fieldChanges()`).
+ * portal's `watchFieldChanges` and the customer portal's `watchPortalChanges` (all through `feedFor()`).
  */
 import type { ChangeType } from "./subjects.ts";
 
