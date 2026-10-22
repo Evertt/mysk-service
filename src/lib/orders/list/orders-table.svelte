@@ -46,11 +46,9 @@
 	setStatusCellQuery((id) => table.pages.queryOf(id));
 
 	// The tenant's modules add theirs (e.g. "Create invoice") before the delete.
-	// One `await` per `$derived`: two in one leave the first's context restored while the second
-	// waits, and a navigation that runs then can't set its state (state_unsafe_mutation).
-	const tenantModules = $derived(await getTenantModules());
+	// One `await` (`loadContributions()` awaits the modules itself): see one-await-per-derived.spec.ts.
 	const moduleActions = $derived(
-		await loadContributions(bulkContributions, points.list.bulk, tenantModules),
+		await loadContributions(bulkContributions, points.list.bulk, getTenantModules()),
 	);
 	const actions = $derived([
 		assignEngineer,

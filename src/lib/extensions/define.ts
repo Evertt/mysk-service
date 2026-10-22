@@ -303,15 +303,19 @@ type Loaded<Value> = { readonly id: string; readonly module: ModuleId } & (
  * in registry order, loaded. Never rejects: one whose file doesn't load (its chunk fails) is logged
  * and comes with its `error` instead of a `value`, which the caller leaves out
  * (`value ?? []`), or `<ExtensionSlot>` shows as a notice.
+ *
+ * `modules` may be the query itself (`getTenantModules()`, unawaited), so a component's
+ * `$derived(await loadContributions(…))` holds one `await` (see `one-await-per-derived.spec.ts`).
  */
 export async function loadContributions<Point extends FilePoint>(
 	registry: readonly Contribution<unknown>[],
 	point: Point,
-	modules: readonly string[],
+	modules: readonly string[] | PromiseLike<readonly string[]>,
 ): Promise<Loaded<Loads<Point>>[]> {
+	const enabled = await modules;
 	return Promise.all(
 		registry
-			.filter((entry) => entry.point === point.id && modules.includes(entry.module))
+			.filter((entry) => entry.point === point.id && enabled.includes(entry.module))
 			.map(({ id, module, load }) =>
 				load().then(
 					// A contribution to this point loads what this point takes (`slotContribution()`, …).

@@ -396,6 +396,7 @@ Already reported: the `$effect.pending()` leak, https://github.com/sveltejs/svel
   timing changed and it never failed in 40 runs.
 - **Fix (not patched):** the compiler should `unsave()` at every suspension point of an async
   derived's body, the outer `await` included, as `save()` itself does at its start.
-- **Workaround:** one `await` per `$derived`; take the inner value in a `$derived` of its own
-  (`orders-table.svelte`, `equipment/+page.svelte`, condition's list page).
+- **Workaround:** one `await` per `$derived`. `loadContributions()` takes the modules query
+  unawaited (`getTenantModules()`) and awaits it itself, so the three list pages hold one `await`
+  without a second `$derived` (which would add a step to the script's chain of awaits).
   `src/tests/unit/one-await-per-derived.spec.ts` refuses two.
