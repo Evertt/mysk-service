@@ -378,3 +378,24 @@ Already reported: the `$effect.pending()` leak, https://github.com/sveltejs/svel
 - **Workaround:** `ChangeFeed` (`src/lib/components/activity/change-feed.ts`) asks once per record.
 - **Reproduction:** a component that calls `getThing(1).refresh()` twice in one handler: the network
   panel shows the empty POST.
+
+## 16. Svelte: two `await`s in one `$derived` leave the derived's context on while the outer one waits
+
+- **Versions:** svelte 5.57.1 (`experimental.async`), @sveltejs/kit 3.0.0.
+- **What happens:** `$derived(await f(await g()))` compiles to
+  `async_derived(async () => { try { return await f((await save(g()))()); } finally { unsave(); } })`.
+  The inner `save` thunk restores the derived's context (`active_reaction` is the `async_derived`
+  runner, `restored = true`), then the outer `await` suspends without `unsave()`: the context stays
+  on until `f` resolves. A microtask that runs in that window runs inside the derived. In our case
+  SvelteKit's popstate `navigate()` sets the page's data (`set data` in
+  `get_navigation_result_from_branch`) and is refused: `state_unsafe_mutation`.
+- **Evidence:** the e2e `dashboard.test.ts` › "redraw at once when the window grows wide enough for
+  the sidebar" (hover a link, open `/orders`, go back) failed about 1 run in 8 on a production
+  build. Svelte instrumented to report the active reaction at the refused write showed the
+  `async_derived` runner with `restored` still set. With the stack captured on every `save`, the
+  timing changed and it never failed in 40 runs.
+- **Fix (not patched):** the compiler should `unsave()` at every suspension point of an async
+  derived's body, the outer `await` included, as `save()` itself does at its start.
+- **Workaround:** one `await` per `$derived`; take the inner value in a `$derived` of its own
+  (`orders-table.svelte`, `equipment/+page.svelte`, condition's list page).
+  `src/tests/unit/one-await-per-derived.spec.ts` refuses two.

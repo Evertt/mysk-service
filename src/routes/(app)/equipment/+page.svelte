@@ -20,8 +20,11 @@
 
 	// The list with the columns of the tenant's modules (e.g. the next maintenance), whose
 	// parameters the URL may hold.
+	// One `await` per `$derived`: two in one leave the first's context restored while the second
+	// waits, and a navigation that runs then can't set its state (state_unsafe_mutation).
+	const tenantModules = $derived(await getTenantModules());
 	const columns = $derived(
-		await loadContributions(columnContributions, points.list.columns, await getTenantModules()),
+		await loadContributions(columnContributions, points.list.columns, tenantModules),
 	);
 	const list = $derived(
 		extendList(
