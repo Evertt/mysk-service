@@ -20,14 +20,13 @@
 
 	let { params }: { params: RouteParams<"/(app)/(modules)/checklists/settings/[id]"> } = $props();
 
-	const data = $derived(await getTemplate(params.id));
+	const [data, manager] = $derived(await Promise.all([getTemplate(params.id), canManage()]));
 	// Another manager's change too.
 	refreshOnRecordChange(
 		() => ({ type: "checklistTemplate", id: params.id }),
 		() => getTemplate(params.id).refresh(),
 	);
 	const template = $derived(data.template);
-	const manager = $derived(await canManage());
 	/** Managers change an active template; a retired one is restored first. */
 	const canChange = $derived(manager && !template.archived);
 

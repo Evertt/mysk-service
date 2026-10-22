@@ -26,8 +26,7 @@
 
 	let { code }: { code: string } = $props();
 
-	const access = $derived(await getPortalAccess(code));
-	const manager = $derived(await canManage());
+	const [access, manager] = $derived(await Promise.all([getPortalAccess(code), canManage()]));
 	const form = $derived(invitePortalContact.for(`customer-${access.customer.id}`));
 
 	const stateDisplay = labelled({

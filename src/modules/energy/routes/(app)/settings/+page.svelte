@@ -11,8 +11,7 @@
 	// The props the route passes; this page needs none of them.
 	const _props: { params: RouteParams<"/(app)/(modules)/energy/settings"> } = $props();
 
-	const settings = $derived(await getEnergySettings());
-	const manager = $derived(await canManage());
+	const [settings, manager] = $derived(await Promise.all([getEnergySettings(), canManage()]));
 	// Where the gateways post their readings (`routes/(api)/ingest/+server.ts`).
 	const ingestUrl = $derived(new URL("/energy/ingest", page.url.origin).toString());
 </script>

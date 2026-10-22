@@ -16,8 +16,9 @@
 
 	let { params }: { params: RouteParams<"/(app)/(modules)/energy/[site]/thresholds"> } = $props();
 
-	const data = $derived(await getEnergyThresholds(Number(params.site)));
-	const manager = $derived(await canManage());
+	const [data, manager] = $derived(
+		await Promise.all([getEnergyThresholds(Number(params.site)), canManage()]),
+	);
 	const siteHref = $derived(resolve("/(app)/(modules)/energy/[site]", { site: params.site }));
 </script>
 

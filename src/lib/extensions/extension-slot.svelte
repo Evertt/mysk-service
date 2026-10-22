@@ -58,14 +58,15 @@
 	/** How often each contribution was tried again: each time loads it again, in a new boundary. */
 	const attempts = $state<Record<string, number>>({});
 
-	const enabled = $derived(await getTenantModules());
 	/** The contributions, loaded with how often each was tried (read before the `await`, so a try reloads). */
 	const load = async (tried: Record<string, number>) =>
-		(await loadContributions(slotContributions, point, enabled)).map(({ value, ...part }) => ({
-			...part,
-			attempt: tried[part.id] ?? 0,
-			Slot: value,
-		}));
+		(await loadContributions(slotContributions, point, getTenantModules())).map(
+			({ value, ...part }) => ({
+				...part,
+				attempt: tried[part.id] ?? 0,
+				Slot: value,
+			}),
+		);
 	const parts = $derived(await load({ ...attempts }));
 
 	const labelOf = (id: ModuleId) => modules.find((module) => module.id === id)?.label ?? id;

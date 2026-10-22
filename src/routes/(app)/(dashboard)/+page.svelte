@@ -36,9 +36,9 @@
 	import RecentActivity from "./recent-activity.svelte";
 	import RevenuePerMonthChart from "./revenue-per-month-chart.svelte";
 
-	const data = $derived(await getDashboard());
-	const charts = $derived(await getCharts());
-	const user = $derived(await getCurrentUser());
+	const [data, charts, user] = $derived(
+		await Promise.all([getDashboard(), getCharts(), getCurrentUser()]),
+	);
 
 	// "Good morning, Jan", by the hour in the user's time zone (the night is still the evening).
 	const greeting = $derived.by(() => {
