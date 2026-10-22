@@ -26,8 +26,9 @@
 	let { module: moduleId, placeholder }: { module: IntegrationModuleId; placeholder?: string } =
 		$props();
 
-	const tokens = $derived(await getIntegrationTokens(moduleId));
-	const manager = $derived(await canManage());
+	const [tokens, manager] = $derived(
+		await Promise.all([getIntegrationTokens(moduleId), canManage()]),
+	);
 
 	/** The token just made: shown until the page is left. */
 	let made = $state<string>();

@@ -18,8 +18,7 @@
 
 	let { code }: { code: string } = $props();
 
-	const data = $derived(await getCustomerDocks(code));
-	const manager = $derived(await canManage());
+	const [data, manager] = $derived(await Promise.all([getCustomerDocks(code), canManage()]));
 	const bySite = $derived(
 		data.sites
 			.map((site) => ({ site, docks: data.docks.filter((dock) => dock.siteId === site.id) }))

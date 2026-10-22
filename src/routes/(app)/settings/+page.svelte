@@ -14,10 +14,14 @@
 	import ModuleCard from "./module-card.svelte";
 	import { getOrganizationSettings } from "./settings.remote.ts";
 
-	const settings = $derived(await getOrganizationSettings());
-	const manager = $derived(await canManage());
-	const categories = $derived(await getEquipmentCategories());
-	const typeSettings = $derived(await getOrderTypes());
+	const [settings, manager, categories, typeSettings] = $derived(
+		await Promise.all([
+			getOrganizationSettings(),
+			canManage(),
+			getEquipmentCategories(),
+			getOrderTypes(),
+		]),
+	);
 	const icons = new Map(moduleRegistry.map((m) => [m.id, m.icon]));
 	/** Where a module is set up, if it has a settings page (`modulePages`). */
 	const settingsHref = (id: ModuleId) => {

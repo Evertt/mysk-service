@@ -18,9 +18,10 @@
 		const value = Number(page.url.searchParams.get("site"));
 		return Number.isInteger(value) && value > 0 ? value : undefined;
 	});
-	const board = $derived(await getDockBoard(siteId));
-	// The demo's Salvo feed is simulated: the banner says so.
-	const simulation = $derived(await getSimulation("docks"));
+	// The demo's Salvo feed is simulated (`simulation`): the banner says so.
+	const [board, simulation] = $derived(
+		await Promise.all([getDockBoard(siteId), getSimulation("docks")]),
+	);
 </script>
 
 <svelte:head>

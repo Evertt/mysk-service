@@ -263,7 +263,7 @@ migration committed.
   `<RecordPage slots={points.detail} slotProps={{ number }}>` (the main column's after its own
   cards, the side column's before the activity card); any other page with
   `<ExtensionSlot point={…} props={…} />`. A table gets its contributed actions with
-  `$derived(await loadContributions(bulkContributions, points.list.bulk, await getTenantModules()))`
+  `$derived(await loadContributions(bulkContributions, points.list.bulk, getTenantModules()))`
   (`#lib/extensions/define.ts`, which loads every kind of contribution, slots' and columns' too: a
   contribution whose chunk doesn't load is logged and comes with its `error`, which a table or list
   leaves out and a slot shows as a notice), which its action bar

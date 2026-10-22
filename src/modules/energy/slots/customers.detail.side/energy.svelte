@@ -17,8 +17,7 @@
 
 	let { code }: { code: string } = $props();
 
-	const data = $derived(await getCustomerEnergy(code));
-	const manager = $derived(await canManage());
+	const [data, manager] = $derived(await Promise.all([getCustomerEnergy(code), canManage()]));
 	const monitored = $derived(data.sites.filter((site) => site.energy));
 	const unmonitored = $derived(data.sites.filter((site) => !site.energy));
 	const sitePage = (id: number) => resolve("/(app)/(modules)/energy/[site]", { site: String(id) });

@@ -16,8 +16,9 @@
 		order,
 	}: { fields: FormPartFields<typeof part>; order: { id: number } | undefined } = $props();
 
-	const materials = $derived(await getMaterialOptions());
-	const quoted = $derived(order ? await getOrderLines(order.id) : undefined);
+	const [materials, quoted] = $derived(
+		await Promise.all([getMaterialOptions(), order ? getOrderLines(order.id) : undefined]),
+	);
 </script>
 
 <OrderLinesField field={fields.lines} {materials} {quoted} />

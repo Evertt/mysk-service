@@ -26,12 +26,16 @@
 	const serial = $derived(page.url.searchParams.get("unit"));
 	const locationParam = $derived(page.url.searchParams.get("location"));
 
-	const sites = $derived(await getPortalSites());
-	// A scanned unit's or location's: a 404 when it isn't the contact's to see.
-	const scanned = $derived(serial ? (await getPortalUnit(serial)).unit : null);
-	const location = $derived(
-		locationParam ? (await getPortalLocation(locationParam)).location : null,
+	// With a scanned unit's or location's: a 404 when it isn't the contact's to see.
+	const [sites, unit, place] = $derived(
+		await Promise.all([
+			getPortalSites(),
+			serial ? getPortalUnit(serial) : null,
+			locationParam ? getPortalLocation(locationParam) : null,
+		]),
 	);
+	const scanned = $derived(unit ? unit.unit : null);
+	const location = $derived(place ? place.location : null);
 
 	const sitesWithUnits = $derived(sites.filter((site) => site.units.length));
 	let chosenSite = $derived(

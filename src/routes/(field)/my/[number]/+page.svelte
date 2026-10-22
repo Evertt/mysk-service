@@ -35,11 +35,10 @@
 
 	let { params }: PageProps = $props();
 
-	const data = $derived(await getMyOrder(params.number));
+	const [data, me] = $derived(await Promise.all([getMyOrder(params.number), getCurrentUser()]));
 	const order = $derived(data.order);
 	const { customer } = $derived(data.order);
 	const actions = $derived(fieldActions(order.status));
-	const me = $derived(await getCurrentUser());
 
 	// How often the modules' cards changed what the order may do (`changed()` of `portal.order`).
 	let partsChanged = $state(0);

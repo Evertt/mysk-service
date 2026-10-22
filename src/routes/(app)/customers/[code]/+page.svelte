@@ -21,12 +21,15 @@
 
 	let { params }: PageProps = $props();
 
-	const data = $derived(await getCustomer(params.code));
-	const options = $derived(await getCustomerFormOptions());
-	// The locations at each site.
-	const locationsAt = $derived(
-		Map.groupBy(await getCustomerLocations(params.code), (location) => location.siteId),
+	const [data, options, locations] = $derived(
+		await Promise.all([
+			getCustomer(params.code),
+			getCustomerFormOptions(),
+			getCustomerLocations(params.code),
+		]),
 	);
+	// The locations at each site.
+	const locationsAt = $derived(Map.groupBy(locations, (location) => location.siteId));
 	const customer = $derived(data.customer);
 </script>
 

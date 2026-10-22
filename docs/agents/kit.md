@@ -16,9 +16,9 @@ before writing the code.
 - **A record's extension points** are one `defineRecordPoints("<domain>", { detail, listColumns,
 bulk })` in its `extensions.ts` (`<domain>.detail.main`/`.side`, `.list.columns`, `.list.bulk`),
   passed to `RecordPage` as `slots={points.detail}`. A point's contributions (slots, bulk actions,
-  list columns) load with `$derived(await loadContributions(registry, point, await
-getTenantModules()))` (`#lib/extensions/define.ts`), never by filtering `contributions.gen.ts`
-  by hand (`src/tests/unit/load-contributions.spec.ts`).
+  list columns) load with `$derived(await loadContributions(registry, point, getTenantModules()))`
+  (`#lib/extensions/define.ts`, which awaits the query itself), never by filtering
+  `contributions.gen.ts` by hand (`src/tests/unit/load-contributions.spec.ts`).
 - **A link** that shows an order, customer, unit or engineer is its link component (`OrderLink`,
   `CustomerLink`, `EquipmentLink`, `EngineerLink`; in a table cell with `secondary`), never a
   `resolve()`d anchor: it gives the office the record's hover card (`RecordLink`). Breadcrumbs,
@@ -45,6 +45,23 @@ getTenantModules()))` (`#lib/extensions/define.ts`), never by filtering `contrib
   (`#lib/auth/shells.ts`: `{ name, home, owns(routeId) }`, which the guard in `hooks.server.ts`
   goes by). The link to the login page and back is `loginUrl(target)`. A role check for a home
   path, or a hand-built `/login?redirectTo`, is refused (`src/tests/unit/lib/auth/shells.spec.ts`).
+
+## Loading data
+
+A component's script awaits once. Svelte runs the `<script>`'s top-level awaits one after another,
+so two queries there load in sequence; the template's awaits already run in parallel.
+
+- **Independent queries** load together in one `$derived`:
+  `const [a, b] = $derived(await Promise.all([getA(), getB(id)]))`, with `cond ? getC() : null` for
+  one that's optional. A value of one part is a plain `$derived` of it.
+- **A query that needs another's value** waits for it in a `$derived` of its own. Where the callee
+  can, it takes the query unawaited and awaits it itself (`loadContributions(…, getTenantModules())`).
+- **One `await` per `$derived`**: two in one expression leak Svelte's reaction context
+  (`docs/upstream-bugs/README.md`, 16); `await Promise.all([…])` is one.
+
+`src/tests/unit/script-awaits.spec.ts` refuses a top-level await that names nothing an earlier one
+gave (its allow-list says why each exception stays), and `one-await-per-derived.spec.ts` two awaits
+in one `$derived`.
 
 ## Lists
 

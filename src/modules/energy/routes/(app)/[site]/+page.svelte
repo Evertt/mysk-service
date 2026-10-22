@@ -57,10 +57,11 @@
 	const asked = $derived(page.url.searchParams.get("period"));
 	const period: Period = $derived(isOneOf(periods, asked) ? asked : "day");
 	const scope = $derived(parseScope(page.url.searchParams.get("scope")));
-	const overview = $derived(await getEnergyOverview({ site: siteId, period }));
+	// With the demo's P1 simulation, for an organization that's offered one (else null).
+	const [overview, simulation] = $derived(
+		await Promise.all([getEnergyOverview({ site: siteId, period }), getSimulation("energy")]),
+	);
 	const site = $derived(overview.site);
-	// The demo's P1 simulation, for an organization that's offered one (else null).
-	const simulation = $derived(await getSimulation("energy"));
 
 	// Live: a batch from the gateway, an alert dealt with or a threshold changed asks again.
 	refreshOnChange(watchEnergy, () => getEnergyOverview({ site: siteId, period }).refresh());

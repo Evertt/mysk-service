@@ -33,7 +33,8 @@
 	// The server filters, sorts and pages the units, as the URL says (see the orders page).
 	const equipment = listQueries(() => list, getEquipmentList, getEquipmentFacets);
 	const categories = getEquipmentCategories();
-	const shown = $derived(await equipment.rows);
+	// Together: the facets' query starts only when read, so awaited later it would wait for the rows.
+	const [shown, facets] = $derived(await Promise.all([equipment.rows, equipment.facets]));
 </script>
 
 <svelte:head>
@@ -42,12 +43,7 @@
 
 <!-- The band with the units the list leaves, and the category chips under it (in the table's
 	context: they set its filter). -->
-<EquipmentTable
-	{list}
-	equipment={shown}
-	facets={await equipment.facets}
-	categories={await categories}
->
+<EquipmentTable {list} equipment={shown} {facets} categories={await categories}>
 	{#snippet header(chips)}
 		<ToolbarBand
 			title={m.equipment_title()}

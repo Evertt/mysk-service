@@ -22,8 +22,7 @@
 	// The props the route passes; this page needs none of them.
 	const _props: { params: RouteParams<"/(app)/(modules)/parts-shop/settings"> } = $props();
 
-	const data = $derived(await getShopCategories());
-	const manager = $derived(await canManage());
+	const [data, manager] = $derived(await Promise.all([getShopCategories(), canManage()]));
 </script>
 
 <PageHeader

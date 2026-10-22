@@ -12,8 +12,7 @@
 	// The props the route passes; this page needs none of them.
 	const _props: { params: RouteParams<"/(app)/(modules)/checklists/settings"> } = $props();
 
-	const data = $derived(await getTemplates());
-	const manager = $derived(await canManage());
+	const [data, manager] = $derived(await Promise.all([getTemplates(), canManage()]));
 	const active = $derived(data.templates.filter((template) => !template.archived));
 	const retired = $derived(data.templates.filter((template) => template.archived));
 	let adding = $state(false);
