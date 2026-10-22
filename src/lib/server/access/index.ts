@@ -95,8 +95,9 @@ export async function readOrNotFound(subject: RecordRef) {
 	if (!(await mayRead(subject))) error(404, m.common_error_not_found());
 }
 
-/** Of `subjects` (the tenant's own), those the viewer may read, as `type/id` keys. */
-export const readable = (subjects: readonly RecordRef[]) => allowed(subjects, "read", true);
+/** Of `subjects` (the tenant's own), those the viewer (or `as`) may read, as `type/id` keys. */
+export const readable = (subjects: readonly RecordRef[], as?: Viewer) =>
+	allowed(subjects, "read", true, as);
 
 /**
  * The subject types the viewer may read at all in this tenant: those with a rule whose read

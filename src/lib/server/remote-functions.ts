@@ -36,7 +36,7 @@
 import { command, form, query } from "$app/server";
 
 import type { ModuleId } from "#lib/modules/ids.ts";
-import { type Admits, admitAs } from "#lib/server/access/viewer.ts";
+import { type Admits, asAdmitted } from "#lib/server/access/viewer.ts";
 import {
 	requireCustomer,
 	requireEngineer,
@@ -75,10 +75,7 @@ function gated<F>(make: F, gate: Gate, admits: Admits, kind: "form" | "call" = "
 			const refused = (thrown: unknown) => answerRefusal(thrown, kind);
 			try {
 				const admitted = gate();
-				const start = () => {
-					admitAs(admits);
-					return handler(...handlerArgs);
-				};
+				const start = () => asAdmitted(admits, () => handler(...handlerArgs));
 				// A gate that answers right away (all but the engineer's and the customer's) leaves the
 				// handler's start synchronous, as SvelteKit calls it.
 				const answer = admitted instanceof Promise ? admitted.then(start) : start();

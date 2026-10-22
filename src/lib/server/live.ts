@@ -144,15 +144,19 @@ export function feedFor(
 ): (changes: Change[]) => Promise<TenantChange[]> {
 	const { user } = currentTenant();
 	return async (changes) => {
-		const { audience } = await asking;
+		const as = await asking;
+		const { audience } = as;
 		const hearing = hears[audience === "system" ? "office" : audience];
 		const named = changes.filter((change) => change.id);
-		const heard = await readable(named.map((change) => ({ type: change.type, id: change.id! })));
+		const heard = await readable(
+			named.map((change) => ({ type: change.type, id: change.id! })),
+			as,
+		);
 		// A change for its type only is heard as far as the viewer reads the type at all.
 		const typesHeard = new Set<string>();
 		if (hearing.ofType) {
 			const types = new Set(changes.filter((change) => !change.id).map((change) => change.type));
-			for (const type of types) if (await visible(type)) typesHeard.add(type);
+			for (const type of types) if (await visible(type, "read", as)) typesHeard.add(type);
 		}
 		// The one exception to reading: someone whose access the change revoked is told so, by the
 		// change's own account of whose it was (unless they have it again by the burst's end).

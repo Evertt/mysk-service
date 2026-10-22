@@ -4,9 +4,11 @@
  * audience it admits once its gate lets a call through (`admitAs()`), and `viewer()` reads it, so a
  * member who is both an admin and an engineer is the engineer in a `forEngineers` function and the
  * office in a `forMembers` one. Outside a gate (a page's load, a hook), and in a set that admits any
- * role, the stronger role decides, as the page guard has it (`shellOf()`).
+ * role, the stronger role decides, as the page guard has it (`shellOf()`). The audience travels with
+ * the handler's call (`asAdmitted()`, an `AsyncLocalStorage`), so no two calls share it.
  */
-import { getRequestEvent } from "$app/server";
+import { AsyncLocalStorage } from "node:async_hooks";
+
 import { and, eq } from "drizzle-orm";
 
 import { parseRoles } from "#lib/auth/index.ts";
@@ -35,19 +37,17 @@ export type Viewer =
 	| { audience: "customer"; access: CustomerAccess }
 	| { audience: "system" };
 
-const admitted = new WeakMap<object, Audience>();
+const admitted = new AsyncLocalStorage<Audience | undefined>();
 
-/** Records the audience the gate admitted for the current request (`"by-role"`: none). */
-export function admitAs(admits: Admits) {
-	const event = getRequestEvent();
-	if (admits === "by-role") admitted.delete(event);
-	else admitted.set(event, admits);
+/** Runs `handler` as the audience the gate admitted (`"by-role"`: none, the roles decide). */
+export function asAdmitted<T>(admits: Admits, handler: () => T): T {
+	return admitted.run(admits === "by-role" ? undefined : admits, handler);
 }
 
-/** The audience of the current request: the gate's, else the member's strongest role's. */
+/** The audience of the current call: the gate's, else the member's strongest role's. */
 export function audienceOf(): Audience {
 	if (systemTenant()) return "system";
-	return admitted.get(getRequestEvent()) ?? shellOf(requireTenant().roles).name;
+	return admitted.getStore() ?? shellOf(requireTenant().roles).name;
 }
 
 /** Who is asking, in a request with a tenant (`requireTenant()`) or as the system. */

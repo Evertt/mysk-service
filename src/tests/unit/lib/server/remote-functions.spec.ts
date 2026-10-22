@@ -155,20 +155,25 @@ describe("a gated set", () => {
 		expect(handlerOf(made)()).toBe("now");
 	});
 
-	test("records the audience the gate admitted, else the member's strongest role's", () => {
+	test("runs the handler as the audience the gate admitted, else the member's strongest role's", async () => {
+		const audience = () => audienceOf();
 		vi.mocked(requireTenant).mockReturnValue({ roles: ["admin", "engineer"] } as never);
-		handlerOf(forEngineers.query(handler as never))();
-		expect(audienceOf()).toBe("engineer");
-		handlerOf(forMembers.query(handler as never))();
-		expect(audienceOf()).toBe("office");
-		handlerOf(forCustomers.query(handler as never))();
-		expect(audienceOf()).toBe("customer");
+		expect(handlerOf(forEngineers.query(audience as never))()).toBe("engineer");
+		expect(handlerOf(forMembers.query(audience as never))()).toBe("office");
+		expect(await handlerOf(forCustomers.query(audience as never))()).toBe("customer");
 		vi.mocked(requireTenant).mockReturnValue({ roles: ["engineer"] } as never);
-		handlerOf(forAnyRole.query(handler as never))();
-		expect(audienceOf()).toBe("engineer");
+		expect(handlerOf(forAnyRole.query(audience as never))()).toBe("engineer");
 		vi.mocked(requireTenant).mockReturnValue({ roles: ["admin", "engineer"] } as never);
-		handlerOf(forAnyRole.query(handler as never))();
-		expect(audienceOf()).toBe("office");
+		expect(handlerOf(forAnyRole.query(audience as never))()).toBe("office");
+		// Concurrent calls each keep their own, whatever runs in between.
+		const engineer = handlerOf(
+			forEngineers.query((async () => {
+				await new Promise((done) => setTimeout(done, 5));
+				return audienceOf();
+			}) as never),
+		)();
+		handlerOf(forMembers.query(audience as never))();
+		expect(await engineer).toBe("engineer");
 	});
 
 	test("forAnyone admits everyone", () => {

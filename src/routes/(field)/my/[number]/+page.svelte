@@ -58,9 +58,15 @@
 		() => ({ type: "customer", id: order.customerId }),
 		() => getMyOrder(params.number).refresh(),
 	);
-	// Its units and sites are not keyed to the page (the work record finds them): any change of one.
+	// Its units and sites, as the work record found them (a unit added to the order is an order change).
+	const followed = $derived(
+		new Set([
+			...order.units.map((unit) => `equipment/${unit.id}`),
+			...data.sites.map((site) => `site/${site.id}`),
+		]),
+	);
 	onAnyChange((change) => {
-		if (!revoked && (change.type === "equipment" || change.type === "site")) {
+		if (!revoked && followed.has(`${change.type}/${change.id}`)) {
 			void getMyOrder(params.number).refresh();
 		}
 	});
