@@ -192,5 +192,6 @@
 	}
 	html {
 		@apply font-sans;
+		accent-color: var(--primary);
 	}
 }

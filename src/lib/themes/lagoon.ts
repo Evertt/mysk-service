@@ -17,7 +17,9 @@ export default defineTheme({
 		"--card-foreground": "oklch(0.208 0.042 265.755)",
 		"--popover": "oklch(1 0 0)",
 		"--popover-foreground": "oklch(0.208 0.042 265.755)",
-		"--primary": "oklch(0.6 0.118 184.704)",
+		// Darkened from teal-600 so white text on it reaches AA (4.96:1); the lighter teal stays on
+		// the sidebar and the logo.
+		"--primary": "oklch(0.53 0.1 185.5)",
 		"--primary-foreground": "oklch(1 0 0)",
 		"--secondary": "oklch(0.968 0.007 247.896)",
 		"--secondary-foreground": "oklch(0.279 0.041 260.031)",
@@ -33,7 +35,7 @@ export default defineTheme({
 		"--info": "oklch(0.5 0.134 242.749)",
 		"--info-foreground": "oklch(1 0 0)",
 		"--border": "oklch(0.929 0.013 255.508)",
-		"--input": "oklch(0.929 0.013 255.508)",
+		"--input": "oklch(0.869 0.022 252.894)",
 		"--ring": "oklch(0.777 0.152 181.912)",
 		"--chart-1": "oklch(0.685 0.169 237.323)",
 		"--chart-2": "oklch(0.673 0.182 276.935)",
@@ -94,10 +96,10 @@ export default defineTheme({
 		// Small, square-ish and tinted with a hairline in their hue: the brand's, the info tone's,
 		// white, the destructive one's and grey; the tones as the mockup colours statuses.
 		badge: {
-			base: "rounded-[0.25rem] border px-2 text-[0.6875rem] font-medium",
+			base: "rounded-[0.25rem] border px-2 text-xs font-medium",
 			variant: {
 				default: "border-primary/25 bg-primary/8 text-accent-foreground",
-				secondary: "border-info/25 bg-info/8 text-info",
+				secondary: "border-border bg-secondary text-secondary-foreground",
 				outline: "border-border bg-card text-secondary-foreground",
 				destructive: "border-destructive/25 bg-destructive/8",
 				ghost: "bg-muted text-muted-foreground",
@@ -124,21 +126,24 @@ export default defineTheme({
 			base: "group-has-[>[data-slot=card-header]+[data-slot=card-content]]/card:border-b group-has-[>[data-slot=card-header]+[data-slot=card-content]]/card:pb-3.5",
 		},
 		"card-title": {
-			base: "font-semibold group-has-[>[data-slot=card-header]+[data-slot=card-content]]/card:text-sm group-has-[>[data-slot=card-header]+[data-slot=card-content]]/card:before:mr-2 group-has-[>[data-slot=card-header]+[data-slot=card-content]]/card:before:inline-block group-has-[>[data-slot=card-header]+[data-slot=card-content]]/card:before:h-3.5 group-has-[>[data-slot=card-header]+[data-slot=card-content]]/card:before:w-0.5 group-has-[>[data-slot=card-header]+[data-slot=card-content]]/card:before:rounded-full group-has-[>[data-slot=card-header]+[data-slot=card-content]]/card:before:bg-primary group-has-[>[data-slot=card-header]+[data-slot=card-content]]/card:before:align-[-0.125em] group-has-[>[data-slot=card-header]+[data-slot=card-content]]/card:before:content-['']",
+			// 14px/600 in every card. A section card's title (header and content) gets a teal bar,
+			// except on a card nested in another card.
+			base: "text-sm font-semibold group-has-[>[data-slot=card-header]+[data-slot=card-content]]/card:before:mr-2 group-has-[>[data-slot=card-header]+[data-slot=card-content]]/card:before:inline-block group-has-[>[data-slot=card-header]+[data-slot=card-content]]/card:before:h-3.5 group-has-[>[data-slot=card-header]+[data-slot=card-content]]/card:before:w-0.5 group-has-[>[data-slot=card-header]+[data-slot=card-content]]/card:before:rounded-full group-has-[>[data-slot=card-header]+[data-slot=card-content]]/card:before:bg-primary group-has-[>[data-slot=card-header]+[data-slot=card-content]]/card:before:align-[-0.125em] group-has-[>[data-slot=card-header]+[data-slot=card-content]]/card:before:content-[''] [[data-slot=card]_[data-slot=card]_&]:before:hidden",
 		},
 		"card-description": { base: "text-xs" },
 		checkbox: { base: "rounded-[0.25rem]" },
 		"data-table": { base: "rounded-md bg-card [--data-table-surface:var(--card)]" },
 		"dialog-content": { base: "rounded-lg" },
+		// Fields are white with a visible border, grey only on hover.
 		input: {
-			base: "bg-muted/60 shadow-none focus-visible:border-ring focus-visible:bg-card focus-visible:ring-2 focus-visible:ring-ring/25 dark:bg-input/20",
+			base: "bg-card shadow-none hover:bg-muted/40 focus-visible:border-ring focus-visible:bg-card focus-visible:ring-2 focus-visible:ring-ring/25 dark:bg-input/20 dark:hover:bg-input/30",
 		},
 		"input-group": {
-			base: "bg-muted/60 shadow-none has-[[data-slot=input-group-control]:focus-visible]:bg-card dark:bg-input/20",
+			base: "bg-card shadow-none hover:bg-muted/40 has-[[data-slot=input-group-control]:focus-visible]:bg-card dark:bg-input/20 dark:hover:bg-input/30",
 		},
 		"select-trigger": { base: "bg-card shadow-none" },
 		textarea: {
-			base: "bg-muted/60 shadow-none focus-visible:border-ring focus-visible:bg-card focus-visible:ring-2 focus-visible:ring-ring/25 dark:bg-input/20",
+			base: "bg-card shadow-none hover:bg-muted/40 focus-visible:border-ring focus-visible:bg-card focus-visible:ring-2 focus-visible:ring-ring/25 dark:bg-input/20 dark:hover:bg-input/30",
 		},
 		"sidebar-container": { base: "border-sidebar-border" },
 		"sidebar-group-label": {
