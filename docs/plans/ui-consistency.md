@@ -1,9 +1,16 @@
 # One look for the whole app: the UI consistency plan
 
-> **Read with the UX discovery** ([2026-10-23-fieldworks-discovery.md](../ux-discovery/2026-10-23-fieldworks-discovery.md)).
-> Its section 7 settles decisions A–D. It also turns step 1 from "tune Lagoon's teal" into a
-> theme built from SHLTR's own brand: night blue, white and mint. Its section 7 overrides this
-> plan where they differ.
+> **Revised after the UX discovery**
+> ([2026-10-23-fieldworks-discovery.md](../ux-discovery/2026-10-23-fieldworks-discovery.md),
+> section 7):
+>
+> - Decisions A–D are settled.
+> - Step 1 is a theme built from SHLTR's own brand: night blue, white and mint. The light teal was
+>   Lovable's default.
+> - The dashboard becomes the planner's "needs attention today" view.
+>
+> The discovery is an interview with a role-played product owner. Its open questions (section 9)
+> may still change these choices.
 
 Review of 23 October 2026, of every page of `develop` (e5d7b392) as the shltr planner, engineer and
 customer, in the Lagoon theme, at 1440 px and 390 px. The per-area findings, with file references,
@@ -47,11 +54,21 @@ apps next to orders and customers. On top of that, teal is used for almost every
 bands, banners, the bar before every card title, the default badge, tile icons), so nothing stands
 out as the action.
 
-**The direction:** keep Lagoon's base and the mockups' best ideas, and **decide each pattern by the
+**The direction:** keep the calm base and the mockups' best ideas, and **decide each pattern by the
 kind of page, not by the mockup**. There is one header for every page, one list, one detail page,
-one form, one settings page, one KPI tile and one status vocabulary. Teal is kept for brand and
-action. The personality goes where it earns its place: the dashboards' figures, the docks and
-energy illustrations, and the portals.
+one form, one settings page, one KPI tile and one status vocabulary.
+
+The colours come from SHLTR's brand, "Engineered Clarity":
+
+- White working surfaces.
+- Colour only for status.
+- Mint for progress and the primary action.
+- Night blue for the brand's areas.
+
+Each audience gets its own density: the planner's office app dense and calm, the engineer's views
+one thing per screen with big targets, the customer portal spacious and the most branded. The
+banners and drawings were pitch material: no banners, and the docks and energy illustrations stay
+contained in their modules.
 
 ### On the `/equipment` band
 
@@ -339,26 +356,27 @@ The number in brackets points to the detailed finding (e.g. lists 2).
 Every rule below names the one component that carries it. Each step adds a guard spec where the
 kit's style allows, so the drift can't come back.
 
-| Concern         | The one way                                                                                                                                                                                                                                                                                                                                                                                                    |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Page title      | `PageHeader`, everywhere (office, portals, modules). It gains `count` (a muted "514" beside the title), `back` (a "← Parent" link for portals and documents) and an `eyebrow`/badges slot (live, simulation). It sets `<title>`.                                                                                                                                                                               |
-| Overview hero   | **Decision A.** Either none, or one `OverviewHero` (the merged `PageBanner` + `HeroBanner`, token colours, breadcrumbs outside) only on dashboard landings: docks, energy site, partner portal, perhaps the customer portal home. Never on lists, details, forms or settings.                                                                                                                                  |
-| List            | `ListLayout`: search, Filter (facets with counts), Saved views, View, the "…" row menu. Active filters show as pills under the toolbar. Optionally one summary row (`ListSummary`, `StatTile`s that set a filter) where the numbers mean more than a row count (condition's health, maintenance's due), at most once per page. No chip rows. A time scope (maintenance's period) is allowed as a toolbar slot. |
-| List on phones  | Below `md`, rows render as cards from one row snippet, `OrderCard`/`WorkCard`-style (title, status, two meta lines). Bigger work: its own step.                                                                                                                                                                                                                                                                |
-| Status          | `EnumBadge` with tone and icon for states. The normal state is shown muted (text or a grey dot), not coloured. Categories (level, segment, type) are outline or plain text. Sentence case and one word per state. Inline edit shows a chevron on hover only.                                                                                                                                                   |
-| Badge variants  | Lagoon's `secondary` is neutral grey, not info. Partner levels become a `level` tone set in sentence case. Metal colours stay inside it.                                                                                                                                                                                                                                                                       |
-| Teal            | Brand (logo, sidebar), **the one primary action per page**, active nav, focus, links, a selected chip. Not large surfaces, decoration, tile icons or status. The fill darkens to about teal-700 for AA; teal-600 stays as `--brand`.                                                                                                                                                                           |
-| Section cards   | The header band for cards with a list or table; small blocks are content-only cards. Card titles are 14/600 in every structure. **Decision B:** keep the teal title bar or drop it.                                                                                                                                                                                                                            |
-| KPI tile        | `StatTile` with two layouts: `stacked` (dashboard, detail pages, portals) and `inline`. The tone is a semantic token. `KpiTile`, the row layout and section-cards-as-tiles go. Colour only where the number signals something.                                                                                                                                                                                 |
-| Type and radius | h1 24/600; subtitle 14 muted, `max-w-prose`; card title 14/600; body 14; meta 12; **nothing under 12** outside illustrations. Radius 8 for containers, 8 for controls, 4 for badges, full for chips and avatars.                                                                                                                                                                                               |
-| Width           | Office lists and details: full width. Forms and settings: one width (`max-w-4xl`) for the **whole page, header included**. Documents (invoice, work order, report): one `DocumentSheet`.                                                                                                                                                                                                                       |
-| Detail page     | `RecordPage` with columns (equipment keeps masonry). Actions: secondary outline; destructive (Delete, Cancel, Void) always red-tinted; primary last; more than 3 go into a "…" menu. Related lists capped at 10 with "View all" to the filtered list. On phones the first side card (the facts) comes first.                                                                                                   |
-| Scrolling       | Scrollable areas show they scroll: a thin scrollbar in the sidebar, an edge fade on tables. Toolbars and header actions wrap instead of overflowing. Only one toolbar menu is open at a time. Layouts beside the sidebar respond to the content's width (container queries), not the window's.                                                                                                                 |
-| Form            | `RecordForm`: every field white with a visible border (the grey fill only as hover); hints don't break the grid; an empty dependent section says what unlocks it; sticky action bar when taller than the viewport. The invoice's inline forms become one `InlineFormCard`.                                                                                                                                     |
-| Settings        | `ModuleSettingsPage` for every module (add a "sections/table" slot), with one read-only notice shown only to viewers who can't edit. The link to it is always a header action; its title follows one pattern ("Settings: Invoicing"); no breadcrumb repeats the title.                                                                                                                                         |
-| Empty           | One `EmptyState` (icon, title, sentence, action) with a `compact` size for inside cards.                                                                                                                                                                                                                                                                                                                       |
-| Wallet          | One `WalletSummary` (compact and full); no navy panel, or navy exactly once.                                                                                                                                                                                                                                                                                                                                   |
-| Errors          | One error page inside the shell when signed in. A lock or search icon, a real title ("You don't have access", "Page not found"), one primary "Back to dashboard", no Reload.                                                                                                                                                                                                                                   |
+| Concern         | The one way                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Page title      | `PageHeader`, everywhere (office, portals, modules). It gains `count` (a muted "514" beside the title), `back` (a "← Parent" link for portals and documents) and an `eyebrow`/badges slot (live, simulation). It sets `<title>`.                                                                                                                                                                                                                          |
+| Overview hero   | **None (decision A).** `PageBanner`, `HeroBanner` and `ToolbarBand` go; live or simulation badges sit in `PageHeader`'s eyebrow slot.                                                                                                                                                                                                                                                                                                                     |
+| Dashboard       | The planner's **"needs attention today"** view (job P1 in the discovery): orders to accept, critical units (condition below 40% or inspection expired), inspections and contract visits due, overdue on top; each row leads to planning it. It keeps its place (filters and scroll) through interruptions. A few `StatTile`s at most, as counts of those lists. Partner bonus, wallet and revenue widgets leave the office dashboard.                     |
+| List            | `ListLayout`: search, Filter (facets with counts), Saved views, View, the "…" row menu. Active filters show as pills under the toolbar. Optionally one summary row (`ListSummary`, `StatTile`s that set a filter) where the numbers mean more than a row count (condition's health, maintenance's due), at most once per page. No chip rows. A time scope (maintenance's period) is allowed as a toolbar slot.                                            |
+| List on phones  | **Engineer and customer views (decision C):** cards, `OrderCard`/`WorkCard`-style (title, status, two meta lines). The office lists stay dense tables (the planner works at a desk), with tuned default columns and a scroll cue on phones.                                                                                                                                                                                                               |
+| Status          | `EnumBadge` with tone and icon for states. The normal state is shown muted (text or a grey dot), not coloured. Categories (level, segment, type) are outline or plain text. Sentence case and one word per state. Inline edit shows a chevron on hover only.                                                                                                                                                                                              |
+| Badge variants  | Lagoon's `secondary` is neutral grey, not info. Partner levels become a `level` tone set in sentence case. Metal colours stay inside it.                                                                                                                                                                                                                                                                                                                  |
+| Colour          | A **SHLTR theme from the brand**: white working surfaces; status colours only for status; **mint** for progress and **the one primary action per page** (and focus, links, a selected chip), dark enough for AA with its text; **night blue** for brand areas (sidebar or logo, the portal's header). No large coloured surfaces, no decoration, no coloured tile icons. The customer portal carries the brand (or a white-label tenant's) most strongly. |
+| Section cards   | The header band for cards with a list or table; small blocks are content-only cards. Card titles are 14/600 in every structure. **No coloured title bar (decision B).**                                                                                                                                                                                                                                                                                   |
+| KPI tile        | `StatTile` with two layouts: `stacked` (dashboard, detail pages, portals) and `inline`. The tone is a semantic token. `KpiTile`, the row layout and section-cards-as-tiles go. Colour only where the number signals something.                                                                                                                                                                                                                            |
+| Type and radius | h1 24/600; subtitle 14 muted, `max-w-prose`; card title 14/600; body 14; meta 12; **nothing under 12** outside illustrations. Radius 8 for containers, 8 for controls, 4 for badges, full for chips and avatars.                                                                                                                                                                                                                                          |
+| Width           | Office lists and details: full width. Forms and settings: one width (`max-w-4xl`) for the **whole page, header included**. Documents (invoice, work order, report): one `DocumentSheet`.                                                                                                                                                                                                                                                                  |
+| Detail page     | `RecordPage` with columns (equipment keeps masonry). Actions: secondary outline; destructive (Delete, Cancel, Void) always red-tinted; primary last; more than 3 go into a "…" menu. Related lists capped at 10 with "View all" to the filtered list. On phones the first side card (the facts) comes first.                                                                                                                                              |
+| Scrolling       | Scrollable areas show they scroll: a thin scrollbar in the sidebar, an edge fade on tables. Toolbars and header actions wrap instead of overflowing. Only one toolbar menu is open at a time. Layouts beside the sidebar respond to the content's width (container queries), not the window's.                                                                                                                                                            |
+| Form            | `RecordForm`: every field white with a visible border (the grey fill only as hover); hints don't break the grid; an empty dependent section says what unlocks it; sticky action bar when taller than the viewport. The invoice's inline forms become one `InlineFormCard`.                                                                                                                                                                                |
+| Settings        | `ModuleSettingsPage` for every module (add a "sections/table" slot), with one read-only notice shown only to viewers who can't edit. The link to it is always a header action; its title follows one pattern ("Settings: Invoicing"); no breadcrumb repeats the title.                                                                                                                                                                                    |
+| Empty           | One `EmptyState` (icon, title, sentence, action) with a `compact` size for inside cards.                                                                                                                                                                                                                                                                                                                                                                  |
+| Wallet          | One `WalletSummary` (compact and full); no navy panel, or navy exactly once.                                                                                                                                                                                                                                                                                                                                                                              |
+| Errors          | One error page inside the shell when signed in. A lock or search icon, a real title ("You don't have access", "Page not found"), one primary "Back to dashboard", no Reload.                                                                                                                                                                                                                                                                              |
 
 ## The plan
 
@@ -366,21 +384,33 @@ Seven steps. Step 1 is global and low-risk; it makes everything else look closer
 Steps 3–7 touch disjoint files after step 2, so they can run as parallel sessions in worktrees, one
 writer per area, each adding its guard spec.
 
-1. **Lagoon tokens** (`src/lib/themes/lagoon.ts`, one file).
-   - Darken `--primary` and add `--brand`.
+1. **A SHLTR theme from the brand** (a new `src/lib/themes/shltr.ts`, made the default; Lagoon
+   stays as one of the themes).
+   - Start from Lagoon's calm base: grey page, white hairline cards, tinted square status badges.
+   - Tokens from the brand:
+     - `--primary` mint, AA with its text.
+     - Night blue for `--sidebar` or the brand areas and the logo tile.
+     - Neutral accents.
+     - Status tones unchanged.
+
+     The exact values come from SHLTR's brand material: ask the client for the brochure's colours
+     and typeface. MF describes "een verfijnde grotesk" (a refined grotesque) and "hoge, compacte
+     koppen" (tall, compact headings).
+
    - Make `secondary` neutral.
-   - Card titles 14/600 in every structure (and decision B).
+   - Card titles 14/600 in every structure, with no coloured title bar.
    - Fields: inputs, textareas and input groups white with a visible `--input` border, like the
      selects (the grey fill only on hover); theme the radio's `accent-color`.
    - Badge text 12 px; radii per the table.
    - Subtitle 14 px (`page-header.svelte:77`).
-   - Check the other five themes still look right (theme spec).
+   - Check the other themes still look right (theme spec).
+   - A white-label tenant later gets its own tokens the same way.
 2. **One header** (wide, so it goes first and alone).
    - Add `count`, `back` and an eyebrow slot to `PageHeader`.
    - Move equipment, schedule, docks, condition, checklists, energy site, energy report, the
      dashboard, the work order and all portal pages onto it.
    - Delete `ToolbarBand` and `CategoryChips`.
-   - Decision A decides `PageBanner`/`HeroBanner`: merge them or delete them.
+   - Delete `PageBanner` and `HeroBanner` too (decision A).
    - Schedule's period navigation and view switch move into a neutral toolbar row
      (`SegmentedNav`, default variant).
    - Rename the titles to match the nav (finding 3).
@@ -389,7 +419,7 @@ writer per area, each adding its guard spec.
 3. **Lists.**
    - Facet counts in the Filter menu and active-filter pills.
    - `ListSummary` for condition's tiles (drop its chips and checkbox into facets, its explainer
-     behind a closed "How it works").
+     cards off the page, see decision D).
    - Put parts shop orders, products, checklist templates and asset list, energy alerts, partner
      years and the activity filters onto `ListLayout` and the toolbar.
    - Tune the default columns to fit 1440 px minus the sidebar, with a scroll fade and a visible
@@ -418,8 +448,9 @@ writer per area, each adding its guard spec.
    - Every settings page onto `ModuleSettingsPage` at one width, with one title pattern and the
      link as a header action.
    - Schedule: one fixed control row in every view, the legend in every view.
-   - Trim the dashboards: docks' explainers to a "How it works" disclosure or the settings page;
-     the energy site's alerts list becomes a link with a count; cap the schedule backlog.
+   - Trim the dashboards: the explainer cards (docks, condition, energy) leave the working pages
+     (decision D); the energy site's alerts list becomes a link with a count; cap the schedule
+     backlog. Drop the energy simulation controls from production pages (demo only).
    - `KpiTile` becomes `StatTile`.
    - Chart and illustration colours to `--chart-*` and the state tokens.
    - Guard: extend `state-colours.spec.ts` by shrinking its allow-list.
@@ -432,9 +463,15 @@ writer per area, each adding its guard spec.
      - The order count as a pill.
      - Error pages.
      - Settings sub-pages hidden from those who can't open them.
-   - Dashboard:
-     - 4 or 5 equal tiles, whole-tile links, 2-up on phones.
-     - Widgets in an equal-height 2-column grid with "View all".
+   - Dashboard, rebuilt as the planner's **"needs attention today"** view (see the table). Design
+     it first: prototype two or three options against journey (a) in the discovery, before
+     building.
+     - One list across all customers, with sections: to accept, critical, due, waiting for a
+       part. Overdue on top.
+     - Plan from the row: accept, assign, reserve the part.
+     - It keeps its place through interruptions.
+     - Counts as a few equal tiles that filter the list, 2-up on phones.
+     - Partner bonus, wallet, revenue and charts move off it (to their modules or reports).
    - Portals:
      - `PageHeader` with `back` (from step 2).
      - `OrderCard` from `WorkCard` for the portal lists.
@@ -442,21 +479,17 @@ writer per area, each adding its guard spec.
      - Engineer buttons `lg` and a sticky "Complete job".
      - `WalletSummary`.
 
-Then, as its own piece: **lists as cards on phones** (finding 10), built on `OrderCard` and
-`ListLayout`'s row snippet.
+Then, as its own piece: **cards on phones for the engineer's and customer's lists** (finding 10,
+decision C), built on `OrderCard`. The office lists stay tables.
 
 The bugs in "Bugs seen on the way" are separate small fixes.
 
-## Decisions before starting
+## Decisions (settled by the UX discovery, section 7)
 
-- **A. Hero banners.** My recommendation is to keep one `OverviewHero` for the three or four
-  dashboard landings. It's the mockups' strongest visual and the client will look for it. But it
-  stays off every list, detail, form and settings page. The alternative is no banners at all
-  (`PageHeader` only): the most consistent and the calmest, at the cost of the most recognisable
-  mockup element.
-- **B. The teal bar before card titles.** My recommendation is to drop it. It's 2 px, nearly
-  invisible, and adds teal everywhere. The header band and divider carry the section look on their
-  own.
-- **C. Lists as cards on phones.** Do it, or keep sideways scrolling and only tune the columns.
-- **D. Explainer content on module dashboards** (docks, condition, energy). Move it to a closed
-  "How it works" disclosure, or to the module's settings page or docs.
+- **A. Hero banners: none.** The owner calls the big banner headers "demo only". `PageHeader`
+  everywhere.
+- **B. The coloured bar before card titles: dropped.** Colour is for status and action only.
+- **C. Lists as cards on phones: yes for the engineer and the customer.** The planner works at a
+  desk, so the office lists stay dense tables, tuned for width.
+- **D. Explainer content on module dashboards: off the working pages.** It was pitch material. If
+  a module needs an explanation, it goes to its settings page or the docs.
