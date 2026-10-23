@@ -476,6 +476,8 @@ writer per area, each adding its guard spec.
      - `PageHeader` with `back` (from step 2).
      - `OrderCard` from `WorkCard` for the portal lists.
      - Customer portal bottom nav, or a persistent "Report a breakdown".
+     - The portal's home serves reading first (units, documents, the schedule): that's what
+       customers use it for (discovery, section 0).
      - Engineer buttons `lg` and a sticky "Complete job".
      - `WalletSummary`.
 

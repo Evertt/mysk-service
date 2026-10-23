@@ -33,6 +33,131 @@ The guesses are collected under "Questions for the real product owner": a short 
 his ten minutes. The role-player's notes, with quotes, are kept outside the repo (session
 scratchpad).
 
+## 0. Version 1: what My24Service changes
+
+A second round, same day: the role-player read the three repositories of My24Service as the
+product's **version 1**, the platform SHLTR and its customers have used for years. The new product
+is its successor. Sources: `/Users/evert/Sites/My24Service/{my24service,frontend,my24-mobile}`,
+including 15 days of production logs (September 2026) and `docs/contract-usage-prod.json`. They
+are tagged [S: My24 …]. The sections below are corrected where version 1 contradicted them.
+
+### What version 1 is
+
+- **A multi-tenant field-service SaaS, 14 years old** (first commit 2012-03-29), with a schema per
+  tenant.
+- **Three clients:** a Vue web app (planners, admins, customers); the Flutter `my24app` for every
+  role, engineers included; and `shltr_flutter` (since 2024) for customers' staff and planners.
+- **"SHLTR Connect" already exists.** It's the `shltr` product family: its own theme and app,
+  served on shltr-connect.com, with 9 tenants.
+- **About 24 real tenants.** The heaviest isn't SHLTR but **Rite-Hite**, a dock and door company:
+  in 15 days it had 129 orders, 93 signed work orders, 176 material lines and 126 photos. In the
+  same period `shltr-installation` had 19 orders and 7 signed work orders. **Selling to other
+  companies isn't a future plan; it's the current business.**
+- **How SHLTR is set up:**
+  - Each SHLTR customer (Riedel, Amex, Poelgeest, Smurfit, …) is a tenant with branches.
+  - Their orders are copied to SHLTR's maintenance tenant (10 partners, 187 copied orders).
+  - A planner accepts or rejects each order, and the answer goes back to the customer's
+    original.
+- **What it tracks and does:**
+  - **Units:** building → location → unit, each with a QR deep link, documents (split
+    Technical/Facility), a serial number, installation date, and a free-text state with "replace
+    in N months".
+  - **Contracts:** units with visits per year, a tariff and standard hours.
+  - **Orders:** an order covers several units (order lines), engineers and dates.
+  - **Statuses:** texts each tenant can edit, which trigger email, SMS, push, .ics invites,
+    partner copies and reminders.
+  - **Planning:** a dispatch board, engineers' GPS, assignment by distance, and a schedule
+    customers can see.
+- **The engineer app** registers start and end codes, hours and km (travel, extra and unforeseen
+  work), materials from a stock location, photos, files, and an extra order from the field. The
+  engineer and the customer sign, and that emails the work-order PDF. **It works online only.**
+- **Invoices and quotations exist but are hardly used:** 3 invoices and 13 quotations across all
+  real tenants.
+- **Checklists were specified in 2019 and never built.** They covered fire doors, dock levellers
+  and overhead doors: good / fault / n.a. / quote, a sticker, and "order parts for dock no. (photo
+  of the old part)", estimated at 84 hours. It's **the oldest unmet need**. [S: My24
+  my24service/TODO.md]
+- **Customers mostly read.** At Riedel in 15 days: 167 equipment reads, 83 document reads, 58
+  schedule views, 3 orders created and 7 QR scans.
+- **The mockup partly reskins version 1.** The customer card's floor area, parking and
+  workstations, and the Technical/Facility documents come from the existing shltr dashboard. The
+  webshop and 3D module were tried as iframes and are switched on for no one.
+
+### Keep, improve, and what the presentations never mentioned
+
+**Keep, some of it exactly:**
+
+- The QR stickers already on site: the same links (link.shltr-group.app) and the same result. Scan,
+  see the unit, report a breakdown.
+- The customer as its own tenant with branches and branch-scoped users. Orders copied to SHLTR
+  with accept/reject.
+- One order with several units, engineers and dates. A signed PDF per order, emailed to the
+  customer.
+- Hours, km, materials (with stock) and photos in the engineer app. Start and end codes. An extra
+  order from the field.
+- The dispatch board, engineer GPS, and the schedule customers can see.
+- Contracts with visits per year per unit. Documents per unit and location.
+- Editable status texts with email, SMS, push, .ics and reminders.
+- The shltr app's UX rules (`my24-mobile/docs/ux-principles.md`): a stepped order form, land on
+  the list, show the photo.
+
+**Improve:**
+
+- Free-text unit state becomes checklist results, a condition score, an inspection date and a
+  status.
+- The work order describes units in free text; it becomes a result per unit.
+- Contracts that only count visits become a schedule of due inspections and visits per unit.
+- Customers can't browse their units in the app ("binnenkort", coming soon).
+- The engineer app gains offline work.
+- Feature gating is enforced only in the browser; status logic is matched by regex.
+- Quotes and invoices: decide whether they belong at all.
+
+**Missing from the presentations, but users depend on it:**
+
+- Copying orders between companies, and accept/reject. It's the most-polled endpoint, behind the
+  "unaccepted" badge.
+- Hours, km, odometer and travel registration. Materials from van or warehouse stock.
+- Engineer GPS and assignment by distance.
+- Signatures and the emailed PDF as legal proof.
+- Status emails and .ics invites to customers. Customers viewing the planned schedule.
+- Excel imports of customers, units and locations.
+- Other tenants' needs:
+  - several customers
+  - a staffing flavour (temps)
+  - Gripp, Teamleader and payroll integrations
+
+### What it corrects below
+
+- **Problem (1).** It isn't "no platform". The platform knows units, but not their condition,
+  inspections or parts. The scope is **the successor to My24Service and SHLTR Connect, for its
+  existing tenants too**, not a system for SHLTR alone. The first thing to ship stands (checklist
+  per unit plus status), but **inside the existing order, work-order and QR flow**.
+- **Two hats.** SHLTR still decides the product's direction, but **the existing tenants' daily
+  work (Rite-Hite's above all) is a guard rail** it can't overrule.
+- **Personas (2).**
+  - Planner: the accept step and the dispatch board are now confirmed.
+  - Engineer: phone app, online only; hours, km, materials, photos and signatures already go into
+    it. Mostly active 06:00–20:00. The "WhatsApp photos" guess was wrong.
+  - Facility manager: **a reader**. They come for units, documents and the schedule. Ordering and
+    QR scans are rare.
+  - New secondary group: the **other service companies already on the platform**. They need their
+    current flows to keep working.
+- **Jobs (3).**
+  - P2 is served better than thought: 6 → 7.
+  - New, already served fairly well: **L1, looking up units and documents** (8 / 6).
+  - The biggest gaps are still P1, P5 and the checklist (E1, unmet since 2019).
+- **Journeys (4).**
+  - The engineer's current state is the app with photos, materials, hours and signatures, not
+    paper and WhatsApp. The pain is no checklist, free-text findings, and being online only.
+  - The facility manager gets status emails after acceptance and can see the order and its date.
+    The waiting pain is smaller than claimed; the audit pain stands.
+  - "No signal" is a confirmed gap.
+- **Success (5).** The north star stands; its baseline of zero checklists is confirmed. More guard
+  rails and measurable indicators are added there.
+- **For the designers (6–7).** Branding must work per tenant (the `default` family exists beside
+  `shltr`), not only for SHLTR. The portal's home should serve reading first: units, documents,
+  schedule.
+
 ## 1. Problem brief
 
 - **Problem.** The status of a customer's doors, docks and levellers is scattered across Excel
@@ -141,6 +266,8 @@ wins. [I: CO p3, p5; My24]
   one or more sites. [S: RIE p2]
 - **Use.** An **occasional visitor**: a few times a month, around a breakdown, an audit or a
   budget meeting. The proposal says "dagelijks" (daily); weekly is more realistic. [S: RIE p11; G]
+  **Mostly a reader:** at Riedel, 15 days held 167 equipment reads, 83 document reads and 58
+  schedule views, against 3 orders and 7 QR scans. [S: My24 prod-logs]
 - **Setting.** An office PC, or a phone on the shop floor; reports breakdowns by the QR code on the
   unit. [S: My24]
 - **Sophistication.** Must understand the status "in één oogopslag" (at a glance). [S: CO p2]
@@ -168,11 +295,12 @@ wins. [I: CO p3, p5; My24]
 | #   | Persona          | When… I want to… so I can…                                                                                                                                                                         | Imp. | Served |   Gap |
 | --- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---: | -----: | ----: |
 | P1  | Planner          | When I start my day or an alert comes in, I want to see every unit that's critical or overdue across all customers, so I can plan it before the customer notices.                                  |    9 |      3 | **6** |
-| P2  | Planner          | When a breakdown or critical finding comes in, I want to accept it, create the order with the right units, assign the engineer and reserve the part in one flow, so I get a first-time fix.        |    9 |      6 |     3 |
+| P2  | Planner          | When a breakdown or critical finding comes in, I want to accept it, create the order with the right units, assign the engineer and reserve the part in one flow, so I get a first-time fix.        |    9 |      7 |     2 |
 | P3  | Planner          | When a period starts, I want the year's inspections and contract visits per unit laid out, so I can fill the agenda without counting by hand.                                                      |    8 |      3 |     5 |
 | P4  | Planner          | When an engineer finishes, I want the checklist results to update condition, inspection date and status, and the report to reach the customer, so I can stop chasing paperwork.                    |    8 |      4 |     4 |
 | P5  | Planner          | When a finding says a part is worn, I want the matching article offered or quoted to the customer, so I can sell the repair instead of waiting for the breakdown.                                  |    7 |      1 | **6** |
 | E1  | Engineer         | When I stand at a unit, I want its fixed checklist and history on my phone, so I can tick it off, record findings with a photo, get a signature and move on, with no typing in the van afterwards. |    8 |      3 |     5 |
+| L1  | Facility manager | When a question comes up about a unit, I want its details, documents and planned visits, so I can answer without calling SHLTR. [S: My24 prod-logs]                                                |    8 |      6 |     2 |
 | C1  | Facility manager | When an audit, breakdown or budget meeting comes up, I want all my units with status and reports, so I can show we're safe and compliant.                                                          |    8 |      3 |     5 |
 
 Scores are the owner's judgement [I/G].
@@ -195,11 +323,11 @@ Emotional and social jobs:
 
 **What they hire today.**
 
-| Who              | Today                                             | Strengths                                                                                     | Weaknesses                                                 | Switching cost                                                    |
-| ---------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------- |
-| Planner          | My24Service, plus Excel, email, phone and memory  | Orders, the planning board, signatures and QR reporting all work, and customers are onboarded | Free-text states, no checklists, no ranking, no part links | High: customers, QR codes, the app and history all live there     |
-| Engineer         | My24Service app, paper or memory, WhatsApp photos | Familiar; signing works                                                                       | Free text, no checklist                                    | The new tool must be at least as fast                             |
-| Facility manager | Supplier PDFs, Excel, email                       | —                                                                                             | Nothing is in one place                                    | Low, if SHLTR fills the data (it does the inventory) [S: RIE p11] |
+| Who              | Today                                                                                       | Strengths                                                                                     | Weaknesses                                                 | Switching cost                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------- |
+| Planner          | My24Service, plus Excel, email, phone and memory                                            | Orders, the planning board, signatures and QR reporting all work, and customers are onboarded | Free-text states, no checklists, no ranking, no part links | High: customers, QR codes, the app and history all live there     |
+| Engineer         | My24Service app (hours, km, materials, photos, signatures; online only), checks from memory | Familiar; signing works                                                                       | Free text, no checklist                                    | The new tool must be at least as fast                             |
+| Facility manager | Supplier PDFs, Excel, email                                                                 | —                                                                                             | Nothing is in one place                                    | Low, if SHLTR fills the data (it does the inventory) [S: RIE p11] |
 
 ## 4. Journeys
 
@@ -233,13 +361,13 @@ Times and feelings are [G]; the My24Service steps are [S].
 
 ### (b) The engineer: one inspection with a rejected point
 
-| Phase          | Today                                                                                                                                 | Desired                                                                                                                                                                              |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Arrive         | Opens the order in the app; the unit's history is hard to see (5–10 min).                                                             | **Scans the unit's QR code** (or picks it from the order), and sees the unit card: last inspection, open findings, condition [S: SOL p6].                                            |
-| Inspect        | NEN checks from memory or paper; gloves, ladder, cold (20–30 min).                                                                    | The fixed checklist for the unit's type, **one point at a time, big goed / afkeur / n.v.t. (good / rejected / not applicable) buttons**, **fully offline**. [S: RIE p10; I: offline] |
-| Rejected point | Cables frayed at the drum, none on the van; a WhatsApp photo to the office and a free-text note. "Hopefully someone follows this up." | One tap: afkeur, a photo and a short note; **the matching part is suggested** and becomes a follow-up for the office [S: PB p7]. Relieved.                                           |
-| Sign           | Hunts for the contact; both sign one PDF for the whole order (5–15 min).                                                              | The customer signs once for the visit; the report shows per unit what was checked and rejected; condition, inspection date and status update by themselves [S: CO p2].               |
-| Leave          | Phones the office about the part.                                                                                                     | No call needed.                                                                                                                                                                      |
+| Phase          | Today                                                                                                                                                                          | Desired                                                                                                                                                                              |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Arrive         | Opens the order in the app; the unit's history is hard to see (5–10 min).                                                                                                      | **Scans the unit's QR code** (or picks it from the order), and sees the unit card: last inspection, open findings, condition [S: SOL p6].                                            |
+| Inspect        | NEN checks from memory or paper; gloves, ladder, cold (20–30 min).                                                                                                             | The fixed checklist for the unit's type, **one point at a time, big goed / afkeur / n.v.t. (good / rejected / not applicable) buttons**, **fully offline**. [S: RIE p10; I: offline] |
+| Rejected point | Cables frayed at the drum, none on the van; a photo in the app and a free-text note, linked to nothing (no part, no follow-up). "Hopefully someone follows this up." [S: My24] | One tap: afkeur, a photo and a short note; **the matching part is suggested** and becomes a follow-up for the office [S: PB p7]. Relieved.                                           |
+| Sign           | Hunts for the contact; both sign one PDF for the whole order (5–15 min).                                                                                                       | The customer signs once for the visit; the report shows per unit what was checked and rejected; condition, inspection date and status update by themselves [S: CO p2].               |
+| Leave          | Phones the office about the part.                                                                                                                                              | No call needed.                                                                                                                                                                      |
 
 - **Make-or-break.** The checklist at the unit. If it's slower than memory or fails without
   signal, engineers skip it, and P1 has no data. **Speed and offline are prerequisites.**
@@ -253,12 +381,12 @@ Times and feelings are [G]; the My24Service steps are [S].
 
 ### (c) The facility manager: a breakdown, and an audit
 
-| Phase    | Today                                                                                                                         | Desired                                                                                                                                                                     |
-| -------- | ----------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Breaks   | Dock 6 won't close; walks over, scans the QR code (if they remember) or phones. Anxious: trucks waiting, the cold store open. | Scans the QR code: the unit is already identified; two taps: storing (breakdown), a photo, "trucks waiting".                                                                |
-| Waits    | **Silence.** Calls again at 10:00. Frustrated. **Peak pain.**                                                                 | **Follows it like a parcel**: received → accepted → planned (engineer, time) → on the way → done, with a notification at each step. Reassured. [I: CO p5 "dezelfde status"] |
-| Resolved | The engineer fixes it; they sign; a PDF arrives by mail into a folder. Will it recur? Unknown.                                | The report sits on the unit's card; rejected parts show as "aandacht" with advice and a price to approve [S: EN p24–25].                                                    |
-| Audit    | Two weeks of collecting PDFs from email and suppliers into Excel. Anxious, days of work.                                      | Open the site, filter fire doors: all green or "gepland"; **one PDF per site with the history per year**; 10 minutes [S: RIE p9–10]. Safe, competent.                       |
+| Phase    | Today                                                                                                                                                                           | Desired                                                                                                                                                                     |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Breaks   | Dock 6 won't close; walks over, scans the QR code (if they remember) or phones. Anxious: trucks waiting, the cold store open.                                                   | Scans the QR code: the unit is already identified; two taps: storing (breakdown), a photo, "trucks waiting".                                                                |
+| Waits    | Until the planner accepts it, **silence**; after that, status emails and the order with its date in the portal [S: My24]. Calls when it takes long. Smaller than first thought. | **Follows it like a parcel**: received → accepted → planned (engineer, time) → on the way → done, with a notification at each step. Reassured. [I: CO p5 "dezelfde status"] |
+| Resolved | The engineer fixes it; they sign; a PDF arrives by mail into a folder. Will it recur? Unknown.                                                                                  | The report sits on the unit's card; rejected parts show as "aandacht" with advice and a price to approve [S: EN p24–25].                                                    |
+| Audit    | Two weeks of collecting PDFs from email and suppliers into Excel. Anxious, days of work.                                                                                        | Open the site, filter fire doors: all green or "gepland"; **one PDF per site with the history per year**; 10 minutes [S: RIE p9–10]. Safe, competent.                       |
 
 - **Make-or-break.** The first breakdown after go-live: if they report it in the portal and still
   have to phone to learn anything, they never use the portal again.
@@ -274,7 +402,7 @@ Times and feelings are [G]; the My24Service steps are [S].
 
 - **Six months after SHLTR fully runs on it:**
   - Planners have dropped Excel and stopped saying "I'll check and call you back".
-  - Every inspection is done on the checklist, and the WhatsApp photos have stopped.
+  - Every inspection is done on the checklist, and findings are per unit, not free text.
   - Customers report in the portal and stop phoning about status.
   - Riedel renews and adds assets, and audits are no stress.
   - Parts sales come from findings.
@@ -297,6 +425,10 @@ Times and feelings are [G]; the My24Service steps are [S].
   - **wrong statuses: a false "in orde" (all clear) on a fire door is a safety and liability
     risk**
   - an unspendable bonus shown as spendable [S: PB p6]
+  - **existing tenants' daily flows keep working**: Rite-Hite's work orders, hours and materials
+    above all [S: My24 prod-logs]
+  - the QR stickers already on site keep resolving
+  - copying orders between partners, with accept/reject, keeps working
 - **Leading indicators** [S: SOL p18; I: the selection]:
   - units registered with a type and checklist
   - visits closed with a completed checklist
@@ -385,35 +517,47 @@ How this discovery answers the open points of [ui-consistency.md](../plans/ui-co
   - "unknown" as a real state
   - normal shown quietly, exceptions in colour, which the plan already wanted
 - **Status the same in office and portal:** same words, same colours, same order.
+- **From version 1** (section 0):
+  - **Branding per tenant**, not only SHLTR's brand. The SHLTR theme is the first of several; a
+    tenant on the `default` family keeps a neutral theme.
+  - **The customer portal's home serves reading first:** units, documents, the schedule. Reporting
+    a breakdown stays one tap away (QR or a button).
+  - **The engineer views must work offline.**
+  - **Keep the shltr app's UX rules** (`my24-mobile/docs/ux-principles.md`): a stepped order form,
+    land on the list, show the photo.
 
 ## 8. Assumptions and risks
 
-- **The engineer persona is mostly guesswork.** Offline use, gloves, timings, the photo habit and
-  language are unverified. Risk: building a checklist that engineers skip, which starves the whole
+- **The engineer persona is partly guesswork.** The app's use is now known from version 1 (photos,
+  hours, materials, signatures, online only), but gloves, timings and language are unverified. Risk: building a checklist that engineers skip, which starves the whole
   product of data.
 - **The planner's day is inferred** from the business and from My24Service, not observed.
-- **How often facility managers use the portal** is optimistic in the material ("dagelijks") and
-  unknown in practice.
-- **Selling to installers like SHLTR** (not only manufacturers) isn't covered by the material.
-  Pricing, branding and data separation for peers are open.
-- **The numbers are unknown:** units under contract, engineers, planners, customers.
+- **Facility managers come weekly at most, mostly to read** (section 0). Whether condition and
+  inspection status will draw them in more often is unknown.
+- **Selling to installers is already the business** (about 24 tenants, Rite-Hite the heaviest),
+  but the presentations only cover manufacturers. The successor must win existing tenants over, not
+  only SHLTR's customers.
+- **The numbers are partly unknown:** units under contract, engineers and planners. SHLTR's own
+  volume in version 1 is low (19 orders in 15 days), which is unexplained.
 - **Three product names** (Installation Suite, SHLTR Connect, SOLOFY Connect) and the scope drift
   (energy, AI, sales pipeline) are the owner's own tensions.
 
 ## 9. Questions for the real product owner
 
-Ten minutes with him would settle the biggest guesses:
+Ten minutes with him would settle the biggest guesses. Version 1 answered some of the first list
+in part (section 0); what's left, and what it raised:
 
-1. How many units do you maintain under contract, and with how many planners, engineers and
-   customers?
-2. What do your engineers use today besides the My24Service app: paper checklists, WhatsApp, their
-   memory? Do they work offline in the halls?
+1. How many units do you maintain under contract, with how many planners and engineers? And why is
+   SHLTR's own volume in My24Service low: do the engineers work outside it, or through partners?
+2. Do your engineers need to work offline (cold stores, steel halls), and what do they still do
+   outside the app (paper checklists)?
 3. Can we spend half a day with a planner and ride along with an engineer for one morning?
-4. Who at a customer like Riedel actually opens the portal, and how often: the facility manager,
-   purchasing, the dock planner?
-5. Is the first market for selling the product manufacturers (Salvo/Castell) or installers like
-   SHLTR?
-6. Is the product's name SHLTR Connect, and is SOLOFY Connect the white label?
+4. Would condition and inspection status make customers come to the portal more often than they
+   read it now?
+5. How much do Rite-Hite and the other `default`-family tenants matter? Must the successor serve
+   them from day one, and is the manufacturer route (Salvo) next to that or instead?
+6. "SHLTR Connect" is already the name and the domain. Is SOLOFY Connect the white label? Must the
+   QR stickers on site keep resolving forever?
 7. The brand is night blue, white and mint. Should the office app wear it, or only the customer
    portal?
 8. Which mockup elements would you be sad to lose? (Our reading: the condition score, the four
@@ -422,6 +566,10 @@ Ten minutes with him would settle the biggest guesses:
 9. When a checklist point is rejected, should the office or the customer approve the part
    order?
 10. What would make you say, three months in, "this was worth it"?
+11. Quotations and invoices are barely used in version 1. Should they go, or become the
+    "commercial next step" (P5)?
+12. Do the staffing flavour (temps) and the Gripp, Teamleader and payroll integrations come along
+    to the successor?
 
 ## 10. Next steps
 
