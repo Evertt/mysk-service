@@ -10,11 +10,28 @@ theme), [lists](../reviews/ui-consistency/lists.md),
 [modules](../reviews/ui-consistency/modules.md) and [portals](../reviews/ui-consistency/portals.md).
 How Lagoon copies the mockup is in [shltr-style.md](shltr-style.md).
 
+A second, independent audit of the office app is included:
+[office-audit-2](../reviews/ui-consistency/office-audit-2.md), by another model, in Dutch, at
+1600 px and at a 1038 px window. The narrow window and the longer Dutch words surfaced layout
+breakage that 1440 px in English hides. Findings taken from it are marked _(audit 2)_. Where this
+plan disagrees with it:
+
+- The dashboard's `stacked` tile is the target, not the outlier.
+- `/checklists/settings` has no actions because a planner can't edit it.
+- The chart palette is deliberate (the colours map to statuses), so it shouldn't be desaturated.
+
+**Lesson for later reviews:** capture at 1024, 1280 and 1440 px, in Dutch as well as English.
+
 ## The diagnosis in short
 
 The foundation is good and mostly consistent: `PageHeader`, `ListLayout`/`ListToolbar`,
 `RecordPage`, `RecordForm`, `EnumBadge`, and Lagoon's calm base (grey page, white hairline cards,
-muted inputs, tinted square status badges). About 50 pages already follow it.
+tinted square status badges). About 50 pages already follow it. Two problems sit underneath every
+page:
+
+- **The layout breaks below about 1280 px.** The breakpoints go by the window, not by the content
+  area beside the sidebar.
+- **Hidden scrollbars hide content.** The sidebar and the tables give no sign that there's more.
 
 The inconsistency comes from one source: each mockup page brought its own composition. These are
 the components that [shltr-style.md](shltr-style.md) lists under "what a theme can't do": the
@@ -75,10 +92,18 @@ The number in brackets points to the detailed finding (e.g. lists 2).
    (lists 17)
 4. **M. Tab titles.** A 403 page's tab is titled "Something went wrong", and edit pages use three
    title patterns ("Edit A28XK6BQSK" is the serial, not the name). (shell 8; details 18)
+5. **M. Links to a module's settings sit in three places.** In the header actions (invoices); as a
+   button under the title on the left (maintenance, energy, partner programme, parts shop
+   products); inside the banner (condition, docks). The settings pages are named in five patterns
+   ("Facturatie-instellingen", "Instellingen onderdelenbeheer", "Salvo-koppeling",
+   "Energie-instellingen", "Onderhoudsinstellingen"). _(audit 2)_
+6. **L. Names said twice.** The breadcrumb repeats the title ("Onderhoudsplannen >
+   Onderhoudsinstellingen" on maintenance and energy settings), and the contract subtitle repeats
+   the level ("Servicecontract Standaard voor …"). _(audit 2)_
 
 ### Lists
 
-5. **H. Seven filter dialects.**
+7. **H. Seven filter dialects.**
    - The standard Filter menu.
    - Equipment adds category chips.
    - Condition adds KPI tiles, customer chips and a checkbox.
@@ -90,20 +115,51 @@ The number in brackets points to the detailed finding (e.g. lists 2).
 
    (lists 2; modules 11)
 
-6. **M–H. Lists outside the list kit, with no search, sort, column toggle or saved views.** These
+8. **M–H. Lists outside the list kit, with no search, sort, column toggle or saved views.** These
    are parts shop orders, parts shop products, the activity feed, checklist templates, energy
    alerts and partner programme years. Products also has a visible "Edit" button per row instead
    of the "…" menu. (lists 3, 6)
-7. **M. Default columns too wide for 1440 px.** Orders, equipment and condition clip their last
+9. **M. Default columns too wide for 1440 px.** Orders, equipment and condition clip their last
    column under the sticky action column, with no scroll cue. (lists 9)
-8. **H on phones. Every office list is a table that scrolls sideways.** Two columns show; status,
-   priority and amount are off-screen. (lists 10)
-9. **M. Header actions on phones.** "New x" drops to its own row; invoices stacks three buttons on
-   two rows; maintenance's toolbar wraps to three lines. (lists 7, 11)
+10. **H on phones. Every office list is a table that scrolls sideways.** Two columns show; status,
+    priority and amount are off-screen. (lists 10)
+11. **M. Header actions on phones.** "New x" drops to its own row; invoices stacks three buttons on
+    two rows; maintenance's toolbar wraps to three lines. (lists 7, 11)
+12. **M. Two toolbar menus can be open at once.** Saved views and View overlap, and one hides the
+    other's first items. _(audit 2)_
+13. **M. The schedule's controls move per view.** The view switch sits beside the arrows in month,
+    below them in week, and on a row of its own in day. Only month shows the order-type legend.
+    Month chips truncate to "08:30 Rie…". _(audit 2)_
+14. **L. Mixed cells.** Materials' stock column puts a warning badge and "0 st." in one
+    right-aligned cell. _(audit 2)_
+
+### Narrow windows and scrolling _(audit 2)_
+
+15. **H. The sidebar is cut off with no sign of it.** `sidebar-content.svelte:22` sets
+    `no-scrollbar`. At a laptop's height the nav doesn't fit, so a planner sees only "Service
+    contracts" under Modules; Energy, Invoicing and Partner programme are below the fold. The
+    tables hide their scrollbars too. Nothing tells the user there's more.
+16. **H. `/maintenance` scrolls the whole page sideways at narrower widths.** The period select
+    makes the content 886 px wide in a 782 px column, and the header pans with it. The toolbar
+    never wraps (`sm:flex-nowrap` with `shrink-0` controls), so any extra tool overflows.
+17. **H. The detail side column gets too narrow.** `RecordPage`'s `lg:grid-cols-3` goes by the
+    window. With the sidebar open, a 1038 px window leaves the side column 229–245 px wide, and its
+    two-column label/value grids about 97 px per column. That breaks:
+    - Text: "Ambachtswe g 74", "AangemaaktGepland", and "facilita…" clipped.
+    - The invoice's "Toevoegen aan de factuur" card: the price is cut off.
+    - The activity card on engineers and materials: the title bar floats, and "View all" sits
+      above the title.
+
+    The fix is layout by the content's width (container queries), not another column count.
+
+18. **M. Crushed and clipped panels.**
+    - The checklist asset panel's title collapses to about 50 px, and "Keuring 2026" overlaps it.
+    - Energy settings' "Locaties en codes" clips the Doors column (the zone list doesn't wrap).
+    - Long emails are truncated in one place and broken mid-word in another.
 
 ### Status, badges, colour
 
-10. **H. Five ways to show a status.**
+19. **H. Five ways to show a status.**
     - A tinted badge with an icon.
     - A badge with a chevron (inline edit, orders and engineers).
     - A tinted badge without an icon.
@@ -113,16 +169,18 @@ The number in brackets points to the detailed finding (e.g. lists 2).
     The normal state ("Operational", "Normal" priority) is coloured on every row, so it's noise.
     (lists 5, 14; portals 10)
 
-11. **M. Badge variants mean different things per theme.** Lagoon makes `secondary` info-blue, so
+20. **M. Badge variants mean different things per theme.** Lagoon makes `secondary` info-blue, so
     "Paused", "Enabled since" and counts look like the info tone. Partner levels are a second
     colour system: UPPERCASE metal variants in four colour families. Docks labels are uppercase.
-    "Nominal" and "Normal" both name one state on one page. (code-system 14, 15; modules 9)
-12. **H. Teal does every job.** Primary buttons, bands and banners, the logo, active nav, the
+    "Nominal" and "Normal" both name one state on one page. One value changes style between list
+    and detail: "Werktuigbouw" is blue in the engineers table and neutral on the engineer's page
+    _(audit 2)_. (code-system 14, 15; modules 9)
+21. **H. Teal does every job.** Primary buttons, bands and banners, the logo, active nav, the
     default badge, the bar before every section-card title (also on nested tiles and the login),
     the chips and the tile icons. Colour is decoration rather than meaning. (shell 2)
-13. **M. The primary button fails contrast.** White on `--primary` (teal-600) is about 3.7:1,
+22. **M. The primary button fails contrast.** White on `--primary` (teal-600) is about 3.7:1,
     below WCAG AA for 14 px text. (shell 4)
-14. **M. Hard-coded palettes outside the tokens.**
+23. **M. Hard-coded palettes outside the tokens.**
     - Energy: door card, building overview, consumption chart, hero.
     - Docks: drawing and display.
     - The navy wallet panel.
@@ -133,11 +191,11 @@ The number in brackets points to the detailed finding (e.g. lists 2).
 
 ### Cards, tiles, type, spacing
 
-15. **M. Card titles change size with the card's structure.** 14 px with a teal bar when the
+24. **M. Card titles change size with the card's structure.** 14 px with a teal bar when the
     header is followed by content; 16 px when the card has a header only. A title-only header is
     49 px tall against 70 px with a description, so the headers in one row don't line up. Small
     blocks on phones carry about 25% chrome. (shell 3; details 8; portals 9)
-16. **M. Several KPI tiles.**
+25. **M. Several KPI tiles.**
     - Five `StatTile` layouts.
     - Energy's `KpiTile`, which takes its tone as a class string.
     - Section cards used as tiles (energy zone, energy portal, with empty bodies).
@@ -145,9 +203,10 @@ The number in brackets points to the detailed finding (e.g. lists 2).
     - Customer detail's row layout.
 
     Their colours are decorative: open doors are blue, and a "0 not locked" is red although 0 is
-    good. (code-system 10; details 2; modules 7; portals 8)
+    good. Tiles in one row differ in height when one has a footer note _(audit 2)_. (code-system
+    10; details 2; modules 7; portals 8)
 
-17. **M. The type scale drifts.**
+26. **M. The type scale drifts.**
     - h1 is text-2xl or text-xl.
     - The subtitle is 16 px under a 24 px h1.
     - Font sizes off the scale: 25 uses of 10–11 px (`text-[0.6875rem]`, `text-[0.625rem]`), and
@@ -156,9 +215,9 @@ The number in brackets points to the detailed finding (e.g. lists 2).
 
     (code-system 6, 8; shell 14, 15)
 
-18. **L–M. Radii.** 4, 6, 8 and 10 px plus pills all appear on one screen. Lagoon promises 8 px.
+27. **L–M. Radii.** 4, 6, 8 and 10 px plus pills all appear on one screen. Lagoon promises 8 px.
     (code-system 9; shell 5)
-19. **M. Widths.**
+28. **M. Widths.**
     - Settings and form pages use `max-w-2xl`, `max-w-3xl`, `max-w-4xl` and `max-w-5xl`, or none
       (`RecordForm`).
     - Page actions sit at the far right of 1440 px while the content stops at 672 px.
@@ -166,25 +225,30 @@ The number in brackets points to the detailed finding (e.g. lists 2).
 
     (code-system 12; modules 4; details 9; portals 13)
 
-20. **L–M. Four or more empty-state styles.** These are `Empty` with an icon, `Empty` without one,
+29. **L–M. Four or more empty-state styles.** These are `Empty` with an icon, `Empty` without one,
     `Empty` with a border, a plain `<p>` in a card, and a table row. (code-system 17; details 16;
     portals 17)
 
 ### Detail pages and forms
 
-21. **H. Destructive actions are styled per page.** Delete is red (the majority), but the
+30. **H. Destructive actions are styled per page.** Delete is red (the majority), but the
     location's Delete and the shop order's Cancel are neutral, and Void is red. The header actions
     run from 0 to 4 buttons, and the primary comes first on some pages and last on others.
     (details 1, 4)
-22. **H. Unbounded related lists.** Materials detail is 9,649 px (all usage and stock history);
+31. **H. Unbounded related lists.** Materials detail is 9,649 px (all usage and stock history);
     engineers lists 32 open orders; contracts lists 19 units. Customers and equipment cap at 10
     with "View all". (details 3)
-23. **M. Detail layouts.** Columns (the majority), masonry (equipment, chosen on purpose, see
+32. **M. Detail layouts.** Columns (the majority), masonry (equipment, chosen on purpose, see
     [equipment-masonry.md](equipment-masonry.md)), and two unrelated "document" pages: the invoice
     and the work order. On phones the facts come after the big tables. (details 6, 14, 17)
-24. **M. Forms.**
-    - Selects are white while inputs are grey.
+33. **M. Forms.**
+    - **Text fields look disabled** _(audit 2)_. Lagoon gives inputs, textareas and input groups a
+      grey `bg-muted/60` fill whose border barely shows (`lagoon.ts:133-141`), while selects are
+      white with a border. Side by side ("Naam" next to "Segment"), the text fields read as
+      disabled. Making the selects grey too would make everything look disabled.
     - Grids leave holes and misalign under hints.
+    - The new invoice's "Wat je factureert" card is blank until a customer is chosen, with no
+      explanation _(audit 2)_.
     - Native dd/mm/yyyy dates ignore the locale.
     - The invoice detail has three ad-hoc inline forms with larger labels.
     - Tall forms keep their buttons at the very bottom.
@@ -193,23 +257,24 @@ The number in brackets points to the detailed finding (e.g. lists 2).
 
 ### Module pages
 
-25. **H. Settings pages share a layout in 5 of 11 cases.** `ModuleSettingsPage` serves invoices,
+34. **H. Settings pages share a layout in 5 of 11 cases.** `ModuleSettingsPage` serves invoices,
     maintenance, condition, energy and docks; the others roll their own. The "Only owners and
     admins…" notice comes in five placements and wordings, and planners see it on pages they
     can't edit. (modules 2, 3)
-26. **M. Module dashboards are demo-length.** Docks is 2,900 px with explainer cards that never
+35. **M. Module dashboards are demo-length.** Docks is 2,900 px with explainer cards that never
     change. Energy site is 6,500 px (12,000 on a phone) and carries the whole alerts list again.
     Schedule is 4,600 px with a 41-card backlog. Condition's four explainer cards push its table to
-    1,500 px down on a phone. (modules 10, 12; lists, condition)
+    1,500 px down on a phone. Energy's index is the opposite: one card a third of the page wide,
+    with no list, search or call to action _(audit 2)_. (modules 10, 12; lists, condition)
 
 ### Shell, dashboard, portals
 
-27. **M. Top bar clutter.** Four unlabelled icons plus a theme picker (a dev feature) for every
+36. **M. Top bar clutter.** Four unlabelled icons plus a theme picker (a dev feature) for every
     user, the login page included. The customer portal's top bar squeezes the customer's name to
     "Riedel…". (shell 7; portals 4)
-28. **M. The sidebar groups aren't a model.** "Records" holds modules (Work orders, Components,
+37. **M. The sidebar groups aren't a model.** "Records" holds modules (Work orders, Components,
     Docks…) and "Modules" holds others. "Work orders" sits next to "Orders". (shell 6)
-29. **M–H. The dashboard, the first screen.**
+38. **M–H. The dashboard, the first screen.**
     - Nine tiles in a 7-column grid, with two orphans.
     - "View" buttons on 4 of the 9 tiles.
     - Masonry columns of unequal height.
@@ -218,24 +283,24 @@ The number in brackets points to the detailed finding (e.g. lists 2).
 
     (shell 9, 10)
 
-30. **M. Error pages.**
+39. **M. Error pages.**
     - The 404 renders without the shell.
     - It says "Not found" twice.
-    - Both 403 and 404 offer "Reload".
+    - Both 403 and 404 offer "Reload", and "Back" next to "Back to the dashboard" _(audit 2)_.
     - Settings is reachable by a planner whose sub-pages then 403.
 
     (shell 8)
 
-31. **M. Orders in four list formats.** The office table, the portal table and card pair, a
+40. **M. Orders in four list formats.** The office table, the portal table and card pair, a
     header-less shop table, and the engineer's `WorkCard`. (portals 3)
-32. **M. Portal mobile.**
+41. **M. Portal mobile.**
     - No visible navigation in the customer portal, and no persistent "Report a breakdown".
     - The engineer's buttons are 36 px.
     - "Complete job" sits 2,800 px down the page.
 
     (portals 5, 12)
 
-33. **M. The wallet three ways.** A navy panel, a teal callout, and plain rows. (portals 6)
+42. **M. The wallet three ways.** A navy panel, a teal callout, and plain rows. (portals 6)
 
 ### Bugs seen on the way (not style)
 
@@ -244,11 +309,14 @@ The number in brackets points to the detailed finding (e.g. lists 2).
 - The orders list's "select all" silently selects 100, the page size.
 - Energy index shows 0 kW for a site with live data on its own page.
 - The dashboard's three charts were blank in the capture. **Not verified live.**
+- The engineer portal's 404s show message keys: "Opdracht equipment niet gevonden", "Opdracht
+  locations niet gevonden" _(audit 2)_.
 
 ## What to keep (the mockups' good ideas)
 
-- Lagoon's base: grey page, white hairline cards without shadows, muted inputs, tinted square
-  status badges, pale-teal active nav, small-caps group labels. The login card.
+- Lagoon's base: grey page, white hairline cards without shadows, tinted square status badges,
+  pale-teal active nav, small-caps group labels. The login card. (Not the grey input fill: see
+  "Forms".)
 - `ListToolbar` and its mobile layout, the selection bar, and the two-line "primary + muted" cells.
 - Materials' "Low" and "Out of stock" badges, which show a state only when it's abnormal. That is
   the rule for all statuses.
@@ -280,8 +348,9 @@ kit's style allows, so the drift can't come back.
 | Type and radius | h1 24/600; subtitle 14 muted, `max-w-prose`; card title 14/600; body 14; meta 12; **nothing under 12** outside illustrations. Radius 8 for containers, 8 for controls, 4 for badges, full for chips and avatars.                                                                                                                                                                                               |
 | Width           | Office lists and details: full width. Forms and settings: one width (`max-w-4xl`) for the **whole page, header included**. Documents (invoice, work order, report): one `DocumentSheet`.                                                                                                                                                                                                                       |
 | Detail page     | `RecordPage` with columns (equipment keeps masonry). Actions: secondary outline; destructive (Delete, Cancel, Void) always red-tinted; primary last; more than 3 go into a "…" menu. Related lists capped at 10 with "View all" to the filtered list. On phones the first side card (the facts) comes first.                                                                                                   |
-| Form            | `RecordForm`: select fill equals input fill; hints don't break the grid; sticky action bar when taller than the viewport. The invoice's inline forms become one `InlineFormCard`.                                                                                                                                                                                                                              |
-| Settings        | `ModuleSettingsPage` for every module (add a "sections/table" slot), with one read-only notice shown only to viewers who can't edit.                                                                                                                                                                                                                                                                           |
+| Scrolling       | Scrollable areas show they scroll: a thin scrollbar in the sidebar, an edge fade on tables. Toolbars and header actions wrap instead of overflowing. Only one toolbar menu is open at a time. Layouts beside the sidebar respond to the content's width (container queries), not the window's.                                                                                                                 |
+| Form            | `RecordForm`: every field white with a visible border (the grey fill only as hover); hints don't break the grid; an empty dependent section says what unlocks it; sticky action bar when taller than the viewport. The invoice's inline forms become one `InlineFormCard`.                                                                                                                                     |
+| Settings        | `ModuleSettingsPage` for every module (add a "sections/table" slot), with one read-only notice shown only to viewers who can't edit. The link to it is always a header action; its title follows one pattern ("Settings: Invoicing"); no breadcrumb repeats the title.                                                                                                                                         |
 | Empty           | One `EmptyState` (icon, title, sentence, action) with a `compact` size for inside cards.                                                                                                                                                                                                                                                                                                                       |
 | Wallet          | One `WalletSummary` (compact and full); no navy panel, or navy exactly once.                                                                                                                                                                                                                                                                                                                                   |
 | Errors          | One error page inside the shell when signed in. A lock or search icon, a real title ("You don't have access", "Page not found"), one primary "Back to dashboard", no Reload.                                                                                                                                                                                                                                   |
@@ -296,7 +365,8 @@ writer per area, each adding its guard spec.
    - Darken `--primary` and add `--brand`.
    - Make `secondary` neutral.
    - Card titles 14/600 in every structure (and decision B).
-   - Select fill equal to input fill; theme the radio's `accent-color`.
+   - Fields: inputs, textareas and input groups white with a visible `--input` border, like the
+     selects (the grey fill only on hover); theme the radio's `accent-color`.
    - Badge text 12 px; radii per the table.
    - Subtitle 14 px (`page-header.svelte:77`).
    - Check the other five themes still look right (theme spec).
@@ -317,7 +387,10 @@ writer per area, each adding its guard spec.
      behind a closed "How it works").
    - Put parts shop orders, products, checklist templates and asset list, energy alerts, partner
      years and the activity filters onto `ListLayout` and the toolbar.
-   - Tune the default columns to fit 1440 px minus the sidebar, with a scroll fade.
+   - Tune the default columns to fit 1440 px minus the sidebar, with a scroll fade and a visible
+     scrollbar.
+   - The toolbar wraps instead of overflowing (drop `sm:flex-nowrap`/`shrink-0`; fixes
+     maintenance's sideways page). Opening one toolbar menu closes the other.
    - Guard spec: `FilterChips` only inside the kit's list parts (or delete it).
 4. **Status vocabulary.**
    - Every enum shown through `EnumBadge`; the normal state muted.
@@ -326,6 +399,8 @@ writer per area, each adding its guard spec.
    - "Nominal"/"Normal" become one word.
    - Guard spec: no `Badge` with an enum `label()` outside `EnumBadge`.
 5. **Detail pages and forms.**
+   - `RecordPage` columns by the content's width (container queries), and side-column key/value
+     grids that drop to one column when narrow (emails truncate with a copy button).
    - `RecordPage` actions rule (destructive tint, order, overflow menu).
    - Cap related lists at 10.
    - Facts first on phones.
@@ -335,7 +410,9 @@ writer per area, each adding its guard spec.
    - `InlineFormCard`.
    - One `EmptyState`.
 6. **Module pages.**
-   - Every settings page onto `ModuleSettingsPage` at one width.
+   - Every settings page onto `ModuleSettingsPage` at one width, with one title pattern and the
+     link as a header action.
+   - Schedule: one fixed control row in every view, the legend in every view.
    - Trim the dashboards: docks' explainers to a "How it works" disclosure or the settings page;
      the energy site's alerts list becomes a link with a count; cap the schedule backlog.
    - `KpiTile` becomes `StatTile`.
@@ -345,7 +422,8 @@ writer per area, each adding its guard spec.
    - Shell:
      - Top bar: bell and feedback; language, theme and colour mode move to the user menu; the
        theme picker only in dev or for owners.
-     - Sidebar grouped by task.
+     - Sidebar grouped by task, with a visible scrollbar (drop `no-scrollbar`); fewer groups also
+       makes it fit.
      - The order count as a pill.
      - Error pages.
      - Settings sub-pages hidden from those who can't open them.
@@ -359,7 +437,7 @@ writer per area, each adding its guard spec.
      - Engineer buttons `lg` and a sticky "Complete job".
      - `WalletSummary`.
 
-Then, as its own piece: **lists as cards on phones** (finding 8), built on `OrderCard` and
+Then, as its own piece: **lists as cards on phones** (finding 10), built on `OrderCard` and
 `ListLayout`'s row snippet.
 
 The bugs in "Bugs seen on the way" are separate small fixes.
