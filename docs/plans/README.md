@@ -20,6 +20,7 @@ status.
 | [table-wishes.md](table-wishes.md)                               | Wishes: row actions from bulk actions, inline editing, infinite scroll, click to filter                        |
 | [cloudflare.md](cloudflare.md)                                   | The app on Cloudflare Workers, its database in one Durable Object; live queries (built)                        |
 | [permissions.md](permissions.md)                                 | One way to ask who may read or change a record by its subject: a registry of rules per type (design)           |
+| [ui-consistency.md](ui-consistency.md)                           | One look for every page: the inconsistencies of the SHLTR/Lagoon UI and the steps to converge (plan)           |
 
 ## The decisions in short
 
