@@ -167,3 +167,13 @@ Order of work:
    recorder touches.
 3. **Hover cards** after error handling is merged (it measures with its timing lines), and
    preferably after the equipment masonry (both touch the equipment page's cards).
+
+## Cloudflare features worth using (23 October 2026)
+
+Three ideas, not grilled yet, each using a Cloudflare feature the app doesn't use so far.
+
+| Plan                                           | Covers                                                                                               |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| [email-to-order.md](email-to-order.md)         | An intake address per tenant: Email Workers and Workers AI turn mail into orders awaiting acceptance |
+| [voice-notes.md](voice-notes.md)               | Engineers speak their notes: Whisper transcribes, a model drafts the work record, they confirm it    |
+| [service-report-pdf.md](service-report-pdf.md) | The signed work order rendered to PDF by Browser Rendering, kept in R2, mailed to the customer       |
