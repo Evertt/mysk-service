@@ -1,5 +1,10 @@
 # One look for the whole app: the UI consistency plan
 
+> **Read with the UX discovery** ([2026-10-23-fieldworks-discovery.md](../ux-discovery/2026-10-23-fieldworks-discovery.md)).
+> Its section 7 settles decisions A–D. It also turns step 1 from "tune Lagoon's teal" into a
+> theme built from SHLTR's own brand: night blue, white and mint. Its section 7 overrides this
+> plan where they differ.
+
 Review of 23 October 2026, of every page of `develop` (e5d7b392) as the shltr planner, engineer and
 customer, in the Lagoon theme, at 1440 px and 390 px. The per-area findings, with file references,
 are in [`docs/reviews/ui-consistency/`](../reviews/ui-consistency/):
