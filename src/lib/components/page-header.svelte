@@ -77,7 +77,7 @@
 				{@render badges?.()}
 			</div>
 			{#if description}
-				<p class="text-muted-foreground">{description}</p>
+				<p class="max-w-prose text-sm text-muted-foreground">{description}</p>
 			{/if}
 		</div>
 		{#if actions}
