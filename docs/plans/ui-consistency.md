@@ -11,6 +11,43 @@
 >
 > The discovery is an interview with a role-played product owner. Its open questions (section 9)
 > may still change these choices.
+>
+> **Evert's opinions** (below) override the discovery where they conflict: Lagoon stays the theme
+> to design for, decision A is reopened, and decision D is narrowed.
+
+## Opinions from Evert (23 October 2026)
+
+These come from Evert, not from the reviews or the role-played discovery, and they take
+precedence over both.
+
+1. **Lagoon stays.** The teal may be Lovable's default, but the client really seemed to like it.
+   - Lagoon must not be deleted or neglected.
+   - **Every UI change is made with Lagoon in mind.**
+   - A brand-based SHLTR theme (night blue, white, mint) may be made **next to it**, as a theme to
+     show the client and see how he likes it. It isn't a replacement.
+2. **Strong visuals are wanted.** The banners may be "demo only", but the striking visual they give
+   is desirable. Either keep the banners (the original recommendation for decision A: one
+   `OverviewHero` on dashboard landings), or find another way to give pages strong visual
+   elements. Pages should be more appealing to look at than bland data tables.
+3. **Beginners need explanation.** The explainer content as built may be pitch material, but
+   first-time tenants would appreciate a beginner-friendly UI that explains each feature, maybe
+   even with a guided tour.
+
+What this changes below, until the plan is reworked around them:
+
+- **Step 1** builds the fixes into **Lagoon**: contrast, neutral `secondary`, card titles, field
+  fills, badge size, radii. The SHLTR theme becomes an optional extra step for the client to
+  compare. It isn't made the default.
+- **"Teal does every job" (finding 21) still stands as a finding.** The cure is giving teal fewer
+  jobs within Lagoon, not dropping it.
+- **Decision A is open again.** Don't delete `PageBanner` and `HeroBanner` in step 2 until it's
+  decided. Options:
+  - Keep one `OverviewHero` on dashboard landings, as first recommended.
+  - Find other strong visual elements that sit inside the consistent system.
+- **Decision D is narrowed.** The explainer cards still leave the working pages, but their
+  content moves to **onboarding**, not away. That could be a first-run explanation per module, a
+  dismissable "How it works" panel, or a guided tour for new tenants. This is a piece of work of
+  its own, to design after the consistency steps.
 
 Review of 23 October 2026, of every page of `develop` (e5d7b392) as the shltr planner, engineer and
 customer, in the Lagoon theme, at 1440 px and 390 px. The per-area findings, with file references,
@@ -385,7 +422,8 @@ Steps 3–7 touch disjoint files after step 2, so they can run as parallel sessi
 writer per area, each adding its guard spec.
 
 1. **A SHLTR theme from the brand** (a new `src/lib/themes/shltr.ts`, made the default; Lagoon
-   stays as one of the themes).
+   stays as one of the themes). **Superseded by Evert's opinion 1:** the fixes below go into
+   Lagoon, which stays the default. The SHLTR theme is an optional extra to show the client.
    - Start from Lagoon's calm base: grey page, white hairline cards, tinted square status badges.
    - Tokens from the brand:
      - `--primary` mint, AA with its text.
@@ -410,7 +448,8 @@ writer per area, each adding its guard spec.
    - Move equipment, schedule, docks, condition, checklists, energy site, energy report, the
      dashboard, the work order and all portal pages onto it.
    - Delete `ToolbarBand` and `CategoryChips`.
-   - Delete `PageBanner` and `HeroBanner` too (decision A).
+   - Delete `PageBanner` and `HeroBanner` too (decision A). **On hold:** decision A is reopened
+     (Evert's opinion 2).
    - Schedule's period navigation and view switch move into a neutral toolbar row
      (`SegmentedNav`, default variant).
    - Rename the titles to match the nav (finding 3).
@@ -489,9 +528,11 @@ The bugs in "Bugs seen on the way" are separate small fixes.
 ## Decisions (settled by the UX discovery, section 7)
 
 - **A. Hero banners: none.** The owner calls the big banner headers "demo only". `PageHeader`
-  everywhere.
+  everywhere. **Reopened by Evert's opinion 2:** strong visuals are wanted.
 - **B. The coloured bar before card titles: dropped.** Colour is for status and action only.
 - **C. Lists as cards on phones: yes for the engineer and the customer.** The planner works at a
   desk, so the office lists stay dense tables, tuned for width.
 - **D. Explainer content on module dashboards: off the working pages.** It was pitch material. If
-  a module needs an explanation, it goes to its settings page or the docs.
+  a module needs an explanation, it goes to its settings page or the docs. **Narrowed by Evert's
+  opinion 3:** the explanations become beginner onboarding (first-run explanations, maybe a
+  guided tour) for new tenants.
