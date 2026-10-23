@@ -180,6 +180,6 @@ Three ideas, not grilled yet, each using a Cloudflare feature the app doesn't us
 
 ## Undo (23 October 2026)
 
-[undo.md](undo.md) (design, not grilled): an Undo button on the toast for 30 seconds. Changes go
+[undo.md](undo.md) (design, grilled): an Undo button on the toast for 30 seconds. Changes go
 to the server at once; the server reverses them from the activity log, deletes hide the row until a
 purge, and outside effects wait out the window.

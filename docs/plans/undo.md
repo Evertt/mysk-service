@@ -1,6 +1,6 @@
 # Undo
 
-A wish of 23 October 2026, not grilled yet. Its open questions are at the end.
+A wish of 23 October 2026, after grilling (Q1–Q11 below). Not built yet.
 
 ## Problem
 
@@ -9,6 +9,22 @@ deleted, a bulk action on 40 rows. The toast says it's done, but a slip can't be
 delete, a confirmation dialog stands in for undo, and it slows down every delete made on purpose.
 
 The wish: the change shows at once, as now, and its toast offers **Undo** for 30 seconds.
+
+## Decisions (grilling)
+
+| #   | Decision                                                                                                                                                                                                                                      |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Q1  | **Only your own changes** can be undone. Undoing a colleague's change from the history is a different feature, for later.                                                                                                                     |
+| Q2  | **30 seconds for everything**: the toast, the server's check (plus a few seconds of grace), the purge of hidden records, and the delay of effects outside the app. One constant.                                                              |
+| Q3  | **A single delete of a type with undo has no confirmation dialog**: the toast's Undo replaces it. Bulk deletes keep their dialog, and so do the deletes of types without undo.                                                                |
+| Q4  | **Orders and units** get the hidden-then-purged delete in the first version. Every other type keeps its hard delete, without Undo and with its dialog.                                                                                        |
+| Q5  | A hidden unit's **serial number stays taken** until the purge. Creating one with it within those seconds gets the existing "serial taken" refusal. Nothing to build.                                                                          |
+| Q6  | **No redo.** The undo's own toast just says "Undone".                                                                                                                                                                                         |
+| Q7  | **The history keeps every entry**: the original, marked undone, then an `"undone"` entry with the fields put back. One new activity action.                                                                                                   |
+| Q8  | **Undo is opt-in per mutation**: a command returns an undo token only when its code says how it's undone. The first version opts in the orders' and units' edits, inline cells, status, assigning and deletes. Modules follow when they want. |
+| Q9  | **The token lives in the toast only.** A reload or a closed tab ends it; client-side navigation keeps it.                                                                                                                                     |
+| Q10 | **Ctrl/Cmd+Z** undoes the newest open toast's change, unless focus is in a text field.                                                                                                                                                        |
+| Q11 | **Undo never navigates.** Undoing a delete made on a detail page leaves you on the list, where the record reappears.                                                                                                                          |
 
 ## Two ways considered
 
@@ -34,13 +50,14 @@ new values (`ActivityChanges`). That's what an undo needs for an update.
   the entry's id, or for a bulk action (`bulkChange()`) a group id that its entries share (a new
   `activity.groupId` column).
 - One server command, `undo({ token })`, gated `forMembers`. It checks:
-  - the entries are this tenant's and this user's;
+  - the entries are this tenant's and this user's (Q1);
   - they're younger than the window (30 s, plus a few seconds for latency, checked on the server);
   - they weren't undone yet.
 
-  Then it reverses them in one transaction, newest first, and logs the undo itself (`"undone"`,
-  pointing at the entry it reverses). The live feeds and the record's history update as for any
-  change.
+  Then it reverses them in one transaction, newest first. It marks each original entry undone (a
+  new `activity.undoneAt` column) and logs the undo itself as an entry with the new action
+  `"undone"`, which lists the fields put back and points at the original (Q7). The live feeds and
+  the record's history update as for any change.
 
 - **Nothing is overwritten silently.** A field is only put back if it still has the value the entry
   set. If someone changed it since, the undo is refused for that record: "Changed by Anna since". In
@@ -49,19 +66,26 @@ new values (`ActivityChanges`). That's what an undo needs for an update.
 
 ### How each kind of change is undone
 
-Every mutation that offers undo says how, on the server, next to the code that makes the change:
+Undo is **opt-in** (Q8). A mutation offers it only when it says how it's undone, on the server, next
+to the code that makes the change; only then does its command return an undo token. That way no
+toast offers an undo that would be wrong: undoing only the logged fields of an order line whose
+quantity moved stock would leave the stock wrong. The ways:
 
-- **Field changes** (most edits, inline cells, assigning an engineer): undone from the entry's
-  changes. This is the default and needs no code per mutation.
+- **Field changes** (edits, inline cells, assigning an engineer): undone from the entry's changes.
+  No code per mutation besides opting in.
 - **Status changes of an order:** back through `transitionOrder()` with the status it had, so stock
   moves, completion dates and module hooks (`saveOrderParts`) reverse the normal way. If the
   lifecycle table (`#lib/orders/lifecycle.ts`) doesn't allow the move back, there's no undo. That
   covers completion with signatures and invoicing.
 - **Creates:** undone as a delete, with the same checks as a delete by hand (`defineRemoval`'s
-  blockers).
+  blockers). Not in the first version: a create's form redirects to the new record's page.
 - **Deletes:** see below.
-- **Not undoable:** sending something, invoicing, sign-off, anything a module marks so. Their toast
-  has no Undo button, and their confirmation dialog stays.
+- **Everything else** (sending something, invoicing, sign-off, and every mutation that hasn't opted
+  in): no Undo button, and its confirmation dialog stays.
+
+The first version opts in, for orders and units: their edit forms, their inline cells, an order's
+status, assigning an engineer, the bulk actions on those fields, and their deletes. Modules opt in
+their own mutations when they want.
 
 ### Deletes: hidden first, removed later
 
@@ -70,7 +94,9 @@ a snapshot, with its lines, notes, units, stock moves and module records, is the
 don't:
 
 - A delete of a record type that offers undo sets `deletedAt` on its row, and only on that row. Its
-  children stay as they are.
+  children stay as they are. In the first version: orders and units (Q4).
+- A **single** delete of such a type has no confirmation dialog any more; the toast's Undo replaces
+  it. Bulk deletes keep theirs, since they say how many records and which are skipped (Q3).
 - A **purge** removes the rows for real once the window has passed. It runs as a Durable Object
   alarm on Cloudflare and a timer on Node, and also catches up on start for any it missed. It runs
   `defineRemoval`'s delete path, so cascades and module cleanup run as they do today, only later.
@@ -81,6 +107,9 @@ don't:
 - Refusals stay as they are: `blockers` are checked when the user deletes, not when the purge runs.
   If the purge is refused anyway (a reference made in the meantime), the row stays deleted-hidden.
   The error log says so; that should never happen.
+- **Unique keys:** a hidden unit's serial number stays taken until the purge, about 30 seconds.
+  Creating a unit with it meanwhile gets the existing "serial taken" refusal (Q5). Order numbers are
+  never reused, so they don't clash.
 
 ### Effects outside the app wait out the window
 
@@ -98,41 +127,38 @@ the tray drops them. Live feeds need nothing: the undo is a change like any othe
   actions' run) read the undo token from the result. If there is one, the success toast gets an
   **Undo** action and lasts 30 seconds. `svelte-sonner` supports both.
 - Undo calls `undo({ token })` and refreshes what the original command refreshed (`.updates(...)`).
-  The optimistic update reverses at once, and the server's answer settles it.
+  The optimistic update reverses at once, and the server's answer settles it. The undo's own toast
+  says "Undone", without a Redo (Q6).
+- **Undo never navigates** (Q11). A delete on a detail page goes to the list, as now. Undo there
+  makes the record reappear in the list, and you stay on it.
 - One toast per change. A second change doesn't cancel the first one's Undo.
-- The keyboard: Ctrl/Cmd+Z undoes the newest toast's change while it's open, unless focus is in a
-  text field.
+- **Ctrl/Cmd+Z** undoes the newest open toast's change, unless focus is in a text field (an input,
+  a textarea, a contenteditable) (Q10).
+- **The token lives in the toast only** (Q9): client-side navigation keeps the toast, a reload or a
+  closed tab ends it. The change then simply stays.
 - No undo in the engineer and customer portals for now.
 
-## Open questions
+## Out of scope
 
-1. **Whose changes can be undone?** Only your own, is the proposal. A manager undoing a colleague's
-   change is "reverting from the history", a different feature.
-2. **Is the window 30 s exactly?** After it, the toast's button goes away; the server allows a few
-   seconds more. Or longer for deletes (e.g. 5 minutes), since the purge can wait anyway?
-3. **Do deletes lose their confirmation dialog** once they can be undone? Single deletes probably
-   yes; bulk deletes of hundreds of records maybe keep it.
-4. **Which record types get soft delete first?** Orders and units, where the list shows a delete. The
-   others keep hard deletes and simply offer no undo until they're added.
-5. **Unique keys while hidden.** A deleted unit's serial number stays taken until the purge. Is
-   "serial in use" for a few seconds acceptable, or does the check ignore hidden rows (and the purge
-   then has to handle the clash)?
-6. **Undo of an undo (redo)?** Proposed: no. The undo's own toast just says "Undone".
-7. **Is the undo visible in the history?** As a "undone" entry under the original, or should both
-   entries collapse into nothing? Keeping both is honest, and simpler.
-8. **Module changes:** a module's mutation gets field undo by default. Does a module have to declare
-   "undoable" explicitly, or opt out?
-9. **Several tabs:** the token lives in one tab's toast only. Undo after a reload is out of scope.
+- Undoing other people's changes, or reverting from the history (Q1).
+- Redo (Q6).
+- Undo after a reload, in another tab, or from a list of recent changes (Q9).
+- Undo in the engineer and customer portals.
+- Hidden-then-purged deletes for customers, engineers and the other types (Q4); each is a column, a
+  migration and opting in, later.
+- Undo of creates.
 
 ## Steps
 
-1. `recordActivity` returns the entry id; `activity.groupId` for bulk changes; the `undo` command for
-   field changes of orders, units and customers, with the "changed since" check. Undo in the toasts of
-   inline cells and edit forms.
+1. The opt-in, the token and the `undo` command, for field changes of orders and units:
+   `recordActivity` returns the entry id; `activity.undoneAt`; the `"undone"` action with its labels
+   (en and nl); the "changed since" check. The Undo action in `submitted()`'s toast, for the edit
+   forms and inline cells. Ctrl/Cmd+Z.
 2. Order status: undo through `transitionOrder()`, only where the lifecycle allows the move back.
-3. Bulk actions: one token per action, skips in the undo's result.
-4. Soft delete with purge for orders and units, the scoping helpers, the guard spec, and undo for
-   their deletes. Revisit the delete dialogs (question 3).
+   Assigning an engineer.
+3. Bulk actions: `activity.groupId`, one token per action, skips in the undo's result.
+4. Hidden-then-purged deletes for orders and units: `deletedAt`, the scoping helpers, the purge, the
+   guard spec, undo for their deletes, and their single deletes without a dialog.
 5. Delayed outside effects, and the bell skipping undone entries.
 
 ## Tests
@@ -145,7 +171,12 @@ the tray drops them. Live feeds need nothing: the undo is a change like any othe
   - South's token is refused for a North user, also when tampered with;
   - a bulk undo skips with reasons;
   - a status undo goes through the lifecycle;
+  - a mutation that hasn't opted in returns no token;
+  - the original entry is marked undone and an `"undone"` entry follows it;
   - a hidden record can't be read through any scoping helper;
   - the purge removes it with its children.
-- E2e, per section that offers it: change a status inline, press Undo and see it back; delete a
-  unit, press Undo and find it in the list. One tampered `undo` call with a foreign token.
+- E2e, per section that offers it:
+  - change a status inline, press Undo and see it back;
+  - delete a unit from its page (no dialog), press Undo on the list and find it there;
+  - Ctrl/Cmd+Z undoes, but not while typing in a field;
+  - one tampered `undo` call with a foreign token.
