@@ -177,3 +177,9 @@ Three ideas, not grilled yet, each using a Cloudflare feature the app doesn't us
 | [email-to-order.md](email-to-order.md)         | An intake address per tenant: Email Workers and Workers AI turn mail into orders awaiting acceptance |
 | [voice-notes.md](voice-notes.md)               | Engineers speak their notes: Whisper transcribes, a model drafts the work record, they confirm it    |
 | [service-report-pdf.md](service-report-pdf.md) | The signed work order rendered to PDF by Browser Rendering, kept in R2, mailed to the customer       |
+
+## Undo (23 October 2026)
+
+[undo.md](undo.md) (design, not grilled): an Undo button on the toast for 30 seconds. Changes go
+to the server at once; the server reverses them from the activity log, deletes hide the row until a
+purge, and outside effects wait out the window.
