@@ -6,8 +6,9 @@
  * module sets are a function, not a set, so the page explains them instead.
  *
  * The table is documentation: it says who gets through as data (`reaches`), and holds no role logic
- * of its own. A check is written as the part of its name after `require` (`checkName()`), so no
- * code of the app's gates is named here outside a comment.
+ * of its own. It names each gate's check as the app does (`requireMember`), and never imports or
+ * calls one: the guard that keeps `requireEngineer` to the auth files lets this file name it
+ * (`engineer-scope.spec.ts`).
  */
 type GateName =
 	| "forMembers"
@@ -40,8 +41,16 @@ export const gates: readonly {
 	admits: string;
 	/** What it is used for. */
 	forWhat: string;
-	/** The check it runs before the handler: what follows `require` in its name; none for none. */
-	check: "Member" | "Manager" | "Engineer" | "Customer" | "Tenant" | "User" | "Developer" | null;
+	/** The check it runs before the handler, by its name in the app; `null` for none. */
+	check:
+		| "requireMember"
+		| "requireManager"
+		| "requireEngineer"
+		| "requireCustomer"
+		| "requireTenant"
+		| "requireUser"
+		| "requireDeveloper"
+		| null;
 	/** The callers it lets through (a field engineer is linked to an engineer record). */
 	reaches: readonly CallerId[];
 }[] = [
@@ -49,49 +58,49 @@ export const gates: readonly {
 		name: "forMembers",
 		admits: "A signed-in member of the organization who isn't a field engineer: the office.",
 		forWhat: "Almost everything.",
-		check: "Member",
+		check: "requireMember",
 		reaches: ["admin", "planner"],
 	},
 	{
 		name: "forManagers",
 		admits: "An owner or admin of the organization.",
 		forWhat: "The organization's settings.",
-		check: "Manager",
+		check: "requireManager",
 		reaches: ["admin"],
 	},
 	{
 		name: "forEngineers",
 		admits: "A user linked to an engineer record.",
 		forWhat: "The engineer portal.",
-		check: "Engineer",
+		check: "requireEngineer",
 		reaches: ["engineer"],
 	},
 	{
 		name: "forCustomers",
 		admits: "A customer's contact, linked to one of the organization's customers.",
 		forWhat: "The customer portal; handlers scope every query to that customer and its sites.",
-		check: "Customer",
+		check: "requireCustomer",
 		reaches: ["customer"],
 	},
 	{
 		name: "forAnyRole",
 		admits: "Any member of the organization, field engineers and customers' contacts too.",
 		forWhat: "What every shell needs, such as the app shell's tenant.",
-		check: "Tenant",
+		check: "requireTenant",
 		reaches: members,
 	},
 	{
 		name: "forUsers",
 		admits: "Anyone signed in, with or without an organization.",
 		forWhat: "Functions that touch no tenant data.",
-		check: "User",
+		check: "requireUser",
 		reaches: [...members, "bare"],
 	},
 	{
 		name: "forDevelopers",
 		admits: "A signed-in user whose email is in DEVELOPER_EMAILS, across tenants.",
 		forWhat: "The bug reports' pages. A 404 for everyone else.",
-		check: "Developer",
+		check: "requireDeveloper",
 		reaches: [],
 	},
 	{
@@ -120,4 +129,4 @@ export function outcome(gate: GateName, caller: CallerId): Outcome {
 
 /** A gate's check as it's called, e.g. `requireMember()`, or `none`. */
 export const checkCall = (check: (typeof gates)[number]["check"]) =>
-	check ? `require${check}()` : "none";
+	check ? `${check}()` : "none";

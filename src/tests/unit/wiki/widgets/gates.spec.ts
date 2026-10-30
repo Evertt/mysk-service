@@ -66,9 +66,9 @@ describe("the gate table", () => {
 			.join("\n");
 		const missing = gates
 			.flatMap((gate) => (gate.check ? [gate.check] : []))
-			.filter((check) => !new RegExp(`\\bexport (?:function|const) require${check}\\b`).test(auth));
+			.filter((check) => !new RegExp(`\\bexport (?:function|const) ${check}\\b`).test(auth));
 		expect(missing, "a check was renamed: update gates.ts").toEqual([]);
-		expect(checkCall("Member")).toBe("requireMember()");
+		expect(checkCall("requireMember")).toBe("requireMember()");
 		expect(checkCall(null)).toBe("none");
 	});
 
@@ -76,7 +76,7 @@ describe("the gate table", () => {
 		for (const { name, check } of gates) {
 			const line = gatesFile.match(new RegExp(`^export const ${name} = remoteSet\\((.*?),`, "m"));
 			if (!check) expect(line?.[1]).toBe("() => {}");
-			else expect(line?.[1]).toBe(`require${check}`);
+			else expect(line?.[1]).toBe(check);
 		}
 	});
 
