@@ -21,7 +21,7 @@ customer is only a plan.
 
 ## What exists
 
-For an order with completed checklists, the order's page has a **Work order** button. It opens the
+For an order with checklists (filled in or not), the order's page has a **Work order** button. It opens the
 work order laid out for A4, without the app's menu, with a **Print** button that uses the browser's
 print dialog (or saves a PDF from it). It holds:
 
@@ -69,8 +69,8 @@ with checklists filling a slot, so every order has one. The PDF would be rendere
 Browser Rendering after the completion's transaction, never inside it, stored in R2, and mailed
 with `sendMail()`. Until then, print it from the browser.
 
-- <SourceLink path="src/modules/checklists/server/work-order.ts" line={22}>`loadWorkOrder()`</SourceLink>
-- <SourceLink path="src/lib/orders/server/work-record.ts" line={116}>`printedWorkOrder()`</SourceLink>
+- <SourceLink path="src/modules/checklists/server/work-order.ts" line={22}><code>loadWorkOrder()</code></SourceLink>
+- <SourceLink path="src/lib/orders/server/work-record.ts" line={116}><code>printedWorkOrder()</code></SourceLink>
 - <SourceLink path="src/modules/checklists/detail/work-order.svelte">the printed page</SourceLink>
 - <SourceLink path="docs/plans/service-report-pdf.md">the plan for the PDF</SourceLink>
 

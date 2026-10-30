@@ -97,10 +97,10 @@ A new way to change an order's status is a row and a verb here, never an update 
 of its own. Creating an order (`createOrders()`), deleting it and assigning it keep their own
 checks; they aren't transitions.
 
-- <SourceLink path="src/lib/orders/lifecycle.ts" line={69}>`orderTransitions`</SourceLink>
-- <SourceLink path="src/lib/orders/server/lifecycle.ts" line={66}>`transitionOrder()`</SourceLink>
-- <SourceLink path="src/lib/orders/server/lifecycle.ts" line={176}>`beginOrderChange()`</SourceLink>
-- <SourceLink path="src/lib/models.ts">the status sets</SourceLink> (`openOrderStatuses`,
-  `doneOrderStatuses`, …)
+- <SourceLink path="src/lib/orders/lifecycle.ts" line={69}><code>orderTransitions</code></SourceLink>
+- <SourceLink path="src/lib/orders/server/lifecycle.ts" line={66}><code>transitionOrder()</code></SourceLink>
+- <SourceLink path="src/lib/orders/server/lifecycle.ts" line={176}><code>beginOrderChange()</code></SourceLink>
+- <SourceLink path="src/lib/models.ts">the status sets</SourceLink> (<code>openOrderStatuses</code>,
+  <code>doneOrderStatuses</code>, …)
 
 <DocsPointer doc="docs/agents/orders.md" section="The lifecycle" />

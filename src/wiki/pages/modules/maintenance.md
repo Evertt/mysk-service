@@ -71,8 +71,7 @@ transactions. It is safe to repeat. The module declares `orderTypes: ["maintenan
 which a tenant cannot hide while it is on, and with condition on it contributes `condition.signals`
 (the next visit, which the Components list shows).
 
-- <SourceLink path="src/modules/maintenance/module.ts">module.ts</SourceLink>: the manifest, and
-  <SourceLink path="src/modules/maintenance">the module's folder</SourceLink>.
+- <SourceLink path="src/modules/maintenance/module.ts">module.ts</SourceLink>: the manifest, and <SourceLink path="src/modules/maintenance">the module's folder</SourceLink>.
 - <SourceLink path="src/modules/maintenance/server/orders.ts" line={40}>orderPlan()</SourceLink>: a
   due plan becomes an order.
 - <SourceLink path="src/modules/maintenance/server/automatic.ts">automatic.ts</SourceLink>: the daily

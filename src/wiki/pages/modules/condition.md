@@ -99,8 +99,7 @@ other. Components keep their article and points as plain ids, without a foreign 
 modules they refer to are optional. The service history is a view of the activity log
 (`server/history.ts`), not a table.
 
-- <SourceLink path="src/modules/condition/module.ts">module.ts</SourceLink>: the manifest, and
-  <SourceLink path="src/modules/condition">the module's folder</SourceLink>.
+- <SourceLink path="src/modules/condition/module.ts">module.ts</SourceLink>: the manifest, and <SourceLink path="src/modules/condition">the module's folder</SourceLink>.
 - <SourceLink path="src/modules/condition/model.ts" line={114}>rolledUpStatus()</SourceLink>: a
   unit's status with its components'.
 - <SourceLink path="src/modules/condition/server/status-sql.ts">status-sql.ts</SourceLink>: the same

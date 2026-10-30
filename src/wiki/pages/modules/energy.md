@@ -72,8 +72,7 @@ contributes `simulation.run` (a simulation of P1 meters and door sensors for the
 `customers.removingSite`, `notifications.rules` and `access.rules`, and declares the `energy.door`
 slot that docks fills.
 
-- <SourceLink path="src/modules/energy/module.ts">module.ts</SourceLink>: the manifest, and
-  <SourceLink path="src/modules/energy">the module's folder</SourceLink>.
+- <SourceLink path="src/modules/energy/module.ts">module.ts</SourceLink>: the manifest, and <SourceLink path="src/modules/energy">the module's folder</SourceLink>.
 - <SourceLink path="src/modules/energy/docs/ingest.md">ingest.md</SourceLink>: the feed's contract.
 - <SourceLink path="src/modules/energy/server/evaluate.ts">evaluate.ts</SourceLink>: readings
   against thresholds.

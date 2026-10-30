@@ -61,7 +61,8 @@ Contracts require nothing.
 
 <HowItWorks />
 
-A contract never edits an order. It plugs into three core extension points, all in `server/index.ts`:
+A contract never edits an order. Its `server/index.ts` makes four contributions: the access rule
+for its records (`accessRules`), and three to core extension points:
 
 - `orders.adjustPrices` returns a negative adjustment per covered order. Everything that shows or
   adds up an order's total prices it with `priceOrders()`, so the discount is the same in the order,
@@ -78,12 +79,11 @@ response time cannot be split between contracts. The contract's page is a `Recor
 slots (`contracts.detail.side`), declared with `defineRecordPoints("contracts", ...)`, which is how
 maintenance adds its plans there without touching contracts' tables.
 
-- <SourceLink path="src/modules/contracts/module.ts">module.ts</SourceLink>: the manifest, and
-  <SourceLink path="src/modules/contracts">the module's folder</SourceLink>.
+- <SourceLink path="src/modules/contracts/module.ts">module.ts</SourceLink>: the manifest, and <SourceLink path="src/modules/contracts">the module's folder</SourceLink>.
 - <SourceLink path="src/modules/contracts/coverage.ts">coverage.ts</SourceLink>: coverage, price and
   response time, in one place.
 - <SourceLink path="src/modules/contracts/server/index.ts" line={44}>server/index.ts</SourceLink>:
-  the three contributions.
+  the four contributions.
 - <SourceLink path="src/modules/contracts/api/extensions.ts">api/extensions.ts</SourceLink>: the
   contract page's own slots.
 

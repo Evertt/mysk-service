@@ -76,8 +76,7 @@ It plugs in at `orders.saving` (the classification is saved with the order from 
 credit), and the customer portal entry is the manifest's `portal`. It declares the
 `partner-programme.client.wallet` slot, which the parts shop fills with a link to the shop.
 
-- <SourceLink path="src/modules/partner-programme/module.ts">module.ts</SourceLink>: the manifest, and
-  <SourceLink path="src/modules/partner-programme">the module's folder</SourceLink>.
+- <SourceLink path="src/modules/partner-programme/module.ts">module.ts</SourceLink>: the manifest, and <SourceLink path="src/modules/partner-programme">the module's folder</SourceLink>.
 - <SourceLink path="src/modules/partner-programme/model.ts" line={267}>levelFor()</SourceLink>: the
   level for a revenue.
 - <SourceLink path="src/modules/partner-programme/server/close.ts" line={84}>closeYear()</SourceLink>:

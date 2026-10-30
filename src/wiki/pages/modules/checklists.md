@@ -92,8 +92,7 @@ order). Every change is saved in a transaction. The inspection status is one fun
 `model.ts` and the same rule in SQL for the list column, which binds no parameters because the
 condition module repeats it many times in one statement.
 
-- <SourceLink path="src/modules/checklists/module.ts">module.ts</SourceLink>: the manifest, and
-  <SourceLink path="src/modules/checklists">the module's folder</SourceLink>.
+- <SourceLink path="src/modules/checklists/module.ts">module.ts</SourceLink>: the manifest, and <SourceLink path="src/modules/checklists">the module's folder</SourceLink>.
 - <SourceLink path="src/modules/checklists/server/checklists.ts" line={202}>syncChecklists()</SourceLink>:
   the checklists that follow an order's units.
 - <SourceLink path="src/modules/checklists/server/field.ts" line={45}>Filler</SourceLink>: one set

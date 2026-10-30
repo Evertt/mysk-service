@@ -96,8 +96,7 @@ columns, bulk actions, hooks and others), and each one only takes part for tenan
 module. Every module's remote functions are made with `moduleRemote("<id>")`, which answers a 404
 for a tenant without it.
 
-- <SourceLink path="src/lib/modules/graph.ts" line={28}>effectiveModules()</SourceLink> and
-  <SourceLink path="src/lib/modules/graph.ts" line={99}>changeModules()</SourceLink>: what is on,
+- <SourceLink path="src/lib/modules/graph.ts" line={28}>effectiveModules()</SourceLink> and <SourceLink path="src/lib/modules/graph.ts" line={99}>changeModules()</SourceLink>: what is on,
   and what a change may do.
 - <SourceLink path="src/lib/modules/define.ts" line={16}>defineModule()</SourceLink>: the manifest.
 - <SourceLink path="src/lib/server/auth/session.ts" line={259}>requireModule()</SourceLink>: the

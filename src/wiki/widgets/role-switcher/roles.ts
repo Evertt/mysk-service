@@ -63,7 +63,7 @@ export const roleCards: readonly RoleCard[] = [
 		[
 			"Report a breakdown, on a unit or from a QR code.",
 			"Follow their orders: waiting to be accepted, planned, done, or rejected with the reason.",
-			"See their units and sites, with each unit's service history.",
+			"See their units and locations, with each unit's service history.",
 			"Read the work done on a finished order: the sign-off, and with the checklists module the work order.",
 		],
 		["See any other customer's records."],

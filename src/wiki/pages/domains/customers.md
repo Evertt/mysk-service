@@ -64,7 +64,7 @@ says what to remove first.
 
 <HowItWorks />
 
-**Three tables.** `customer`, `customer_site` and (for the portal) `portal_contact` and
+**Four tables.** `customer`, `customer_site` and (for the portal) `portal_contact` and
 `portal_contact_site`. Every one has an `organizationId`, and references between them are composite
 foreign keys that include the tenant, so a row can't point into another tenant. Where a record must
 belong to the same customer (a unit's site, an order's units, a contact's sites) the key pairs
@@ -87,11 +87,10 @@ of theirs is scoped to the tenant, their customer and their sites (`ofCustomer()
 **What a site shows** depends on who reads it. The office, and an engineer at the sites of their orders, see the
 contact preferences and access notes (the `onSite` columns); a customer's contact sees only the address.
 
-- <SourceLink path="src/lib/server/db/schema/customers.ts" line={8}>`customer`</SourceLink> and
-  <SourceLink path="src/lib/server/db/schema/customers.ts" line={35}>`customer_site`</SourceLink>
-- <SourceLink path="src/lib/server/db/schema/portal.ts" line={16}>`portal_contact`</SourceLink>
-- <SourceLink path="src/lib/customers/server/customers.ts" line={13}>`removeCustomer`</SourceLink>
-- <SourceLink path="src/lib/customers/detail/portal-access.remote.ts" line={119}>`invitePortalContact`</SourceLink>
+- <SourceLink path="src/lib/server/db/schema/customers.ts" line={8}><code>customer</code></SourceLink> and <SourceLink path="src/lib/server/db/schema/customers.ts" line={35}><code>customer_site</code></SourceLink>
+- <SourceLink path="src/lib/server/db/schema/portal.ts" line={16}><code>portal_contact</code></SourceLink>
+- <SourceLink path="src/lib/customers/server/customers.ts" line={13}><code>removeCustomer</code></SourceLink>
+- <SourceLink path="src/lib/customers/detail/portal-access.remote.ts" line={119}><code>invitePortalContact</code></SourceLink>
 - <SourceLink path="src/wiki/widgets/records/records-diagram.svelte">the diagram</SourceLink>
 
 <DocsPointer doc="docs/agents/tenancy.md" section="Tenancy" />

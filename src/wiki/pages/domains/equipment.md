@@ -89,12 +89,10 @@ the engineer the site's contact and access details, the customer's contact only 
 The scopes (`officeUnits()`, `engineerUnits()`, `customerUnits(access)`) take their rows from the
 access registry. See [The work record](/wiki/orders/work-record).
 
-- <SourceLink path="src/lib/server/db/schema/equipment.ts" line={81}>`equipment`</SourceLink>,
-  <SourceLink path="src/lib/server/db/schema/equipment.ts" line={51}>`equipment_location`</SourceLink>
-- <SourceLink path="src/lib/equipment/server/qr.ts" line={63}>`resolveQrCode()`</SourceLink> and
-  <SourceLink path="src/lib/equipment/server/qr.ts" line={83}>`qrDestination()`</SourceLink>
-- <SourceLink path="src/routes/q/[token]/+server.ts" line={16}>the `/q/[token]` route</SourceLink>
-- <SourceLink path="src/lib/equipment/labels/labels.remote.ts" line={18}>`getLabelSheet`</SourceLink>
-- <SourceLink path="src/lib/equipment/detail/service-history.ts" line={67}>`buildTimeline()`</SourceLink>
+- <SourceLink path="src/lib/server/db/schema/equipment.ts" line={81}><code>equipment</code></SourceLink>, <SourceLink path="src/lib/server/db/schema/equipment.ts" line={51}><code>equipment_location</code></SourceLink>
+- <SourceLink path="src/lib/equipment/server/qr.ts" line={63}><code>resolveQrCode()</code></SourceLink> and <SourceLink path="src/lib/equipment/server/qr.ts" line={83}><code>qrDestination()</code></SourceLink>
+- <SourceLink path="src/routes/q/[token]/+server.ts" line={16}>the <code>/q/[token]</code> route</SourceLink>
+- <SourceLink path="src/lib/equipment/labels/labels.remote.ts" line={18}><code>getLabelSheet</code></SourceLink>
+- <SourceLink path="src/lib/equipment/detail/service-history.ts" line={67}><code>buildTimeline()</code></SourceLink>
 
 <DocsPointer doc="docs/agents/orders.md" section="Units and locations" />

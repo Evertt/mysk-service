@@ -74,8 +74,7 @@ invoice card. For modules that require invoices there is an `api/` folder, for e
 `revenue.server.ts` (the paid invoices' lines less the settled credit notes') and
 `credit-notes.server.ts` (a standalone credit note), so they never read invoices' tables directly.
 
-- <SourceLink path="src/modules/invoices/module.ts">module.ts</SourceLink>: the manifest, and
-  <SourceLink path="src/modules/invoices">the module's folder</SourceLink>.
+- <SourceLink path="src/modules/invoices/module.ts">module.ts</SourceLink>: the manifest, and <SourceLink path="src/modules/invoices">the module's folder</SourceLink>.
 - <SourceLink path="src/modules/invoices/invoice.ts">invoice.ts</SourceLink>: numbers, status, totals,
   lines.
 - <SourceLink path="src/modules/invoices/server/billable.ts">billable.ts</SourceLink>: what a customer

@@ -68,7 +68,8 @@ payloads, kept under a URL of its own.
   boundary retries on the `online` event.
 
 It began as a spike for the app on Vercel and Turso, where every navigation waited on database round
-trips, and it measured revisits falling from about 670 ms to about 70 ms. The worker's own header
+trips, and it measured revisits falling from about 670 ms to about 70 ms, with every remote call
+held up by 600 ms to stand in for those round trips. The worker's own header
 still calls it an experiment.
 
 <DocsPointer doc="docs/plans/service-worker-swr.md" />

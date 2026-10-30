@@ -55,7 +55,7 @@ linked to an engineer's record by an owner or admin, on the engineer's page.
 
 For the customer's own contacts. It starts at `/portal`: a button to report a breakdown, the
 customer's open orders (also those not accepted yet) and their latest finished work. Besides that,
-their orders, units, sites and locations.
+pages for their orders, units and locations.
 
 A contact sees only their own customer's records, and, if the office invited them for some sites
 only, only those sites'. They don't see the engineers' notes; of an engineer they see the first
@@ -97,10 +97,10 @@ and by the access registry, so a customer who guesses an order number of another
 The demo accounts are the same split: Jan is a member (office), Lev is an engineer, Marieke a
 customer's contact.
 
-- <SourceLink path="src/lib/auth/shells.ts" line={28}>`shells` and `shellOf()`</SourceLink>
-- <SourceLink path="src/lib/auth/roles.ts">the roles</SourceLink>, with `isFieldEngineer()` and
-  `isCustomerContact()`
-- <SourceLink path="src/hooks.server.ts" line={145}>`handleGuard`</SourceLink>
+- <SourceLink path="src/lib/auth/shells.ts" line={28}><code>shells</code> and <code>shellOf()</code></SourceLink>
+- <SourceLink path="src/lib/auth/roles.ts">the roles</SourceLink>, with <code>isFieldEngineer()</code> and
+  <code>isCustomerContact()</code>
+- <SourceLink path="src/hooks.server.ts" line={145}><code>handleGuard</code></SourceLink>
 - <SourceLink path="src/wiki/widgets/role-switcher/roles.ts">the cards above</SourceLink>
 
 <DocsPointer doc="docs/agents/tenancy.md" section="Tenancy" />

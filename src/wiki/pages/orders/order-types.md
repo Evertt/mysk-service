@@ -83,10 +83,9 @@ ignores a hidden flag on a needed type, also if it was set before the module was
 (`saveOrderType`). `orderTypeProblems()` finds what is wrong (a needed type hidden, a name already
 taken), the transaction replaces or deletes the row, and the change is logged.
 
-- <SourceLink path="src/lib/models.ts" line={36}>`orderTypes` and corrective work</SourceLink>
-- <SourceLink path="src/lib/orders/types.ts" line={58}>`offeredOrderTypes()`</SourceLink> and
-  <SourceLink path="src/lib/orders/types.ts" line={91}>`orderTypeProblems()`</SourceLink>
-- <SourceLink path="src/lib/orders/server/types.ts" line={32}>`requiredOrderTypes()`</SourceLink>
-- <SourceLink path="src/lib/server/db/schema/orders.ts" line={102}>`order_type_setting`</SourceLink>
+- <SourceLink path="src/lib/models.ts" line={36}><code>orderTypes</code> and corrective work</SourceLink>
+- <SourceLink path="src/lib/orders/types.ts" line={58}><code>offeredOrderTypes()</code></SourceLink> and <SourceLink path="src/lib/orders/types.ts" line={91}><code>orderTypeProblems()</code></SourceLink>
+- <SourceLink path="src/lib/orders/server/types.ts" line={32}><code>requiredOrderTypes()</code></SourceLink>
+- <SourceLink path="src/lib/server/db/schema/orders.ts" line={102}><code>order_type_setting</code></SourceLink>
 
 <DocsPointer doc="docs/agents/i18n.md" />

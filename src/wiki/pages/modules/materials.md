@@ -25,7 +25,8 @@ link between them and the orders that use them. Its sidebar entry sits after Eng
   deleted.
 - **A stock ledger.** Stock is never edited, it moves. Every change is an entry: the opening
   balance, **Received**, a **count adjustment** (you enter what you counted and the difference is
-  recorded), **Used on order** and **Returned from order**. A material's page shows the history,
+  recorded), **Used on order**, **Returned from order**, and with the parts shop **Reserved for a
+  shop order** and **Released from a shop order**. A material's page shows the history,
   newest first, and which orders use it. A level shows as **In stock**, **Low** (below 10 pieces, or
   50 metres, kilograms or litres) or **Out of stock**.
 - **Materials on orders.** The order form gets a materials part: lines of a material and a quantity.
@@ -73,11 +74,10 @@ whose status changed while the tenant had materials switched off is put right th
 saved. For modules that require materials (the parts shop), `api/stock.server.ts` offers
 `reserveStock()` and `releaseStock()` to set stock aside inside the caller's transaction.
 
-- <SourceLink path="src/modules/materials/module.ts">module.ts</SourceLink>: the manifest, and
-  <SourceLink path="src/modules/materials">the module's folder</SourceLink>.
+- <SourceLink path="src/modules/materials/module.ts">module.ts</SourceLink>: the manifest, and <SourceLink path="src/modules/materials">the module's folder</SourceLink>.
 - <SourceLink path="src/modules/materials/model.ts" line={63}>holdsStock()</SourceLink>: which statuses
   hold stock.
-- <SourceLink path="src/modules/materials/server/stock.ts" line={177}>moveOrderStock()</SourceLink>:
+- <SourceLink path="src/modules/materials/server/stock.ts" line={179}>moveOrderStock()</SourceLink>:
   the ledger follows the order.
 - <SourceLink path="src/modules/materials/form-parts/orders.form.ts">orders.form.ts</SourceLink>: the
   form's part.

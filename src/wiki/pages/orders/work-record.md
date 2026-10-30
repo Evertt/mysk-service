@@ -77,9 +77,8 @@ it has just one, else none. The units are read as their audience sees them, by `
 **Showing it** has components for every shell: `<WorkUnits>`, `<SignOff>` and `<NotesList>`
 (`#lib/orders/components.ts`).
 
-- <SourceLink path="src/lib/orders/server/work-record.ts" line={62}>`audiences`</SourceLink>
-- <SourceLink path="src/lib/orders/server/work-record.ts" line={211}>`readWorkRecord()`</SourceLink>
-- <SourceLink path="src/lib/server/db/schema/orders.ts" line={118}>`order_note`</SourceLink> and
-  <SourceLink path="src/lib/server/db/schema/orders.ts" line={139}>`order_signoff`</SourceLink>
+- <SourceLink path="src/lib/orders/server/work-record.ts" line={62}><code>audiences</code></SourceLink>
+- <SourceLink path="src/lib/orders/server/work-record.ts" line={211}><code>readWorkRecord()</code></SourceLink>
+- <SourceLink path="src/lib/server/db/schema/orders.ts" line={118}><code>order_note</code></SourceLink> and <SourceLink path="src/lib/server/db/schema/orders.ts" line={139}><code>order_signoff</code></SourceLink>
 
 <DocsPointer doc="docs/agents/orders.md" section="The work record" />

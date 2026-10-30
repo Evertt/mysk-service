@@ -67,10 +67,8 @@ is a live query over the record types the board shows (`order`, `engineer`, `cus
 timestamp on each change so an open page re-reads. Drag and drop is the client's own: it applies the
 move optimistically and undoes it on an error (`board-drag.svelte.ts`).
 
-- <SourceLink path="src/modules/schedule/module.ts">module.ts</SourceLink>: the manifest, and
-  <SourceLink path="src/modules/schedule">the module's folder</SourceLink>.
-- <SourceLink path="src/modules/schedule/schedule.remote.ts" line={103}>getSchedule()</SourceLink> and
-  <SourceLink path="src/modules/schedule/schedule.remote.ts" line={162}>moveOrder()</SourceLink>: the
+- <SourceLink path="src/modules/schedule/module.ts">module.ts</SourceLink>: the manifest, and <SourceLink path="src/modules/schedule">the module's folder</SourceLink>.
+- <SourceLink path="src/modules/schedule/schedule.remote.ts" line={103}>getSchedule()</SourceLink> and <SourceLink path="src/modules/schedule/schedule.remote.ts" line={162}>moveOrder()</SourceLink>: the
   data and the change.
 - <SourceLink path="src/modules/schedule/board/board-drag.svelte.ts">board-drag.svelte.ts</SourceLink>:
   drag and drop.

@@ -60,6 +60,12 @@ describe("the theme gallery", () => {
 		expect(themeStyle({ label: "Plain" }, "dark")).toContain("--background: oklch(0.145 0 0)");
 	});
 
+	test("a dark style has the light base under it, as the app layers `.dark` over `:root`", () => {
+		const dark = themeStyle({ label: "Plain" }, "dark");
+		expect(dark).toContain(`--font-body: ${baseVariables.light["--font-body"]}`);
+		expect(dark).toContain(`--radius: ${baseVariables.light["--radius"]}`);
+	});
+
 	test("a light card carries the tones too, so a dark page can't turn them dark", () => {
 		const light = themeStyle(galleryThemes.find((card) => card.name === "lagoon")!.theme, "light");
 		expect(light).toContain("--success:");

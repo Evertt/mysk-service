@@ -91,7 +91,7 @@ new sign-in fails the old session stays.
 **`TryIt`** (the button on this page) asks one remote function, `demoSignInEnabled()`, and renders
 nothing when the answer is no or when it can't be asked.
 
-- <SourceLink path="src/routes/demo.remote.ts" line={23}>`demoSignInEnabled`, sign-in and View as</SourceLink>
+- <SourceLink path="src/routes/demo.remote.ts" line={23}><code>demoSignInEnabled</code>, sign-in and View as</SourceLink>
 - <SourceLink path="src/routes/demo-accounts.server.ts">which account each role is</SourceLink>
 - <SourceLink path="src/routes/demo-roles.ts">the three roles</SourceLink>
 - <SourceLink path="src/wiki/parts/try-it.svelte">the button</SourceLink>

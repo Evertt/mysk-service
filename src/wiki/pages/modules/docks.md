@@ -74,8 +74,7 @@ docks, `notifications.rules` for the bell and `access.rules`. A breakdown order 
 `createOrders()`, and the module declares `orderTypes: ["breakdown"]`, which a tenant cannot hide
 while it is on. The full event contract is in the module's own docs.
 
-- <SourceLink path="src/modules/docks/module.ts">module.ts</SourceLink>: the manifest, and
-  <SourceLink path="src/modules/docks">the module's folder</SourceLink>.
+- <SourceLink path="src/modules/docks/module.ts">module.ts</SourceLink>: the manifest, and <SourceLink path="src/modules/docks">the module's folder</SourceLink>.
 - <SourceLink path="src/modules/docks/docs/salvo-events.md">salvo-events.md</SourceLink>: the feed's
   contract.
 - <SourceLink path="src/modules/docks/model.ts" line={164}>applyEvent()</SourceLink>: an event

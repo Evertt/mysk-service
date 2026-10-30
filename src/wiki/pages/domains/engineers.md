@@ -79,9 +79,9 @@ the engineer.
 `src/lib/engineers/display.ts`; the specialties are those of the order's units' categories, first
 unit first.
 
-- <SourceLink path="src/lib/server/db/schema/engineers.ts" line={9}>`engineer`</SourceLink>
-- <SourceLink path="src/lib/engineers/form/account.remote.ts" line={49}>`linkEngineerAccount`</SourceLink>
-- <SourceLink path="src/lib/engineers/display.ts" line={58}>`fittingFirst()`</SourceLink>
-- <SourceLink path="src/lib/orders/server/pricing.ts" line={15}>`laborCost()`</SourceLink>
+- <SourceLink path="src/lib/server/db/schema/engineers.ts" line={9}><code>engineer</code></SourceLink>
+- <SourceLink path="src/lib/engineers/form/account.remote.ts" line={49}><code>linkEngineerAccount</code></SourceLink>
+- <SourceLink path="src/lib/engineers/display.ts" line={58}><code>fittingFirst()</code></SourceLink>
+- <SourceLink path="src/lib/orders/server/pricing.ts" line={15}><code>laborCost()</code></SourceLink>
 
 <DocsPointer doc="docs/agents/tenancy.md" section="Tenancy" />

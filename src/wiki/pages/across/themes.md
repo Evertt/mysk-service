@@ -25,7 +25,8 @@ this wiki: the switchers in this page's header change it too.
   Plex Sans and gently rounded corners.
 - **Lagoon** is the default. It is crisp and practical, after the SHLTR client mockup: white cards
   with thin slate borders and no shadows on a cool grey page, a teal brand, tinted status badges,
-  the system font and 8px corners.
+  the system font and 8px corners on its cards, buttons and fields (its `--radius` is 0.625rem;
+  those use the `md` radius, 0.8 of it).
 - **Blueprint** is drafting paper and navy ink with monospace type, square corners and dashed
   construction lines. Dark mode is an actual blueprint: pale lines on deep blue.
 - **Brutalist** is neo-brutalism: cream paper, thick black outlines, hard offset shadows, loud

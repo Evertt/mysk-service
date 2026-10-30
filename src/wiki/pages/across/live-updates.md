@@ -51,7 +51,8 @@ stream is the fix, and a guard spec (`live-by-subject.spec.ts`) keeps it that wa
    portal `watchFieldChanges` and the customer portal `watchPortalChanges`, each
    `liveFeed(types, feedFor())`. `feedFor()` keeps the changes to records the viewer may read
    (asking the [access registry](/wiki/internals/permissions)) and decides what their audience
-   hears: the office the name and the action, the others neither. See <SourceLink path="src/lib/server/live.ts" line={89}>liveFeed</SourceLink> and <SourceLink path="src/lib/server/live.ts" line={142}>feedFor</SourceLink>.
+   hears: the office who made the change and the action; the others only whether the record was
+   updated or is gone, without the name. See <SourceLink path="src/lib/server/live.ts" line={89}>liveFeed</SourceLink> and <SourceLink path="src/lib/server/live.ts" line={142}>feedFor</SourceLink>.
 3. **The answer repeats the last ten seconds** (`FEED_WINDOW`), because a client that reads only the
    latest answer would otherwise miss changes that came in quick succession. It tells them apart by
    when they were made.

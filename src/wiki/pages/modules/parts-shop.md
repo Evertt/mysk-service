@@ -61,8 +61,8 @@ Its sidebar entry sits after Materials.
 Placing an order is one transaction, in `placeShopOrder()`: it spends the parts credit with the
 partner programme's `spendCredit()` and sets the stock aside with the materials' `reserveStock()`,
 both checked inside it, so the balance never goes below zero and the stock never runs out twice.
-Cancelling does the reverse, `giveBackCredit()` and `releaseStock()`. The shop never reads those
-modules' tables, it uses their `api/` folders. Every change is logged against the customer.
+Cancelling does the reverse, `giveBackCredit()` and `releaseStock()`. The shop reads those modules'
+tables only through their `api/` folders. Every change is logged against the customer.
 
 The shop's pages in the portal are the manifest's `portal` entry and its routes in the `(customer)`
 group (`/parts-shop/portal`). Its queries use the module's set for customers, whose handlers scope
@@ -74,8 +74,7 @@ the shop answers `condition.articleCheckpoints` (when condition is on) and `noti
 (the bell for an order a customer places). Its suggestion slots `checklists.order.rejected` and
 `checklists.client.rejected` are checklists' points, filled from the shop's `slots/`.
 
-- <SourceLink path="src/modules/parts-shop/module.ts">module.ts</SourceLink>: the manifest, and
-  <SourceLink path="src/modules/parts-shop">the module's folder</SourceLink>.
+- <SourceLink path="src/modules/parts-shop/module.ts">module.ts</SourceLink>: the manifest, and <SourceLink path="src/modules/parts-shop">the module's folder</SourceLink>.
 - <SourceLink path="src/modules/parts-shop/server/orders.ts" line={89}>placeShopOrder()</SourceLink>:
   credit and stock in one transaction.
 - <SourceLink path="src/modules/parts-shop/api/extensions.ts">api/extensions.ts</SourceLink>: the
