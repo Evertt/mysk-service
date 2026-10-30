@@ -3,6 +3,8 @@
 	A wiki page: its component, inside the wiki's shell.
 -->
 <script lang="ts">
+	import PageStatus from "#wiki/parts/page-status.svelte";
+
 	import type { PageProps } from "./$types";
 
 	let { data }: PageProps = $props();
@@ -14,4 +16,5 @@
 </svelte:head>
 
 <h1>{data.page.title}</h1>
+<PageStatus status={data.page.status} />
 <Page />

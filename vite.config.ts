@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import { globSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
@@ -61,6 +62,21 @@ function shadcnImports(): ImportsMap {
 	return Object.fromEntries(entries);
 }
 
+/**
+ * The commit the wiki's links to the source point at (`#wiki/parts/github.ts`), so a line is still
+ * the line it was written for. `develop` where there's no git (a build from an archive).
+ */
+const wikiCommit = (() => {
+	try {
+		return execSync("git rev-parse HEAD", {
+			encoding: "utf8",
+			stdio: ["ignore", "pipe", "ignore"],
+		}).trim();
+	} catch {
+		return "develop";
+	}
+})();
+
 /** The unit tests that run in Node (`*.svelte.spec.ts` run in the browser). */
 const serverSpecs = {
 	// Worker threads start faster than forked processes: `vitest doctor` measured 16% off.
@@ -113,6 +129,7 @@ const isolatedServerSpecs = nodeSpecs
 	.map(({ file }) => file);
 
 export default defineConfig({
+	define: { __WIKI_COMMIT__: JSON.stringify(wikiCommit) },
 	run: {
 		cache: {
 			scripts: true,

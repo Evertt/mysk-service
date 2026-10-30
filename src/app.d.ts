@@ -7,6 +7,9 @@ import type { Tenant } from "#lib/server/auth/index.ts";
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
 declare global {
+	/** The commit the build was made from, for the wiki's links to the source (`vite.config.ts`). */
+	const __WIKI_COMMIT__: string;
+
 	namespace App {
 		interface Locals {
 			user?: User;

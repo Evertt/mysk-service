@@ -27,7 +27,6 @@ export type Coverage =
 	| `shell:${ShellName}`
 	| `theme:${ThemeName}`;
 
-/** @public */
 export interface PageMeta {
 	title: string;
 	summary: string;
