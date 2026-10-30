@@ -65,6 +65,63 @@ describe("signed out", () => {
 		await expect.poll(() => page.locator("main h1").innerText()).toBe("Order lifecycle");
 	});
 
+	test("a search result for a heading opens the page at the heading", async () => {
+		const { page } = app;
+		await app.go(first);
+		await page.getByRole("button", { name: "Search the wiki" }).click();
+		// Typed with a straight quote; the heading's is curled.
+		await page
+			.getByRole("dialog")
+			.getByRole("combobox", { name: "Search the wiki" })
+			.fill("isn't work");
+		await page
+			.getByRole("dialog")
+			.getByRole("option", { name: /Until it’s decided, it isn’t work/ })
+			.click();
+		await page.waitForURL((url) => url.pathname === "/wiki/orders/awaiting-acceptance");
+		expect(new URL(page.url()).hash).toBe("#until-its-decided-it-isnt-work");
+		expect(await page.locator("main h2#until-its-decided-it-isnt-work").innerText()).toBe(
+			"Until it’s decided, it isn’t work",
+		);
+	});
+
+	test("a widget responds: the lifecycle lists a status's moves once it's chosen", async () => {
+		const { page } = app;
+		await app.go("/wiki/orders/lifecycle");
+		const move = page.getByTestId("leaves-plan-scheduled");
+		expect(await move.count()).toBe(0);
+		await page.getByRole("button", { name: "Quote", exact: true }).click();
+		await move.waitFor();
+		expect(await page.getByRole("list", { name: "Leaves by" }).innerText()).toContain("Scheduled");
+	});
+
+	test("reads as English, also where the app speaks Dutch", async () => {
+		const { page } = app;
+		await page.setExtraHTTPHeaders({ "accept-language": "nl-NL,nl;q=0.9" });
+		try {
+			await app.go(first);
+			expect(await page.evaluate(() => document.documentElement.lang)).toBe("nl");
+			// The language each is read in: its nearest `lang`.
+			const langOf = (selector: string) =>
+				page
+					.locator(selector)
+					.evaluate((element) => element.closest("[lang]")?.getAttribute("lang"));
+			expect(await langOf("main article")).toBe("en");
+			expect(await langOf("nav[aria-label=Wiki]")).toBe("en");
+		} finally {
+			await page.setExtraHTTPHeaders({});
+		}
+	});
+
+	test("has the way into the app, which sends a visitor who isn't signed in to log in", async () => {
+		const { page } = app;
+		await app.go(first);
+		const open = page.getByRole("link", { name: "Open the app" });
+		expect(await open.getAttribute("href")).toBe("/");
+		await open.click();
+		await page.waitForURL((url) => url.pathname === "/login");
+	});
+
 	test("phone width shows the sidebar as a sheet", async () => {
 		const { page } = app;
 		await app.go(first);
@@ -86,6 +143,23 @@ describe("signed out", () => {
 			.locator('nav [data-sidebar="group-label"]')
 			.evaluateAll((labels) => labels.map((label) => label.textContent));
 		expect(groups).toEqual(wikiNav().map((group) => group.label));
+	});
+});
+
+describe("trying the demo (the lanes' servers have DEMO_SIGN_IN)", () => {
+	const app = useApp({ user: null });
+
+	test("a Try it button signs in as its role, in one click, and is gone once in the demo", async () => {
+		const { page } = app;
+		await app.go("/wiki/start/try-the-demo");
+		expect(await page.getByText("One-click demo sign-in is switched off").count()).toBe(0);
+		await page.getByRole("button", { name: "Try it as the planner" }).click();
+		await page.waitForURL((url) => url.pathname === "/");
+		await page.locator("[data-hydrated]").waitFor({ state: "attached" });
+
+		await app.go("/wiki/start/try-the-demo");
+		expect(await page.locator("main h1").innerText()).toBe("Try the demo");
+		expect(await page.getByRole("button", { name: /^Try it as/ }).count()).toBe(0);
 	});
 });
 

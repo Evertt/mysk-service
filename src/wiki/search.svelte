@@ -41,6 +41,7 @@
 <Button
 	variant="outline"
 	size="sm"
+	lang="en"
 	class="w-9 justify-start px-0 text-muted-foreground sm:w-56 sm:px-3"
 	aria-label="Search the wiki"
 	onclick={() => (open = true)}
@@ -56,6 +57,7 @@
 
 <Command.Dialog
 	bind:open
+	lang="en"
 	shouldFilter={false}
 	title="Search the wiki"
 	description="Find a page by its title or one of its headings."

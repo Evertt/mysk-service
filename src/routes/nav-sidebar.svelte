@@ -21,10 +21,13 @@
 		header,
 		footer,
 		badge,
+		lang,
 	}: {
 		groups: NavGroup[];
 		/** The navigation's name, for a screen reader's list of landmarks. */
 		label?: string;
+		/** The entries' language, where it isn't the app's (the wiki's are English). */
+		lang?: string;
 		/** Whether `item` is the current page's entry. */
 		isCurrent?: (item: NavItem) => boolean;
 		/** Above the entries, e.g. the organization. */
@@ -45,7 +48,7 @@
 		</Sidebar.Header>
 	{/if}
 	<Sidebar.Content>
-		<nav aria-label={label}>
+		<nav aria-label={label} {lang}>
 			{#each groups as group, index (group.label ?? index)}
 				<Sidebar.Group>
 					{#if group.label}
