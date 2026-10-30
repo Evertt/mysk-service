@@ -8,8 +8,8 @@
 	import CheckIcon from "@lucide/svelte/icons/check";
 	import XIcon from "@lucide/svelte/icons/x";
 
-	import { demoRoleLabels } from "#routes/demo-roles.ts";
 	import TryIt from "#wiki/parts/try-it.svelte";
+	import { roleNames } from "#wiki/roles.ts";
 
 	import { roleCards, shellTitles } from "./roles.ts";
 </script>
@@ -24,8 +24,8 @@
 				aria-labelledby="role-{card.role}"
 			>
 				<div class="grid gap-1">
-					<h3 id="role-{card.role}" class="text-base font-semibold">
-						{demoRoleLabels[card.role]()}
+					<h3 id="role-{card.role}" class="text-base font-semibold first-letter:uppercase">
+						{roleNames[card.role]}
 					</h3>
 					<p class="text-sm text-muted-foreground">
 						{shellTitles[card.shell]}, starting at

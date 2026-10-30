@@ -3,6 +3,7 @@ import { beforeEach, expect, test, vi } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
+import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
 import { demoSignInEnabled } from "#routes/demo.remote.ts";
 import Diagram from "#wiki/parts/diagram.svelte";
 import DocsPointer from "#wiki/parts/docs-pointer.svelte";
@@ -21,6 +22,7 @@ vi.mock("#routes/demo.remote.ts", () => ({
 	),
 }));
 
+const englishByDefault = getLocale;
 const text = (html: string) => createRawSnippet(() => ({ render: () => `<span>${html}</span>` }));
 const github = "https://github.com/Evertt/mysk-service/blob";
 
@@ -91,6 +93,23 @@ test("try it, where the demo's sign-in is on: a link to the login page, with the
 	const link = page.getByRole("link", { name: "Try it as the planner" });
 	await expect.element(link).toBeVisible();
 	await expect.element(link).toHaveAttribute("href", "/login");
+});
+
+test("try it names the role in English, also where the app speaks Dutch", async () => {
+	demo.enabled = true;
+	overwriteGetLocale(() => "nl");
+	try {
+		await render(TryIt, { as: "engineer" });
+		await expect
+			.element(page.getByRole("link", { name: "Try it as the field engineer" }))
+			.toBeVisible();
+		await render(TryIt, { as: "customer" });
+		await expect
+			.element(page.getByRole("link", { name: "Try it as the customer contact" }))
+			.toBeVisible();
+	} finally {
+		overwriteGetLocale(englishByDefault);
+	}
 });
 
 test("try it, where the demo's sign-in is off: nothing, once the answer is in", async () => {
