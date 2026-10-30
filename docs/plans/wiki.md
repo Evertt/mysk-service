@@ -1,6 +1,7 @@
 # Wiki
 
-A wish of 30 October 2026, worked out in a brainstorm. Not built yet.
+A wish of 30 October 2026, worked out in a brainstorm. Not built yet; the tasks are in
+[wiki-implementation.md](wiki-implementation.md).
 
 ## Problem
 
