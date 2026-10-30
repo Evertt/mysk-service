@@ -269,10 +269,11 @@ A hand-rolled `setTimeout` debounce or observer is refused (`src/tests/unit/rune
   the half for developers, `<SourceLink path="…" line={…}>` to the code at the commit the wiki was
   built from (`links.spec.ts` checks that the line still holds the identifier the label names, or
   its `symbol="…"` where the label names none: an edit above it moves it),
-  `<DocsPointer doc="…" section="…" />` to the rules, `<TryIt as="planner" />` (only where the
-  demo's sign-in is on) and `<Diagram viewBox label>` with SVG coloured by the theme's variables.
-  A line that starts with a component tag ends the Markdown paragraph before it: keep a tag on
-  the line of the text it belongs to.
+  `<DocsPointer doc="…" section="…" />` to the rules, `<TryIt as="planner" />` (one click signs
+  in as that demo role, shown only where the demo's sign-in is on and the visitor isn't in it)
+  and `<Diagram viewBox label>` with SVG coloured by the theme's variables. A line that starts
+  with a component tag ends the Markdown paragraph before it: keep a tag on the line of the text
+  it belongs to.
 - **A widget** is a folder in `src/wiki/widgets/`: a `.ts` that reads what it shows from the app's
   own code (the transition table, the module graph, the themes), so it can't drift, with a spec
   in `src/tests/unit/wiki/widgets/`; and a `.svelte` that renders it with the kit's components,

@@ -12,6 +12,7 @@ covers: []
 	import SourceLink from "#wiki/parts/source-link.svelte";
 	import DocsPointer from "#wiki/parts/docs-pointer.svelte";
 	import TryIt from "#wiki/parts/try-it.svelte";
+	import DemoSwitchedOff from "#wiki/parts/demo-switched-off.svelte";
 </script>
 
 The demo is a made-up company called SHLTR: it installs, services and inspects doors, docks,
@@ -21,7 +22,11 @@ company's would be, whichever language you use the app in.
 
 Where the demo is switched on (staging, and a developer's own machine), the login page has three
 buttons under its form, **Log in as**: Planner, Engineer and Customer. One click signs you in; you
-don't type anything. The buttons on this page do the same, and appear only where it is on.
+don't type anything. The **Try it** buttons on this page do the same: each signs you in as its
+role and opens that role's home. They appear only where the demo is on and you aren't signed in
+to it yet. Once you are, switch with **View as** (below).
+
+<DemoSwitchedOff />
 
 ## As a planner
 
@@ -88,8 +93,10 @@ its organization are the same as after typing it. Nothing from the request picks
 **View as** signs in as the chosen role and then ends the old session, in one request. If the
 new sign-in fails the old session stays.
 
-**`TryIt`** (the button on this page) asks one remote function, `demoSignInEnabled()`, and renders
-nothing when the answer is no or when it can't be asked.
+**`TryIt`** (the button on this page) posts the login page's form, `demoSignIn`, with its role.
+It asks `demoSignInEnabled()` and `getViewAs()` (which answers only for someone signed in to the
+demo), and renders nothing when the sign-in is off, when the visitor is in the demo already, or
+when it can't ask.
 
 - <SourceLink path="src/routes/demo.remote.ts" line={23}><code>demoSignInEnabled</code>, sign-in and View as</SourceLink>
 - <SourceLink path="src/routes/demo-accounts.server.ts">which account each role is</SourceLink>
