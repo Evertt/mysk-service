@@ -63,9 +63,16 @@
 			<Separator orientation="vertical" class="mr-1 h-4! self-center" />
 			<Search />
 			<div class="ml-auto flex shrink-0 items-center gap-1">
-				<!-- The app's home: the guard sends a visitor who isn't signed in to the login page, and
-					everyone else to their shell's home. -->
-				<Button href="/" variant="ghost" size="sm" lang="en" aria-label="Open the app">
+				<!-- The app's home, loaded in full: the guard, which sees only full page loads, sends a
+					visitor who isn't signed in to the login page, and everyone else to their shell's home. -->
+				<Button
+					href="/"
+					data-sveltekit-reload
+					variant="ghost"
+					size="sm"
+					lang="en"
+					aria-label="Open the app"
+				>
 					<AppWindowIcon />
 					<span class="hidden sm:inline">Open the app</span>
 				</Button>

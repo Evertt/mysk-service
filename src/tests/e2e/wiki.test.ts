@@ -97,6 +97,8 @@ describe("signed out", () => {
 
 	test("reads as English, also where the app speaks Dutch", async () => {
 		const { page } = app;
+		// The app in Dutch, as for most visitors (Paraglide's cookie comes first, then the browser's).
+		await page.context().addCookies([{ name: "PARAGLIDE_LOCALE", value: "nl", url: baseURL }]);
 		await page.setExtraHTTPHeaders({ "accept-language": "nl-NL,nl;q=0.9" });
 		try {
 			await app.go(first);
@@ -110,6 +112,7 @@ describe("signed out", () => {
 			expect(await langOf("nav[aria-label=Wiki]")).toBe("en");
 		} finally {
 			await page.setExtraHTTPHeaders({});
+			await page.context().clearCookies({ name: "PARAGLIDE_LOCALE" });
 		}
 	});
 
