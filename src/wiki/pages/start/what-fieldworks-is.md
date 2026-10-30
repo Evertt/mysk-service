@@ -77,4 +77,4 @@ The code is split by who owns it:
 
 <DocsPointer doc="docs/agents/structure.md" section="Where files go" />
 
-Source: <SourceLink path="src/lib/auth/shells.ts" line={28}>the shells</SourceLink>, <SourceLink path="src/lib/modules/manifests.ts">the module manifests</SourceLink>.
+Source: <SourceLink path="src/lib/auth/shells.ts" line={28} symbol="shells">the shells</SourceLink>, <SourceLink path="src/lib/modules/manifests.ts">the module manifests</SourceLink>.

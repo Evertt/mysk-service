@@ -82,7 +82,7 @@ maintenance adds its plans there without touching contracts' tables.
 - <SourceLink path="src/modules/contracts/module.ts">module.ts</SourceLink>: the manifest, and <SourceLink path="src/modules/contracts">the module's folder</SourceLink>.
 - <SourceLink path="src/modules/contracts/coverage.ts">coverage.ts</SourceLink>: coverage, price and
   response time, in one place.
-- <SourceLink path="src/modules/contracts/server/index.ts" line={44}>server/index.ts</SourceLink>:
+- <SourceLink path="src/modules/contracts/server/index.ts" line={44} symbol="defineServerModule">server/index.ts</SourceLink>:
   the four contributions.
 - <SourceLink path="src/modules/contracts/api/extensions.ts">api/extensions.ts</SourceLink>: the
   contract page's own slots.

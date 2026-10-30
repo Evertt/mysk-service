@@ -45,7 +45,7 @@ good news whether the page is a blueprint or a sorbet.
 
 <HowItWorks />
 
-A theme is one file in `src/lib/themes/`, registered in <SourceLink path="src/lib/themes/index.ts" line={13}>index.ts</SourceLink>. The gallery above and
+A theme is one file in `src/lib/themes/`, registered in <SourceLink path="src/lib/themes/index.ts" line={13} symbol="themes">index.ts</SourceLink>. The gallery above and
 the switchers are built from that list (`themeNames`), so a registered theme appears in both. A
 wiki guard spec also fails until a page's `covers` names the new theme.
 

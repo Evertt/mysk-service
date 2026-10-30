@@ -64,8 +64,8 @@ function shadcnImports(): ImportsMap {
 }
 
 /**
- * The commit the wiki's links to the source point at (`#wiki/parts/github.ts`), so a line is still
- * the line it was written for. `develop` where there's no git (a build from an archive).
+ * The commit the wiki's links to the source point at (`#wiki/parts/github.ts`): the code the pages
+ * were built with. `develop` where there's no git (a build from an archive).
  */
 const wikiCommit = (() => {
 	try {

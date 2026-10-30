@@ -62,8 +62,8 @@ What is recorded, and what isn't:
   its console plugin for errors and warnings, and wraps `fetch` to note the page's remote function
   calls. One recorder per tab, outside any component, so a recording carries on across client-side
   navigations, from the office to the engineer portal too. Its phases (`idle`, `recording`,
-  `stopping`, `sending`) and the steps between them are a small state machine. See <SourceLink path="src/lib/bug-reports/recorder.svelte.ts" line={73}>the rrweb options</SourceLink>
-  and <SourceLink path="src/lib/bug-reports/machine.ts" line={15}>the phases</SourceLink>.
+  `stopping`, `sending`) and the steps between them are a small state machine. See <SourceLink path="src/lib/bug-reports/recorder.svelte.ts" line={71} symbol="record">the rrweb options</SourceLink>
+  and <SourceLink path="src/lib/bug-reports/machine.ts" line={11} symbol="Phase">the phases</SourceLink>.
 - **Limits.** `maxRecordingMs` is ten minutes, `maxReportBytes` 20 MB gzipped. The server refuses a
   request without a `Content-Length` (411) and one over the limit (413) before it reads a byte.
 - **The endpoint** is `POST /bug-reports`, a plain endpoint rather than a remote form because the

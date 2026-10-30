@@ -266,7 +266,9 @@ A hand-rolled `setTimeout` debounce or observer is refused (`src/tests/unit/rune
   are what the search finds. English, no Paraglide messages. `coverage.spec.ts` fails until a
   page covers each module, domain, shell and theme; `links.spec.ts` checks every link literally.
 - **A page's parts** come from `#wiki/parts/`: `<HowItWorks />` between the half for users and
-  the half for developers, `<SourceLink path="…" line={…}>` to the code at this commit,
+  the half for developers, `<SourceLink path="…" line={…}>` to the code at the commit the wiki was
+  built from (`links.spec.ts` checks that the line still holds the identifier the label names, or
+  its `symbol="…"` where the label names none: an edit above it moves it),
   `<DocsPointer doc="…" section="…" />` to the rules, `<TryIt as="planner" />` (only where the
   demo's sign-in is on) and `<Diagram viewBox label>` with SVG coloured by the theme's variables.
   A line that starts with a component tag ends the Markdown paragraph before it: keep a tag on

@@ -52,7 +52,7 @@ A function that forgets its gate has no way to be written, which is the point.
   customer.
 - **The sets** are `remoteSet(gate, admits)`: each has `query` (with `.batch` and `.live`), `form`
   and `command`. See <SourceLink path="src/lib/server/remote-functions.ts" line={97}>remoteSet</SourceLink>.
-  The checks (`requireMember()` and the rest) are in <SourceLink path="src/lib/server/auth/session.ts" line={133}>session.ts</SourceLink>.
+  The checks (`requireMember()` and the rest) are in <SourceLink path="src/lib/server/auth/session.ts" line={133} symbol="requireMember">session.ts</SourceLink>.
 - **A module's set** is `moduleRemote("<id>")` (or `moduleRemote(id, "manager" | "engineer" |
 "customer")`), called once in the module's `remote-functions.ts`. It adds `requireModule(id)`:
   a tenant without the module gets a 404, as if the function didn't exist. A spec

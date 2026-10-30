@@ -89,9 +89,9 @@ the engineer the site's contact and access details, the customer's contact only 
 The scopes (`officeUnits()`, `engineerUnits()`, `customerUnits(access)`) take their rows from the
 access registry. See [The work record](/wiki/orders/work-record).
 
-- <SourceLink path="src/lib/server/db/schema/equipment.ts" line={81}><code>equipment</code></SourceLink>, <SourceLink path="src/lib/server/db/schema/equipment.ts" line={51}><code>equipment_location</code></SourceLink>
+- <SourceLink path="src/lib/server/db/schema/equipment.ts" line={81}><code>equipment</code></SourceLink>, <SourceLink path="src/lib/server/db/schema/equipment.ts" line={51} symbol="equipmentLocation"><code>equipment_location</code></SourceLink>
 - <SourceLink path="src/lib/equipment/server/qr.ts" line={63}><code>resolveQrCode()</code></SourceLink> and <SourceLink path="src/lib/equipment/server/qr.ts" line={83}><code>qrDestination()</code></SourceLink>
-- <SourceLink path="src/routes/q/[token]/+server.ts" line={16}>the <code>/q/[token]</code> route</SourceLink>
+- <SourceLink path="src/routes/q/[token]/+server.ts" line={16} symbol="GET">the <code>/q/[token]</code> route</SourceLink>
 - <SourceLink path="src/lib/equipment/labels/labels.remote.ts" line={18}><code>getLabelSheet</code></SourceLink>
 - <SourceLink path="src/lib/equipment/detail/service-history.ts" line={67}><code>buildTimeline()</code></SourceLink>
 

@@ -86,6 +86,6 @@ taken), the transaction replaces or deletes the row, and the change is logged.
 - <SourceLink path="src/lib/models.ts" line={36}><code>orderTypes</code> and corrective work</SourceLink>
 - <SourceLink path="src/lib/orders/types.ts" line={58}><code>offeredOrderTypes()</code></SourceLink> and <SourceLink path="src/lib/orders/types.ts" line={91}><code>orderTypeProblems()</code></SourceLink>
 - <SourceLink path="src/lib/orders/server/types.ts" line={32}><code>requiredOrderTypes()</code></SourceLink>
-- <SourceLink path="src/lib/server/db/schema/orders.ts" line={102}><code>order_type_setting</code></SourceLink>
+- <SourceLink path="src/lib/server/db/schema/orders.ts" line={102} symbol="orderTypeSetting"><code>order_type_setting</code></SourceLink>
 
 <DocsPointer doc="docs/agents/i18n.md" />

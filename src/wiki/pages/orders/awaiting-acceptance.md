@@ -80,6 +80,6 @@ They are `acceptReportedOrder` and `rejectReportedOrder`, gated for any office m
 - <SourceLink path="src/routes/(customer)/portal/client.remote.ts" line={186}><code>reportBreakdown</code></SourceLink>
 - <SourceLink path="src/lib/orders/detail/acceptance.remote.ts" line={35}><code>acceptReportedOrder</code></SourceLink>
   and <SourceLink path="src/lib/orders/detail/acceptance.remote.ts" line={61}><code>rejectReportedOrder</code></SourceLink>
-- <SourceLink path="src/lib/server/db/schema/orders.ts" line={169}><code>order_request</code></SourceLink>
+- <SourceLink path="src/lib/server/db/schema/orders.ts" line={169} symbol="orderRequest"><code>order_request</code></SourceLink>
 
 <DocsPointer doc="docs/agents/orders.md" section="Orders awaiting acceptance" />

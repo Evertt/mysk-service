@@ -87,8 +87,8 @@ of theirs is scoped to the tenant, their customer and their sites (`ofCustomer()
 **What a site shows** depends on who reads it. The office, and an engineer at the sites of their orders, see the
 contact preferences and access notes (the `onSite` columns); a customer's contact sees only the address.
 
-- <SourceLink path="src/lib/server/db/schema/customers.ts" line={8}><code>customer</code></SourceLink> and <SourceLink path="src/lib/server/db/schema/customers.ts" line={35}><code>customer_site</code></SourceLink>
-- <SourceLink path="src/lib/server/db/schema/portal.ts" line={16}><code>portal_contact</code></SourceLink>
+- <SourceLink path="src/lib/server/db/schema/customers.ts" line={8}><code>customer</code></SourceLink> and <SourceLink path="src/lib/server/db/schema/customers.ts" line={35} symbol="customerSite"><code>customer_site</code></SourceLink>
+- <SourceLink path="src/lib/server/db/schema/portal.ts" line={16} symbol="portalContact"><code>portal_contact</code></SourceLink>
 - <SourceLink path="src/lib/customers/server/customers.ts" line={13}><code>removeCustomer</code></SourceLink>
 - <SourceLink path="src/lib/customers/detail/portal-access.remote.ts" line={119}><code>invitePortalContact</code></SourceLink>
 - <SourceLink path="src/wiki/widgets/records/records-diagram.svelte">the diagram</SourceLink>

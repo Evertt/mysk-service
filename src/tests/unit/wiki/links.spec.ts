@@ -9,7 +9,12 @@
  *   `[t]: …`; an `#anchor` or `?query` ignored),
  * - a `<SourceLink>` or `<DocsPointer>` whose path this spec can't read (no `path`, a computed
  *   one, a template with `${…}`), or an `href` with `/wiki` in an expression it can't read: they
- *   fail as `unreadable`, so nothing passes on nothing.
+ *   fail as `unreadable`, so nothing passes on nothing;
+ * - a `<SourceLink line={N}>` whose line N doesn't hold what it links to: the identifier its
+ *   `symbol` names, or else the one its label names (in `<code>`, or a label that is one, like
+ *   `moveOrderStock()`). The links point at the commit the wiki was built from, but the next edit
+ *   to a file moves its lines, and the page is written against the current file; a label that
+ *   names no identifier needs a `symbol`.
  *
  * Tags may span lines; attributes may be quoted either way or a literal in braces (`{'…'}`).
  * Failures list `file:line → target`. The checks also run on made-up text, to show they find what
@@ -20,7 +25,7 @@ import { join } from "node:path";
 
 import { describe, expect, test } from "vite-plus/test";
 
-import { pageBySlug } from "#wiki/pages.ts";
+import { pageBySlug, wikiPages } from "#wiki/pages.ts";
 
 const root = join(import.meta.dirname, "../../../..");
 
@@ -113,9 +118,94 @@ const missingPage = (href: string) => {
 };
 
 const sourceLinks = tagReferences("SourceLink", "path");
+
+/** A `<SourceLink>` with a `line`: where it is, its `path`, `line`, `symbol` and label. */
+interface LineLink {
+	index: number;
+	path: string | null;
+	/** `null`: a `line` that isn't a number literal. */
+	line: number | null;
+	symbol: string | null;
+	label: string;
+}
+
+/** Every `<SourceLink>` of `source` with a `line`, its label the markup up to `</SourceLink>`. */
+function lineLinks(source: string): LineLink[] {
+	return [...source.matchAll(/<SourceLink(?![\w.-])/g)].flatMap((match): LineLink[] => {
+		openingTag.lastIndex = match.index;
+		const whole = openingTag.exec(source)?.[0];
+		if (!whole || !/(?<![\w-])line\s*=/.test(whole)) return [];
+		const line = /(?<![\w-])line\s*=\s*(?:\{\s*(\d+)\s*\}|"(\d+)"|'(\d+)')/.exec(whole);
+		const after = match.index + whole.length;
+		const close = whole.endsWith("/>") ? -1 : source.indexOf("</SourceLink>", after);
+		return [
+			{
+				index: match.index,
+				path: attribute(whole, "path"),
+				line: line ? Number(line[1] ?? line[2] ?? line[3]) : null,
+				symbol: attribute(whole, "symbol"),
+				label: close === -1 ? "" : source.slice(after, close),
+			},
+		];
+	});
+}
+
+/** A label that is an identifier: `mayRead`, `moveOrderStock()`, `dashboard.stats`, not a file. */
+const identifier = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*(?:\(\))?$/;
+const fileName = /\.(?:ts|js|svelte|md|json|css)$/;
+
+/** The identifiers a link's label names: its `<code>`s, or the label if it is one. */
+function labelIdentifiers(label: string): string[] {
+	const codes = [...label.matchAll(/<code>([^<]*)<\/code>/g)].map(([, code]) => code.trim());
+	const named = codes.length > 0 ? codes : [label.trim()];
+	return named
+		.filter((name) => identifier.test(name) && !fileName.test(name))
+		.map((name) => name.replace(/\(\)$/, ""));
+}
+
+/** Whether `text` holds `name` as a whole identifier. */
+const holds = (text: string, name: string) =>
+	new RegExp(`(?<![\\w$])${name.replace(/[.$]/g, "\\$&")}(?![\\w$])`).test(text);
+
+/** Line `n` (from 1) of the file at `path` from the project root, `undefined` past its end. */
+const lineOf = (path: string, n: number) =>
+	existsSync(join(root, path))
+		? readFileSync(join(root, path), "utf8").split("\n")[n - 1]
+		: undefined;
+
+/**
+ * `file:line → path:N …` of every line link in `files` whose line doesn't hold what it links to:
+ * its `symbol`, else one of the identifiers its label names. A link whose `line` or `path` can't
+ * be read, or that names nothing to look for, fails too.
+ */
+function driftedLines(
+	files: { path: string; source: string }[],
+	read: (path: string, n: number) => string | undefined = lineOf,
+) {
+	return files.flatMap((file) =>
+		lineLinks(file.source).flatMap(({ index, path, line, symbol, label }) => {
+			const at = `${file.path}:${file.source.slice(0, index).split("\n").length}`;
+			if (path === null || line === null) return [`${at} → ${UNREADABLE}`];
+			const names = symbol ? [symbol] : labelIdentifiers(label);
+			if (names.length === 0)
+				return [`${at} → ${path}:${line}: names no identifier (add a symbol)`];
+			const text = read(path, line);
+			if (text !== undefined && names.some((name) => holds(text, name))) return [];
+			return [`${at} → ${path}:${line} lacks ${names.join(" or ")}`];
+		}),
+	);
+}
 const docsPointers = tagReferences("DocsPointer", "doc");
 
 describe("the wiki's links", () => {
+	test("reads the wiki's files: at least every page, and the parts", () => {
+		const paths = wikiFiles().map((file) => file.path);
+		expect(
+			paths.filter((path) => path.startsWith("src/wiki/pages/")).length,
+		).toBeGreaterThanOrEqual(wikiPages.length);
+		expect(paths).toContain("src/wiki/parts/source-link.svelte");
+	});
+
 	test("every SourceLink names a file that exists", () => {
 		expect(brokenReferences(wikiFiles(), sourceLinks, missingFile)).toEqual([]);
 	});
@@ -126,6 +216,10 @@ describe("the wiki's links", () => {
 
 	test("every link between wiki pages has a page", () => {
 		expect(brokenReferences(wikiFiles(), wikiLinks, missingPage)).toEqual([]);
+	});
+
+	test("every SourceLink to a line lands on what it names", () => {
+		expect(driftedLines(wikiFiles())).toEqual([]);
 	});
 
 	describe("the checks find what they should (made-up text)", () => {
@@ -210,6 +304,38 @@ describe("the wiki's links", () => {
 			expect(brokenReferences(files, wikiLinks, missingPage)).toEqual([
 				"made-up.md:2 → /wiki/orders/no-such-page?x=1",
 				"made-up.md:3 → /wiki/nowhere",
+			]);
+		});
+
+		test("a SourceLink whose line moved away from what it names", () => {
+			const file: Record<string, string[]> = {
+				"src/a.ts": ["import x;", "export function moveOrderStock() {", "export const rows = [];"],
+			};
+			const read = (path: string, n: number) => file[path]?.[n - 1];
+			const files = made(
+				'<SourceLink path="src/a.ts" line={2}><code>moveOrderStock()</code></SourceLink>',
+				'<SourceLink path="src/a.ts" line={2}>moveOrderStock()</SourceLink>',
+				'<SourceLink path="src/a.ts" line={1}><code>moveOrderStock()</code></SourceLink>',
+				'<SourceLink path="src/a.ts" line={3}>the rows</SourceLink>',
+				'<SourceLink path="src/a.ts" line={3} symbol="rows">the rows</SourceLink>',
+				'<SourceLink path="src/a.ts" line={2} symbol="rows">the rows</SourceLink>',
+				'<SourceLink path="src/a.ts" line={3}>a.ts</SourceLink>',
+				'<SourceLink path="src/a.ts" line={9}><code>rows</code></SourceLink>',
+				'<SourceLink path="src/a.ts" line={2}><code>shells</code> and <code>moveOrderStock()</code></SourceLink>',
+				'<SourceLink path="src/a.ts" line={x}><code>rows</code></SourceLink>',
+				'<SourceLink path="src/a.ts" line={3} />',
+				'<SourceLink path="src/a.ts" line={2}><code>moveOrder</code></SourceLink>',
+				'<SourceLink path="src/a.ts"><code>nowhere</code></SourceLink>',
+			);
+			expect(driftedLines(files, read)).toEqual([
+				"made-up.md:3 → src/a.ts:1 lacks moveOrderStock",
+				"made-up.md:4 → src/a.ts:3: names no identifier (add a symbol)",
+				"made-up.md:6 → src/a.ts:2 lacks rows",
+				"made-up.md:7 → src/a.ts:3: names no identifier (add a symbol)",
+				"made-up.md:8 → src/a.ts:9 lacks rows",
+				"made-up.md:10 → unreadable",
+				"made-up.md:11 → src/a.ts:3: names no identifier (add a symbol)",
+				"made-up.md:12 → src/a.ts:2 lacks moveOrder",
 			]);
 		});
 

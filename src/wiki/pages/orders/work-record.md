@@ -79,6 +79,6 @@ it has just one, else none. The units are read as their audience sees them, by `
 
 - <SourceLink path="src/lib/orders/server/work-record.ts" line={62}><code>audiences</code></SourceLink>
 - <SourceLink path="src/lib/orders/server/work-record.ts" line={211}><code>readWorkRecord()</code></SourceLink>
-- <SourceLink path="src/lib/server/db/schema/orders.ts" line={118}><code>order_note</code></SourceLink> and <SourceLink path="src/lib/server/db/schema/orders.ts" line={139}><code>order_signoff</code></SourceLink>
+- <SourceLink path="src/lib/server/db/schema/orders.ts" line={118} symbol="orderNote"><code>order_note</code></SourceLink> and <SourceLink path="src/lib/server/db/schema/orders.ts" line={139} symbol="orderSignoff"><code>order_signoff</code></SourceLink>
 
 <DocsPointer doc="docs/agents/orders.md" section="The work record" />
