@@ -15,12 +15,11 @@ import { themeNames, type ThemeName } from "#lib/themes/index.ts";
 
 import { sectionInfo, wikiSections, type WikiSection } from "./sections.ts";
 
-/** @public Read by the wiki's guard specs (knip can't see them yet). */
+/** The core domains the wiki covers (`domain:<name>`). */
 export const coreDomains = ["orders", "customers", "equipment", "engineers"] as const;
 
 /**
  * What a page says it covers: `module:<id>`, `domain:<name>`, `shell:<name>` or `theme:<name>`.
- * @public
  */
 export type Coverage =
 	| `module:${ModuleId}`
