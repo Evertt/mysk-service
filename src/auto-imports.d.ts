@@ -33,6 +33,7 @@ declare global {
   const Sidebar: typeof import('#ui/sidebar')
   const Skeleton: typeof import('#ui/skeleton').Skeleton
   const Spinner: typeof import('#ui/spinner').Spinner
+  const Switch: typeof import('#ui/switch').Switch
   const Table: typeof import('#ui/table')
   const Textarea: typeof import('#ui/textarea').Textarea
   const Toaster: typeof import('#ui/sonner').Toaster
