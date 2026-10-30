@@ -1,8 +1,9 @@
-import { createRawSnippet } from "svelte";
+import { createRawSnippet, tick } from "svelte";
 import { beforeEach, expect, test, vi } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
+import { demoSignInEnabled } from "#routes/demo.remote.ts";
 import Diagram from "#wiki/parts/diagram.svelte";
 import DocsPointer from "#wiki/parts/docs-pointer.svelte";
 import HowItWorks from "#wiki/parts/how-it-works.svelte";
@@ -10,10 +11,14 @@ import PageStatus from "#wiki/parts/page-status.svelte";
 import SourceLink from "#wiki/parts/source-link.svelte";
 import TryIt from "#wiki/parts/try-it.svelte";
 
+import TryItInPage from "./try-it.test-harness.svelte";
+
 // The one remote function the wiki calls: whether the SHLTR demo's sign-in is switched on.
-const demo = vi.hoisted(() => ({ enabled: false }));
+const demo = vi.hoisted(() => ({ enabled: false, fails: false }));
 vi.mock("#routes/demo.remote.ts", () => ({
-	demoSignInEnabled: vi.fn(() => Promise.resolve(demo.enabled)),
+	demoSignInEnabled: vi.fn(() =>
+		demo.fails ? Promise.reject(new Error("offline")) : Promise.resolve(demo.enabled),
+	),
 }));
 
 const text = (html: string) => createRawSnippet(() => ({ render: () => `<span>${html}</span>` }));
@@ -21,7 +26,17 @@ const github = "https://github.com/Evertt/mysk-service/blob";
 
 beforeEach(() => {
 	demo.enabled = false;
+	demo.fails = false;
+	vi.mocked(demoSignInEnabled).mockClear();
 });
+
+/** Waits until try it has asked, and its answer has had its turn in the page. */
+async function answered() {
+	await vi.waitFor(() => expect(demoSignInEnabled).toHaveBeenCalledTimes(1));
+	await Promise.allSettled([vi.mocked(demoSignInEnabled).mock.results[0].value]);
+	await tick();
+	await new Promise((resolve) => setTimeout(resolve, 50));
+}
 
 test("the test build knows the commit the source links point at", () => {
 	expect(__WIKI_COMMIT__).toBeTruthy();
@@ -78,11 +93,24 @@ test("try it, where the demo's sign-in is on: a link to the login page, with the
 	await expect.element(link).toHaveAttribute("href", "/login");
 });
 
-test("try it, where the demo's sign-in is off: nothing", async () => {
+test("try it, where the demo's sign-in is off: nothing, once the answer is in", async () => {
 	const { container } = await render(TryIt, { as: "planner" });
 
-	await vi.waitFor(() => expect(container.textContent).toBe(""));
+	await answered();
+	expect(container.textContent).toBe("");
 	expect(page.getByRole("link").elements()).toHaveLength(0);
+});
+
+test("try it, where the demo's answer fails: nothing, and the rest of the page renders", async () => {
+	demo.fails = true;
+	const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+	await render(TryItInPage);
+
+	await answered();
+	await expect.element(page.getByText("Before the link")).toBeVisible();
+	await expect.element(page.getByText("After the link")).toBeVisible();
+	expect(page.getByRole("link").elements()).toHaveLength(0);
+	errors.mockRestore();
 });
 
 test("the how-it-works divider: the heading, before the developer half", async () => {

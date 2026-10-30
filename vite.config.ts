@@ -69,6 +69,7 @@ function shadcnImports(): ImportsMap {
 const wikiCommit = (() => {
 	try {
 		return execSync("git rev-parse HEAD", {
+			cwd: import.meta.dirname,
 			encoding: "utf8",
 			stdio: ["ignore", "pipe", "ignore"],
 		}).trim();
@@ -195,9 +196,15 @@ export default defineConfig({
 	// scan doesn't reach them or what they import (e.g. their icons). Those were found on the first
 	// page that used them, after the deps cache was cleared: Vite then pre-bundled them again and
 	// reloaded the page. Scanning the components, and the modules' manifests (their nav icons), finds
-	// them up front.
+	// them up front. The wiki's parts and shell (`src/wiki`) are imported by the pages, which are
+	// loaded on demand, so they need the same.
 	optimizeDeps: {
-		entries: ["src/lib/**/*.svelte", "src/modules/**/*.svelte", "src/modules/*/module.ts"],
+		entries: [
+			"src/lib/**/*.svelte",
+			"src/modules/**/*.svelte",
+			"src/modules/*/module.ts",
+			"src/wiki/**/*.svelte",
+		],
 	},
 	plugins: lazyPlugins(() => [
 		modulesPlugin(import.meta.dirname),
@@ -260,7 +267,8 @@ export default defineConfig({
 				// ("Failed to fetch dynamically imported module", an iframe that isn't ready, or a second
 				// copy of Svelte's runtime). Scanning the components as well finds them up front. These
 				// entries replace the default ones, so they name the test files too, and every component
-				// in `src/lib` (not only `ui/`: e.g. the data table's own icons).
+				// in `src/lib` (not only `ui/`: e.g. the data table's own icons), and the wiki's parts
+				// (`src/wiki`: their icons, found mid-run, failed the first run that used them).
 				optimizeDeps: {
 					entries: [
 						"src/tests/unit/**/*.svelte.{test,spec}.{js,ts}",
@@ -268,6 +276,7 @@ export default defineConfig({
 						"src/lib/**/*.svelte",
 						"src/modules/**/*.svelte",
 						"src/modules/*/module.ts",
+						"src/wiki/**/*.svelte",
 					],
 				},
 				test: {
