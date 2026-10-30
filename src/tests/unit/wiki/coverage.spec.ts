@@ -13,14 +13,7 @@ import { themeNames } from "#lib/themes/index.ts";
 import { coreDomains, wikiPages, type Coverage } from "#wiki/pages.ts";
 
 /** Written out, not computed, so it can't drift from the code: it's the pages still to write. */
-const notYetWritten: readonly Coverage[] = [
-	"theme:neutral",
-	"theme:harbor",
-	"theme:lagoon",
-	"theme:blueprint",
-	"theme:brutalist",
-	"theme:sorbet",
-];
+const notYetWritten: readonly Coverage[] = [];
 
 /** Every module, core domain, shell and theme the wiki must cover. */
 const expectedKeys = (): Coverage[] => [
