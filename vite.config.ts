@@ -20,7 +20,7 @@ import {
 	paraglideOutput,
 	paraglideOutputStructure,
 } from "./scripts/paraglide.ts";
-import { wikiHeadings } from "./scripts/wiki-headings.ts";
+import { wikiMdsvex, wikiPagesPlugin } from "./scripts/wiki-pages.ts";
 
 // Links the modules in `src/modules` into the app before anything reads `src/routes` or the
 // registries (SvelteKit's sync, Vitest, the editor), see scripts/modules.ts.
@@ -209,6 +209,8 @@ export default defineConfig({
 	},
 	plugins: lazyPlugins(() => [
 		modulesPlugin(import.meta.dirname),
+		// The wiki's pages' front-matter, for its registry, sidebar and search (scripts/wiki-pages.ts).
+		wikiPagesPlugin(import.meta.dirname),
 		AutoImport({
 			include: [/\.svelte$/, /\.svelte\?svelte/, /\.ts$/],
 			// Paraglide's messages (`m.title()`), and the shadcn-svelte components.
@@ -219,9 +221,9 @@ export default defineConfig({
 		tailwindcss(),
 		sveltekit({
 			extensions: [".svelte", ".md"],
-			// The wiki's pages (`src/wiki/pages`), with their `##` headings in their front-matter, for
-			// the wiki's search (`scripts/wiki-headings.ts`).
-			preprocess: [mdsvex({ extensions: [".md"], remarkPlugins: [wikiHeadings] })],
+			// The wiki's pages (`src/wiki/pages`), their `##` headings with ids and listed in their
+			// front-matter, for the wiki's search (`scripts/wiki-headings.ts`).
+			preprocess: [mdsvex(wikiMdsvex)],
 			// mdsvex 0.12 still writes `<script context="module">` for a page's front-matter, which
 			// Svelte 5 calls deprecated: a warning per wiki page per compile, in every build, dev
 			// server and test run, about code nobody can change here. Only that warning, only in `.md`.

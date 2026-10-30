@@ -78,9 +78,24 @@ describe("buildPages", () => {
 	});
 
 	test("refuses a page without front-matter, naming the file", () => {
-		expect(() => buildPages({ "./pages/x/y.md": undefined }, { "./pages/x/y.md": loader })).toThrow(
+		expect(() => buildPages({ "./pages/x/y.md": null }, { "./pages/x/y.md": loader })).toThrow(
 			"./pages/x/y.md",
 		);
+		// A page the front-matter's module doesn't list at all.
+		expect(() => buildPages({}, { "./pages/x/z.md": loader })).toThrow("./pages/x/z.md");
+	});
+
+	test("refuses front-matter without a page to load, naming the file", () => {
+		expect(() => buildPages({ "./pages/x/y.md": meta() }, {})).toThrow("./pages/x/y.md: no loader");
+	});
+
+	test("takes the headings with their ids", () => {
+		const headings = [{ text: "Until it’s decided", id: "until-its-decided" }];
+		const pages = buildPages(
+			{ "./pages/x/y.md": meta({ headings }) },
+			{ "./pages/x/y.md": loader },
+		);
+		expect(pages[0]?.headings).toEqual(headings);
 	});
 });
 
@@ -108,5 +123,11 @@ describe("the real pages", () => {
 		expect(wikiPages.length).toBeGreaterThan(0);
 		expect(pageBySlug("start/what-fieldworks-is")).toBeDefined();
 		expect(pageBySlug("nope/nothing")).toBeUndefined();
+	});
+
+	test("one page loads by its slug, with its component", async () => {
+		const page = pageBySlug("orders/lifecycle");
+		expect(page?.headings).toContainEqual({ text: "Try the moves", id: "try-the-moves" });
+		expect((await page!.load()).default).toBeTypeOf("function");
 	});
 });

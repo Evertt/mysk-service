@@ -7,3 +7,12 @@ declare module "*.md" {
 	const page: import("svelte").Component;
 	export default page;
 }
+
+/**
+ * The wiki's pages' front-matter, by file (`./pages/orders/lifecycle.md`), as
+ * `scripts/wiki-pages.ts` reads it at build time: `null` for a page without any.
+ */
+declare module "virtual:wiki-pages" {
+	const frontMatter: Record<string, unknown>;
+	export default frontMatter;
+}

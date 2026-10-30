@@ -2,16 +2,15 @@
 	@component
 	The wiki's search, in its header: a button (and `/`, Ctrl+K or ⌘K) that opens a search box over
 	the page. As the visitor types it lists the pages and headings holding every word
-	(`searchPages()`, `search.ts`); choosing one opens its page. English only, like the rest of the
-	wiki.
+	(`searchPages()`, `search.ts`); choosing one opens its page, at the heading if it's one
+	(`entryHref()`). English only, like the rest of the wiki.
 -->
 <script lang="ts">
 	import FileTextIcon from "@lucide/svelte/icons/file-text";
 	import HashIcon from "@lucide/svelte/icons/hash";
 	import SearchIcon from "@lucide/svelte/icons/search";
 
-	import { pageHref } from "./pages.ts";
-	import { searchIndex, searchPages } from "./search.ts";
+	import { entryHref, searchIndex, searchPages } from "./search.ts";
 
 	let open = $state(false);
 	let query = $state("");
@@ -68,12 +67,8 @@
 				No page matches “{query.trim()}”.
 			</p>
 		{/if}
-		{#each results as entry (`${entry.slug}#${entry.heading ?? ""}`)}
-			<Command.LinkItem
-				href={pageHref(entry.slug)}
-				value="{entry.slug}#{entry.heading ?? ''}"
-				onSelect={chosen}
-			>
+		{#each results as entry (entryHref(entry))}
+			<Command.LinkItem href={entryHref(entry)} value={entryHref(entry)} onSelect={chosen}>
 				{#if entry.heading}
 					<HashIcon class="text-muted-foreground" />
 					<span class="grid min-w-0">

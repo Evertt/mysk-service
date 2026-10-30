@@ -1,12 +1,16 @@
 /**
- * The wiki's pages. Each file in `./pages` (an mdsvex `.md` or a `.svelte` page) starts with
- * front-matter (a `.svelte` page exports it as `metadata` from `<script module>`), which
- * `buildPages()` checks against the app: the section, and what the page `covers`, which must be a
- * module, core domain, shell or theme that exists. The guards read `covers` to see what the wiki
- * says about each; the route and the sidebar read the rest.
+ * The wiki's pages. Each file in `./pages` is an mdsvex `.md` page that starts with front-matter,
+ * which `buildPages()` checks against the app: the section, and what the page `covers`, which must
+ * be a module, core domain, shell or theme that exists. The guards read `covers` to see what the
+ * wiki says about each; the route, the sidebar and the search read the rest.
+ *
+ * The front-matter comes from `virtual:wiki-pages` (`scripts/wiki-pages.ts`), read at build time,
+ * not from the pages' modules: so a wiki page's chunk holds that page alone, and the route loads
+ * it by its slug (`load`).
  */
 import type { Component } from "svelte";
 import * as v from "valibot";
+import frontMatter from "virtual:wiki-pages";
 
 import { shells, type ShellName } from "#lib/auth/shells.ts";
 import { moduleIds, type ModuleId } from "#lib/modules/ids.ts";
@@ -34,8 +38,11 @@ export interface PageMeta {
 	order: number;
 	status: "built" | "partly built" | "planned";
 	covers: Coverage[];
-	/** The page's `##` headings, which the build adds to its front-matter (`scripts/wiki-headings.ts`). */
-	headings: string[];
+	/**
+	 * The page's `##` headings, and the `id` each has in the page, which the build adds to its
+	 * front-matter (`scripts/wiki-headings.ts`).
+	 */
+	headings: { text: string; id: string }[];
 }
 
 export interface WikiPage extends PageMeta {
@@ -60,24 +67,24 @@ const pageMeta = v.object({
 	order: v.number(),
 	status: v.picklist(["built", "partly built", "planned"]),
 	covers: v.array(coverage),
-	headings: v.optional(v.array(v.string()), []),
+	headings: v.optional(v.array(v.object({ text: v.string(), id: v.string() })), []),
 });
 
 /** The path under `/wiki` of the page file `./pages/<slug>.md`. */
-const slugOf = (key: string) => key.replace(/^\.\/pages\//, "").replace(/\.(?:md|svelte)$/, "");
+const slugOf = (key: string) => key.replace(/^\.\/pages\//, "").replace(/\.md$/, "");
 
 /**
- * The pages of these files (`metadata` and `loaders` by file key, as `import.meta.glob` makes
- * them), sorted by section, then `order`, then title. Throws on the first file whose front-matter
- * is wrong, naming it and what is wrong.
+ * The pages of these files (`metadata` as `virtual:wiki-pages` holds it, and `loaders` as
+ * `import.meta.glob` makes them, both by file key), sorted by section, then `order`, then title. Throws on the first file whose front-matter
+ * is wrong or missing, or that has no loader, naming it and what is wrong.
  */
 export function buildPages(
 	metadata: Record<string, unknown>,
 	loaders: Record<string, () => Promise<{ default: Component }>>,
 ): WikiPage[] {
-	return Object.entries(metadata)
-		.map(([key, input]): WikiPage => {
-			const parsed = v.safeParse(pageMeta, input);
+	return [...new Set([...Object.keys(metadata), ...Object.keys(loaders)])]
+		.map((key): WikiPage => {
+			const parsed = v.safeParse(pageMeta, metadata[key]);
 			if (!parsed.success) {
 				const problems = parsed.issues.map((issue) => {
 					const path = v.getDotPath(issue);
@@ -98,11 +105,8 @@ export function buildPages(
 }
 
 export const wikiPages = buildPages(
-	import.meta.glob("./pages/**/*.{md,svelte}", { eager: true, import: "metadata" }),
-	import.meta.glob("./pages/**/*.{md,svelte}") as Record<
-		string,
-		() => Promise<{ default: Component }>
-	>,
+	frontMatter,
+	import.meta.glob("./pages/**/*.md") as Record<string, () => Promise<{ default: Component }>>,
 );
 
 /** Where the page of `slug` is served. */

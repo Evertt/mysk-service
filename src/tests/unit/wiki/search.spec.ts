@@ -4,7 +4,7 @@
  */
 import { describe, expect, test } from "vite-plus/test";
 
-import { searchIndex, searchPages, type SearchEntry } from "#wiki/search.ts";
+import { entryHref, searchIndex, searchPages, type SearchEntry } from "#wiki/search.ts";
 
 /** A made-up index, in page order. */
 const index: SearchEntry[] = [
@@ -67,6 +67,33 @@ describe("searchPages", () => {
 			{ slug: "internals/tenancy", title: "Tenancy" },
 		]);
 	});
+
+	test("a quote matches whether it's curled or straight, in the index or the query", () => {
+		const quoted: SearchEntry[] = [
+			{ slug: "a", title: "A", heading: "Until it’s decided" },
+			{ slug: "b", title: "B", heading: 'The "done" status' },
+			{ slug: "c", title: "C", heading: "What it isn't" },
+		];
+		expect(searchPages("it's", quoted).map((entry) => entry.slug)).toEqual(["a"]);
+		expect(searchPages("“done”", quoted).map((entry) => entry.slug)).toEqual(["b"]);
+		expect(searchPages("isn’t", quoted).map((entry) => entry.slug)).toEqual(["c"]);
+	});
+});
+
+describe("entryHref", () => {
+	test("leads to the page, or to the heading on it", () => {
+		expect(entryHref({ slug: "orders/lifecycle", title: "Order lifecycle" })).toBe(
+			"/wiki/orders/lifecycle",
+		);
+		expect(
+			entryHref({
+				slug: "orders/lifecycle",
+				title: "Order lifecycle",
+				heading: "Try the moves",
+				id: "try-the-moves",
+			}),
+		).toBe("/wiki/orders/lifecycle#try-the-moves");
+	});
 });
 
 describe("the index of the real pages", () => {
@@ -76,6 +103,16 @@ describe("the index of the real pages", () => {
 			slug: "orders/lifecycle",
 			title: "Order lifecycle",
 			heading: "Try the moves",
+			id: "try-the-moves",
+		});
+	});
+
+	test("finds a curled heading as the visitor types it", () => {
+		expect(searchPages("isn't work", searchIndex)).toContainEqual({
+			slug: "orders/awaiting-acceptance",
+			title: "Orders awaiting acceptance",
+			heading: "Until it’s decided, it isn’t work",
+			id: "until-its-decided-it-isnt-work",
 		});
 	});
 

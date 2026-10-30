@@ -10,6 +10,7 @@
 		"scripts/modules/**/*.ts",
 		"scripts/test-dates.ts",
 		"scripts/test-dates.spec.ts",
+		"scripts/wiki-*.ts",
 		"vite.config.ts",
 		"drizzle.config.ts"
 	],
