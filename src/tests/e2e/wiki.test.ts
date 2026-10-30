@@ -57,10 +57,33 @@ describe("signed out", () => {
 });
 
 describe("signed in", () => {
-	const app = useApp({ user: users.planner });
+	// The office shell owns every page but the customer portal's, so a planner stays on the wiki
+	// either way; the guard sends an engineer and a customer's contact home from any page that isn't
+	// their shell's, unless it's public (`isPublic`, `hooks.server.ts`).
+	describe("as the planner", () => {
+		const app = useApp({ user: users.planner });
 
-	test("opens signed in, without being sent to the shell", async () => {
-		await app.go("/wiki");
-		expect(app.path()).toBe(first);
+		test("opens signed in, without being sent to the shell", async () => {
+			await app.go("/wiki");
+			expect(app.path()).toBe(first);
+		});
+	});
+
+	describe("as a field engineer", () => {
+		const app = useApp({ user: users.engineer });
+
+		test("stays on the wiki, not sent to the engineer portal", async () => {
+			await app.go("/wiki");
+			expect(app.path()).toBe(first);
+		});
+	});
+
+	describe("as a customer's contact", () => {
+		const app = useApp({ user: users.northCustomer });
+
+		test("stays on the wiki, not sent to the customer portal", async () => {
+			await app.go("/wiki");
+			expect(app.path()).toBe(first);
+		});
 	});
 });
