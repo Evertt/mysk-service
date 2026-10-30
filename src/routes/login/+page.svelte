@@ -80,4 +80,14 @@
 			<p class="text-xs text-balance text-muted-foreground">{m.auth_demo_note()}</p>
 		</form>
 	{/if}
+
+	<!-- The public wiki (`/wiki`) shows what the app does before anyone signs in. -->
+	<p class="text-center text-sm">
+		<a
+			href="/wiki"
+			class="text-muted-foreground underline underline-offset-4 hover:text-foreground"
+		>
+			{m.auth_wiki_link()}
+		</a>
+	</p>
 </PublicShell>

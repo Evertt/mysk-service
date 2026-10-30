@@ -101,11 +101,14 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 
 /**
  * Paths anyone may open: the login page, invitations (`/invite/[id]`), better-auth's endpoints,
- * SvelteKit's own assets, and the operations endpoints (`/_ops/daily`), which check a token of
- * their own instead of a session. By path, as some have no route.
+ * SvelteKit's own assets, the wiki (`/wiki`, public and tenantless: signed-in members read it too,
+ * and the guard leaves it alone for them), and the operations endpoints (`/_ops/daily`), which
+ * check a token of their own instead of a session. By path, as some have no route.
  */
 const isPublic = (pathname: string) =>
 	pathname === "/login" ||
+	pathname === "/wiki" ||
+	pathname.startsWith("/wiki/") ||
 	pathname.startsWith("/invite/") ||
 	pathname.startsWith("/api/auth/") ||
 	pathname.startsWith("/_app/") ||
