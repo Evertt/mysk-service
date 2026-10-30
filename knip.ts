@@ -32,6 +32,8 @@ const config: KnipConfig = {
 		// the enum types that only a generated `labels.gen.ts` reads.)
 		// The wiki's pages, which `src/wiki/pages.ts` loads through `import.meta.glob`.
 		"src/wiki/pages/**/*.{md,svelte}",
+		// The wiki's widgets, used by its .md pages, which knip doesn't parse.
+		"src/wiki/widgets/**/*.svelte",
 		// The tests of every Vitest project: `src/tests/{unit,e2e}/` and the modules' `tests/{unit,e2e}/`.
 		"src/**/*.{test,spec}.{ts,js}",
 		"scripts/**/*.spec.ts",

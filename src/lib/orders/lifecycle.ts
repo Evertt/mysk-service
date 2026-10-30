@@ -41,7 +41,7 @@ export const fieldRefusal = (status: OrderStatus) =>
 		: m.portal_cant_change({ status: label("orderStatus", status).toLowerCase() });
 
 /** Who moves an order from one status to another. */
-type OrderActor = "office" | "planner" | "acceptance" | "engineer" | "invoicing";
+export type OrderActor = "office" | "planner" | "acceptance" | "engineer" | "invoicing";
 
 /** A transition: who makes it, from which statuses, and to which. */
 export interface TransitionRule {
