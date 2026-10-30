@@ -32,7 +32,8 @@ all.
   filtered, sorted list. Come back later and the list is as you left it.
 - **Select rows** to act on them: assign an engineer to ten orders at once, change their status, or delete them.
   On a long list you can select everything that matches the filters, not just the rows on screen.
-- **Rows load as you scroll** in the lists that grow (orders, equipment), so a list of thousands
+- **Rows load as you scroll** in the lists the server pages through (orders, equipment, and the
+  modules' materials, partners, units by condition and maintenance due), so a list of thousands
   opens as fast as one of ten.
 
 Try the search, the status filter and the grouping on 25 made-up orders:

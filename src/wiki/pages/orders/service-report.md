@@ -61,8 +61,9 @@ serves two pages, so the office's and the customer's versions come from the same
 **The page** is `detail/work-order.svelte`, wrapped in `PrintSheet` with the page's print styles.
 It is the one place the layout is decided. The office reaches it at
 `/checklists/work-orders/[number]`, and the customer portal has its own route in the same module.
-Both are linked from a slot on the order's page (`orders.detail.side` in the office,
-`client.order` in the portal), shown only when the order has completed checklists.
+Both are linked from the checklists' card in a slot on the order's page. In the office
+(`orders.detail.side`) the card shows when the order has checklists, filled in or not. In the
+portal (`client.order`) it shows the completed ones, and has the button once the order is done.
 
 **What the plan would change.** It moves the work order out of the checklists module into core,
 with checklists filling a slot, so every order has one. The PDF would be rendered by Cloudflare's
