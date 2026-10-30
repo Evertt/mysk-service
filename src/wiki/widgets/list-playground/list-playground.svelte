@@ -12,7 +12,7 @@
 	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { formatDate } from "#lib/i18n/format.ts";
 	import { orderStatuses } from "#lib/models.ts";
-	import { orderStatusDisplay } from "#lib/orders/display.ts";
+	import { orderStatusDisplay } from "#lib/orders/index.ts";
 
 	import { fixtureRows, playground, type PlaygroundState } from "./list-playground.ts";
 

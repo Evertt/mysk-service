@@ -12,7 +12,7 @@
 	import FilterChips from "#lib/components/filter-chips.svelte";
 	import { cn } from "#lib/utils.ts";
 
-	import { type CallerId, callers, gates, outcome } from "./gates.ts";
+	import { type CallerId, callers, checkCall, gates, outcome } from "./gates.ts";
 
 	let caller = $state<CallerId>("planner");
 	const label = $derived(callers.find((candidate) => candidate.id === caller)?.label ?? "");
@@ -51,7 +51,7 @@
 					<p>{gate.admits}</p>
 					<p class="text-xs text-muted-foreground">
 						{gate.forWhat}
-						<span class="font-mono">{gate.check}</span>
+						<span class="font-mono">{checkCall(gate.check)}</span>
 					</p>
 					{#if gate.name === "forDevelopers" && caller !== "anonymous"}
 						<p class="text-xs text-muted-foreground">
@@ -70,7 +70,7 @@
 		{/each}
 	</ul>
 	<figcaption class="mt-2 text-xs text-muted-foreground">
-		A module's own set, <code class="font-mono">moduleRemote(id)</code>, adds the module check to
-		one of these.
+		A module's own set (made with <code class="font-mono">moduleRemote</code>) adds the module check
+		to one of these.
 	</figcaption>
 </figure>

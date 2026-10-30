@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { describe, expect, test } from "vite-plus/test";
 
-import { callers, gates, outcome } from "#wiki/widgets/gate-table/gates.ts";
+import { callers, checkCall, gates, outcome } from "#wiki/widgets/gate-table/gates.ts";
 
 const gatesFile = readFileSync(
 	join(import.meta.dirname, "../../../../lib/server/remote-functions.ts"),
@@ -54,6 +54,29 @@ describe("the gate table", () => {
 	test("the developers' gate is a 404 for the roles, so it doesn't say its pages exist", () => {
 		for (const { id } of callers) {
 			if (id !== "anonymous") expect(outcome("forDevelopers", id)).toMatchObject({ status: 404 });
+		}
+	});
+
+	test("every check it names is a function of the auth files", () => {
+		const auth = [
+			"../../../../lib/server/auth/session.ts",
+			"../../../../lib/server/bug-reports/developers.ts",
+		]
+			.map((path) => readFileSync(join(import.meta.dirname, path), "utf8"))
+			.join("\n");
+		const missing = gates
+			.flatMap((gate) => (gate.check ? [gate.check] : []))
+			.filter((check) => !new RegExp(`\\bexport (?:function|const) require${check}\\b`).test(auth));
+		expect(missing, "a check was renamed: update gates.ts").toEqual([]);
+		expect(checkCall("Member")).toBe("requireMember()");
+		expect(checkCall(null)).toBe("none");
+	});
+
+	test("each gate's check is the one the file passes to remoteSet()", () => {
+		for (const { name, check } of gates) {
+			const line = gatesFile.match(new RegExp(`^export const ${name} = remoteSet\\((.*?),`, "m"));
+			if (!check) expect(line?.[1]).toBe("() => {}");
+			else expect(line?.[1]).toBe(`require${check}`);
 		}
 	});
 
