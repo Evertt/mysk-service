@@ -152,3 +152,35 @@ Each step ends committed, with `pnpm run check`, `pnpm knip` and its specs green
 - Dutch pages.
 - Live tenant data in the wiki (it's prerendered and tenantless).
 - A full-text search index; search covers titles and headings.
+
+## Decisions after the spike
+
+Tried on 2026-10-30 with mdsvex 0.12.8, a throwaway route and `vp dev`, `vp build` and `vp preview`.
+
+- **Pages are `.md` files (mdsvex).** `sveltekit({ extensions: [".svelte", ".md"], preprocess:
+[mdsvex({ extensions: [".md"] })] })` compiles Markdown that imports a Svelte 5 component with
+  `$state`/`$derived`, uses an `{#await}` block and an `{await …}` expression, under
+  `experimental.async` and `runes: true`. It renders and hydrates in dev and in a production
+  build, and `pnpm exec svelte-check` is clean. Three things to know:
+  - mdsvex ships types only for `*.svx` and `*.svelte.md`, as `SvelteComponent` classes. Task 2
+    adds a `declare module "*.md"` (a default `Component` and `metadata`) in `src/`, or
+    svelte-check fails on every `.md` import.
+  - Block syntax (`{#await}`, `{:then}`, `{/await}`) must stand on lines of its own, with a blank
+    line before and after: next to text mdsvex wraps it in `<p>` and Svelte rejects the block.
+  - `mdsvex` is registered in `vite.config.ts` and pinned in `package.json`.
+- **`prerender = false`.** A prerendered page can't show the visitor's theme without a flash:
+  - The build fails at the root layout, whose `await getTheme()` and `await getMode()` are remote
+    queries (`remote_query_prerender`), and in `handleGuard`, which reads `event.url.search`
+    (`url_search_unavailable_prerender`). Both can be worked around (`building`, reading `search`
+    only when redirecting).
+  - Then the prerendered `<html>` is static and the adapter serves it before the hooks run, so
+    `handleTheme` never sees the cookies. With `Cookie: theme=harbor; mode=dark` the served
+    `<html>` is `lang="nl" data-theme="lagoon" data-mode="system" class=""` (the build's
+    defaults: also its language and time zone), the same as without cookies.
+  - The client corrects it only after hydration, when the layout's queries answer: in the browser
+    the theme and mode changed 45 ms after the first frame, with the splash screen showing the
+    default colours until then. A flash, brief but there, for everyone not on the defaults.
+  - Without the prerender the same route, served by the hooks, returns
+    `data-theme="harbor" data-mode="dark" class="dark"` for those cookies.
+  - So the wiki's pages are server-rendered, with no database or session, and the theme comes from
+    the cookie as in the other shells. Wherever this plan says "prerender", read "server-rendered".

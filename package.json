@@ -84,6 +84,7 @@
 		"knip": "^6.40.0",
 		"layerchart": "^2.5.2",
 		"magic-string": "^0.30.21",
+		"mdsvex": "0.12.8",
 		"nodemailer": "^10.0.15",
 		"pdf-lib": "^1.17.1",
 		"playwright": "^1.60.0",

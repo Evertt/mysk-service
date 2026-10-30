@@ -6,6 +6,7 @@ import autoAdapter from "@sveltejs/adapter-auto";
 import cloudflareAdapter from "@sveltejs/adapter-cloudflare";
 import { sveltekit } from "@sveltejs/kit/vite";
 import tailwindcss from "@tailwindcss/vite";
+import { mdsvex } from "mdsvex";
 import type { ImportsMap } from "unplugin-auto-import/types";
 import AutoImport from "unplugin-auto-import/vite";
 import { defineConfig, lazyPlugins } from "vite-plus";
@@ -192,6 +193,8 @@ export default defineConfig({
 		}),
 		tailwindcss(),
 		sveltekit({
+			extensions: [".svelte", ".md"],
+			preprocess: [mdsvex({ extensions: [".md"] })],
 			compilerOptions: {
 				// Force runes mode for the project, except for libraries. Can be removed in svelte 6.
 				runes: ({ filename }) =>
