@@ -32,12 +32,6 @@ const notYetWritten: readonly Coverage[] = [
 	"shell:office",
 	"shell:engineer",
 	"shell:customer",
-	"theme:neutral",
-	"theme:harbor",
-	"theme:lagoon",
-	"theme:blueprint",
-	"theme:brutalist",
-	"theme:sorbet",
 ];
 
 /** Every module, core domain, shell and theme the wiki must cover. */
