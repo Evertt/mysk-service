@@ -14,17 +14,6 @@ import { coreDomains, wikiPages, type Coverage } from "#wiki/pages.ts";
 
 /** Written out, not computed, so it can't drift from the code: it's the pages still to write. */
 const notYetWritten: readonly Coverage[] = [
-	"module:checklists",
-	"module:condition",
-	"module:contracts",
-	"module:docks",
-	"module:energy",
-	"module:invoices",
-	"module:maintenance",
-	"module:materials",
-	"module:partner-programme",
-	"module:parts-shop",
-	"module:schedule",
 	"domain:orders",
 	"domain:customers",
 	"domain:equipment",
