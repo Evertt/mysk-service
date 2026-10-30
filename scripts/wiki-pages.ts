@@ -79,6 +79,10 @@ export function wikiPagesPlugin(root: string): Plugin {
 			const module = graph.getModuleById(resolvedId);
 			if (!module || served.get(this.environment.name) === (await code())) return;
 			graph.invalidateModule(module);
+			// Its importer (the registry) too: its `import.meta.glob` of the pages is expanded anew
+			// with it, or a page that just came has front-matter but no loader yet, and one that just
+			// went the other way round.
+			for (const importer of module.importers) graph.invalidateModule(importer);
 			return [...modules, module];
 		},
 	};
