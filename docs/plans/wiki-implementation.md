@@ -42,9 +42,9 @@ components, Vitest 5 through `vp test`.
 
 ## Review Focus
 
-1. **A visitor with a theme or mode cookie** opening a prerendered page expects their own theme,
-   not a Lagoon/light flash. Task 1 decides prerender versus SSR on exactly this; Task 3's e2e
-   test sets the cookie and checks `data-theme`.
+1. **A visitor with a theme or mode cookie** opening a server-rendered wiki page expects their own
+   theme, not a Lagoon/light flash. The spike settled that the pages are server-rendered, so the
+   hooks apply the cookie; Task 3's e2e test sets the cookie and checks `data-theme`.
 2. **A signed-in member** opening `/wiki` expects the wiki, not a redirect to their shell's home
    (`shellOf()` sends members away from pages outside their shell). Task 3's e2e test opens
    `/wiki` signed in as the planner.
@@ -84,8 +84,8 @@ section added to `docs/plans/wiki.md`.
   - mdsvex passes → pages are `.md`; fails → pages are `.svelte` files wrapped in `<Prose>`,
     and the rest of this plan reads "page file" as `.svelte`.
   - the prerender passes → `prerender = true`; fails → `prerender = false` (pages are still
-    server-rendered without a database or session, so the theme comes from the cookie as in the
-    other shells).
+    server-rendered, and no wiki code reads the database or a tenant, so the theme comes from the
+    cookie as in the other shells).
 - [ ] **Step 5: Revert the spike code** (`git checkout -- vite.config.ts src/hooks.server.ts` and
       delete the throwaway route). If mdsvex passed, keep it in `package.json` and the
       `vite.config.ts` registration; it's needed from Task 2.
@@ -200,14 +200,13 @@ pathname.startsWith("/wiki/")`)
 **Interfaces:**
 
 - Consumes: `wikiPages`, `pageBySlug`, `wikiNav` (Task 2).
-- Produces: `[...slug]/+page.ts` exports `entries()` (every slug), `load({ params })` →
+- Produces: `[...slug]/+page.ts` exports `load({ params })` →
   `{ page: WikiPage, component: Component }`, or `error(404)` for an unknown slug. `/wiki`'s
-  `+page.ts` redirects (307) to `/wiki/start/what-fieldworks-is`. `+layout.ts` sets `prerender`
-  per Task 1, `ssr = true`, and `csr = true`.
+  `+page.ts` redirects (307) to `/wiki/start/what-fieldworks-is`. `+layout.ts` sets `prerender = false`
+  (the spike's decision), `ssr = true`, and `csr = true`.
 
 - [ ] **Step 1: Write the failing load spec**: `"loads a known slug"` returns its `page.title`;
-      `"404s an unknown slug"` throws with `status: 404` for `nope`; `"entries lists every page"`
-      equals `wikiPages.map(({ slug }) => ({ slug }))`.
+      `"404s an unknown slug"` throws with `status: 404` for `nope`.
 - [ ] **Step 2: Write the failing e2e file** `wiki.test.ts` (copy `useApp` usage from
       `auth.demo.test.ts`):
   - `"opens signed out"`: `useApp({ user: null })`, go to `/wiki`; it lands on
@@ -227,7 +226,7 @@ pathname.startsWith("/wiki/")`)
       for `/login`'s GET.
 - [ ] **Step 5: Run** both again. Expected: PASS. Then `pnpm run check`, `pnpm knip`, and the
       guards the change touches: `pnpm exec vp test run src/tests/unit/shell-chrome.spec.ts
-  src/tests/unit/lib/domain-boundaries.spec.ts src/tests/unit/lib/auth/shells.spec.ts`. If a
+src/tests/unit/lib/domain-boundaries.spec.ts src/tests/unit/lib/auth/shells.spec.ts`. If a
       guard refuses a wiki file for a rule a public, tenantless page can't meet, add the file to
       that guard's allow-list with the comment `the wiki: public and tenantless (docs/plans/wiki.md)`.
 - [ ] **Step 6: Commit** `feat(wiki): /wiki, its shell and the links to it`.
@@ -287,7 +286,7 @@ or "develop" when git fails>) }`), `src/app.d.ts` (`declare const __WIKI_COMMIT_
   (`#lib/components/callout.svelte`) linking to the doc on GitHub: "The rules: …".
 - `<TryIt as={DemoRole}>`: a button-link to `/login` reading "Try it as the {role label}", with
   the role's label from `demoRoleLabels` (`src/routes/demo-roles.ts`). The login page's demo
-  buttons do the sign-in. It renders nothing on the server or the prerender, and in the browser
+  buttons do the sign-in. It renders nothing on the server, and in the browser
   only once `demoSignInEnabled()` answers true.
 - `<HowItWorks>`: the heading "How it works" and a divider before the developer half.
 - `<PageStatus status>`: nothing for `built`; a callout for `partly built` and `planned`.

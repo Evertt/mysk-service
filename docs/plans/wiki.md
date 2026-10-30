@@ -21,8 +21,10 @@ wherever a concept is clearer seen or tried than read.
 - **Public, in the repo.** A route group `(wiki)` at `/wiki`, no sign-in, deployed with the app and
   committed with the code it describes. Not an artifact outside the repo: that can't import the
   code's data and goes stale silently.
-- **Prerendered.** Every page is static HTML at build time: no database, session, tenant or remote
-  function.
+- **Server-rendered, tenantless.** Every page is rendered per request from files in the repo; no
+  wiki code reads the database or a tenant, or calls a remote function of its own. (Not
+  prerendered: a prerendered page can't show the visitor's theme without a flash, see "Decisions
+  after the spike".)
 - **English only.** Pages are prose, not Paraglide messages; the wiki is exempt from the Paraglide
   rule, with the reason in the guard's allow-list. Dutch is out of scope for now.
 - **Widgets import the real data, never a copy.** The lifecycle diagram reads `orderTransitions`,
@@ -62,9 +64,10 @@ A page's two halves:
 ### Routes and access
 
 - `src/routes/(wiki)/wiki/+layout.svelte`: the wiki's own shell (a sidebar of sections and pages,
-  search, the theme and mode switchers), in the Lagoon look. `+layout.ts` sets `prerender = true`.
-- `src/routes/(wiki)/wiki/[...slug]/+page.ts` loads a page by its path and lists every page in
-  `entries()` for the prerender.
+  search, the theme and mode switchers), in the Lagoon look. `+layout.ts` sets `prerender = false`: the pages are
+  server-rendered.
+- `src/routes/(wiki)/wiki/[...slug]/+page.ts` loads a page by its path (a 404 for an unknown
+  one).
 - `isPublic` in `src/hooks.server.ts` admits `/wiki` and everything under it.
 - Links to `/wiki` from the login page and the office's user menu.
 
@@ -106,7 +109,7 @@ original, so the copy can't drift.
 
 Widgets use the kit's components, formats and colours (`docs/agents/kit.md`). The wiki gets only
 the exemptions it needs, each in its guard's allow-list with the reason: the Paraglide rule for
-prose, and any page or layout rule a static, tenantless page can't meet.
+prose, and any page or layout rule a tenantless page can't meet.
 
 ## Staying current
 
@@ -116,7 +119,8 @@ prose, and any page or layout rule a static, tenantless page can't meet.
   pages not yet written, emptied by step 6.
 - **Link guard**: every `SourceLink` path and docs pointer names a file that exists, so a rename
   fails a test instead of breaking the wiki.
-- **The prerender**: `pnpm build` fails on a broken link between wiki pages.
+- **Page links**: `links.spec.ts` ("every link between wiki pages has a page") is the only check
+  on links between wiki pages: without a prerender the build doesn't crawl them.
 - **AGENTS.md** gets a line under "Pointers": a feature added or changed gets its wiki page updated.
   `docs/agents/kit.md` gets a short "Wiki" entry: how to write a page and a widget.
 
@@ -133,9 +137,9 @@ prose, and any page or layout rule a static, tenantless page can't meet.
 Each step ends committed, with `pnpm run check`, `pnpm knip` and its specs green.
 
 1. **Spike: mdsvex.** Does it compile Markdown with Svelte 5 components under `experimental.async`,
-   SvelteKit 3 and Vite+, and prerender? Decide between mdsvex and `.svelte` pages; record the
+   SvelteKit 3 and Vite+, and can the pages be prerendered? Decide between mdsvex and `.svelte` pages; record the
    answer here.
-2. **Skeleton.** The route group and its shell, `nav.ts`, `isPublic`, the prerender, the links from
+2. **Skeleton.** The route group and its shell, `nav.ts`, `isPublic`, the links from
    the login page and the user menu, the coverage and link guards (with their allow-list), and one
    page ("What Fieldworks is") to prove the path.
 3. **Shared parts.** `Diagram`, `SourceLink`, `TryIt`, `DocsPointer`, `RoleSwitcher`.
@@ -150,7 +154,7 @@ Each step ends committed, with `pnpm run check`, `pnpm knip` and its specs green
 ## Out of scope
 
 - Dutch pages.
-- Live tenant data in the wiki (it's prerendered and tenantless).
+- Live tenant data in the wiki (it's tenantless).
 - A full-text search index; search covers titles and headings.
 
 ## Decisions after the spike
@@ -182,5 +186,7 @@ Tried on 2026-10-30 with mdsvex 0.12.8, a throwaway route and `vp dev`, `vp buil
     default colours until then. A flash, brief but there, for everyone not on the defaults.
   - Without the prerender the same route, served by the hooks, returns
     `data-theme="harbor" data-mode="dark" class="dark"` for those cookies.
-  - So the wiki's pages are server-rendered, with no database or session, and the theme comes from
-    the cookie as in the other shells. Wherever this plan says "prerender", read "server-rendered".
+  - So the wiki's pages are server-rendered (`prerender = false`), and the theme comes from the
+    cookie as in the other shells. No wiki code reads the database or a tenant, but the hooks
+    (`handleBetterAuth`) still resolve the session when a cookie comes along: a session lookup per
+    wiki view for signed-in visitors.
