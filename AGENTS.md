@@ -118,6 +118,8 @@ Before you add a message file, an enum kind, a plural or a format, or write Dutc
 - **Lists**: `docs/agents/lists.md`.
 - **Tests** (where they go, e2e conventions, component harnesses): `docs/agents/tests.md`.
 - **Cloudflare deployment**: README.md, "On Cloudflare"; the plan is in `docs/plans/cloudflare.md`.
+- **Wiki**: a feature added or changed gets its page in src/wiki/pages/ updated; a new module,
+  domain, shell or theme fails coverage.spec.ts until it has one (docs/plans/wiki.md).
 - **Svelte and SvelteKit**: use the Svelte MCP. Fetch the docs sections a task needs
   (`list-sections`, then `get-documentation`), and run `svelte-autofixer` on Svelte code you write
   until it reports nothing.

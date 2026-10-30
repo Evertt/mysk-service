@@ -76,11 +76,10 @@ comments, match a regular expression, and list the offenders. Some of them:
 | `dialogs.spec.ts`          | `Dialog.Root` outside the components that own dialogs                            |
 | `command-toasts.spec.ts`   | A hand-made try/catch toast around a command                                     |
 
-A guard with exceptions has an allow-list that says _why_ each one stays. That is also how this
-wiki's coverage guard starts with a list of pages not yet written and shrinks to empty.
+A guard with exceptions has an allow-list that says _why_ each one stays.
 
 The wiki has two guards of its own: `coverage.spec.ts` (every module id, core domain, shell and
-theme appears in some page's `covers`) and `links.spec.ts` (every `SourceLink` path, docs pointer and
+theme appears in some page's `covers`, so a new one fails until a page covers it) and `links.spec.ts` (every `SourceLink` path, docs pointer and
 `/wiki/…` link names something that exists). See <SourceLink path="src/tests/unit/wiki/coverage.spec.ts">coverage.spec.ts</SourceLink> and <SourceLink path="src/tests/unit/wiki/links.spec.ts">links.spec.ts</SourceLink>.
 
 ## Running them

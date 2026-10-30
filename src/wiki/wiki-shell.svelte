@@ -1,22 +1,26 @@
 <!--
 	@component
 	The wiki's shell (`/wiki`, docs/plans/wiki.md): a sidebar of its sections and pages (`wikiNav()`),
-	a header with the theme and mode, and the page in a readable column of prose. Public and
+	a header with the search (`search.svelte`) and the theme and mode, and the page in a readable column of prose. Public and
 	tenantless, so it asks the app for nothing: no user, no organization. English only.
 -->
 <script lang="ts">
 	import BookOpenIcon from "@lucide/svelte/icons/book-open";
 	import type { Snippet } from "svelte";
 
+	import { useTheme } from "#lib/themes/context.ts";
+	import { cn } from "#lib/utils.ts";
 	import AppearanceSwitchers from "#routes/appearance-switchers.svelte";
 	import BrandMark from "#routes/brand-mark.svelte";
 	import NavSidebar from "#routes/nav-sidebar.svelte";
 
 	import { wikiNav } from "./pages.ts";
+	import Search from "./search.svelte";
 
 	let { children }: { children: Snippet } = $props();
 
 	const groups = wikiNav();
+	const theme = useTheme();
 </script>
 
 <Sidebar.Provider>
@@ -41,17 +45,29 @@
 	</NavSidebar>
 	<!-- min-w-0 lets wide widgets scroll inside the page instead of widening it. -->
 	<Sidebar.Inset class="min-w-0">
+		<!-- The office's header slot, so a theme styles both alike (`app-header.svelte`). -->
 		<header
-			class="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur"
+			data-slot="app-header"
+			class={cn(
+				"sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur",
+				theme.classes("app-header"),
+			)}
 		>
 			<Sidebar.Trigger class="-ml-1" />
 			<Separator orientation="vertical" class="mr-1 h-4! self-center" />
+			<Search />
 			<div class="ml-auto flex shrink-0 items-center gap-1">
 				<AppearanceSwitchers />
 			</div>
 		</header>
 		<main class="mx-auto w-full max-w-3xl min-w-0 flex-1 p-4 pb-16 md:p-8">
-			<article class="prose max-w-none dark:prose-invert">
+			<!--
+				Inline code without the typography plugin's backticks, on a quiet tint instead; a long path
+				in it breaks rather than widen the page on a phone.
+			-->
+			<article
+				class="prose max-w-none dark:prose-invert prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:font-normal prose-code:wrap-anywhere prose-code:before:content-none prose-code:after:content-none [&_pre_code]:bg-transparent [&_pre_code]:p-0"
+			>
 				{@render children()}
 			</article>
 		</main>

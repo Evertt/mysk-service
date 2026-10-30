@@ -255,3 +255,23 @@ state machines:
 
 A context is `createContext()`, and a time that moves on is `Clock` (`#lib/hooks/clock.svelte.ts`).
 A hand-rolled `setTimeout` debounce or observer is refused (`src/tests/unit/runed.spec.ts`).
+
+## Wiki
+
+- **A wiki page** is an mdsvex `.md` file, `src/wiki/pages/<section>/<page>.md`, served at
+  `/wiki/<section>/<page>`. Its front-matter (`title`, `summary`, `section`, `order`, `status`:
+  `built`, `partly built` or `planned`, and `covers`: `module:<id>`, `domain:<name>`,
+  `shell:<name>`, `theme:<name>`) is checked by `buildPages()` (`src/wiki/pages.ts`), which names
+  the file that's wrong. The route renders the title, so a page starts at `##`; its `##` headings
+  are what the search finds. English, no Paraglide messages. `coverage.spec.ts` fails until a
+  page covers each module, domain, shell and theme; `links.spec.ts` checks every link literally.
+- **A page's parts** come from `#wiki/parts/`: `<HowItWorks />` between the half for users and
+  the half for developers, `<SourceLink path="…" line={…}>` to the code at this commit,
+  `<DocsPointer doc="…" section="…" />` to the rules, `<TryIt as="planner" />` (only where the
+  demo's sign-in is on) and `<Diagram viewBox label>` with SVG coloured by the theme's variables.
+  A line that starts with a component tag ends the Markdown paragraph before it: keep a tag on
+  the line of the text it belongs to.
+- **A widget** is a folder in `src/wiki/widgets/`: a `.ts` that reads what it shows from the app's
+  own code (the transition table, the module graph, the themes), so it can't drift, with a spec
+  in `src/tests/unit/wiki/widgets/`; and a `.svelte` that renders it with the kit's components,
+  needs no props, and has a component spec when it has state.

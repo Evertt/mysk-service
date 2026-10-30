@@ -4,24 +4,24 @@ The plans of the clean-up and planning passes of October 2026, and what became o
 three came from one pass and are built (see "Order of work"); the rest are listed with their
 status.
 
-| Plan                                                             | Covers                                                                                                         |
-| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| [feature-folders-and-plugins.md](feature-folders-and-plugins.md) | No `src/features/`; domain folders; the optional modules as self-contained folders (built)                     |
-| [table-query.md](table-query.md)                                 | The server-side tables: `tableParams` as a typed object, one list definition per table (built, but step 7)     |
-| [file-splits-and-cleanup.md](file-splits-and-cleanup.md)         | Files over ~300 lines, repeated code, names, dead code, placement (done in phases 1–3 below)                   |
-| [domain-folders.md](domain-folders.md)                           | The core domains' files leave `src/routes` for `src/lib/<domain>/`, with barrels (done)                        |
-| [module-dependencies.md](module-dependencies.md)                 | Modules that depend on each other, points their owners declare, roles, core features as modules (partly built) |
-| [maintenance-plans.md](maintenance-plans.md)                     | The maintenance module, the first built from scratch (built)                                                   |
-| [module-form-schemas.md](module-form-schemas.md)                 | Typed, validated parts of a core form that modules add (built)                                                 |
-| [table-columns.md](table-columns.md)                             | Remembered columns, the last view, stable column widths (built; the rationale)                                 |
-| [test-subject-imports.md](test-subject-imports.md)               | Spike: tests importing their subject's folder relatively (shims + Vite plugin); not adopted                    |
-| [service-worker-swr.md](service-worker-swr.md)                   | A service worker answering remote queries stale-while-revalidate, and keeping the build's files                |
-| [hide-unavailable-modules.md](hide-unavailable-modules.md)       | To do: hide which modules exist from tenants without them (route manifest, manifests, precache)                |
-| [table-wishes.md](table-wishes.md)                               | Wishes: row actions from bulk actions, inline editing, infinite scroll, click to filter                        |
-| [cloudflare.md](cloudflare.md)                                   | The app on Cloudflare Workers, its database in one Durable Object; live queries (built)                        |
-| [permissions.md](permissions.md)                                 | One way to ask who may read or change a record by its subject: a registry of rules per type (design)           |
-| [ui-consistency.md](ui-consistency.md)                           | One look for every page: the inconsistencies of the SHLTR/Lagoon UI and the steps to converge (plan)           |
-| [wiki.md](wiki.md)                                               | A public, prerendered wiki at `/wiki` explaining every feature, with widgets fed by the code's own data (plan) |
+| Plan                                                             | Covers                                                                                                           |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| [feature-folders-and-plugins.md](feature-folders-and-plugins.md) | No `src/features/`; domain folders; the optional modules as self-contained folders (built)                       |
+| [table-query.md](table-query.md)                                 | The server-side tables: `tableParams` as a typed object, one list definition per table (built, but step 7)       |
+| [file-splits-and-cleanup.md](file-splits-and-cleanup.md)         | Files over ~300 lines, repeated code, names, dead code, placement (done in phases 1–3 below)                     |
+| [domain-folders.md](domain-folders.md)                           | The core domains' files leave `src/routes` for `src/lib/<domain>/`, with barrels (done)                          |
+| [module-dependencies.md](module-dependencies.md)                 | Modules that depend on each other, points their owners declare, roles, core features as modules (partly built)   |
+| [maintenance-plans.md](maintenance-plans.md)                     | The maintenance module, the first built from scratch (built)                                                     |
+| [module-form-schemas.md](module-form-schemas.md)                 | Typed, validated parts of a core form that modules add (built)                                                   |
+| [table-columns.md](table-columns.md)                             | Remembered columns, the last view, stable column widths (built; the rationale)                                   |
+| [test-subject-imports.md](test-subject-imports.md)               | Spike: tests importing their subject's folder relatively (shims + Vite plugin); not adopted                      |
+| [service-worker-swr.md](service-worker-swr.md)                   | A service worker answering remote queries stale-while-revalidate, and keeping the build's files                  |
+| [hide-unavailable-modules.md](hide-unavailable-modules.md)       | Superseded by the wiki: hide which modules exist from tenants without them (route manifest, manifests, precache) |
+| [table-wishes.md](table-wishes.md)                               | Wishes: row actions from bulk actions, inline editing, infinite scroll, click to filter                          |
+| [cloudflare.md](cloudflare.md)                                   | The app on Cloudflare Workers, its database in one Durable Object; live queries (built)                          |
+| [permissions.md](permissions.md)                                 | One way to ask who may read or change a record by its subject: a registry of rules per type (design)             |
+| [ui-consistency.md](ui-consistency.md)                           | One look for every page: the inconsistencies of the SHLTR/Lagoon UI and the steps to converge (plan)             |
+| [wiki.md](wiki.md)                                               | A public wiki at `/wiki` explaining every feature, with search and widgets fed by the code's own data (built)    |
 
 ## The decisions in short
 

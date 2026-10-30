@@ -34,6 +34,8 @@ export interface PageMeta {
 	order: number;
 	status: "built" | "partly built" | "planned";
 	covers: Coverage[];
+	/** The page's `##` headings, which the build adds to its front-matter (`scripts/wiki-headings.ts`). */
+	headings: string[];
 }
 
 export interface WikiPage extends PageMeta {
@@ -58,6 +60,7 @@ const pageMeta = v.object({
 	order: v.number(),
 	status: v.picklist(["built", "partly built", "planned"]),
 	covers: v.array(coverage),
+	headings: v.optional(v.array(v.string()), []),
 });
 
 /** The path under `/wiki` of the page file `./pages/<slug>.md`. */
@@ -102,6 +105,9 @@ export const wikiPages = buildPages(
 	>,
 );
 
+/** Where the page of `slug` is served. */
+export const pageHref = (slug: string) => `/wiki/${slug}`;
+
 export function pageBySlug(slug: string): WikiPage | undefined {
 	return wikiPages.find((page) => page.slug === slug);
 }
@@ -118,7 +124,7 @@ export function wikiNav(pages: readonly WikiPage[] = wikiPages): NavGroup[] {
 				items: inSection.map((page) => ({
 					id: page.slug,
 					title: page.title,
-					href: `/wiki/${page.slug}`,
+					href: pageHref(page.slug),
 					icon,
 				})),
 			},

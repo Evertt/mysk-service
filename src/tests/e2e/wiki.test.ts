@@ -6,7 +6,7 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { wikiNav } from "#wiki/pages.ts";
 
-import { baseURL, users, useApp } from "./app.ts";
+import { baseURL, fitsWidth, onPhone, users, useApp } from "./app.ts";
 
 const first = "/wiki/start/what-fieldworks-is";
 
@@ -44,6 +44,39 @@ describe("signed out", () => {
 		expect(response?.status()).toBe(404);
 		expect(app.path()).toBe("/wiki/nope");
 		expect(await app.page.locator('[data-error-kind="http"]').count()).toBe(1);
+		// Within the wiki's shell, with the way back to the wiki, not to the dashboard.
+		expect(await app.page.locator("nav[aria-label=Wiki]").count()).toBe(1);
+		expect(
+			await app.page.getByRole("link", { name: "Back to the wiki" }).getAttribute("href"),
+		).toBe("/wiki");
+	});
+
+	test("search finds a page", async () => {
+		const { page } = app;
+		await app.go(first);
+		await page.getByRole("button", { name: "Search the wiki" }).click();
+		await page
+			.getByRole("dialog")
+			.getByRole("combobox", { name: "Search the wiki" })
+			.fill("lifecycle");
+		await page.getByRole("dialog").getByRole("option", { name: "Order lifecycle" }).first().click();
+		await page.waitForURL((url) => url.pathname === "/wiki/orders/lifecycle");
+		await page.getByRole("dialog").waitFor({ state: "detached" });
+		await expect.poll(() => page.locator("main h1").innerText()).toBe("Order lifecycle");
+	});
+
+	test("phone width shows the sidebar as a sheet", async () => {
+		const { page } = app;
+		await app.go(first);
+		await onPhone(page, async () => {
+			const nav = page.locator('[data-mobile="true"] nav[aria-label=Wiki]');
+			expect(await nav.count()).toBe(0);
+			await page.locator('[data-sidebar="trigger"]').click();
+			await nav.waitFor();
+			await nav.getByRole("link", { name: "Order lifecycle" }).click();
+			await page.waitForURL((url) => url.pathname === "/wiki/orders/lifecycle");
+			expect(await fitsWidth(page)).toBe(true);
+		});
 	});
 
 	test("lists every section with pages in the sidebar", async () => {

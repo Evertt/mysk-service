@@ -1,6 +1,7 @@
 # Wiki
 
-A wish of 30 October 2026, worked out in a brainstorm. Not built yet; the tasks are in
+A wish of 30 October 2026, worked out in a brainstorm. Built (October 2026): 37 pages in six
+sections at `/wiki`, with search over titles and headings; the tasks were in
 [wiki-implementation.md](wiki-implementation.md).
 
 ## Problem

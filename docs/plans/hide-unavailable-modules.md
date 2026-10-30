@@ -1,5 +1,7 @@
 # To do: hide which modules exist from tenants that don't have them
 
+Superseded by the public wiki ([wiki.md](wiki.md)), which names every module.
+
 Not started (October 2026); to reconsider later. Every tenant's browser can learn which optional
 modules the app has, also those the tenant hasn't switched on. Nothing of their data leaks (the
 modules' remote functions and server files refuse tenants without them, on the server), only that

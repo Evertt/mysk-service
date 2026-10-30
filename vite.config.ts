@@ -20,6 +20,7 @@ import {
 	paraglideOutput,
 	paraglideOutputStructure,
 } from "./scripts/paraglide.ts";
+import { wikiHeadings } from "./scripts/wiki-headings.ts";
 
 // Links the modules in `src/modules` into the app before anything reads `src/routes` or the
 // registries (SvelteKit's sync, Vitest, the editor), see scripts/modules.ts.
@@ -218,7 +219,17 @@ export default defineConfig({
 		tailwindcss(),
 		sveltekit({
 			extensions: [".svelte", ".md"],
-			preprocess: [mdsvex({ extensions: [".md"] })],
+			// The wiki's pages (`src/wiki/pages`), with their `##` headings in their front-matter, for
+			// the wiki's search (`scripts/wiki-headings.ts`).
+			preprocess: [mdsvex({ extensions: [".md"], remarkPlugins: [wikiHeadings] })],
+			// mdsvex 0.12 still writes `<script context="module">` for a page's front-matter, which
+			// Svelte 5 calls deprecated: a warning per wiki page per compile, in every build, dev
+			// server and test run, about code nobody can change here. Only that warning, only in `.md`.
+			onwarn: (warning, handle) => {
+				if (warning.code === "script_context_deprecated" && warning.filename?.endsWith(".md"))
+					return;
+				handle(warning);
+			},
 			compilerOptions: {
 				// Force runes mode for the project, except for libraries. Can be removed in svelte 6.
 				runes: ({ filename }) =>
