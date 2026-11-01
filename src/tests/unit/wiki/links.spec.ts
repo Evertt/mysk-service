@@ -27,6 +27,17 @@ import { describe, expect, test } from "vite-plus/test";
 
 import { pageBySlug, wikiPages } from "#wiki/pages.ts";
 
+import {
+	attribute,
+	hasAttribute,
+	lineAttribute,
+	type Reference,
+	slugOf,
+	tagAt,
+	tagReferences,
+	wikiLinks,
+} from "./markup.test-support.ts";
+
 const root = join(import.meta.dirname, "../../../..");
 
 const wikiFiles = () =>
@@ -36,62 +47,6 @@ const wikiFiles = () =>
 	}));
 
 const UNREADABLE = "unreadable";
-
-/** A reference in a file: where it starts and what it points at (`null`: it can't be read). */
-interface Reference {
-	index: number;
-	target: string | null;
-}
-
-/** An opening tag, whole: quoted values and `{…}` expressions may hold a `>`. */
-const openingTag = /<[A-Za-z][\w.]*(?:[^>"'{]|"[^"]*"|'[^']*'|\{[^}]*\})*>/y;
-
-/** The value of the attribute `name` in `tag`, if it's a string literal in quotes or in braces. */
-function attribute(tag: string, name: string): string | null {
-	const match = new RegExp(
-		`(?<![\\w-])${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|\\{\\s*(?:"([^"]*)"|'([^']*)'|\`([^\`]*)\`)\\s*\\})`,
-	).exec(tag);
-	const value = match?.slice(1).find((group) => group !== undefined);
-	return value === undefined || value === "" || value.includes("${") ? null : value;
-}
-
-/** Every `<tag …>` of `source` with its `name` attribute: whole tags, over lines. */
-function tagReferences(tag: string, name: string) {
-	return (source: string): Reference[] =>
-		[...source.matchAll(new RegExp(`<${tag}(?![\\w.-])`, "g"))].map((match) => {
-			openingTag.lastIndex = match.index;
-			const whole = openingTag.exec(source)?.[0];
-			return { index: match.index, target: whole ? attribute(whole, name) : null };
-		});
-}
-
-/** The links to `/wiki` in markup (`href`), Markdown (`](…)`) and reference-style Markdown. */
-function wikiLinks(source: string): Reference[] {
-	const wiki = "\\/wiki(?:[/?#][^\"'`)>\\s]*)?";
-	const found = new Map<number, Reference>();
-	const add = (pattern: RegExp) => {
-		for (const match of source.matchAll(pattern)) {
-			const target = match[2] ?? "";
-			found.set(match.index, { index: match.index, target: target.includes("${") ? null : target });
-		}
-	};
-	add(new RegExp(`href\\s*=\\s*(["'])(${wiki})\\1`, "g"));
-	add(new RegExp(`href\\s*=\\s*\\{\\s*(["'\`])(${wiki})\\1\\s*\\}`, "g"));
-	add(new RegExp(`(\\])\\(\\s*<?(${wiki})`, "g"));
-	add(new RegExp(`^( {0,3}\\[[^\\]]+\\]:)[ \\t]*<?(${wiki})`, "gm"));
-	// An `href` expression with /wiki in it that none of the above could read.
-	for (const match of source.matchAll(/href\s*=\s*\{[^}]*\/wiki[^}]*\}/g)) {
-		if (!found.has(match.index)) found.set(match.index, { index: match.index, target: null });
-	}
-	return [...found.values()].sort((a, b) => a.index - b.index);
-}
-
-/** `/wiki/orders/lifecycle#x?y` is the slug `orders/lifecycle`; `/wiki` itself is `""`. */
-const slugOf = (href: string) =>
-	href
-		.replace(/^\/wiki\/?/, "")
-		.replace(/[?#].*$/, "")
-		.replace(/\/$/, "");
 
 /** `file:line → target` of every reference in `files` that's unreadable or that `broken` refuses. */
 function brokenReferences(
@@ -132,17 +87,15 @@ interface LineLink {
 /** Every `<SourceLink>` of `source` with a `line`, its label the markup up to `</SourceLink>`. */
 function lineLinks(source: string): LineLink[] {
 	return [...source.matchAll(/<SourceLink(?![\w.-])/g)].flatMap((match): LineLink[] => {
-		openingTag.lastIndex = match.index;
-		const whole = openingTag.exec(source)?.[0];
-		if (!whole || !/(?<![\w-])line\s*=/.test(whole)) return [];
-		const line = /(?<![\w-])line\s*=\s*(?:\{\s*(\d+)\s*\}|"(\d+)"|'(\d+)')/.exec(whole);
+		const whole = tagAt(source, match.index);
+		if (!whole || !hasAttribute(whole, "line")) return [];
 		const after = match.index + whole.length;
 		const close = whole.endsWith("/>") ? -1 : source.indexOf("</SourceLink>", after);
 		return [
 			{
 				index: match.index,
 				path: attribute(whole, "path"),
-				line: line ? Number(line[1] ?? line[2] ?? line[3]) : null,
+				line: lineAttribute(whole),
 				symbol: attribute(whole, "symbol"),
 				label: close === -1 ? "" : source.slice(after, close),
 			},
