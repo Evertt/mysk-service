@@ -34,18 +34,7 @@ import {
  * The pages whose Dutch twin isn't written yet, by slug. Only ever shrinks: write the twin, then
  * take its page off the list (a listed page with a twin fails).
  */
-const notYetTranslated = [
-	"domains/customers",
-	"domains/engineers",
-	"domains/equipment",
-	"orders/awaiting-acceptance",
-	"orders/lifecycle",
-	"orders/order-types",
-	"orders/service-report",
-	"orders/work-record",
-	"start/roles-and-shells",
-	"start/try-the-demo",
-];
+const notYetTranslated = [];
 
 const pagesDir = join(import.meta.dirname, "../../../wiki/pages");
 const twinSuffix = ".nl.md";
