@@ -24,6 +24,18 @@ describe("the live-update flow", () => {
 		expect(text).toMatch(/feed/);
 	});
 
+	test("every step's text is whole: its code in backticks, no placeholder left over", () => {
+		for (const step of liveSteps) {
+			for (const text of [step.title(), step.detail(), step.box()]) {
+				expect(text, step.id).not.toContain("undefined");
+				expect(text, step.id).not.toMatch(/[{}]/);
+			}
+		}
+		expect(liveSteps.find((step) => step.id === "log")?.detail()).toContain(
+			"`recordActivity(tx, entry)`",
+		);
+	});
+
 	test("the code in a step's text is what's between backticks", () => {
 		expect(codeParts("calls `recordActivity()` in `tx`.")).toEqual([
 			{ text: "calls ", code: false },

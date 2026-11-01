@@ -56,7 +56,7 @@
 				value="Pier 9"
 				class="min-w-0 flex-1"
 			/>
-			<Switch id="{id}-switch" aria-label={m.wiki_themes_sample_notify()} checked />
+			<Switch id="{id}-switch" aria-label={m.common_notifications()} checked />
 		</div>
 		<div class="flex gap-1.5" aria-label={m.wiki_themes_sample_colours()}>
 			{#each swatches as swatch (swatch)}

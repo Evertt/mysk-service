@@ -97,6 +97,9 @@ describe("the widgets, in Dutch", () => {
 		await expect.element(page.getByRole("button", { name: "Terug" })).toBeDisabled();
 		await page.getByRole("button", { name: "Volgende" }).click();
 		await expect.element(page.getByText("recordActivity() logt het")).toBeVisible();
+		// The step's detail names the call whole: no braces of a literal read as an input.
+		await expect.element(page.getByText(/recordActivity\(tx, entry\)/)).toBeVisible();
+		expect(document.body.textContent).not.toContain("undefined");
 		await expect.element(page.getByRole("button", { name: "Afspelen" })).toBeVisible();
 	});
 
@@ -108,7 +111,7 @@ describe("the widgets, in Dutch", () => {
 		await expect
 			.element(page.getByTestId("leaves-plan-scheduled"))
 			.toHaveTextContent("plan naar Ingepland, door een planner");
-		await expect.element(page.getByRole("list", { name: "Gaat verder via" })).toBeVisible();
+		await expect.element(page.getByRole("list", { name: "Uitgaande stappen" })).toBeVisible();
 		await expect.element(page.getByRole("list", { name: "Wie een stap zet" })).toBeVisible();
 	});
 
@@ -131,7 +134,7 @@ describe("the widgets, in Dutch", () => {
 		await render(TenancySimulator);
 		await expect.element(page.getByText("Ingelogd bij")).toBeVisible();
 		await expect.element(page.getByLabelText("De query")).toBeVisible();
-		await page.getByLabelText("Leest").selectOptions("de opdracht met id 2 (van South)");
+		await page.getByLabelText("Leest:").selectOptions("de opdracht met id 2 (van South)");
 
 		await expect.element(page.getByText("404 Niet gevonden")).toBeVisible();
 		await page.getByRole("switch", { name: "Begrensd met inTenant()" }).click();
@@ -143,6 +146,9 @@ describe("the widgets, in Dutch", () => {
 		await render(GateTable);
 		await expect.element(page.getByText("Wie roept aan").first()).toBeVisible();
 		await expect.element(page.getByText("Planner (een lid)")).toBeVisible();
+		// The callers the app names itself: its role labels, and its "not signed in".
+		await expect.element(page.getByText("Klantcontact")).toBeVisible();
+		await expect.element(page.getByText("Niet ingelogd")).toBeVisible();
 		await expect.element(page.getByText("Doorgelaten").first()).toBeVisible();
 		await expect.element(page.getByText(/Geweigerd, 403/).first()).toBeVisible();
 		await expect.element(page.getByText(/^Het monteursportaal\./)).toBeVisible();
@@ -153,10 +159,13 @@ describe("the widgets, in Dutch", () => {
 		await expect.element(page.getByText("Alle statussen")).toBeInTheDocument();
 		await expect.element(page.getByText("Groeperen op status")).toBeVisible();
 		await expect.element(page.getByText(/van 25 opdrachten/)).toBeVisible();
+		// The statuses are the app's own Dutch labels.
+		await expect.element(page.getByText("Ingepland").first()).toBeInTheDocument();
+		await expect.element(page.getByText("Nieuw (te accepteren)").first()).toBeInTheDocument();
 		await expect.element(page.getByText("Opdracht", { exact: true }).first()).toBeVisible();
 
 		await page.getByRole("textbox").first().fill("zzzzzz");
-		await expect.element(page.getByText("Geen opdrachten gevonden.")).toBeVisible();
+		await expect.element(page.getByText("Geen opdrachten gevonden")).toBeVisible();
 	});
 
 	test("the list playground searches the sites in Dutch", async () => {
@@ -170,8 +179,10 @@ describe("the widgets, in Dutch", () => {
 		await render(RoleSwitcher);
 		await expect.element(page.getByRole("heading", { name: "Monteur" })).toBeVisible();
 		await expect.element(page.getByRole("heading", { name: "Klant" })).toBeVisible();
-		await expect.element(page.getByText(/^Het monteursportaal, begint op/)).toBeVisible();
+		await expect.element(page.getByText(/^Het monteursportaal begint op/)).toBeVisible();
 		await expect.element(page.getByText(/De gegevens van andere klanten zien\./)).toBeVisible();
+		// The module is named as the app names it.
+		await expect.element(page.getByText(/als de module Werkbonnen aan staat/)).toBeVisible();
 	});
 
 	test("the theme gallery: the default badge and the sample's texts", async () => {
@@ -179,7 +190,9 @@ describe("the widgets, in Dutch", () => {
 		await expect.element(page.getByText("Standaard").first()).toBeVisible();
 		await expect.element(page.getByText("Opdracht ORD-2026-00014").first()).toBeVisible();
 		await expect.element(page.getByText("Afdrukken").first()).toBeVisible();
-		await expect.element(page.getByText("Gefactureerd")).not.toBeInTheDocument();
+		// The badges are the app's own labels: a quote is "Nieuw", and urgent is "Spoed".
+		await expect.element(page.getByText("Nieuw").first()).toBeVisible();
+		await expect.element(page.getByText("Spoed").first()).toBeVisible();
 	});
 
 	test("the records diagram: the app's names and Dutch arrows", async () => {

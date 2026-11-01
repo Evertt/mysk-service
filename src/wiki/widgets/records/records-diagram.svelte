@@ -13,7 +13,7 @@
 	/** A record, drawn as a box: where its top left is, and its name (the app's own labels). */
 	const boxes = [
 		{ name: m.orders_column_customer, x: 150, y: 10, accent: true },
-		{ name: m.equipment_column_site, x: 10, y: 100 },
+		{ name: m.orders_site, x: 10, y: 100 },
 		{ name: m.orders_column_order, x: 290, y: 100 },
 		{ name: m.equipment_column_unit, x: 150, y: 190 },
 		{ name: m.equipment_column_location, x: 10, y: 280 },

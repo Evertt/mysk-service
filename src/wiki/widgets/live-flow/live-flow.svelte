@@ -165,7 +165,7 @@
 		<Button size="sm" onclick={() => (player.isActive ? player.pause() : play())}>
 			{#if player.isActive}
 				<PauseIcon />
-				{m.wiki_live_pause()}
+				{m.simulation_pause()}
 			{:else}
 				<PlayIcon />
 				{current === last ? m.wiki_live_play_again() : m.wiki_live_play()}

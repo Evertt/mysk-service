@@ -12,6 +12,7 @@
  *
  * Every text is a message function, read where it is shown (`gate-table.svelte`).
  */
+import { label } from "#lib/i18n/index.ts";
 import { m } from "#lib/paraglide/messages.js";
 
 type GateName =
@@ -28,10 +29,10 @@ type GateName =
 export const callers = [
 	{ id: "admin", label: m.wiki_gate_caller_admin },
 	{ id: "planner", label: m.wiki_gate_caller_planner },
-	{ id: "engineer", label: m.wiki_gate_caller_engineer },
-	{ id: "customer", label: m.wiki_gate_caller_customer },
+	{ id: "engineer", label: () => label("memberRole", "engineer") },
+	{ id: "customer", label: () => label("memberRole", "customer") },
 	{ id: "bare", label: m.wiki_gate_caller_bare },
-	{ id: "anonymous", label: m.wiki_gate_caller_anonymous },
+	{ id: "anonymous", label: m.common_error_not_signed_in },
 ] as const;
 
 export type CallerId = (typeof callers)[number]["id"];

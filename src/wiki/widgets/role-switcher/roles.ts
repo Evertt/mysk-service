@@ -71,7 +71,7 @@ export const roleCards: readonly RoleCard[] = [
 			m.wiki_roles_customer_can_1,
 			m.wiki_roles_customer_can_2,
 			m.wiki_roles_customer_can_3,
-			m.wiki_roles_customer_can_4,
+			() => m.wiki_roles_customer_can_4({ module: m.checklists_module_name() }),
 		],
 		[m.wiki_roles_customer_cannot_1],
 	),

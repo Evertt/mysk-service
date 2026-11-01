@@ -184,7 +184,7 @@ describe("signed out", () => {
 				.getByRole("combobox", { name: "Zoek in de wiki" })
 				.fill("zzzzzzzz");
 			expect(await page.getByRole("dialog").innerText()).toContain(
-				"Geen pagina past bij “zzzzzzzz”.",
+				"Geen pagina gevonden voor “zzzzzzzz”.",
 			);
 		});
 	});
@@ -209,7 +209,7 @@ describe("signed out", () => {
 			const move = page.getByTestId("leaves-plan-scheduled");
 			await move.waitFor();
 			expect(await move.innerText()).toBe("plan naar Ingepland, door een planner");
-			expect(await page.getByRole("list", { name: "Gaat verder via" }).count()).toBe(1);
+			expect(await page.getByRole("list", { name: "Uitgaande stappen" }).count()).toBe(1);
 			expect(await page.locator("main figure").first().innerText()).not.toContain("Leaves by");
 		});
 	});

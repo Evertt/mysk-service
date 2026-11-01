@@ -88,7 +88,7 @@
 				<Table.Row>
 					<Table.Head>{m.orders_column_order()}</Table.Head>
 					<Table.Head>{m.orders_column_customer()}</Table.Head>
-					<Table.Head class="hidden @md:table-cell">{m.equipment_column_site()}</Table.Head>
+					<Table.Head class="hidden @md:table-cell">{m.orders_site()}</Table.Head>
 					<!-- Grouped, the group's header says it: as the real table leaves the grouped column out. -->
 					{#if !grouped}
 						<Table.Head>{m.orders_column_status()}</Table.Head>
@@ -132,7 +132,7 @@
 				{#if shown.total === 0}
 					<Table.Row>
 						<Table.Cell colspan={5} class="py-8 text-center text-muted-foreground">
-							{m.wiki_list_no_match()}
+							{m.orders_empty()}
 						</Table.Cell>
 					</Table.Row>
 				{/if}
