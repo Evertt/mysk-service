@@ -32,7 +32,7 @@ export const callers = [
 	{ id: "engineer", label: () => label("memberRole", "engineer") },
 	{ id: "customer", label: () => label("memberRole", "customer") },
 	{ id: "bare", label: m.wiki_gate_caller_bare },
-	{ id: "anonymous", label: m.common_error_not_signed_in },
+	{ id: "anonymous", label: m.wiki_gate_caller_anonymous },
 ] as const;
 
 export type CallerId = (typeof callers)[number]["id"];

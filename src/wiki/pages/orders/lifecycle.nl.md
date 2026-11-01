@@ -74,7 +74,7 @@ activiteitenlog, de weigering, en twee keuzes met een standaardwaarde:
 - `same`: een stap naar de status die hij al heeft, doet niets (`"skip"`), of wordt toch gezet
   (`"move"`: die van de planner, omdat die de monteur en de tijd verandert).
 
-Het diagram hierboven is uit die tabel getekend: hij kan niet uit de pas lopen met de app.
+Het diagram hierboven is uit die tabel getekend: het kan niet uit de pas lopen met de app.
 
 **Regels die eruit volgen.** Pagina's en de server vragen `mayEditOrder`, `mayDeleteOrder`,
 `statusChoices`, `fieldActions`, `plannedStatus` en `can(verb, status)`, in plaats van zelf

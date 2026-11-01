@@ -82,6 +82,7 @@
 	"wiki_gate_caller_admin": "Owner or admin",
 	"wiki_gate_caller_planner": "Planner (a member)",
 	"wiki_gate_caller_bare": "Signed in, no organization",
+	"wiki_gate_caller_anonymous": "Not signed in",
 	"wiki_gate_members_admits": "A signed-in member of the organization who isn't a field engineer: the office.",
 	"wiki_gate_members_for": "Almost everything.",
 	"wiki_gate_managers_admits": "An owner or admin of the organization.",

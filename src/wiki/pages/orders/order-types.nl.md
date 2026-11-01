@@ -67,7 +67,7 @@ en als je het terugzet naar standaard, wordt de rij verwijderd.
 (`src/lib/orders/types.ts`) eerst om de naam van de tenant, en valt anders terug op het
 standaardlabel. Op de server komen de namen van de tenant van het verzoek, die er één keer mee
 wordt geladen (`loadTenant()`). In de browser wacht de layout van elke shell op `getOrderTypes()` en
-koppelt die aan. De opgeslagen waarden, de filters en de URL's houden de eigen ids van de types.
+koppelt die aan. De opgeslagen waarden, de filters en de URL's houden de eigen id's van de types.
 
 **Wat het formulier aanbiedt**, is `offeredOrderTypes(settings, current)`: de types die niet
 verborgen zijn, plus het eigen type van de opdracht als dat sindsdien is verborgen.

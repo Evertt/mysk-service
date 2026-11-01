@@ -99,7 +99,7 @@ In de andere richting haakt Onderdelenbeheer in op de modules die het verrijkt, 
 de onderdelen vast op het moment dat een checklist wordt afgerond. De dagelijkse taak (`jobs.daily`)
 plant kritieke apparaten in voor tenants die dat willen, als het systeem via `createOrders()` van de
 kern, zodat de opdracht een nummer krijgt en gelogd wordt zoals elke andere. Onderdelen bewaren hun
-artikel en punten als gewone ids, zonder foreign key, omdat de modules waarnaar ze verwijzen
+artikel en punten als gewone id's, zonder foreign key, omdat de modules waarnaar ze verwijzen
 optioneel zijn. De servicegeschiedenis is een weergave van het activiteitenlog
 (`server/history.ts`), geen tabel.
 

@@ -28,9 +28,9 @@ aanroept) en zijn logregels worden voor die tenant niet gevonden.
 ## Probeer het
 
 De simulator hieronder is één tabel `order` die twee tenants delen. Voer een query uit als North of
-South, met de scope van de tenant of zonder, voor alle opdrachten of voor één op zijn id. Kies de
-opdracht van South terwijl je bij North bent ingelogd, en zet de scope uit: dat is het lek dat de
-scope van elke query voorkomt.
+South, met de begrenzing van de tenant of zonder, voor alle opdrachten of voor één op zijn id. Kies de
+opdracht van South terwijl je bij North bent ingelogd, en zet de begrenzing uit: dat is het lek dat de
+begrenzing van elke query voorkomt.
 
 <TenancySimulator />
 
@@ -40,7 +40,7 @@ Alle gegevens van tenants staan in tabellen met een `organization_id`, en vier g
 uit elkaar.
 
 **1. Elke lees- en schrijfactie is beperkt.** Een select, update of delete op een tenant-tabel
-bevat de voorwaarde van de tenant, ook bij opzoeken op id, want ids zijn globaal en komen van de
+bevat de voorwaarde van de tenant, ook bij opzoeken op id, want id's zijn globaal en komen van de
 client: `inTenant(table)`, `idInTenant(table, id)`, `idsInTenant(table, ids)`. Een join naar een
 tenant-tabel gaat via `tenantJoin()`, en een subquery waarvan de rijen de tenant van de buitenste
 rij delen via `sameTenant(a, b)`. Een kale `eq(table.id, id)` valt op in een review, en een guard
@@ -70,9 +70,9 @@ hun helpers (`engineerOrders()`, `customerOrders()`) staan in `src/lib/server/au
 [access registry](/wiki/internals/permissions) gebruikt ze opnieuw als zijn regels.
 
 **Tests.** Elk onderdeel test de isolatie: South kan de records van North niet zien of wijzigen,
-ook niet door met ids te knoeien. In e2e is dat één pagina die voor de andere tenant een 404 is en
+ook niet door met id's te knoeien. In e2e is dat één pagina die voor de andere tenant een 404 is en
 één formulier dat wordt verstuurd met een gemanipuleerd verborgen id; de rest staat in de
-serverspec van het onderdeel, die de remote functions aanroept als South met de ids van North. Zie
+serverspec van het onderdeel, die de remote functions aanroept als South met de id's van North. Zie
 [tests en guard specs](/wiki/internals/tests-and-guards).
 
 <DocsPointer doc="docs/agents/tenancy.md" />
