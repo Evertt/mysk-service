@@ -120,7 +120,7 @@ Before you add a message file, an enum kind, a plural or a format, or write Dutc
 - **Cloudflare deployment**: README.md, "On Cloudflare"; the plan is in `docs/plans/cloudflare.md`.
 - **Wiki**: a feature added or changed gets its page in src/wiki/pages/ updated, and the page's
   Dutch twin (`<page>.nl.md`) with it: twins.spec.ts fails on a page without its twin or a twin
-  built differently. A new module, domain, shell or theme fails coverage.spec.ts until it has a
+  built differently, copied from its page, or with other code. A new module, domain, shell or theme fails coverage.spec.ts until it has a
   page (docs/plans/wiki.md, docs/plans/wiki-dutch.md).
 - **Svelte and SvelteKit**: use the Svelte MCP. Fetch the docs sections a task needs
   (`list-sections`, then `get-documentation`), and run `svelte-autofixer` on Svelte code you write
