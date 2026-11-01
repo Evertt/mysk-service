@@ -11,7 +11,7 @@ summary: Onderhoud elk apparaat op een vast interval, en maak van de bezoeken di
 </script>
 
 Onderhoudsplannen zijn het antwoord op "wanneer moet dit apparaat weer een beurt?". De module heet
-**Onderhoudsplannen** (in de code `maintenance`); het menu-item staat in de zijbalk na Apparatuur.
+**Onderhoudsplannen** (in de code maintenance); het menu-item staat in de zijbalk na Apparatuur.
 Een plan zegt dat een apparaat om de zoveel maanden een bezoek krijgt, en de module maakt van elk
 bezoek dat eraan komt een opdracht.
 

@@ -10,7 +10,7 @@ summary: Een vaste checklist per apparaat bij inspectie- en onderhoudsopdrachten
   import TryIt from "#wiki/parts/try-it.svelte";
 </script>
 
-Werkbonnen (in de code de module `checklists`, naar de digitale checkpoint-werkbon) geeft elk
+Werkbonnen (in de code de module checklists, naar de digitale checkpoint-werkbon) geeft elk
 apparaat op een inspectie- of onderhoudsopdracht een checklist: de punten die een monteur
 controleert, gemaakt uit een sjabloon voor de apparatuurcategorie van het apparaat. Het menu-item
 staat in de zijbalk direct na Apparatuur.

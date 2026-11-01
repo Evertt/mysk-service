@@ -10,7 +10,12 @@
  * - a twin that isn't built like its page, so a change to one that isn't made to the other fails:
  *   the same components in the same order, with the same literal `path`, `doc`, `section`, `line`,
  *   `symbol` and `as`; the same `<script>` imports; as many `##` headings; and links to the same
- *   wiki pages (`/wiki/…`, an `#anchor` or `?query` ignored: a heading's id is its language's).
+ *   wiki pages (`/wiki/…`, an `#anchor` or `?query` ignored: a heading's id is its language's);
+ * - a twin that is its page's text copied, not translated: more than half of its prose lines
+ *   (code, tags, link targets and addresses left out) also stand in the English page;
+ * - a twin whose code differs from its page's: the same inline code spans and the same code blocks
+ *   (as multisets, so a sentence may move them), as `messages.spec.ts` does for the messages. A
+ *   translator moves code, never changes it.
  *
  * Failures name the file and what differs. The checks also run on made-up pairs, to show each can
  * fail.
@@ -95,13 +100,109 @@ function frontMatterProblems(source: string): string[] {
  */
 const fixedAttributes = ["path", "doc", "section", "line", "symbol", "as"] as const;
 
+/** A body without its scripts, styles and comments. */
+function withoutScripts(body: string): string {
+	return body.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/g, "").replace(/<!--[\s\S]*?-->/g, "");
+}
+
+/** A component's or an element's tag, opening or closing, whose attributes may span lines. */
+const tagPattern = /<\/?[A-Za-z][\w.]*(?:[^>"'{]|"[^"]*"|'[^']*'|\{[^}]*\})*>/g;
+
 /** What's wrong with a twin's body: nothing but components, scripts and whitespace, so no prose. */
 function proseProblems(source: string): string[] {
-	const text = split(source)
-		.body.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/g, "")
-		.replace(/<!--[\s\S]*?-->/g, "")
-		.replace(/<\/?[A-Za-z][\w.]*(?:[^>"'{]|"[^"]*"|'[^']*'|\{[^}]*\})*>/g, "");
+	const text = withoutScripts(split(source).body).replace(tagPattern, "");
 	return /\p{L}/u.test(text) ? [] : ["no prose: only components and whitespace"];
+}
+
+/** A body in its code blocks (the opening line, `ts`, and the lines between) and the rest of it. */
+function fencesOf(body: string): { blocks: string[]; rest: string } {
+	const blocks: string[] = [];
+	const rest: string[] = [];
+	let open: string[] | null = null;
+	for (const line of body.split("\n")) {
+		const fence = /^\s*(?:```|~~~)(.*)$/.exec(line);
+		if (fence && open === null) open = [fence[1].trim()];
+		else if (fence) {
+			blocks.push(open!.join("\n"));
+			open = null;
+		} else if (open) open.push(line.trimEnd());
+		else rest.push(line);
+	}
+	if (open) blocks.push(open.join("\n"));
+	return { blocks, rest: rest.join("\n") };
+}
+
+/** The prose lines of a page or twin, trimmed: what's left of its body without code, tags, link targets and addresses, of at least three words. */
+function proseLines(source: string): string[] {
+	return withoutScripts(fencesOf(split(source).body).rest)
+		.replace(tagPattern, "")
+		.replace(/`[^`]*`/g, "")
+		.replace(/\]\([^)]*\)/g, "]")
+		.replace(/https?:\/\/\S+/g, "")
+		.split("\n")
+		.map((line) => line.trim())
+		.filter((line) => (line.match(/\p{L}{2,}/gu) ?? []).length >= 3);
+}
+
+/** What's wrong when a twin's prose is its page's: most of its lines are the English ones. */
+function copyProblems(page: string, twin: string): string[] {
+	const english = new Set(proseLines(page));
+	const lines = proseLines(twin);
+	const same = lines.filter((line) => english.has(line));
+	return same.length > lines.length / 2
+		? [
+				`copied, not translated: ${same.length} of its ${lines.length} prose lines are in the English page too ("${same[0]}")`,
+			]
+		: [];
+}
+
+/** What's in `a` and not in `b`, counting repeats. */
+function without(a: readonly string[], b: readonly string[]): string[] {
+	const left = [...b];
+	return a.filter((item) => {
+		const at = left.indexOf(item);
+		if (at === -1) return true;
+		left.splice(at, 1);
+		return false;
+	});
+}
+
+/** How the inline code and the code blocks of `twin` differ from `page`'s, as multisets. */
+function codeDifferences(page: string, twin: string): string[] {
+	const codeOf = (source: string) => {
+		const { blocks, rest } = fencesOf(split(source).body);
+		const spans = [...withoutScripts(rest).matchAll(/`([^`]+)`/g)].map(([, code]) =>
+			code.replace(/\s+/g, " ").trim(),
+		);
+		return { spans, blocks };
+	};
+	const a = codeOf(page);
+	const b = codeOf(twin);
+	const list = (items: string[]) => `[${items.map((item) => `\`${item}\``).join(", ")}]`;
+	const problems: string[] = [];
+
+	const onlyInPage = without(a.spans, b.spans);
+	const onlyInTwin = without(b.spans, a.spans);
+	if (onlyInPage.length || onlyInTwin.length) {
+		problems.push(
+			`inline code: ${[
+				onlyInPage.length ? `only in the page ${list(onlyInPage)}` : "",
+				onlyInTwin.length ? `only in the twin ${list(onlyInTwin)}` : "",
+			]
+				.filter(Boolean)
+				.join("; ")}`,
+		);
+	}
+
+	const blocksOnlyInPage = without(a.blocks, b.blocks);
+	const blocksOnlyInTwin = without(b.blocks, a.blocks);
+	if (blocksOnlyInPage.length || blocksOnlyInTwin.length) {
+		const first = (blocksOnlyInPage[0] ?? blocksOnlyInTwin[0]).replace(/\s+/g, " ").trim();
+		problems.push(
+			`code blocks: ${blocksOnlyInPage.length} only in the page, ${blocksOnlyInTwin.length} only in the twin (first: ${first})`,
+		);
+	}
+	return problems;
 }
 
 /** A page's build, as the twins must share it. */
@@ -216,6 +317,28 @@ describe("the wiki's Dutch twins", () => {
 				const page = pages.find((candidate) => candidate.slug === twin.slug);
 				if (!page) return [];
 				return differences(page.source, twin.source).map((problem) => `${twin.path}: ${problem}`);
+			}),
+		).toEqual([]);
+	});
+
+	test("a twin is a translation, not a copy of its page", () => {
+		expect(
+			twins.flatMap((twin) => {
+				const page = pages.find((candidate) => candidate.slug === twin.slug);
+				if (!page) return [];
+				return copyProblems(page.source, twin.source).map((problem) => `${twin.path}: ${problem}`);
+			}),
+		).toEqual([]);
+	});
+
+	test("a twin keeps its page's code: the same inline code and code blocks", () => {
+		expect(
+			twins.flatMap((twin) => {
+				const page = pages.find((candidate) => candidate.slug === twin.slug);
+				if (!page) return [];
+				return codeDifferences(page.source, twin.source).map(
+					(problem) => `${twin.path}: ${problem}`,
+				);
 			}),
 		).toEqual([]);
 	});
@@ -343,6 +466,155 @@ describe("the wiki's Dutch twins", () => {
 				),
 			).toEqual(["no prose: only components and whitespace"]);
 			expect(proseProblems(made(""))).toEqual(["no prose: only components and whitespace"]);
+		});
+
+		test("a twin that is its page's text copied, or mostly", () => {
+			const page = made(
+				"A line of the page that says something about tenants and their orders,",
+				"and a second line that says something else about the activity log.",
+				"",
+				"## Try it",
+				"",
+				"Pick an order of South while you are signed in at North, and turn the scope off.",
+				'<SourceLink path="src/a.ts" line={2}>the label of a link</SourceLink> and `code`.',
+				"See [the lifecycle](/wiki/orders/lifecycle) or https://example.com/a-long-address now.",
+			);
+			// A copy of the page, whatever its front-matter says.
+			expect(copyProblems(page, page.replace("title: T", "title: Titel"))).toHaveLength(1);
+			// A copy with one line translated is still a copy.
+			expect(
+				copyProblems(
+					page,
+					page.replace(
+						"and a second line that says something else",
+						"en een tweede regel over iets",
+					),
+				),
+			).toHaveLength(1);
+			// A twin in Dutch: nothing is the same but what is code, a tag or an address.
+			expect(
+				copyProblems(
+					page,
+					made(
+						"Een regel van de pagina die iets zegt over tenants en hun opdrachten,",
+						"en een tweede regel die iets anders zegt over het activiteitenlogboek.",
+						"",
+						"## Probeer het",
+						"",
+						"Kies een opdracht van South terwijl je bij North bent ingelogd, en zet de begrenzing uit.",
+						'<SourceLink path="src/a.ts" line={2}>het label van een link</SourceLink> en `code`.',
+						"Zie [de levenscyclus](/wiki/orders/lifecycle) of https://example.com/a-long-address nu.",
+					),
+				),
+			).toEqual([]);
+			// A twin that only shares what isn't prose: code, fences, tags, comments and addresses.
+			expect(
+				copyProblems(
+					made("Code: `one two three four` and a link https://example.com/one/two/three/four."),
+					made("Code: `one two three four` en een link https://example.com/one/two/three/four."),
+				),
+			).toEqual([]);
+		});
+
+		test("a twin whose inline code or code blocks differ from its page's", () => {
+			const page = made(
+				"Call `inTenant(table)` first, then `recordActivity(tx)`, and `inTenant(table)` again.",
+				"",
+				"```ts",
+				"const x = inTenant(orders);",
+				"```",
+			);
+			const twin = (...lines: string[]) => made(...lines);
+			// The same code, moved around the Dutch sentence and the block's place.
+			expect(
+				codeDifferences(
+					page,
+					twin(
+						"Roep eerst `recordActivity(tx)` aan, `inTenant(table)` en nog eens `inTenant(table)`.",
+						"",
+						"```ts",
+						"const x = inTenant(orders);",
+						"```",
+					),
+				),
+			).toEqual([]);
+			// An inline span translated, one missing, one added.
+			expect(
+				codeDifferences(
+					page,
+					twin(
+						"Roep `inTenant(tabel)` aan, dan `recordActivity(tx)`, en `inTenant(table)`.",
+						"",
+						"```ts",
+						"const x = inTenant(orders);",
+						"```",
+					),
+				),
+			).toEqual([
+				"inline code: only in the page [`inTenant(table)`]; only in the twin [`inTenant(tabel)`]",
+			]);
+			expect(
+				codeDifferences(
+					page,
+					twin(
+						"Roep `inTenant(table)` aan, dan `recordActivity(tx)`, `inTenant(table)` en `extra()`.",
+						"",
+						"```ts",
+						"const x = inTenant(orders);",
+						"```",
+					),
+				),
+			).toEqual(["inline code: only in the twin [`extra()`]"]);
+			// A fence changed, or gone.
+			expect(
+				codeDifferences(
+					page,
+					twin(
+						"Roep `inTenant(table)` aan, dan `recordActivity(tx)`, en `inTenant(table)`.",
+						"",
+						"```ts",
+						"const x = inTenant(opdrachten);",
+						"```",
+					),
+				),
+			).toEqual([
+				"code blocks: 1 only in the page, 1 only in the twin (first: ts const x = inTenant(orders);)",
+			]);
+			expect(
+				codeDifferences(
+					page,
+					twin("Roep `inTenant(table)` aan, dan `recordActivity(tx)`, en `inTenant(table)`."),
+				),
+			).toEqual([
+				"code blocks: 1 only in the page, 0 only in the twin (first: ts const x = inTenant(orders);)",
+			]);
+			// Backticks in a script or a comment, or inside a block, aren't inline code.
+			expect(
+				codeDifferences(
+					made(
+						"<script>",
+						"\tconst a = `x`;",
+						"</script>",
+						"",
+						"<!-- `note` -->",
+						"",
+						"```md",
+						"`in a block`",
+						"```",
+					),
+					made(
+						"<script>",
+						"\tconst a = `y`;",
+						"</script>",
+						"",
+						"<!-- `nota` -->",
+						"",
+						"```md",
+						"`in a block`",
+						"```",
+					),
+				),
+			).toEqual([]);
 		});
 
 		test("different imports", () => {

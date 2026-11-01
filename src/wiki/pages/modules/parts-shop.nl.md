@@ -12,7 +12,7 @@ summary: Partners bestellen vervangingsonderdelen in het klantportaal en betalen
 
 Onderdelen Shop is een catalogus in het klantportaal waar een partner vervangingsonderdelen
 bestelt, bijvoorbeeld voor sectionaaldeuren en levellers, en betaalt met het **Parts Credit** uit
-zijn wallet. In de code heet de module `parts-shop`; het menu-item staat in de zijbalk na
+zijn wallet. In de code heet de module parts-shop; het menu-item staat in de zijbalk na
 Materialen.
 
 ## Wat de module toevoegt

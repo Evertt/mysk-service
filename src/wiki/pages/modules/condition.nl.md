@@ -10,7 +10,7 @@ summary: De conditie van elk apparaat en zijn onderdelen door de tijd, berekend 
   import TryIt from "#wiki/parts/try-it.svelte";
 </script>
 
-Onderdelenbeheer (in de code de module `condition`) houdt bij hoe het met elk apparaat van je
+Onderdelenbeheer (in de code de module condition) houdt bij hoe het met elk apparaat van je
 klanten gaat, en met de **onderdelen** erin (bijvoorbeeld een veerpakket in een deur). Het
 menu-item staat in de zijbalk na Apparatuur. De module beantwoordt één vraag: welke apparaten
 hebben aandacht nodig, en hoe snel?

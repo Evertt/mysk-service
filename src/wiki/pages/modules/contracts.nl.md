@@ -12,7 +12,7 @@ summary: Servicecontracten die de apparaten van een klant dekken met een gegaran
 
 Een servicecontract is een onderhoudsafspraak: een klant betaalt een vast bedrag per maand, en in
 ruil daarvoor worden de apparaten van de klant gedekt met een gegarandeerde reactietijd. De module
-heet **Servicecontracten** (in de code `contracts`), met een eigen lijst op `/contracts`.
+heet **Servicecontracten** (in de code contracts), met een eigen lijst op `/contracts`.
 
 ## Wat de module toevoegt
 

@@ -74,7 +74,7 @@ verborgen zijn, plus het eigen type van de opdracht als dat sindsdien is verborg
 
 **Wat niet verborgen mag worden**, bepaalt `requiredOrderTypes(enabled)` in
 `src/lib/orders/server/types.ts`: die geeft storing, en elk type in de `orderTypes` van het manifest
-van een ingeschakelde module. `effectiveOrderTypes()` negeert de vlag `hidden` bij een type dat
+van een ingeschakelde module. `effectiveOrderTypes()` negeert een verborgen vlag bij een type dat
 nodig is, ook als die werd gezet voordat de module aan werd gezet.
 
 **Opslaan** is `saveOrderTypeSetting()` in hetzelfde bestand, die wordt aangeroepen door

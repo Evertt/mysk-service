@@ -10,7 +10,7 @@ summary: Facturen en creditnota's voor afgeronde opdrachten en de vergoedingen v
   import TryIt from "#wiki/parts/try-it.svelte";
 </script>
 
-Facturatie (in de code de module `invoices`) maakt van afgerond werk een factuur. Het is de
+Facturatie (in de code de module invoices) maakt van afgerond werk een factuur. Het is de
 module waarop andere bouwen: Partnerprogramma heeft hem nodig, en Servicecontracten biedt hem
 zijn vergoedingen aan.
 
