@@ -3,7 +3,7 @@
 	The wiki's search, in its header: a button (and `/`, Ctrl+K or ⌘K) that opens a search box over
 	the page. As the visitor types it lists the pages and headings holding every word
 	(`searchPages()`, `search.ts`); choosing one opens its page, at the heading if it's one
-	(`entryHref()`). English only, like the rest of the wiki.
+	(`entryHref()`). It searches the titles and headings in the visitor's language (`searchIndex()`).
 -->
 <script lang="ts">
 	import FileTextIcon from "@lucide/svelte/icons/file-text";
@@ -15,7 +15,8 @@
 	let open = $state(false);
 	let query = $state("");
 
-	const results = $derived(searchPages(query, searchIndex).slice(0, 20));
+	const index = searchIndex();
+	const results = $derived(searchPages(query, index).slice(0, 20));
 
 	/** Whether the key was typed into a field, where `/` is just a slash. */
 	const typing = (target: EventTarget | null) =>
@@ -41,7 +42,6 @@
 <Button
 	variant="outline"
 	size="sm"
-	lang="en"
 	class="w-9 justify-start px-0 text-muted-foreground sm:w-56 sm:px-3"
 	aria-label="Search the wiki"
 	onclick={() => (open = true)}
@@ -57,7 +57,6 @@
 
 <Command.Dialog
 	bind:open
-	lang="en"
 	shouldFilter={false}
 	title="Search the wiki"
 	description="Find a page by its title or one of its headings."

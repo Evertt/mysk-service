@@ -3,13 +3,14 @@
  * which serves their front-matter as the virtual module `virtual:wiki-pages`.
  *
  * The registry (`src/wiki/pages.ts`), the sidebar and the search need every page's front-matter,
- * but only one page's body. Importing the pages' `metadata` would bundle every page, and every
+ * and that of its Dutch twin (`<page>.nl.md`, read like any page), but only one page's body, in one
+ * language. Importing the pages' `metadata` would bundle every page, and every
  * widget it imports, into the chunk of each wiki page; so this reads the front-matter here, at
  * build time and in dev, and the route imports one page by its slug. It compiles each page as the
  * preprocessor does (`wikiMdsvex`), so `metadata` holds the `headings` the Markdown pass adds
  * (`wiki-headings.ts`). A page without front-matter, or with front-matter that doesn't parse, is
- * `null`, which `buildPages()` refuses, naming the file. In dev a page that comes, goes or changes
- * its front-matter or headings updates the module.
+ * `null`, which `buildPages()` refuses, naming the file. In dev a page or twin that comes, goes or
+ * changes its front-matter or headings updates the module.
  */
 import { globSync, readFileSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
@@ -39,8 +40,9 @@ async function metadataOf(file: string, cache: Cache) {
 }
 
 /**
- * The front-matter of every `.md` file under `dir`, by the key `import.meta.glob("./pages/**")`
- * gives it in `src/wiki/pages.ts` (`./pages/orders/lifecycle.md`): `null` where there is none.
+ * The front-matter of every `.md` file under `dir`, twins too, by the key
+ * `import.meta.glob("./pages/**")` gives it in `src/wiki/pages.ts` (`./pages/orders/lifecycle.md`,
+ * `./pages/orders/lifecycle.nl.md`): `null` where there is none.
  */
 export async function readWikiPages(dir: string, cache: Cache = new Map()) {
 	const files = globSync("**/*.md", { cwd: dir }).sort();
@@ -72,7 +74,7 @@ export function wikiPagesPlugin(root: string): Plugin {
 			served.set(this.environment.name, text);
 			return text;
 		},
-		// A page added, removed or changed: the module again, where what it holds has changed.
+		// A page or twin added, removed or changed: the module again, where what it holds has changed.
 		async hotUpdate({ file, modules }) {
 			if (!file.startsWith(dir + sep) || !file.endsWith(".md")) return;
 			const graph = this.environment.moduleGraph;

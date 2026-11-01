@@ -70,6 +70,10 @@ describe("readWikiPages", () => {
 		try {
 			mkdirSync(join(dir, "orders"));
 			writeFileSync(join(dir, "orders/lifecycle.md"), "---\ntitle: Lifecycle\n---\n\n## Moves\n");
+			writeFileSync(
+				join(dir, "orders/lifecycle.nl.md"),
+				"---\ntitle: Levensloop\n---\n\n## Stappen\n",
+			);
 			writeFileSync(join(dir, "loose.md"), "No front-matter.\n");
 			writeFileSync(join(dir, "notes.txt"), "---\ntitle: Not a page\n---\n");
 			expect(await readWikiPages(dir)).toEqual({
@@ -78,17 +82,25 @@ describe("readWikiPages", () => {
 					title: "Lifecycle",
 					headings: [{ text: "Moves", id: "moves" }],
 				},
+				// A Dutch twin, with the ids of its own headings.
+				"./pages/orders/lifecycle.nl.md": {
+					title: "Levensloop",
+					headings: [{ text: "Stappen", id: "stappen" }],
+				},
 			});
 		} finally {
 			rmSync(dir, { recursive: true, force: true });
 		}
 	});
 
-	test("reads the real pages", async () => {
+	test("reads the real pages, and their twins", async () => {
 		const pages = await readWikiPages(join(import.meta.dirname, "../src/wiki/pages"));
 		expect(pages["./pages/orders/lifecycle.md"]).toMatchObject({
 			title: "Order lifecycle",
 			headings: expect.arrayContaining([{ text: "Try the moves", id: "try-the-moves" }]),
+		});
+		expect(pages["./pages/start/what-fieldworks-is.nl.md"]).toMatchObject({
+			title: "Wat Fieldworks is",
 		});
 	});
 });

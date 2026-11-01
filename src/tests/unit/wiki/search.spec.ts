@@ -1,10 +1,17 @@
 /**
- * The wiki's search (`#wiki/search.ts`): its index, a page's title and each of its `##` headings,
- * and `searchPages()`, which finds the entries holding every word of the query, titles first.
+ * The wiki's search (`#wiki/search.ts`): its index, a page's title and each of its `##` headings
+ * in the visitor's language, and `searchPages()`, which finds the entries holding every word of
+ * the query, titles first.
  */
-import { describe, expect, test } from "vite-plus/test";
+import type { Component } from "svelte";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 
+import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
+import { buildPages } from "#wiki/pages.ts";
 import { entryHref, searchIndex, searchPages, type SearchEntry } from "#wiki/search.ts";
+
+const englishByDefault = getLocale;
+afterEach(() => overwriteGetLocale(englishByDefault));
 
 /** A made-up index, in page order. */
 const index: SearchEntry[] = [
@@ -20,7 +27,7 @@ const text = (entry: SearchEntry) => `${entry.title} ${entry.heading ?? ""}`.toL
 
 describe("searchPages", () => {
 	test('"lifecycle" finds the order lifecycle first', () => {
-		expect(searchPages("lifecycle", searchIndex)[0]).toEqual({
+		expect(searchPages("lifecycle", searchIndex())[0]).toEqual({
 			slug: "orders/lifecycle",
 			title: "Order lifecycle",
 		});
@@ -96,10 +103,78 @@ describe("entryHref", () => {
 	});
 });
 
+describe("searchIndex", () => {
+	const loader = async () => ({ default: {} as Component });
+	const pages = buildPages(
+		{
+			"./pages/start/a.md": {
+				title: "A page",
+				summary: ".",
+				section: "start",
+				order: 1,
+				status: "built",
+				covers: [],
+				headings: [{ text: "What it does", id: "what-it-does" }],
+			},
+			"./pages/start/a.nl.md": {
+				title: "Een pagina",
+				summary: ".",
+				headings: [{ text: "Wat het doet", id: "wat-het-doet" }],
+			},
+			"./pages/start/b.md": {
+				title: "B page",
+				summary: ".",
+				section: "start",
+				order: 2,
+				status: "built",
+				covers: [],
+				headings: [{ text: "Notes", id: "notes" }],
+			},
+		},
+		{
+			"./pages/start/a.md": loader,
+			"./pages/start/a.nl.md": loader,
+			"./pages/start/b.md": loader,
+		},
+	);
+
+	test("in English: the pages' titles and headings", () => {
+		expect(searchIndex("en", pages)).toEqual([
+			{ slug: "start/a", title: "A page" },
+			{ slug: "start/a", title: "A page", heading: "What it does", id: "what-it-does" },
+			{ slug: "start/b", title: "B page" },
+			{ slug: "start/b", title: "B page", heading: "Notes", id: "notes" },
+		]);
+	});
+
+	test("in Dutch: the twins', with the twins' heading ids, English where there's no twin", () => {
+		expect(searchIndex("nl", pages)).toEqual([
+			{ slug: "start/a", title: "Een pagina" },
+			{ slug: "start/a", title: "Een pagina", heading: "Wat het doet", id: "wat-het-doet" },
+			{ slug: "start/b", title: "B page" },
+			{ slug: "start/b", title: "B page", heading: "Notes", id: "notes" },
+		]);
+		expect(searchPages("doet", searchIndex("nl", pages)).map(entryHref)).toEqual([
+			"/wiki/start/a#wat-het-doet",
+		]);
+		expect(searchPages("doet", searchIndex("en", pages))).toEqual([]);
+	});
+
+	test("is the current language's by default", () => {
+		expect(searchIndex()).toBe(searchIndex("en"));
+		overwriteGetLocale(() => "nl");
+		expect(searchIndex()).toBe(searchIndex("nl"));
+		expect(searchIndex()).toContainEqual({
+			slug: "start/what-fieldworks-is",
+			title: "Wat Fieldworks is",
+		});
+	});
+});
+
 describe("the index of the real pages", () => {
 	test("has each page's title, and its ## headings", () => {
-		expect(searchIndex).toContainEqual({ slug: "orders/lifecycle", title: "Order lifecycle" });
-		expect(searchIndex).toContainEqual({
+		expect(searchIndex()).toContainEqual({ slug: "orders/lifecycle", title: "Order lifecycle" });
+		expect(searchIndex()).toContainEqual({
 			slug: "orders/lifecycle",
 			title: "Order lifecycle",
 			heading: "Try the moves",
@@ -108,7 +183,7 @@ describe("the index of the real pages", () => {
 	});
 
 	test("finds a curled heading as the visitor types it", () => {
-		expect(searchPages("isn't work", searchIndex)).toContainEqual({
+		expect(searchPages("isn't work", searchIndex())).toContainEqual({
 			slug: "orders/awaiting-acceptance",
 			title: "Orders awaiting acceptance",
 			heading: "Until it’s decided, it isn’t work",
@@ -117,6 +192,10 @@ describe("the index of the real pages", () => {
 	});
 
 	test("has a heading as it reads, without its Markdown", () => {
-		expect(searchIndex.filter((entry) => /[`*_[\]]/.test(entry.heading ?? ""))).toEqual([]);
+		for (const locale of ["en", "nl"] as const) {
+			expect(searchIndex(locale).filter((entry) => /[`*_[\]]/.test(entry.heading ?? ""))).toEqual(
+				[],
+			);
+		}
 	});
 });

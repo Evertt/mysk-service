@@ -8,9 +8,9 @@
 	import HammerIcon from "@lucide/svelte/icons/hammer";
 
 	import Callout from "#lib/components/callout.svelte";
-	import type { PageMeta } from "#wiki/pages.ts";
+	import type { WikiPage } from "#wiki/pages.ts";
 
-	let { status }: { status: PageMeta["status"] } = $props();
+	let { status }: { status: WikiPage["status"] } = $props();
 </script>
 
 {#if status === "partly built"}

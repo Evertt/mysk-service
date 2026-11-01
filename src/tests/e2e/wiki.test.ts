@@ -1,14 +1,34 @@
 /**
  * The public wiki (`/wiki`, docs/plans/wiki.md): open to anyone, signed in or not, in the visitor's
- * theme, with the sidebar of the wiki's sections.
+ * theme and language (docs/plans/wiki-dutch.md), with the sidebar of the wiki's sections.
  */
+import type { Page } from "playwright";
 import { describe, expect, test } from "vite-plus/test";
 
-import { wikiNav } from "#wiki/pages.ts";
+import { pageHref, wikiNav, wikiPages } from "#wiki/pages.ts";
 
 import { baseURL, fitsWidth, onPhone, users, useApp } from "./app.ts";
 
 const first = "/wiki/start/what-fieldworks-is";
+
+/** A page without its Dutch twin yet, if there's one left. */
+const untranslated = wikiPages.find((page) => !page.text.nl);
+
+/** `run` with the app in Dutch, as for most visitors (Paraglide's cookie, and the browser's language). */
+async function inDutch(page: Page, run: () => Promise<void>) {
+	await page.context().addCookies([{ name: "PARAGLIDE_LOCALE", value: "nl", url: baseURL }]);
+	await page.setExtraHTTPHeaders({ "accept-language": "nl-NL,nl;q=0.9" });
+	try {
+		await run();
+	} finally {
+		await page.setExtraHTTPHeaders({});
+		await page.context().clearCookies({ name: "PARAGLIDE_LOCALE" });
+	}
+}
+
+/** The language `selector`'s element is read in: its nearest `lang`. */
+const langOf = (page: Page, selector: string) =>
+	page.locator(selector).evaluate((element) => element.closest("[lang]")?.getAttribute("lang"));
 
 describe("signed out", () => {
 	const app = useApp({ user: null });
@@ -95,26 +115,73 @@ describe("signed out", () => {
 		expect(await page.getByRole("list", { name: "Leaves by" }).innerText()).toContain("Scheduled");
 	});
 
-	test("reads as English, also where the app speaks Dutch", async () => {
+	test("reads in English for an English visitor, with no note", async () => {
 		const { page } = app;
-		// The app in Dutch, as for most visitors (Paraglide's cookie comes first, then the browser's).
-		await page.context().addCookies([{ name: "PARAGLIDE_LOCALE", value: "nl", url: baseURL }]);
-		await page.setExtraHTTPHeaders({ "accept-language": "nl-NL,nl;q=0.9" });
-		try {
+		await app.go(first);
+		expect(await langOf(page, "main article")).toBe("en");
+		expect(await page.locator("main h1").innerText()).toBe("What Fieldworks is");
+		expect(await page.getByTestId("wiki-untranslated").count()).toBe(0);
+	});
+
+	test("a Dutch visitor reads the page's Dutch twin, and the sidebar in Dutch", async () => {
+		const { page } = app;
+		await inDutch(page, async () => {
 			await app.go(first);
 			expect(await page.evaluate(() => document.documentElement.lang)).toBe("nl");
-			// The language each is read in: its nearest `lang`.
-			const langOf = (selector: string) =>
-				page
-					.locator(selector)
-					.evaluate((element) => element.closest("[lang]")?.getAttribute("lang"));
-			expect(await langOf("main article")).toBe("en");
-			expect(await langOf("nav[aria-label=Wiki]")).toBe("en");
-		} finally {
-			await page.setExtraHTTPHeaders({});
-			await page.context().clearCookies({ name: "PARAGLIDE_LOCALE" });
-		}
+			expect(await page.locator("main h1").innerText()).toBe("Wat Fieldworks is");
+			expect(await page.locator("main article").innerText()).toContain(
+				"Drie soorten mensen gebruiken het",
+			);
+			expect(await langOf(page, "main article")).toBe("nl");
+			expect(await page.getByTestId("wiki-untranslated").count()).toBe(0);
+			const nav = page.locator("nav[aria-label=Wiki]");
+			expect(await langOf(page, "nav[aria-label=Wiki]")).toBe("nl");
+			expect(await nav.getByRole("link", { name: "Wat Fieldworks is" }).count()).toBe(1);
+			expect(await nav.getByRole("link", { name: "What Fieldworks is" }).count()).toBe(0);
+		});
 	});
+
+	test("a Dutch visitor's search finds the Dutch headings, by their Dutch ids", async () => {
+		const { page } = app;
+		await inDutch(page, async () => {
+			await app.go(first);
+			await page.getByRole("button", { name: "Search the wiki" }).click();
+			await page
+				.getByRole("dialog")
+				.getByRole("combobox", { name: "Search the wiki" })
+				.fill("wie ermee werken");
+			await page
+				.getByRole("dialog")
+				.getByRole("option", { name: /Wie ermee werken/ })
+				.click();
+			await page.waitForURL((url) => url.hash === "#wie-ermee-werken");
+			expect(await page.locator("main h2#wie-ermee-werken").innerText()).toBe("Wie ermee werken");
+		});
+	});
+
+	test.runIf(untranslated)(
+		"a Dutch visitor on a page without its twin reads it in English, marked so, with a note",
+		async () => {
+			const { page } = app;
+			await inDutch(page, async () => {
+				await app.go(pageHref(untranslated!.slug));
+				expect(await page.locator("main h1").innerText()).toBe(untranslated!.text.en.title);
+				expect(await langOf(page, "main article")).toBe("en");
+				const note = page.getByTestId("wiki-untranslated");
+				expect(await note.innerText()).toBe(
+					"Deze pagina is nog niet vertaald, dus je leest hem in het Engels.",
+				);
+				expect(await langOf(page, '[data-testid="wiki-untranslated"]')).toBe("nl");
+				// Its sidebar entry is English too, the page's own title.
+				expect(
+					await page
+						.locator("nav[aria-label=Wiki]")
+						.getByRole("link", { name: untranslated!.text.en.title, exact: true })
+						.count(),
+				).toBe(1);
+			});
+		},
+	);
 
 	test("has the way into the app, which sends a visitor who isn't signed in to log in", async () => {
 		const { page } = app;

@@ -5,9 +5,9 @@
 	mode, and the page in a readable column of prose, coloured by the theme. Public and tenantless,
 	so it asks the app for nothing: no user, no organization.
 
-	English only, and marked so (`lang="en"`): the app's own language is the visitor's (`<html
-	lang>`, Dutch for most), which a screen reader would read the pages in. The chrome the shell
-	shares with the app (the sidebar's button, the switchers) stays in the app's language.
+	In the app's language, like the rest of the app (`<html lang>`): the sidebar titles the pages
+	in it, and the page is its twin in it where there is one (`pageText()`, `src/wiki/pages.ts`). A
+	page shown in English for want of its twin says so itself (`lang="en"`, the route's page).
 -->
 <script lang="ts">
 	import AppWindowIcon from "@lucide/svelte/icons/app-window";
@@ -30,13 +30,13 @@
 </script>
 
 <Sidebar.Provider>
-	<NavSidebar {groups} label="Wiki" lang="en">
+	<NavSidebar {groups} label="Wiki">
 		{#snippet header()}
 			<Sidebar.Menu>
 				<Sidebar.MenuItem>
 					<Sidebar.MenuButton size="lg" tooltipContent="Fieldworks wiki">
 						{#snippet child({ props })}
-							<a {...props} href="/wiki" lang="en">
+							<a {...props} href="/wiki">
 								<BrandMark icon={BookOpenIcon} sidebar />
 								<span class="grid flex-1 text-left text-sm leading-tight">
 									<span class="truncate font-medium">Fieldworks</span>
@@ -65,32 +65,25 @@
 			<div class="ml-auto flex shrink-0 items-center gap-1">
 				<!-- The app's home, loaded in full: the guard, which sees only full page loads, sends a
 					visitor who isn't signed in to the login page, and everyone else to their shell's home. -->
-				<Button
-					href="/"
-					data-sveltekit-reload
-					variant="ghost"
-					size="sm"
-					lang="en"
-					aria-label="Open the app"
-				>
+				<Button href="/" data-sveltekit-reload variant="ghost" size="sm" aria-label="Open the app">
 					<AppWindowIcon />
 					<span class="hidden sm:inline">Open the app</span>
 				</Button>
 				<AppearanceSwitchers />
 			</div>
 		</header>
-		<main lang="en" class="mx-auto w-full max-w-3xl min-w-0 flex-1 p-4 pb-16 md:p-8">
+		<main class="mx-auto w-full max-w-3xl min-w-0 flex-1 p-4 pb-16 md:p-8">
 			<!--
 				The typography plugin's colours are the theme's (see the style below), in light and dark.
 				Inline code without its backticks, on a quiet tint instead; a long path in it breaks rather
 				than widen the page on a phone. A heading the search links to (`#id`) clears the sticky
-				header.
+				header. The page itself is the route's `<article>`, in its own language.
 			-->
-			<article
+			<div
 				class="wiki-prose prose max-w-none prose-headings:scroll-mt-20 prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:font-normal prose-code:wrap-anywhere prose-code:before:content-none prose-code:after:content-none [&_pre_code]:bg-transparent [&_pre_code]:p-0"
 			>
 				{@render children()}
-			</article>
+			</div>
 		</main>
 	</Sidebar.Inset>
 </Sidebar.Provider>

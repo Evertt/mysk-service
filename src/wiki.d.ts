@@ -9,8 +9,9 @@ declare module "*.md" {
 }
 
 /**
- * The wiki's pages' front-matter, by file (`./pages/orders/lifecycle.md`), as
- * `scripts/wiki-pages.ts` reads it at build time: `null` for a page without any.
+ * The wiki's pages' front-matter, and their twins', by file (`./pages/orders/lifecycle.md`,
+ * `./pages/orders/lifecycle.nl.md`), as `scripts/wiki-pages.ts` reads it at build time: `null` for
+ * a file without any.
  */
 declare module "virtual:wiki-pages" {
 	const frontMatter: Record<string, unknown>;
