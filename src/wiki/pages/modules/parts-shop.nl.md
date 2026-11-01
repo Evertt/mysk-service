@@ -23,15 +23,15 @@ Materialen.
   checklistpunten het oplost. De prijs en de voorraad zijn die van het materiaal. Alleen eigenaren
   en beheerders wijzigen de categorieën van de shop.
 - **De shop in het portaal.** Een partner zoekt in de catalogus op naam of artikelnummer, filtert op
-  categorie, en vult een winkelwagen. De voorraad staat als Op voorraad, Laag voorraad of Op
+  categorie, en vult een winkelwagen. De voorraad staat als Op voorraad, Lage voorraad of Op
   aanvraag.
 - **Afrekenen met Parts Credit.** Alleen Parts Credit wordt aangenomen: geen gemengde betaling, geen
   factuur. Bij het afrekenen zie je het beschikbare saldo, de bestelling en het saldo erna. Over een
   bestelling die met Parts Credit is betaald, wordt geen btw gerekend. De bestelling wordt geweigerd
   als het credit of de voorraad niet genoeg is, of als het bedrijf niet in het partnerprogramma zit.
 - **Shopbestellingen.** Kantoor ziet de shopbestellingen en brengt elke bestelling door
-  **Bevestigen**, **Verzenden** en **Geleverd melden**. Geplaatst, Bevestigd, Verzonden, Geleverd of
-  Geannuleerd. Een shopbestelling kan worden geannuleerd zolang hij niet is verzonden: het credit
+  **Bevestigen**, **Verzenden** en **Geleverd melden**. De status is Geplaatst, Bevestigd,
+  Verzonden, Geleverd of Geannuleerd. Een shopbestelling kan worden geannuleerd zolang hij niet is verzonden: het credit
   gaat terug in de wallet van de partner (credit dat intussen is vervallen, blijft vervallen) en de
   onderdelen gaan terug in de voorraad.
 - **Voorgestelde onderdelen.** Als bij een keuring een punt wordt afgekeurd, toont de opdracht het

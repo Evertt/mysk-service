@@ -24,7 +24,7 @@ and a row of tiles:
 - **Urgent**: open orders with the priority "urgent".
 - **Revenue**: the completed work of the last thirty days, priced like everywhere else, against the
   thirty days before.
-- **Needs attention**: units that need service or are out of service, of all units.
+- **Equipment needing attention**: units that need service or are out of service, of all units.
 
 Below the tiles are cards: the next six scheduled orders with customer, units, engineer and
 priority, a chart of units by status, revenue per month, orders made per week by status, and the

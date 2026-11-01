@@ -72,13 +72,14 @@ koppelt die aan. De opgeslagen waarden, de filters en de URL's houden de eigen i
 **Wat het formulier aanbiedt**, is `offeredOrderTypes(settings, current)`: de types die niet
 verborgen zijn, plus het eigen type van de opdracht als dat sindsdien is verborgen.
 
-**Wat verborgen mag worden**, bepaalt `requiredOrderTypes(enabled)` in
+**Wat niet verborgen mag worden**, bepaalt `requiredOrderTypes(enabled)` in
 `src/lib/orders/server/types.ts`: die geeft storing, en elk type in de `orderTypes` van het manifest
 van een ingeschakelde module. `effectiveOrderTypes()` negeert de vlag `hidden` bij een type dat
 nodig is, ook als die werd gezet voordat de module aan werd gezet.
 
-**Opslaan** is `saveOrderTypeSetting()` in hetzelfde bestand, een remote form (een formulier dat
-direct een functie op de server aanroept) alleen voor managers (`saveOrderType`).
+**Opslaan** is `saveOrderTypeSetting()` in hetzelfde bestand, die wordt aangeroepen door
+`saveOrderType` (`src/lib/orders/type-settings/type-settings.remote.ts`), een remote form (een
+formulier dat direct een functie op de server aanroept) alleen voor managers.
 `orderTypeProblems()` vindt wat er mis is (een type dat nodig is maar verborgen, een naam die al
 bezet is), de transactie vervangt of verwijdert de rij, en de wijziging wordt gelogd.
 

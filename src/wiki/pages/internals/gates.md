@@ -20,7 +20,8 @@ runs first. If it refuses, the function's own code never runs.
 
 That is why the same URL behaves differently for different people. A planner can load the orders
 list; an engineer calling the same function gets a 403 and uses the engineer portal's functions
-instead; someone signed out gets a 401. A customer's contact reaches the customer portal's functions and the few that every role may call.
+instead; someone signed out gets a 401. A customer's contact reaches the customer portal's
+functions and the few that every role may call.
 
 Pick who is calling and see what each gate does:
 
@@ -53,10 +54,11 @@ A function that forgets its gate has no way to be written, which is the point.
 - **The sets** are `remoteSet(gate, admits)`: each has `query` (with `.batch` and `.live`), `form`
   and `command`. See <SourceLink path="src/lib/server/remote-functions.ts" line={97}>remoteSet</SourceLink>.
   The checks (`requireMember()` and the rest) are in <SourceLink path="src/lib/server/auth/session.ts" line={133} symbol="requireMember">session.ts</SourceLink>.
-- **A module's set** is `moduleRemote("<id>")` (or `moduleRemote(id, "manager" | "engineer" |
-"customer")`), called once in the module's `remote-functions.ts`. It adds `requireModule(id)`:
-  a tenant without the module gets a 404, as if the function didn't exist. A spec
-  (`module-gate.spec.ts`) checks that each module builds its functions from its own set.
+- **A module's set** is `moduleRemote("<id>")` (or
+  `moduleRemote(id, "manager" | "engineer" | "customer")`), called once in the module's
+  `remote-functions.ts`. It adds `requireModule(id)`: a tenant without the module gets a 404, as if
+  the function didn't exist. A spec (`module-gate.spec.ts`) checks that each module builds its
+  functions from its own set.
 - **No `prerender`.** Nothing here is the same for every tenant.
 - **What the gate doesn't decide.** It says who may _call_ a function. Which _records_ they
   reach is the [access registry](/wiki/internals/permissions), and every query is still scoped to

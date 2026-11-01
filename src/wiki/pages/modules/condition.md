@@ -64,8 +64,8 @@ attention, and how soon?
   [Checklists](/wiki/modules/checklists).
 - **Maintenance** adds a unit's next visit to the list as a "Next due" column, see
   [Maintenance](/wiki/modules/maintenance).
-  **Materials** are the components' articles, see [Materials](/wiki/modules/materials). The **parts
-  shop** says which points an article fixes, see [Parts shop](/wiki/modules/parts-shop).
+- **Materials** are the components' articles, see [Materials](/wiki/modules/materials).
+- The **parts shop** says which points an article fixes, see [Parts shop](/wiki/modules/parts-shop).
 
 Condition requires no module.
 

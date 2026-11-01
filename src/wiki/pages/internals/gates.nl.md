@@ -51,11 +51,11 @@ Een functie die zijn gate vergeet, valt niet te schrijven, en dat is precies de 
 - **De sets** zijn `remoteSet(gate, admits)`: elke set heeft `query` (met `.batch` en `.live`),
   `form` en `command`. Zie <SourceLink path="src/lib/server/remote-functions.ts" line={97}>remoteSet</SourceLink>.
   De controles (`requireMember()` en de rest) staan in <SourceLink path="src/lib/server/auth/session.ts" line={133} symbol="requireMember">session.ts</SourceLink>.
-- **De set van een module** is `moduleRemote("<id>")` (of `moduleRemote(id, "manager" | "engineer" |
-"customer")`), één keer aangeroepen in de `remote-functions.ts` van de module. Die voegt
-  `requireModule(id)` toe: een tenant (een organisatie in de app) zonder de module krijgt een 404,
-  alsof de functie niet bestaat. Een spec (`module-gate.spec.ts`) controleert dat elke module zijn
-  functies bouwt uit zijn eigen set.
+- **De set van een module** is `moduleRemote("<id>")` (of
+  `moduleRemote(id, "manager" | "engineer" | "customer")`), één keer aangeroepen in de
+  `remote-functions.ts` van de module. Die voegt `requireModule(id)` toe: een tenant (een
+  organisatie in de app) zonder de module krijgt een 404, alsof de functie niet bestaat. Een spec
+  (`module-gate.spec.ts`) controleert dat elke module zijn functies bouwt uit zijn eigen set.
 - **Geen `prerender`.** Niets hier is voor elke tenant hetzelfde.
 - **Wat de gate niet beslist.** Hij zegt wie een functie mag _aanroepen_. Welke _records_ iemand
   bereikt, is aan de [access registry](/wiki/internals/permissions), en elke query blijft beperkt

@@ -14,11 +14,11 @@ covers: [theme:neutral, theme:harbor, theme:lagoon, theme:blueprint, theme:bruta
 	import ThemeGallery from "#wiki/widgets/theme-gallery/theme-gallery.svelte";
 </script>
 
-Fieldworks can look like six different products. Everyone picks a theme and a mode in the header (and
-on the sign-in page): the theme switcher, and the mode switcher with light, dark and "follow my
-system". The choice is kept in a cookie for a year, so it is the same on your next visit and, since
-the server reads the cookie, there is no flash of the wrong colours while the page loads. Try them on
-this wiki: the switchers in this page's header change it too.
+Fieldworks can look like six different products. Everyone picks a theme and a mode in the header
+(and on the sign-in page): the theme switcher, and the mode switcher with Light, Dark and System,
+which follows your device's setting. The choice is kept in a cookie for a year, so it is the same on
+your next visit and, since the server reads the cookie, there is no flash of the wrong colours while
+the page loads. Try them on this wiki: the switchers in this page's header change it too.
 
 - **Neutral** is shadcn-svelte as installed, with no changes.
 - **Harbor** is calm and professional: cool slate, a deep teal for actions, a warm sand accent, IBM

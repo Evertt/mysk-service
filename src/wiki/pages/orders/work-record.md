@@ -27,7 +27,7 @@ Four screens show it, and none shows quite the same thing:
   engineer is named in full. The units come with the sites' contact and access details, and the
   warranty date.
 - **The engineer's order** shows the notes, but not who collected the sign-off. The engineer isn't
-  shown: it's them. The units come with the sites' contact and access details, at their own order.
+  shown: it's them. The units come with the sites' contact and access details, on their own order.
 - **The customer's order** shows no notes and no collector. The engineer is named by first name.
   The units come with the sites' address only.
 - **The printed work order** shows no notes and no collector, and names the engineer in full. Its

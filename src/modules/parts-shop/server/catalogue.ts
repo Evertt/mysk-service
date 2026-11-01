@@ -48,7 +48,7 @@ export async function catalogue(where?: SQL, tx: Transaction | typeof db = db) {
 	);
 	return rows.map((row) => ({
 		...row,
-		/** "Op voorraad", "Laag voorraad" or "Op aanvraag", by the materials' low threshold. */
+		/** "Op voorraad", "Lage voorraad" or "Op aanvraag", by the materials' low threshold. */
 		availability: productStock(row, (stock) => stockLevel(stock, row.materialUnit) === "low"),
 		checkpointIds: linked.get(row.id) ?? [],
 	}));
@@ -98,6 +98,6 @@ export async function withCheckpoints(rows: CatalogueRow[]) {
 	}));
 }
 
-/** How many of the products run low: the portal's banner ("N artikelen met laag voorraad"). */
+/** How many of the products run low: the portal's banner ("N artikelen met lage voorraad"). */
 export const lowCount = (rows: readonly CatalogueRow[]) =>
 	rows.filter((row) => row.availability === "low").length;

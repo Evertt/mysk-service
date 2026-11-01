@@ -31,9 +31,9 @@ Its sidebar entry sits after Materials.
   order paid with parts credit. The order is refused when the credit or the stock is not enough, or
   when the company is not in the partner programme.
 - **Shop orders.** The office sees the shop orders and moves each one through **Confirm**, **Ship**
-  and **Mark delivered**. Placed, Confirmed, Shipped, Delivered or Cancelled. A shop order can be
-  cancelled before it is shipped: the credit goes back into the partner's wallet (credit that has
-  expired since stays expired) and the parts go back into stock.
+  and **Mark delivered**. Its status is Placed, Confirmed, Shipped, Delivered or Cancelled. A shop
+  order can be cancelled before it is shipped: the credit goes back into the partner's wallet
+  (credit that has expired since stays expired) and the parts go back into stock.
 - **Suggested parts.** When an inspection rejects a point, the order shows the **Part needed**: the
   products that fix that point, with an "Add to order" button. The customer sees the same
   suggestion in their portal, from the shop.

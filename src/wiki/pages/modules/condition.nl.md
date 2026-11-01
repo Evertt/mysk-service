@@ -63,8 +63,8 @@ hebben aandacht nodig, en hoe snel?
   [Werkbonnen](/wiki/modules/checklists).
 - **Onderhoudsplannen** zet het volgende bezoek van een apparaat in de lijst, als kolom
   "Volgende", zie [Onderhoudsplannen](/wiki/modules/maintenance).
-  **Materialen** zijn de artikelen van de onderdelen, zie [Materialen](/wiki/modules/materials).
-  **Onderdelen Shop** zegt welke punten een artikel oplost, zie
+- **Materialen** zijn de artikelen van de onderdelen, zie [Materialen](/wiki/modules/materials).
+- **Onderdelen Shop** zegt welke punten een artikel oplost, zie
   [Onderdelen Shop](/wiki/modules/parts-shop).
 
 Onderdelenbeheer heeft geen module nodig.

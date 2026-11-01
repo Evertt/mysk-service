@@ -11,10 +11,10 @@ summary: Zes uiterlijken voor de hele app, elk in licht en donker, gekozen in de
 </script>
 
 Fieldworks kan eruitzien als zes verschillende producten. Iedereen kiest een thema en een modus in
-de kopbalk (en op de inlogpagina): de themakiezer, en de moduskiezer met licht, donker en
-"Systeem", dat je systeem volgt. De keuze wordt een jaar bewaard in een cookie, dus bij je volgende
-bezoek is hij hetzelfde, en omdat de server de cookie leest, flitsen er geen verkeerde kleuren
-voorbij terwijl de pagina laadt. Probeer ze op deze wiki: de kiezers in de kopbalk van deze pagina
+de kopbalk (en op de inlogpagina): de themakiezer, en de moduskiezer met Licht, Donker en
+Systeem, dat de instelling van je apparaat volgt. De keuze wordt een jaar bewaard in een cookie,
+dus bij je volgende bezoek is hij hetzelfde, en omdat de server de cookie leest, flitsen er geen
+verkeerde kleuren voorbij terwijl de pagina laadt. Probeer ze op deze wiki: de kiezers in de kopbalk van deze pagina
 veranderen hem ook.
 
 - **Neutral** is shadcn-svelte zoals het geïnstalleerd wordt, zonder wijzigingen.

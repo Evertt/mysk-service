@@ -75,12 +75,12 @@ filters and the URLs keep the types' own ids.
 **What the form offers** is `offeredOrderTypes(settings, current)`: the types not hidden, plus the
 order's own type if it was hidden since.
 
-**What may be hidden** is `requiredOrderTypes(enabled)` in `src/lib/orders/server/types.ts`:
+**What may not be hidden** is `requiredOrderTypes(enabled)` in `src/lib/orders/server/types.ts`:
 breakdown, and every type in the `orderTypes` of an enabled module's manifest. `effectiveOrderTypes()`
 ignores a hidden flag on a needed type, also if it was set before the module was switched on.
 
-**Saving** is `saveOrderTypeSetting()` in the same file, a manager-only remote form
-(`saveOrderType`). `orderTypeProblems()` finds what is wrong (a needed type hidden, a name already
+**Saving** is `saveOrderTypeSetting()` in the same file, which the manager-only remote form
+`saveOrderType` (`src/lib/orders/type-settings/type-settings.remote.ts`) calls. `orderTypeProblems()` finds what is wrong (a needed type hidden, a name already
 taken), the transaction replaces or deletes the row, and the change is logged.
 
 - <SourceLink path="src/lib/models.ts" line={36}><code>orderTypes</code> and corrective work</SourceLink>

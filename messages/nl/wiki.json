@@ -1,6 +1,6 @@
 {
 	"$schema": "https://inlang.com/schema/inlang-message-format",
-	"wiki_not_translated": "Deze pagina is nog niet vertaald, dus je leest hem in het Engels.",
+	"wiki_not_translated": "Deze pagina is nog niet vertaald; je leest de Engelse versie.",
 	"wiki_title": "{name}-wiki",
 	"wiki_open_app": "Open de app",
 	"wiki_back": "Terug naar de wiki",
