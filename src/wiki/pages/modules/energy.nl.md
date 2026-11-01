@@ -10,7 +10,7 @@ summary: Vermogen en verbruik per zone van het gebouw van een klant, deuren die 
   import TryIt from "#wiki/parts/try-it.svelte";
 </script>
 
-De module energie toont het gebouw van een klant live: hoeveel vermogen en energie elk deel ervan
+De module Energie toont het gebouw van een klant live: hoeveel vermogen en energie elk deel ervan
 gebruikt, welke deuren open staan en wat dat kost, en wanneer iets over zijn grens gaat. Van een
 alert maak je met één klik een opdracht, en zo wordt monitoring werk voor een monteur.
 
@@ -46,8 +46,8 @@ alert maak je met één klik een opdracht, en zo wordt monitoring werk voor een 
 
 ### Werkt samen met
 
-Energie heeft niets nodig en verrijkt niets. **Docks** verrijken energie: een deur die ook de deur
-van een dock is, toont de status van het dock op de deurkaart van energie. Zie
+Energie heeft niets nodig en verrijkt niets. **Docks** verrijkt Energie: een deur die ook de deur
+van een dock is, toont de status van het dock op de deurkaart van Energie. Zie
 [Docks](/wiki/modules/docks).
 
 <TryIt as="planner" />

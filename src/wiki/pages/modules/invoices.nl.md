@@ -1,5 +1,5 @@
 ---
-title: Facturen
+title: Facturatie
 summary: Facturen en creditnota's voor afgeronde opdrachten en de vergoedingen van andere modules, met btw, pdf's en openstaande posten op het dashboard.
 ---
 
@@ -10,9 +10,9 @@ summary: Facturen en creditnota's voor afgeronde opdrachten en de vergoedingen v
   import TryIt from "#wiki/parts/try-it.svelte";
 </script>
 
-Facturen maakt van afgerond werk een rekening. In de app heet de module **Facturatie**. Het is de
-module waarop andere bouwen: het partnerprogramma heeft hem nodig, en contracten bieden hem hun
-vergoedingen aan.
+Facturatie (in de code de module `invoices`) maakt van afgerond werk een rekening. Het is de
+module waarop andere bouwen: het Partnerprogramma heeft hem nodig, en Servicecontracten biedt hem
+zijn vergoedingen aan.
 
 ## Wat de module toevoegt
 
@@ -48,9 +48,9 @@ vergoedingen aan.
 
 ### Werkt samen met
 
-Facturen heeft niets nodig en verrijkt niets. **Contracten** bieden hun maandbedragen aan (zie
-[Contracten](/wiki/modules/contracts)), en het **partnerprogramma** heeft facturen nodig voor zijn
-cijfers en betaalt een Cash Bonus uit als creditnota (zie
+Facturatie heeft niets nodig en verrijkt niets. **Servicecontracten** biedt zijn maandbedragen
+aan (zie [Servicecontracten](/wiki/modules/contracts)), en het **Partnerprogramma** heeft Facturatie
+nodig voor zijn cijfers en betaalt een Cash Bonus uit als creditnota (zie
 [Partnerprogramma](/wiki/modules/partner-programme)).
 
 <TryIt as="planner" />
@@ -74,10 +74,10 @@ Twee bijdragen gaan de module uit: de bulkactie `invoices:create-invoice` op de 
 (`orders.list.bulk`, die alleen afgeronde opdrachten van één klant aanneemt, en op de server
 controleert of er al een op een factuur staat), en de slots `orders.detail.side` en
 `dashboard.cards` (plekken in een pagina die een module vult). De hook `orders.committed` laat een
-opdracht die de kern net heeft opgeslagen zijn factuurkaart verversen. Voor modules die facturen
+opdracht die de kern net heeft opgeslagen zijn factuurkaart verversen. Voor modules die Facturatie
 nodig hebben is er een map `api/`, bijvoorbeeld `revenue.server.ts` (de regels van de betaalde
 facturen min die van de verrekende creditnota's) en `credit-notes.server.ts` (een losse
-creditnota), zodat ze de tabellen van facturen nooit rechtstreeks lezen.
+creditnota), zodat ze de tabellen van Facturatie nooit rechtstreeks lezen.
 
 - <SourceLink path="src/modules/invoices/module.ts">module.ts</SourceLink>: het manifest, en <SourceLink path="src/modules/invoices">de map van de module</SourceLink>.
 - <SourceLink path="src/modules/invoices/invoice.ts">invoice.ts</SourceLink>: nummers, status, totalen,

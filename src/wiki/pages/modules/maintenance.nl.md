@@ -1,5 +1,5 @@
 ---
-title: Onderhoud
+title: Onderhoudsplannen
 summary: Onderhoud elk apparaat op een vast interval, en maak van de bezoeken die eraan komen opdrachten, met de hand of elke dag vanzelf.
 ---
 
@@ -10,10 +10,10 @@ summary: Onderhoud elk apparaat op een vast interval, en maak van de bezoeken di
   import TryIt from "#wiki/parts/try-it.svelte";
 </script>
 
-Onderhoudsplannen zijn het antwoord op "wanneer moet dit apparaat weer een beurt?". In de app heet
-de module **Onderhoudsplannen**; het menu-item staat in de zijbalk na Apparatuur. Een plan zegt dat
-een apparaat om de zoveel maanden een bezoek krijgt, en de module maakt van elk bezoek dat eraan
-komt een opdracht.
+Onderhoudsplannen zijn het antwoord op "wanneer moet dit apparaat weer een beurt?". De module heet
+**Onderhoudsplannen** (in de code `maintenance`); het menu-item staat in de zijbalk na Apparatuur.
+Een plan zegt dat een apparaat om de zoveel maanden een bezoek krijgt, en de module maakt van elk
+bezoek dat eraan komt een opdracht.
 
 ## Wat de module toevoegt
 
@@ -44,35 +44,35 @@ komt een opdracht.
 
 ### Werkt samen met
 
-- **Contracten** (verrijkt): de plannen van de gedekte apparaten van een contract op de pagina
-  ervan. Zie [Contracten](/wiki/modules/contracts).
-- **Conditie** (verrijkt): het volgende bezoek van een apparaat staat als kolom "Volgende" in de
-  lijst van Onderdelenbeheer. Zie [Conditie](/wiki/modules/condition).
+- **Servicecontracten** (verrijkt): de plannen van de gedekte apparaten van een contract op de
+  pagina ervan. Zie [Servicecontracten](/wiki/modules/contracts).
+- **Onderdelenbeheer** (verrijkt): het volgende bezoek van een apparaat staat als kolom "Volgende"
+  in de lijst van Onderdelenbeheer. Zie [Onderdelenbeheer](/wiki/modules/condition).
 
-Onderhoud heeft niets nodig, en werkt zonder beide.
+Onderhoudsplannen heeft niets nodig, en werkt zonder beide.
 
 <TryIt as="planner" />
 
 <HowItWorks />
 
-Onderhoud is de module om te lezen voor een **eigen lijst met een bulkactie**: de lijst met
+Onderhoudsplannen is de module om te lezen voor een **eigen lijst met een bulkactie**: de lijst met
 geplande bezoeken (`list/due-list.ts`, `server/list-sql.ts`) is een lijst die op de server wordt
 opgebouwd, en Opdrachten maken is de bulkactie ervan. Het is ook het voorbeeld van een **kolom in
 een lijst van de kern** (`columns/equipment.list.columns.ts`, met de SQL in `server/columns/`,
 bijgedragen aan het punt `equipment.list.columns` van de apparatenlijst), van **bijdragen aan de
 slot van een andere module** (een plek in een pagina die een module vult:
-`slots/contracts.detail.side/`, die alleen `api/extensions.ts` van contracten mag importeren en de
-gedekte apparaten als props krijgt), en van gegevens maken via een service van de kern.
+`slots/contracts.detail.side/`, die alleen `api/extensions.ts` van Servicecontracten mag importeren
+en de gedekte apparaten als props krijgt), en van gegevens maken via een service van de kern.
 
-Beide manieren om van een plan een opdracht te maken lopen via `orderPlan()` in
-`server/orders.ts`, dat `createOrders()` van de kern aanroept, zodat de opdracht van een plan
-precies zo wordt genummerd, gecontroleerd en gelogd als elke andere. De dagelijkse taak,
-`runDueMaintenance`, bijgedragen aan `jobs.daily`, gebruikt de gedeelde `dailyOrderRun()`: die
-draait als het systeem in elke tenant die het wil, maakt de opdracht van elk plan in een eigen
-transactie, telt wat mislukt, en stuurt de herinneringsmails achteraf, buiten de transacties. Je
-kunt hem veilig herhalen. De module declareert `orderTypes: ["maintenance", "inspection"]`, die een
-tenant niet kan verbergen zolang hij aan staat, en met conditie aan levert hij `condition.signals`
-(het volgende bezoek, dat de lijst van Onderdelenbeheer toont).
+Beide manieren om van een plan een opdracht te maken lopen via `orderPlan()` in `server/orders.ts`,
+dat `createOrders()` van de kern aanroept, zodat de opdracht van een plan precies zo wordt
+genummerd, gecontroleerd en gelogd als elke andere. De dagelijkse taak, `runDueMaintenance`,
+bijgedragen aan `jobs.daily`, gebruikt de gedeelde `dailyOrderRun()`: die draait als het systeem in
+elke tenant die het wil, maakt de opdracht van elk plan in een eigen transactie, telt wat mislukt,
+en stuurt de herinneringsmails achteraf, buiten de transacties. Je kunt hem veilig herhalen. De
+module declareert `orderTypes: ["maintenance", "inspection"]`, die een tenant niet kan verbergen
+zolang hij aan staat, en met Onderdelenbeheer aan levert hij `condition.signals` (het volgende
+bezoek, dat de lijst van Onderdelenbeheer toont).
 
 - <SourceLink path="src/modules/maintenance/module.ts">module.ts</SourceLink>: het manifest, en <SourceLink path="src/modules/maintenance">de map van de module</SourceLink>.
 - <SourceLink path="src/modules/maintenance/server/orders.ts" line={40}>orderPlan()</SourceLink>: een

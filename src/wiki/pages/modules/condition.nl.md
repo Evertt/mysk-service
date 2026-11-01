@@ -1,5 +1,5 @@
 ---
-title: Conditie
+title: Onderdelenbeheer
 summary: De conditie van elk apparaat en zijn onderdelen door de tijd, berekend uit de checklists, met een status die zegt wat aandacht nodig heeft.
 ---
 
@@ -10,10 +10,10 @@ summary: De conditie van elk apparaat en zijn onderdelen door de tijd, berekend 
   import TryIt from "#wiki/parts/try-it.svelte";
 </script>
 
-De module conditie houdt bij hoe het met elk apparaat van je klanten gaat, en met de
-**onderdelen** erin (bijvoorbeeld een veerpakket in een deur). In de app heet hij
-**Onderdelenbeheer**; het menu-item staat in de zijbalk na Apparatuur. Hij beantwoordt één vraag:
-welke apparaten hebben aandacht nodig, en hoe snel?
+Onderdelenbeheer (in de code de module `condition`) houdt bij hoe het met elk apparaat van je
+klanten gaat, en met de **onderdelen** erin (bijvoorbeeld een veerpakket in een deur). Het
+menu-item staat in de zijbalk na Apparatuur. De module beantwoordt één vraag: welke apparaten
+hebben aandacht nodig, en hoe snel?
 
 ## Wat de module toevoegt
 
@@ -38,7 +38,7 @@ welke apparaten hebben aandacht nodig, en hoe snel?
   conditie vastleggen, die geldt tot er een nieuwere is, zoals die van de volgende afgeronde
   checklist.
 - **Onderdelen.** Op de pagina van een apparaat voegt kantoor onderdelen toe: een naam, het
-  **artikel** in de onderdelenshop dat het is (een materiaal), en de checklistpunten die het
+  **artikel** in de Onderdelen Shop dat het is (een materiaal), en de checklistpunten die het
   controleren. Een afgekeurd punt van een onderdeel stelt eerst het artikel ervan voor.
 - **Instellingen.** Een manager stelt de twee drempels in (kritiek onder, aandacht onder) en of
   kritieke apparaten **automatisch worden ingepland**. Staat dat aan, dan krijgt elk kritiek
@@ -58,33 +58,33 @@ welke apparaten hebben aandacht nodig, en hoe snel?
 
 ### Werkt samen met
 
-- **Checklists** (verrijkt, en wordt erdoor verrijkt): zonder checklists zijn er geen scores uit
+- **Werkbonnen** (verrijkt, en wordt erdoor verrijkt): zonder Werkbonnen zijn er geen scores uit
   keuringen, dus is de conditie alleen wat kantoor vastlegt. Zie
-  [Checklists](/wiki/modules/checklists).
-- **Onderhoud** zet het volgende bezoek van een apparaat in de lijst, als kolom "Volgende", zie
-  [Onderhoud](/wiki/modules/maintenance).
+  [Werkbonnen](/wiki/modules/checklists).
+- **Onderhoudsplannen** zet het volgende bezoek van een apparaat in de lijst, als kolom
+  "Volgende", zie [Onderhoudsplannen](/wiki/modules/maintenance).
   **Materialen** zijn de artikelen van de onderdelen, zie [Materialen](/wiki/modules/materials). De
-  **onderdelenshop** zegt welke punten een artikel oplost, zie
-  [Onderdelenshop](/wiki/modules/parts-shop).
+  **Onderdelen Shop** zegt welke punten een artikel oplost, zie
+  [Onderdelen Shop](/wiki/modules/parts-shop).
 
-Conditie heeft geen module nodig.
+Onderdelenbeheer heeft geen module nodig.
 
 <TryIt as="planner" />
 
 <HowItWorks />
 
-Conditie is eigenaar van de hooks waarop de modules eromheen antwoorden. Dat maakt hem het
-duidelijkste voorbeeld van een module waar andere modules op inhaken. In `api/extensions.ts`
-declareert hij:
+Onderdelenbeheer is eigenaar van de hooks waarop de modules eromheen antwoorden. Daarmee is deze
+module het duidelijkste voorbeeld van een module waar andere modules op inhaken. In
+`api/extensions.ts` declareert de module:
 
-- `condition.signals`: SQL die andere modules bijdragen aan de rij van een apparaat. Checklists
-  geven de keuringsstatus, die de status van het apparaat meeneemt; onderhoud geeft het volgende
-  bezoek, dat de lijst toont.
+- `condition.signals`: SQL die andere modules bijdragen aan de rij van een apparaat. Werkbonnen
+  geeft de keuringsstatus, die de status van het apparaat meeneemt; Onderhoudsplannen geeft het
+  volgende bezoek, dat de lijst toont.
 - `condition.articles`: de artikelen van onderdelen (materialen).
 - `condition.checkpoints` en `condition.articleCheckpoints`: de punten die een onderdeel
-  controleren (checklists geven de sjabloonpunten van een apparaat, de onderdelenshop de punten die
+  controleren (Werkbonnen geeft de sjabloonpunten van een apparaat, de Onderdelen Shop de punten die
   een artikel oplost).
-- `condition.list.columns`: kolommen in zijn eigen apparatenlijst, die checklists aanvult met de
+- `condition.list.columns`: kolommen in zijn eigen apparatenlijst, die Werkbonnen aanvult met de
   keuringskolom.
 
 Elk daarvan is een **immediate collector** (`collectNow()`, een verzamelpunt dat meteen antwoord
@@ -94,13 +94,14 @@ gecorreleerde subqueries, en staan dezelfde regels in code (`rolledUpStatus()` i
 losse records. Een statement bindt hoogstens 100 waarden, dus die SQL is geschreven met letterlijke
 constanten, niet met parameters.
 
-In de andere richting haakt conditie in op de modules die hij verrijkt, in `server/index.ts`. Met
-checklists aan legt `checklists.completed` de condities van het apparaat en de onderdelen vast op
-het moment dat een checklist wordt afgerond. De dagelijkse taak (`jobs.daily`) plant kritieke
-apparaten in voor tenants die dat willen, als het systeem via `createOrders()` van de kern, zodat
-de opdracht een nummer krijgt en gelogd wordt zoals elke andere. Onderdelen bewaren hun artikel en
-punten als gewone ids, zonder foreign key, omdat de modules waarnaar ze verwijzen optioneel zijn.
-De servicegeschiedenis is een weergave van het activiteitenlog (`server/history.ts`), geen tabel.
+In de andere richting haakt Onderdelenbeheer in op de modules die het verrijkt, in
+`server/index.ts`. Met Werkbonnen aan legt `checklists.completed` de condities van het apparaat en
+de onderdelen vast op het moment dat een checklist wordt afgerond. De dagelijkse taak (`jobs.daily`)
+plant kritieke apparaten in voor tenants die dat willen, als het systeem via `createOrders()` van de
+kern, zodat de opdracht een nummer krijgt en gelogd wordt zoals elke andere. Onderdelen bewaren hun
+artikel en punten als gewone ids, zonder foreign key, omdat de modules waarnaar ze verwijzen
+optioneel zijn. De servicegeschiedenis is een weergave van het activiteitenlog
+(`server/history.ts`), geen tabel.
 
 - <SourceLink path="src/modules/condition/module.ts">module.ts</SourceLink>: het manifest, en <SourceLink path="src/modules/condition">de map van de module</SourceLink>.
 - <SourceLink path="src/modules/condition/model.ts" line={114}>rolledUpStatus()</SourceLink>: de

@@ -26,19 +26,19 @@ Zet hieronder een module uit en zie wat er meegaat. Modules met een lijn naar ee
 
 ## De elf
 
-| Module                                              | Naam in de app    | Waar het voor is                                                          |
-| --------------------------------------------------- | ----------------- | ------------------------------------------------------------------------- |
-| [Checklists](/wiki/modules/checklists)              | Werkbonnen        | Een checklist per apparaat bij inspectie- en onderhoudsopdrachten.        |
-| [Conditie](/wiki/modules/condition)                 | Onderdelenbeheer  | De conditie van elk apparaat en onderdeel door de tijd, en de status.     |
-| [Contracten](/wiki/modules/contracts)               | Servicecontracten | Gedekt werk is gratis; reactietijden worden bewaakt.                      |
-| [Docks](/wiki/modules/docks)                        | Docks             | De live status van docks uit Salvo-hardware, en deuren die openstaan.     |
-| [Energie](/wiki/modules/energy)                     | Energie           | Vermogen en verbruik per zone, grenswaarden, alerts.                      |
-| [Facturen](/wiki/modules/invoices)                  | Facturatie        | Facturen en creditnota's voor afgeronde opdrachten en vergoedingen.       |
-| [Onderhoud](/wiki/modules/maintenance)              | Onderhoudsplannen | Bezoeken op een vast interval, die opdrachten worden.                     |
-| [Materialen](/wiki/modules/materials)               | Materialen        | Onderdelen en verbruiksartikelen, hun prijzen en voorraad.                |
-| [Partnerprogramma](/wiki/modules/partner-programme) | Partnerprogramma  | Een jaarlijkse bonus voor partners, als cash of als Parts Credit.         |
-| [Onderdelenshop](/wiki/modules/parts-shop)          | Onderdelen Shop   | Partners bestellen onderdelen in het portaal en betalen met Parts Credit. |
-| [Planning](/wiki/modules/schedule)                  | Planning          | Wie welke opdracht doet, en wanneer: per week, maand en dag.              |
+| Module                                              | Waar het voor is                                                          |
+| --------------------------------------------------- | ------------------------------------------------------------------------- |
+| [Werkbonnen](/wiki/modules/checklists)              | Een checklist per apparaat bij inspectie- en onderhoudsopdrachten.        |
+| [Onderdelenbeheer](/wiki/modules/condition)         | De conditie van elk apparaat en onderdeel door de tijd, en de status.     |
+| [Servicecontracten](/wiki/modules/contracts)        | Gedekt werk is gratis; reactietijden worden bewaakt.                      |
+| [Docks](/wiki/modules/docks)                        | De live status van docks uit Salvo-hardware, en deuren die openstaan.     |
+| [Energie](/wiki/modules/energy)                     | Vermogen en verbruik per zone, grenswaarden, alerts.                      |
+| [Facturatie](/wiki/modules/invoices)                | Facturen en creditnota's voor afgeronde opdrachten en vergoedingen.       |
+| [Onderhoudsplannen](/wiki/modules/maintenance)      | Bezoeken op een vast interval, die opdrachten worden.                     |
+| [Materialen](/wiki/modules/materials)               | Onderdelen en verbruiksartikelen, hun prijzen en voorraad.                |
+| [Partnerprogramma](/wiki/modules/partner-programme) | Een jaarlijkse bonus voor partners, als cash of als Parts Credit.         |
+| [Onderdelen Shop](/wiki/modules/parts-shop)         | Partners bestellen onderdelen in het portaal en betalen met Parts Credit. |
+| [Planning](/wiki/modules/schedule)                  | Wie welke opdracht doet, en wanneer: per week, maand en dag.              |
 
 ## Modules aan- en uitzetten
 
@@ -57,7 +57,7 @@ Een module uitzetten verbergt hem. Er wordt niets verwijderd: de tabellen en geg
 zet je hem weer aan, dan is alles terug. Intussen antwoorden zijn pagina's en gegevens met "niet
 gevonden", zijn zijn menu-item in de zijbalk, dashboardkaarten, kolommen en bulkacties weg, draaien
 zijn dagelijkse taken niet, en zijn zijn gegevens niet te vinden in het activiteitenlog of de
-feeds. Twee modules, docks en energie, houden zelfs tegen dat een vestiging van een klant wordt
+feeds. Twee modules, Docks en Energie, houden zelfs tegen dat een vestiging van een klant wordt
 verwijderd zolang ze daar gegevens hebben, en vragen je ze eerst weer aan te zetten.
 
 ## Nodig hebben en verrijken
@@ -65,14 +65,14 @@ verwijderd zolang ze daar gegevens hebben, en vragen je ze eerst weer aan te zet
 Het manifest van een module (het bestand dat de module beschrijft) kan twee dingen zeggen over
 andere modules.
 
-- **requires** (nodig hebben): zonder de andere werkt hij niet. Het partnerprogramma heeft
-  facturen nodig (zijn cijfers zijn de betaalde facturen van de partners). De onderdelenshop heeft
-  materialen nodig (zijn artikelen zijn materialen, met hun voorraad) en het partnerprogramma (je
-  betaalt er met het credit van de partners).
-- **enhances** (verrijken): hij doet meer als de andere aan staat, en werkt prima zonder. Checklists
-  verrijken conditie en de onderdelenshop: met conditie aan gaat de keuringsstatus van een apparaat
-  mee in zijn conditie, en met de onderdelenshop aan stelt een afgekeurd punt het onderdeel voor dat
-  het oplost.
+- **requires** (nodig hebben): zonder de andere werkt hij niet. Het Partnerprogramma heeft
+  Facturatie nodig (zijn cijfers zijn de betaalde facturen van de partners). De Onderdelen Shop
+  heeft Materialen nodig (zijn artikelen zijn materialen, met hun voorraad) en het Partnerprogramma
+  (je betaalt er met het credit van de partners).
+- **enhances** (verrijken): hij doet meer als de andere aan staat, en werkt prima zonder. Werkbonnen
+  verrijkt Onderdelenbeheer en de Onderdelen Shop: met Onderdelenbeheer aan gaat de keuringsstatus
+  van een apparaat mee in zijn conditie, en met de Onderdelen Shop aan stelt een afgekeurd punt het
+  onderdeel voor dat het oplost.
 
 Alleen `requires` bepaalt wat er aan staat. Zet je een module uit die een andere alleen verrijkt,
 dan blijft die andere gewoon werken en laat hij alleen het extraatje niet meer zien.

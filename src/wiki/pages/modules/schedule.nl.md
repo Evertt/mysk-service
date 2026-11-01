@@ -10,7 +10,7 @@ summary: Het planbord dat zegt wie welke opdracht doet, en wanneer, per week, ma
   import TryIt from "#wiki/parts/try-it.svelte";
 </script>
 
-In de planning maakt een planner van open opdrachten een plan. Het menu-item staat in de zijbalk
+In de Planning maakt een planner van open opdrachten een plan. Het menu-item staat in de zijbalk
 direct na Opdrachten.
 
 ## Wat de module toevoegt
@@ -45,16 +45,17 @@ Planning heeft niets nodig en verrijkt niets, en geen andere module hangt ervan 
 
 <HowItWorks />
 
-De planning is de enige module **zonder eigen tabellen**: hij is een weergave van de opdrachten, en
+De Planning is de enige module **zonder eigen tabellen**: hij is een weergave van de opdrachten, en
 wijzigt ze alleen via een service van de kern. Hij is eigenaar van zijn route, zijn componenten en
 zijn berichten, en verder niets: geen map `server/`, geen hooks en geen slots.
 
 De gegevens van het bord komen uit twee queries in `schedule.remote.ts`. `getSchedule` geeft de
 monteurs, de opdrachten die in de week van maandag tot zondag zijn ingepland en wat nog ingepland
 moet worden; `getScheduleMonth` geeft de zes weken van een maand, die de server vastlegt zodat geen
-request meer laadt. Elke opdracht wordt gekoppeld aan zijn klant en zijn eerste apparaat (met hoeveel
-apparaten hij heeft), en de specialismen die bij zijn apparaten horen, zodat de dialoog de monteurs
-die erbij passen als eerste kan tonen. Beide zijn beperkt tot de tenant, zoals elke andere query.
+request meer laadt. Elke opdracht wordt gekoppeld aan zijn klant en zijn eerste apparaat (met
+hoeveel apparaten hij heeft), en de specialismen die bij zijn apparaten horen, zodat de dialoog de
+monteurs die erbij passen als eerste kan tonen. Beide zijn beperkt tot de tenant, zoals elke andere
+query.
 
 Inplannen loopt via `transitionOrder()` met het werkwoord `plan`, in een transactie: dat is de enige
 plek die de status van een opdracht wijzigt, dus die weigert een opdracht die niet open is, een

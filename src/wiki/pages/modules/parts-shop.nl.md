@@ -1,5 +1,5 @@
 ---
-title: Onderdelenshop
+title: Onderdelen Shop
 summary: Partners bestellen vervangingsonderdelen in het klantportaal en betalen met hun Parts Credit; kantoor bevestigt, verzendt en levert.
 ---
 
@@ -10,9 +10,9 @@ summary: Partners bestellen vervangingsonderdelen in het klantportaal en betalen
   import TryIt from "#wiki/parts/try-it.svelte";
 </script>
 
-De onderdelenshop is een catalogus in het klantportaal waar een partner vervangingsonderdelen
+De Onderdelen Shop is een catalogus in het klantportaal waar een partner vervangingsonderdelen
 bestelt, bijvoorbeeld voor sectionaaldeuren en levellers, en betaalt met het **Parts Credit** uit
-zijn wallet. In de app heet hij **Onderdelen Shop**; het menu-item staat in de zijbalk na
+zijn wallet. In de code heet de module `parts-shop`; het menu-item staat in de zijbalk na
 Materialen.
 
 ## Wat de module toevoegt
@@ -46,21 +46,21 @@ Materialen.
 
 ### Werkt samen met
 
-- **Materialen** en het **partnerprogramma** (nodig): artikelen zijn materialen met hun voorraad,
+- **Materialen** en het **Partnerprogramma** (nodig): artikelen zijn materialen met hun voorraad,
   en het credit komt uit de wallet. Zet je een van beide uit, dan gaat de shop ook uit. Zie
   [Materialen](/wiki/modules/materials) en [Partnerprogramma](/wiki/modules/partner-programme).
-- **Checklists** (verrijkt): de voorstellen bij afgekeurde punten. Zie
-  [Checklists](/wiki/modules/checklists).
-- **Conditie** (verrijkt): de punten die een artikel oplost, zijn de punten waarmee een onderdeel
-  met dat artikel wordt gecontroleerd. Zie [Conditie](/wiki/modules/condition).
+- **Werkbonnen** (verrijkt): de voorstellen bij afgekeurde punten. Zie
+  [Werkbonnen](/wiki/modules/checklists).
+- **Onderdelenbeheer** (verrijkt): de punten die een artikel oplost, zijn de punten waarmee een
+  onderdeel met dat artikel wordt gecontroleerd. Zie [Onderdelenbeheer](/wiki/modules/condition).
 
 <TryIt as="customer" />
 
 <HowItWorks />
 
 Een bestelling plaatsen is één transactie, in `placeShopOrder()`: die besteedt het Parts Credit met
-`spendCredit()` van het partnerprogramma en zet de voorraad apart met `reserveStock()` van
-materialen, allebei gecontroleerd binnen die transactie, zodat het saldo nooit onder nul komt en
+`spendCredit()` van het Partnerprogramma en zet de voorraad apart met `reserveStock()` van
+Materialen, allebei gecontroleerd binnen die transactie, zodat het saldo nooit onder nul komt en
 de voorraad niet twee keer kan opraken. Annuleren doet het omgekeerde, `giveBackCredit()`
 en `releaseStock()`. De shop leest de tabellen van die modules alleen via hun mappen `api/`. Elke
 wijziging wordt gelogd bij de klant.
@@ -71,11 +71,12 @@ waarvan de handlers alles beperken met `currentCustomer()`, zodat een klant alle
 bestellingen kan zien.
 
 De bijdragen aan extension points (plekken waar de kern en andere modules ruimte laten) zijn klein:
-`parts-shop.checkpoints` is een collector (een verzamelpunt waar modules op antwoorden) die de shop declareert in `api/extensions.ts`, waarop
-checklists antwoorden met de sjabloonpunten waaraan de artikelen gekoppeld kunnen worden; de shop
-antwoordt op `condition.articleCheckpoints` (als conditie aan staat) en `notifications.rules` (de
-bel voor een bestelling die een klant plaatst). De slots (plekken in een pagina die een module vult) voor voorstellen,
-`checklists.order.rejected` en `checklists.client.rejected`, zijn punten van checklists, gevuld
+`parts-shop.checkpoints` is een collector (een verzamelpunt waar modules op antwoorden) die de shop
+declareert in `api/extensions.ts`, waarop Werkbonnen antwoordt met de sjabloonpunten waaraan de
+artikelen gekoppeld kunnen worden; de shop antwoordt op `condition.articleCheckpoints` (als
+Onderdelenbeheer aan staat) en `notifications.rules` (de bel voor een bestelling die een klant
+plaatst). De slots (plekken in een pagina die een module vult) voor voorstellen,
+`checklists.order.rejected` en `checklists.client.rejected`, zijn punten van Werkbonnen, gevuld
 vanuit de `slots/` van de shop.
 
 - <SourceLink path="src/modules/parts-shop/module.ts">module.ts</SourceLink>: het manifest, en <SourceLink path="src/modules/parts-shop">de map van de module</SourceLink>.

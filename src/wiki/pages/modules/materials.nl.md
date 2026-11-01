@@ -23,7 +23,7 @@ staat in de zijbalk na Monteurs.
 - **Een voorraadboek.** Voorraad wordt nooit bewerkt, hij beweegt. Elke wijziging is een mutatie:
   de beginvoorraad, **Ontvangen**, een **telcorrectie** (je vult in wat je hebt geteld en het
   verschil wordt vastgelegd), **Verbruikt op opdracht**, **Retour van opdracht**, en met de
-  onderdelenshop **Gereserveerd voor bestelling** en **Vrijgegeven van bestelling**. De pagina van
+  Onderdelen Shop **Gereserveerd voor bestelling** en **Vrijgegeven van bestelling**. De pagina van
   een materiaal toont de historie, de nieuwste eerst, en welke opdrachten het gebruiken. Een
   voorraad staat als **Op voorraad**, **Laag** (onder 10 stuks, of 50 meter, kilogram of liter) of
   **Niet op voorraad**.
@@ -47,9 +47,9 @@ staat in de zijbalk na Monteurs.
 
 ### Werkt samen met
 
-Materialen hebben niets nodig. **Conditie** wordt erdoor verrijkt: een materiaal is het artikel van
-een onderdeel. Zie [Conditie](/wiki/modules/condition). De
-[onderdelenshop](/wiki/modules/parts-shop) heeft materialen nodig, want zijn artikelen zijn
+Materialen heeft niets nodig. **Onderdelenbeheer** wordt erdoor verrijkt: een materiaal is het
+artikel van een onderdeel. Zie [Onderdelenbeheer](/wiki/modules/condition). De
+[Onderdelen Shop](/wiki/modules/parts-shop) heeft Materialen nodig, want zijn artikelen zijn
 materialen.
 
 <TryIt as="planner" />
@@ -64,7 +64,7 @@ module haakt op drie punten in op de opdracht, allemaal in `server/index.ts`:
 - `orders.saving`: de regels van de opdracht en de voorraad die volgt uit de status worden ermee
   opgeslagen, in de transactie van de opdracht. Een tekort gooit een `Refused`, die het formulier
   bij de velden toont.
-- `condition.articles`: de materialen als artikelen van onderdelen (als conditie aan staat).
+- `condition.articles`: de materialen als artikelen van onderdelen (als Onderdelenbeheer aan staat).
 
 Het deel van het opdrachtformulier wordt getypeerd en gevalideerd door een valibot-schema
 (`form-parts/orders.form.ts`) dat de generator verzamelt in het veld `modules.materials` van het
@@ -74,7 +74,7 @@ die in het voorraadboek schrijft, is `moveStock()`, en `moveOrderStock()` neemt 
 de regels en de status van een opdracht zeggen dat hij moet vasthouden: het verschil tussen wat hij
 volgens het voorraadboek vasthoudt en wat hij nu zou moeten vasthouden. Daarom wordt een opdracht
 waarvan de status veranderde terwijl de tenant materialen uit had staan, rechtgezet de volgende
-keer dat hij wordt opgeslagen. Voor modules die materialen nodig hebben (de onderdelenshop) biedt
+keer dat hij wordt opgeslagen. Voor modules die Materialen nodig hebben (de Onderdelen Shop) biedt
 `api/stock.server.ts` `reserveStock()` en `releaseStock()` om voorraad apart te zetten binnen de
 transactie van de aanroeper.
 

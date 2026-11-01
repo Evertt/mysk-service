@@ -1,5 +1,5 @@
 ---
-title: Checklists
+title: Werkbonnen
 summary: Een vaste checklist per apparaat bij inspectie- en onderhoudsopdrachten, ingevuld in het monteursportaal, met de keuringsstatus die eruit volgt.
 ---
 
@@ -10,9 +10,9 @@ summary: Een vaste checklist per apparaat bij inspectie- en onderhoudsopdrachten
   import TryIt from "#wiki/parts/try-it.svelte";
 </script>
 
-De module checklists geeft elk apparaat op een inspectie- of onderhoudsopdracht een checklist: de
-punten die een monteur controleert, gemaakt uit een sjabloon voor de apparatuurcategorie van het
-apparaat. In de app heet de module **Werkbonnen** (de digitale checkpoint-werkbon); het menu-item
+Werkbonnen (in de code de module `checklists`, naar de digitale checkpoint-werkbon) geeft elk
+apparaat op een inspectie- of onderhoudsopdracht een checklist: de punten die een monteur
+controleert, gemaakt uit een sjabloon voor de apparatuurcategorie van het apparaat. Het menu-item
 staat in de zijbalk direct na Apparatuur.
 
 ## Wat de module toevoegt
@@ -53,13 +53,13 @@ staat in de zijbalk direct na Apparatuur.
 
 ### Werkt samen met
 
-- **Conditie** (verrijkt): de keuringsstatus wordt deel van de conditiestatus van een apparaat, en
-  een afgeronde checklist geeft het apparaat en zijn onderdelen hun score. Zie
-  [Conditie](/wiki/modules/condition).
-- **Onderdelenshop** (verrijkt): een afgekeurd punt stelt het onderdeel voor dat het oplost, met een
-  knop "Toevoegen aan opdracht". Zie [Onderdelenshop](/wiki/modules/parts-shop).
+- **Onderdelenbeheer** (verrijkt): de keuringsstatus wordt deel van de conditiestatus van een
+  apparaat, en een afgeronde checklist geeft het apparaat en zijn onderdelen hun score. Zie
+  [Onderdelenbeheer](/wiki/modules/condition).
+- **Onderdelen Shop** (verrijkt): een afgekeurd punt stelt het onderdeel voor dat het oplost, met
+  een knop "Toevoegen aan opdracht". Zie [Onderdelen Shop](/wiki/modules/parts-shop).
 
-Checklists hebben niets nodig, en werken zonder beide.
+Werkbonnen heeft niets nodig, en werkt zonder beide.
 
 <TryIt as="planner" />
 
@@ -75,24 +75,24 @@ verrijkt op deze punten, allemaal aangeleverd in `server/index.ts`:
   niets is beantwoord.
 - `orders.saving` weigert het afronden zolang een checklist open staat, en weigert verwijderen, een
   andere soort of een apparaat eraf halen zodra er een is vastgelegd.
-- `condition.signals` geeft de module conditie de keuringsstatus, als SQL over `equipment`, en
+- `condition.signals` geeft Onderdelenbeheer de keuringsstatus, als SQL over `equipment`, en
   `condition.checkpoints` geeft de sjabloonpunten waarmee een onderdeel gecontroleerd kan worden.
-  Met de onderdelenshop aan koppelt `parts-shop.checkpoints` de artikelen aan de punten.
+  Met de Onderdelen Shop aan koppelt `parts-shop.checkpoints` de artikelen aan de punten.
 - `notifications.rules` laat de bel gaan bij afgekeurde punten, en `access.rules` zegt wie de
   gegevens mag lezen en wijzigen.
 
 De module declareert ook eigen punten voor de modules die hem verrijken: de slot (een plek in een
-pagina die een andere module vult) `checklists.field.checklist` in het monteursportaal (conditie
-stelt daar zijn adviesvraag), de slots voor afgekeurde punten `checklists.order.rejected` en
-`checklists.client.rejected` (de voorstellen van de onderdelenshop), en de hook
-`checklists.completed`, waarop conditie antwoordt door een conditie vast te leggen. De kolommen
-komen in de apparatenlijst en in de apparatenlijst van conditie.
+pagina die een andere module vult) `checklists.field.checklist` in het monteursportaal
+(Onderdelenbeheer stelt daar zijn adviesvraag), de slots voor afgekeurde punten
+`checklists.order.rejected` en `checklists.client.rejected` (de voorstellen van de Onderdelen Shop),
+en de hook `checklists.completed`, waarop Onderdelenbeheer antwoordt door een conditie vast te
+leggen. De kolommen komen in de apparatenlijst en in de apparatenlijst van Onderdelenbeheer.
 
 De monteur en kantoor vullen een checklist in met dezelfde code: een `Filler` van de soort
 `engineer` of `office` (monteurs alleen hun eigen opdrachten terwijl die in behandeling zijn,
 kantoor elke open opdracht). Elke wijziging wordt in een transactie opgeslagen. De keuringsstatus
 is één functie in `model.ts` en dezelfde regel in SQL voor de kolom in de lijst, die geen
-parameters bindt omdat de module conditie hem vaak herhaalt in één statement.
+parameters bindt omdat Onderdelenbeheer hem vaak herhaalt in één statement.
 
 - <SourceLink path="src/modules/checklists/module.ts">module.ts</SourceLink>: het manifest, en <SourceLink path="src/modules/checklists">de map van de module</SourceLink>.
 - <SourceLink path="src/modules/checklists/server/checklists.ts" line={202}>syncChecklists()</SourceLink>:

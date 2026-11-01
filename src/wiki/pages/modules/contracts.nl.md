@@ -1,5 +1,5 @@
 ---
-title: Contracten
+title: Servicecontracten
 summary: Servicecontracten die de apparaten van een klant dekken met een gegarandeerde reactietijd, gedekt werk gratis maken en een maandbedrag factureren.
 ---
 
@@ -11,8 +11,8 @@ summary: Servicecontracten die de apparaten van een klant dekken met een gegaran
 </script>
 
 Een servicecontract is een onderhoudsafspraak: een klant betaalt een vast bedrag per maand, en in
-ruil daarvoor zijn zijn apparaten gedekt met een gegarandeerde reactietijd. In de app heet de
-module **Servicecontracten**, met een eigen lijst op `/contracts`.
+ruil daarvoor zijn zijn apparaten gedekt met een gegarandeerde reactietijd. De module heet
+**Servicecontracten** (in de code `contracts`), met een eigen lijst op `/contracts`.
 
 ## Wat de module toevoegt
 
@@ -33,11 +33,11 @@ module **Servicecontracten**, met een eigen lijst op `/contracts`.
   van de apparaten (storingen, reparaties, onderhoud, keuringen), geen nieuw werk eraan, schade of
   ander werk.
 
-- **Reactietijden.** Een gedekte storing of reparatie is een call-out (in de app heet dat een storing),
-  waarop binnen de reactietijd van het contract gereageerd moet worden, gerekend vanaf het moment dat de opdracht
-  werd gemaakt. Er is gereageerd zodra hij is ingepland. Tot dan ligt hij op schema, is hij **SLA in
-  gevaar** zodra er minder dan een kwart van de tijd over is, en te laat na de deadline. De opdracht
-  draagt het label, in lijsten en op zijn pagina.
+- **Reactietijden.** Een gedekte storing of reparatie is een call-out (in de app heet dat een
+  storing), waarop binnen de reactietijd van het contract gereageerd moet worden, gerekend vanaf het
+  moment dat de opdracht werd gemaakt. Er is gereageerd zodra hij is ingepland. Tot dan ligt hij op
+  schema, is hij **SLA in gevaar** zodra er minder dan een kwart van de tijd over is, en te laat na
+  de deadline. De opdracht draagt het label, in lijsten en op zijn pagina.
 - **Maandbedragen op facturen.** Heeft de tenant facturatie, dan wordt elke maand van de contracten
   van een klant aangeboden als post om te factureren, zodat het maandbedrag samen met de afgeronde
   opdrachten van de klant wordt gefactureerd.
@@ -51,14 +51,15 @@ module **Servicecontracten**, met een eigen lijst op `/contracts`.
 
 ### Werkt samen met
 
-- **Facturen** (verrijkt): contracten bieden hun maandbedragen aan facturatie aan. Zonder facturen
-  dekken ze nog steeds werk en bewaken ze reactietijden. Zie [Facturen](/wiki/modules/invoices).
+- **Facturatie** (verrijkt): contracten bieden hun maandbedragen aan Facturatie aan. Zonder
+  Facturatie dekken ze nog steeds werk en bewaken ze reactietijden. Zie
+  [Facturatie](/wiki/modules/invoices).
 - **Materialen** (verrijkt): alleen voor de seed (de demogegevens), zodat de storingen in de demo
   materiaalregels krijgen.
-- **Onderhoud** zet de plannen van de gedekte apparaten van een contract op de pagina ervan. Zie
-  [Onderhoud](/wiki/modules/maintenance).
+- **Onderhoudsplannen** zet de plannen van de gedekte apparaten van een contract op de pagina
+  ervan. Zie [Onderhoudsplannen](/wiki/modules/maintenance).
 
-Contracten hebben niets nodig.
+Servicecontracten heeft niets nodig.
 
 <TryIt as="planner" />
 
@@ -83,7 +84,8 @@ tegenspreken. Een opdracht over meerdere apparaten is alleen gedekt door een con
 allemaal dekt, omdat je de prijs en reactietijd van een opdracht niet over contracten kunt
 verdelen. De pagina van het contract is een `RecordPage` met eigen slots (plekken die andere
 modules vullen, `contracts.detail.side`), gedeclareerd met `defineRecordPoints("contracts", ...)`.
-Zo zet onderhoud er zijn plannen neer zonder de tabellen van contracten aan te raken.
+Zo zet Onderhoudsplannen er zijn plannen neer zonder de tabellen van Servicecontracten aan te
+raken.
 
 - <SourceLink path="src/modules/contracts/module.ts">module.ts</SourceLink>: het manifest, en <SourceLink path="src/modules/contracts">de map van de module</SourceLink>.
 - <SourceLink path="src/modules/contracts/coverage.ts">coverage.ts</SourceLink>: dekking, prijs en

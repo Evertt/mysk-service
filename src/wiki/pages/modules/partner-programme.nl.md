@@ -35,7 +35,7 @@ Credit. In de app heet het **Partnerprogramma**; bij SHLTR is het de Partner Bon
   **Parts Credit**, één keer, en voorgoed. Een manager kan de keuze ook op kantoor maken.
   - Credit gaat als toekenning in de **wallet** van de partner, geldig tot het einde van een later
     jaar.
-  - Cash is een bedrag om uit te betalen, als losse creditnota in de module facturen, of buiten de
+  - Cash is een bedrag om uit te betalen, als losse creditnota in Facturatie, of buiten de
     app.
 - **De wallet.** Een boek met boekingen: Toegekend, Besteed, Teruggeboekt, Vervallen en Correctie.
   Kantoor kan met de hand een boeking toevoegen, voor credit dat buiten de shop is besteed of credit
@@ -50,9 +50,9 @@ Credit. In de app heet het **Partnerprogramma**; bij SHLTR is het de Partner Bon
 
 ### Werkt samen met
 
-- **Facturen** (nodig): de omzet van de partners is hun **betaalde** facturen, min verrekende
-  creditnota's. Zonder facturen staat het programma uit. Zie [Facturen](/wiki/modules/invoices).
-- De [onderdelenshop](/wiki/modules/parts-shop) heeft het partnerprogramma nodig: daar wordt het
+- **Facturatie** (nodig): de omzet van de partners is hun **betaalde** facturen, min verrekende
+  creditnota's. Zonder Facturatie staat het programma uit. Zie [Facturatie](/wiki/modules/invoices).
+- De [Onderdelen Shop](/wiki/modules/parts-shop) heeft het Partnerprogramma nodig: daar wordt het
   credit besteed.
 
 <TryIt as="planner" />
@@ -60,11 +60,11 @@ Credit. In de app heet het **Partnerprogramma**; bij SHLTR is het de Partner Bon
 <HowItWorks />
 
 Het partnerprogramma is het voorbeeld van een module die **de gegevens van een andere module leest
-via diens `api/`**. Het leest nooit de tabellen van facturen: het vraagt `api/revenue.server.ts`
+via diens `api/`**. Het leest nooit de tabellen van Facturatie: het vraagt `api/revenue.server.ts`
 om de regels van de betaalde facturen, min die van de verrekende creditnota's, ook als subquery
 voor zijn eigen lijst op de server, en betaalt een Cash Bonus uit via
 `api/credit-notes.server.ts`, binnen de eigen transactie van het programma. Het verwijst naar de
-tabel van facturen met een foreign key, wat mag omdat het die module nodig heeft.
+tabel van Facturatie met een foreign key, wat mag omdat het die module nodig heeft.
 
 De regels zijn pure functies in `model.ts`, gedeeld door de tabellen, de seed (de demogegevens),
 de server en de UI: de omzet van een partner bepaalt zijn level, en het deel ervan dat meetelt,
@@ -78,7 +78,7 @@ Het haakt in op `orders.saving` (de classificatie wordt vanuit het opdrachtformu
 opdracht opgeslagen, als `modules.partnerProgramme`: de sleutel van een id met een streepje is in
 camel case) en `jobs.daily` (credit laten vervallen), en de ingang in het klantportaal is de
 `portal` van het manifest. Het declareert de slot `partner-programme.client.wallet` (een plek in de
-pagina die een andere module vult), waar de onderdelenshop een link naar de shop neerzet.
+pagina die een andere module vult), waar de Onderdelen Shop een link naar de shop neerzet.
 
 - <SourceLink path="src/modules/partner-programme/module.ts">module.ts</SourceLink>: het manifest, en <SourceLink path="src/modules/partner-programme">de map van de module</SourceLink>.
 - <SourceLink path="src/modules/partner-programme/model.ts" line={267}>levelFor()</SourceLink>: het
