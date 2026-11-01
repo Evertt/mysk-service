@@ -57,7 +57,7 @@ export type Coverage =
 	| `theme:${ThemeName}`;
 
 /** A page's text in one language: what the visitor reads, and its page component. */
-export interface PageText {
+interface PageText {
 	title: string;
 	summary: string;
 	/** Its `##` headings, which the build adds to its front-matter, with their ids in that language. */
