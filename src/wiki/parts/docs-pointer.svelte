@@ -27,7 +27,7 @@
 
 <Callout tone="brand" icon={BookOpenIcon} class="not-prose my-6">
 	<p>
-		The rules:
+		{m.wiki_rules()}
 		<a {href} target="_blank" rel="noopener noreferrer" class="font-medium underline">
 			{doc}{#if section}, {section}{/if}
 		</a>

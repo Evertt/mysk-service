@@ -4,4 +4,4 @@
 	it works for someone changing it (below).
 -->
 <hr class="my-10" />
-<h2>How it works</h2>
+<h2>{m.wiki_how_it_works()}</h2>

@@ -15,10 +15,10 @@
 
 {#if status === "partly built"}
 	<Callout tone="warning" icon={HammerIcon} class="not-prose mb-6">
-		This is partly built: some of what this page describes isn't in the app yet.
+		{m.wiki_status_partly_built()}
 	</Callout>
 {:else if status === "planned"}
 	<Callout tone="brand" icon={CalendarClockIcon} class="not-prose mb-6">
-		This is planned: what this page describes isn't in the app yet.
+		{m.wiki_status_planned()}
 	</Callout>
 {/if}

@@ -10,9 +10,13 @@
 </script>
 
 <svelte:head>
-	<title>{page.status === 404 ? "Page not found" : "Something went wrong"} · Fieldworks wiki</title>
+	<title
+		>{page.status === 404 ? m.wiki_page_not_found() : m.common_error_generic()} · {m.wiki_title({
+			name: m.common_app_name(),
+		})}</title
+	>
 </svelte:head>
 
 <div class="not-prose flex items-center justify-center py-12">
-	<ErrorView home="/wiki" homeLabel="Back to the wiki" />
+	<ErrorView home="/wiki" homeLabel={m.wiki_back()} />
 </div>

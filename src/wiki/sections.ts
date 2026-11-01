@@ -7,6 +7,8 @@ import RocketIcon from "@lucide/svelte/icons/rocket";
 import UsersIcon from "@lucide/svelte/icons/users";
 import type { Component } from "svelte";
 
+import { m } from "#lib/paraglide/messages.js";
+
 export const wikiSections = [
 	"start",
 	"orders",
@@ -18,12 +20,15 @@ export const wikiSections = [
 
 export type WikiSection = (typeof wikiSections)[number];
 
-/** Title and icon per section. */
-export const sectionInfo: Record<WikiSection, { title: string; icon: Component }> = {
-	start: { title: "Start", icon: RocketIcon },
-	orders: { title: "Orders", icon: ClipboardListIcon },
-	domains: { title: "Customers, equipment and engineers", icon: UsersIcon },
-	modules: { title: "Modules", icon: BlocksIcon },
-	across: { title: "Across the app", icon: LayersIcon },
-	internals: { title: "Under the hood", icon: CpuIcon },
+/**
+ * Title and icon per section. The title is a message function, read where it is shown, so it's in
+ * the visitor's language (the sidebar, `wikiNav()`).
+ */
+export const sectionInfo: Record<WikiSection, { title: () => string; icon: Component }> = {
+	start: { title: m.wiki_section_start, icon: RocketIcon },
+	orders: { title: m.common_nav_orders, icon: ClipboardListIcon },
+	domains: { title: m.wiki_section_domains, icon: UsersIcon },
+	modules: { title: m.common_nav_modules, icon: BlocksIcon },
+	across: { title: m.wiki_section_across, icon: LayersIcon },
+	internals: { title: m.wiki_section_internals, icon: CpuIcon },
 };

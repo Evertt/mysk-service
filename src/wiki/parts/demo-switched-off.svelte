@@ -10,7 +10,7 @@
 
 <svelte:boundary>
 	{#if !(await demoSignInEnabled())}
-		<p>One-click demo sign-in is switched off on this server.</p>
+		<p>{m.wiki_demo_off()}</p>
 	{/if}
 	{#snippet failed()}{/snippet}
 </svelte:boundary>
