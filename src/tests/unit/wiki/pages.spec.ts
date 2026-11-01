@@ -7,6 +7,7 @@
 import type { Component } from "svelte";
 import { afterEach, describe, expect, test } from "vite-plus/test";
 
+import { m } from "#lib/paraglide/messages.js";
 import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
 import { buildPages, pageBySlug, pageText, wikiNav, wikiPages } from "#wiki/pages.ts";
 import { sectionInfo } from "#wiki/sections.ts";
@@ -252,6 +253,25 @@ describe("wikiNav", () => {
 		expect(titles()).toEqual(["A page", "B page"]);
 		overwriteGetLocale(() => "nl");
 		expect(titles()).toEqual(["Een pagina", "B page"]);
+	});
+
+	test("the locale it is given rules the group labels and the titles, not the current one", () => {
+		const pages = buildPages(
+			{
+				"./pages/start/a.md": meta({ title: "A page" }),
+				"./pages/start/a.nl.md": { title: "Een pagina", summary: "Wat er staat." },
+			},
+			{ "./pages/start/a.md": loader, "./pages/start/a.nl.md": dutchLoader },
+		);
+		// The current language is English.
+		const dutch = wikiNav(pages, "nl");
+		expect(dutch[0]?.label).toBe(m.wiki_section_start({}, { locale: "nl" }));
+		expect(dutch[0]?.label).not.toBe(m.wiki_section_start({}, { locale: "en" }));
+		expect(dutch[0]?.items[0]?.title).toBe("Een pagina");
+		const english = wikiNav(pages, "en");
+		expect(english[0]?.label).toBe(m.wiki_section_start({}, { locale: "en" }));
+		overwriteGetLocale(() => "nl");
+		expect(wikiNav(pages, "en")[0]?.label).toBe(m.wiki_section_start({}, { locale: "en" }));
 	});
 });
 

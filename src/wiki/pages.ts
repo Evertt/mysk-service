@@ -209,7 +209,7 @@ export function wikiNav(
 		const { title, icon } = sectionInfo[section];
 		return [
 			{
-				label: title(),
+				label: title({}, { locale }),
 				items: inSection.map((page) => ({
 					id: page.slug,
 					title: pageText(page, locale).title,
