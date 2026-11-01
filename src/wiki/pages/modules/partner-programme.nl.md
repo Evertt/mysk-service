@@ -37,9 +37,10 @@ Credit. In de app heet het **Partnerprogramma**; bij SHLTR is het de Partner Bon
     jaar.
   - Cash is een bedrag om uit te betalen, als losse creditnota in Facturatie, of buiten de
     app.
-- **De wallet.** Een boek met boekingen: Toegekend, Besteed, Teruggeboekt, Vervallen en Correctie.
-  Kantoor kan met de hand een boeking toevoegen, voor credit dat buiten de shop is besteed of credit
-  dat erbij komt. Credit waarvan de datum voorbij is, vervalt vanzelf, in de dagelijkse taak.
+- **De wallet.** Een grootboek met boekingen: Toegekend, Besteed, Teruggeboekt, Vervallen en
+  Correctie. Kantoor kan met de hand een boeking toevoegen, voor credit dat buiten de shop is
+  besteed of credit dat erbij komt. Credit waarvan de datum voorbij is, vervalt vanzelf, in de
+  dagelijkse taak.
 
 ### Waar je het ziet
 
@@ -52,7 +53,7 @@ Credit. In de app heet het **Partnerprogramma**; bij SHLTR is het de Partner Bon
 
 - **Facturatie** (nodig): de omzet van de partners is hun **betaalde** facturen, min verrekende
   creditnota's. Zonder Facturatie staat het programma uit. Zie [Facturatie](/wiki/modules/invoices).
-- De [Onderdelen Shop](/wiki/modules/parts-shop) heeft het Partnerprogramma nodig: daar wordt het
+- [Onderdelen Shop](/wiki/modules/parts-shop) heeft Partnerprogramma nodig: daar wordt het
   credit besteed.
 
 <TryIt as="planner" />
@@ -66,26 +67,26 @@ voor zijn eigen lijst op de server, en betaalt een Cash Bonus uit via
 `api/credit-notes.server.ts`, binnen de eigen transactie van het programma. Het verwijst naar de
 tabel van Facturatie met een foreign key, wat mag omdat het die module nodig heeft.
 
-De regels zijn pure functies in `model.ts`, gedeeld door de tabellen, de seed (de demogegevens),
-de server en de UI: de omzet van een partner bepaalt zijn level, en het deel ervan dat meetelt,
-maal het percentage van het level, is zijn bonus. Bedragen zijn in centen en percentages in
-basispunten. Als een jaar wordt afgesloten, worden de cijfers **bevroren** (`partner_bonus_year`),
-zodat een latere wijziging van de regels de geschiedenis niet herschrijft. De wallet is een boek
-waarvan het saldo de som van de boekingen is; elke boeking houdt bij wat er nog over is van het
-credit dat ze binnenbracht, zodat SQL kan optellen wat er op een bepaalde dag beschikbaar is.
+De regels zijn pure functies in `model.ts`, gedeeld door de tabellen, de seed (de demogegevens), de
+server en de UI: de omzet van een partner bepaalt zijn level, en het deel ervan dat meetelt, maal
+het percentage van het level, is zijn bonus. Bedragen zijn in centen en percentages in basispunten.
+Als een jaar wordt afgesloten, worden de cijfers **vastgezet** (`partner_bonus_year`), zodat een
+latere wijziging van de regels de geschiedenis niet herschrijft. De wallet is een grootboek waarvan
+het saldo de som van de boekingen is; elke boeking houdt bij wat er nog over is van het credit dat
+ze binnenbracht, zodat SQL kan optellen wat er op een bepaalde dag beschikbaar is.
 
 Het haakt in op `orders.saving` (de classificatie wordt vanuit het opdrachtformulier met de
 opdracht opgeslagen, als `modules.partnerProgramme`: de sleutel van een id met een streepje is in
 camel case) en `jobs.daily` (credit laten vervallen), en de ingang in het klantportaal is de
-`portal` van het manifest. Het declareert de slot `partner-programme.client.wallet` (een plek in de
-pagina die een andere module vult), waar de Onderdelen Shop een link naar de shop neerzet.
+`portal` van het manifest. Het declareert het slot `partner-programme.client.wallet` (een plek in de
+pagina die een andere module vult), waar Onderdelen Shop een link naar de shop neerzet.
 
 - <SourceLink path="src/modules/partner-programme/module.ts">module.ts</SourceLink>: het manifest, en <SourceLink path="src/modules/partner-programme">de map van de module</SourceLink>.
 - <SourceLink path="src/modules/partner-programme/model.ts" line={267}>levelFor()</SourceLink>: het
   level bij een omzet.
 - <SourceLink path="src/modules/partner-programme/server/close.ts" line={84}>closeYear()</SourceLink>:
-  een jaar bevriezen.
+  een jaar vastzetten.
 - <SourceLink path="src/modules/partner-programme/server/wallet.ts">wallet.ts</SourceLink>: het
-  boek.
+  grootboek.
 
 <DocsPointer doc="docs/agents/modules.md" section="Modules" />

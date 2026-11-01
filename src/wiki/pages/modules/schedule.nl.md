@@ -10,12 +10,12 @@ summary: Het planbord dat zegt wie welke opdracht doet, en wanneer, per week, ma
   import TryIt from "#wiki/parts/try-it.svelte";
 </script>
 
-In de Planning maakt een planner van open opdrachten een plan. Het menu-item staat in de zijbalk
+In de planning maakt een planner van open opdrachten een plan. Het menu-item staat in de zijbalk
 direct na Opdrachten.
 
 ## Wat de module toevoegt
 
-- **Het weekbord.** Een raster van monteurs tegen dagen, met de opdrachten van de week als kaarten.
+- **Het weekbord.** Een raster met monteurs en dagen, met de opdrachten van de week als kaarten.
   Ernaast staat **Nog in te plannen**: de open opdrachten zonder datum, de dringendste eerst (op
   prioriteit, dan op leeftijd). Op een smal scherm is het bord geen raster maar een lijst per dag.
 - **Plannen met slepen.** Sleep een kaart uit Nog in te plannen naar de dag van een monteur, of van
@@ -45,9 +45,9 @@ Planning heeft niets nodig en verrijkt niets, en geen andere module hangt ervan 
 
 <HowItWorks />
 
-De Planning is de enige module **zonder eigen tabellen**: hij is een weergave van de opdrachten, en
-wijzigt ze alleen via een service van de kern. Hij is eigenaar van zijn route, zijn componenten en
-zijn berichten, en verder niets: geen map `server/`, geen hooks en geen slots.
+Planning is de enige module **zonder eigen tabellen**: hij is een weergave van de opdrachten, en
+wijzigt ze alleen via een service van de kern. Hij heeft alleen zijn eigen route, componenten en
+berichten: geen map `server/`, geen hooks en geen slots.
 
 De gegevens van het bord komen uit twee queries in `schedule.remote.ts`. `getSchedule` geeft de
 monteurs, de opdrachten die in de week van maandag tot zondag zijn ingepland en wat nog ingepland
@@ -58,14 +58,14 @@ monteurs die erbij passen als eerste kan tonen. Beide zijn beperkt tot de tenant
 query.
 
 Inplannen loopt via `transitionOrder()` met het werkwoord `plan`, in een transactie: dat is de enige
-plek die de status van een opdracht wijzigt, dus die weigert een opdracht die niet open is, een
-probleem met de monteur of een voorraadtekort, net als het opdrachtformulier. De dialoog
-(`scheduleOrder`) is een form; slepen (`moveOrder`) is een command (twee soorten remote functions,
-functies op de server die een pagina direct aanroept). Na beide wordt de query van het bord
-ververst. `watchSchedule` is een live query over de soorten gegevens die het bord toont (`order`,
-`engineer`, `customer`), die bij elke wijziging een tijdstempel stuurt zodat een open pagina
-opnieuw leest. Het slepen is van de client zelf: die voert de verplaatsing optimistisch uit en
-draait hem terug bij een fout (`board-drag.svelte.ts`).
+plek die de status van een opdracht wijzigt, dus die weigert een opdracht die niet open is, en
+weigert bij een probleem met de monteur of een voorraadtekort, net als het opdrachtformulier. De
+dialoog (`scheduleOrder`) is een form; slepen (`moveOrder`) is een command (twee soorten remote
+functions, functies op de server die een pagina direct aanroept). Na beide wordt de query van het
+bord ververst. `watchSchedule` is een live query over de soorten gegevens die het bord toont
+(`order`, `engineer`, `customer`), die bij elke wijziging een tijdstempel stuurt zodat een open
+pagina opnieuw leest. Het slepen is van de client zelf: die voert de verplaatsing optimistisch uit
+en draait hem terug bij een fout (`board-drag.svelte.ts`).
 
 - <SourceLink path="src/modules/schedule/module.ts">module.ts</SourceLink>: het manifest, en <SourceLink path="src/modules/schedule">de map van de module</SourceLink>.
 - <SourceLink path="src/modules/schedule/schedule.remote.ts" line={103}>getSchedule()</SourceLink> en <SourceLink path="src/modules/schedule/schedule.remote.ts" line={162}>moveOrder()</SourceLink>: de

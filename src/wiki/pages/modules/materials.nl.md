@@ -18,11 +18,11 @@ staat in de zijbalk na Monteurs.
 
 - **Een catalogus.** Elk materiaal heeft een artikelnummer, een naam, een eenheid (stuks, meter,
   kilogram of liter), een lijstprijs per eenheid en een voorraad. Een prijs wijzigen raakt
-  bestaande opdrachten niet: die houden de prijs waarvoor ze geoffreerd zijn. Een materiaal dat op
+  bestaande opdrachten niet: die houden de prijs waarvoor ze zijn aangeboden. Een materiaal dat op
   een opdracht staat, kan niet worden verwijderd.
 - **Een voorraadboek.** Voorraad wordt nooit bewerkt, hij beweegt. Elke wijziging is een mutatie:
   de beginvoorraad, **Ontvangen**, een **telcorrectie** (je vult in wat je hebt geteld en het
-  verschil wordt vastgelegd), **Verbruikt op opdracht**, **Retour van opdracht**, en met de
+  verschil wordt vastgelegd), **Verbruikt op opdracht**, **Retour van opdracht**, en met
   Onderdelen Shop **Gereserveerd voor bestelling** en **Vrijgegeven van bestelling**. De pagina van
   een materiaal toont de historie, de nieuwste eerst, en welke opdrachten het gebruiken. Een
   voorraad staat als **Op voorraad**, **Laag** (onder 10 stuks, of 50 meter, kilogram of liter) of
@@ -48,7 +48,7 @@ staat in de zijbalk na Monteurs.
 ### Werkt samen met
 
 Materialen heeft niets nodig. **Onderdelenbeheer** wordt erdoor verrijkt: een materiaal is het
-artikel van een onderdeel. Zie [Onderdelenbeheer](/wiki/modules/condition). De
+artikel van een onderdeel. Zie [Onderdelenbeheer](/wiki/modules/condition).
 [Onderdelen Shop](/wiki/modules/parts-shop) heeft Materialen nodig, want zijn artikelen zijn
 materialen.
 
@@ -62,8 +62,8 @@ module haakt op drie punten in op de opdracht, allemaal in `server/index.ts`:
 
 - `orders.costs`: de materialen van de opdracht als kostenpost in de prijs.
 - `orders.saving`: de regels van de opdracht en de voorraad die volgt uit de status worden ermee
-  opgeslagen, in de transactie van de opdracht. Een tekort gooit een `Refused`, die het formulier
-  bij de velden toont.
+  opgeslagen, in de transactie van de opdracht. Een tekort levert een `Refused` op, die het
+  formulier bij de velden toont.
 - `condition.articles`: de materialen als artikelen van onderdelen (als Onderdelenbeheer aan staat).
 
 Het deel van het opdrachtformulier wordt getypeerd en gevalideerd door een valibot-schema
@@ -74,7 +74,7 @@ die in het voorraadboek schrijft, is `moveStock()`, en `moveOrderStock()` neemt 
 de regels en de status van een opdracht zeggen dat hij moet vasthouden: het verschil tussen wat hij
 volgens het voorraadboek vasthoudt en wat hij nu zou moeten vasthouden. Daarom wordt een opdracht
 waarvan de status veranderde terwijl de tenant materialen uit had staan, rechtgezet de volgende
-keer dat hij wordt opgeslagen. Voor modules die Materialen nodig hebben (de Onderdelen Shop) biedt
+keer dat hij wordt opgeslagen. Voor modules die Materialen nodig hebben (Onderdelen Shop) biedt
 `api/stock.server.ts` `reserveStock()` en `releaseStock()` om voorraad apart te zetten binnen de
 transactie van de aanroeper.
 

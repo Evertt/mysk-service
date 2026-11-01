@@ -10,7 +10,7 @@ summary: Partners bestellen vervangingsonderdelen in het klantportaal en betalen
   import TryIt from "#wiki/parts/try-it.svelte";
 </script>
 
-De Onderdelen Shop is een catalogus in het klantportaal waar een partner vervangingsonderdelen
+Onderdelen Shop is een catalogus in het klantportaal waar een partner vervangingsonderdelen
 bestelt, bijvoorbeeld voor sectionaaldeuren en levellers, en betaalt met het **Parts Credit** uit
 zijn wallet. In de code heet de module `parts-shop`; het menu-item staat in de zijbalk na
 Materialen.
@@ -42,11 +42,11 @@ Materialen.
 
 - Het dashboard heeft een tegel met de open shopbestellingen.
 - De bel van kantoor gaat als een klant een bestelling plaatst.
-- De wallet van het partnerprogramma in het portaal linkt naar de shop.
+- De wallet van het partnerprogramma in het portaal verwijst naar de shop.
 
 ### Werkt samen met
 
-- **Materialen** en het **Partnerprogramma** (nodig): artikelen zijn materialen met hun voorraad,
+- **Materialen** en **Partnerprogramma** (nodig): artikelen zijn materialen met hun voorraad,
   en het credit komt uit de wallet. Zet je een van beide uit, dan gaat de shop ook uit. Zie
   [Materialen](/wiki/modules/materials) en [Partnerprogramma](/wiki/modules/partner-programme).
 - **Werkbonnen** (verrijkt): de voorstellen bij afgekeurde punten. Zie
@@ -59,7 +59,7 @@ Materialen.
 <HowItWorks />
 
 Een bestelling plaatsen is één transactie, in `placeShopOrder()`: die besteedt het Parts Credit met
-`spendCredit()` van het Partnerprogramma en zet de voorraad apart met `reserveStock()` van
+`spendCredit()` van Partnerprogramma en zet de voorraad apart met `reserveStock()` van
 Materialen, allebei gecontroleerd binnen die transactie, zodat het saldo nooit onder nul komt en
 de voorraad niet twee keer kan opraken. Annuleren doet het omgekeerde, `giveBackCredit()`
 en `releaseStock()`. De shop leest de tabellen van die modules alleen via hun mappen `api/`. Elke

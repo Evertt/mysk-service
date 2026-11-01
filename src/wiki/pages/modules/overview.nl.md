@@ -44,7 +44,7 @@ Zet hieronder een module uit en zie wat er meegaat. Modules met een lijn naar ee
 
 Een manager (een eigenaar of een beheerder) zet modules aan op de pagina **Instellingen**, onder
 Modules. Elke module heeft een knop Inschakelen of Uitschakelen, een korte omschrijving en de datum
-waarop hij is ingeschakeld. De pagina doet wat de graaf zegt:
+waarop hij is ingeschakeld. De pagina doet wat de kaart zegt:
 
 - Een module inschakelen schakelt ook in wat hij **nodig heeft**. De dialoog zegt het: "Schakelt
   ook ... in."
@@ -54,9 +54,9 @@ waarop hij is ingeschakeld. De pagina doet wat de graaf zegt:
   van de modules erbij.
 
 Een module uitzetten verbergt hem. Er wordt niets verwijderd: de tabellen en gegevens blijven, dus
-zet je hem weer aan, dan is alles terug. Intussen antwoorden zijn pagina's en gegevens met "niet
-gevonden", zijn zijn menu-item in de zijbalk, dashboardkaarten, kolommen en bulkacties weg, draaien
-zijn dagelijkse taken niet, en zijn zijn gegevens niet te vinden in het activiteitenlog of de
+zet je hem weer aan, dan is alles terug. Intussen geven de pagina's en gegevens van de module "niet
+gevonden", zijn het menu-item in de zijbalk, de dashboardkaarten, kolommen en bulkacties verdwenen,
+draaien de dagelijkse taken niet en zijn de gegevens niet te vinden in het activiteitenlog of de
 feeds. Twee modules, Docks en Energie, houden zelfs tegen dat een vestiging van een klant wordt
 verwijderd zolang ze daar gegevens hebben, en vragen je ze eerst weer aan te zetten.
 
@@ -65,13 +65,13 @@ verwijderd zolang ze daar gegevens hebben, en vragen je ze eerst weer aan te zet
 Het manifest van een module (het bestand dat de module beschrijft) kan twee dingen zeggen over
 andere modules.
 
-- **requires** (nodig hebben): zonder de andere werkt hij niet. Het Partnerprogramma heeft
-  Facturatie nodig (zijn cijfers zijn de betaalde facturen van de partners). De Onderdelen Shop
-  heeft Materialen nodig (zijn artikelen zijn materialen, met hun voorraad) en het Partnerprogramma
+- **requires** (nodig hebben): zonder de andere werkt hij niet. Partnerprogramma heeft
+  Facturatie nodig (zijn cijfers zijn de betaalde facturen van de partners). Onderdelen Shop
+  heeft Materialen nodig (zijn artikelen zijn materialen, met hun voorraad) en Partnerprogramma
   (je betaalt er met het credit van de partners).
 - **enhances** (verrijken): hij doet meer als de andere aan staat, en werkt prima zonder. Werkbonnen
-  verrijkt Onderdelenbeheer en de Onderdelen Shop: met Onderdelenbeheer aan gaat de keuringsstatus
-  van een apparaat mee in zijn conditie, en met de Onderdelen Shop aan stelt een afgekeurd punt het
+  verrijkt Onderdelenbeheer en Onderdelen Shop: met Onderdelenbeheer aan gaat de keuringsstatus
+  van een apparaat mee in zijn conditie, en met Onderdelen Shop aan stelt een afgekeurd punt het
   onderdeel voor dat het oplost.
 
 Alleen `requires` bepaalt wat er aan staat. Zet je een module uit die een andere alleen verrijkt,

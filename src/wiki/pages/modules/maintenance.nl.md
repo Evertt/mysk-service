@@ -31,7 +31,7 @@ bezoek dat eraan komt een opdracht.
   hoe vroeg een plan meetelt (plannen die te laat zijn tellen altijd mee), en **Klanten mailen**
   stuurt de klant een bericht als er een opdracht voor zijn apparaat wordt gemaakt.
 - **Ritme.** Het volgende bezoek schuift op vanaf de vorige geplande datum, niet vanaf vandaag, en
-  houdt zijn dag van de maand, dus een bezoek dat te laat is, verschuift het schema niet.
+  houdt zijn dag van de maand, dus een bezoek dat te laat plaatsvindt, verschuift het schema niet.
 
 ### Waar je het ziet
 
@@ -59,7 +59,7 @@ Onderhoudsplannen is de module om te lezen voor een **eigen lijst met een bulkac
 geplande bezoeken (`list/due-list.ts`, `server/list-sql.ts`) is een lijst die op de server wordt
 opgebouwd, en Opdrachten maken is de bulkactie ervan. Het is ook het voorbeeld van een **kolom in
 een lijst van de kern** (`columns/equipment.list.columns.ts`, met de SQL in `server/columns/`,
-bijgedragen aan het punt `equipment.list.columns` van de apparatenlijst), van **bijdragen aan de
+bijgedragen aan het punt `equipment.list.columns` van de apparatenlijst), van **bijdragen aan het
 slot van een andere module** (een plek in een pagina die een module vult:
 `slots/contracts.detail.side/`, die alleen `api/extensions.ts` van Servicecontracten mag importeren
 en de gedekte apparaten als props krijgt), en van gegevens maken via een service van de kern.
@@ -69,8 +69,8 @@ dat `createOrders()` van de kern aanroept, zodat de opdracht van een plan precie
 genummerd, gecontroleerd en gelogd als elke andere. De dagelijkse taak, `runDueMaintenance`,
 bijgedragen aan `jobs.daily`, gebruikt de gedeelde `dailyOrderRun()`: die draait als het systeem in
 elke tenant die het wil, maakt de opdracht van elk plan in een eigen transactie, telt wat mislukt,
-en stuurt de herinneringsmails achteraf, buiten de transacties. Je kunt hem veilig herhalen. De
-module declareert `orderTypes: ["maintenance", "inspection"]`, die een tenant niet kan verbergen
+en stuurt de herinneringsmails achteraf, buiten de transacties. De taak mag veilig opnieuw draaien.
+De module declareert `orderTypes: ["maintenance", "inspection"]`, die een tenant niet kan verbergen
 zolang hij aan staat, en met Onderdelenbeheer aan levert hij `condition.signals` (het volgende
 bezoek, dat de lijst van Onderdelenbeheer toont).
 

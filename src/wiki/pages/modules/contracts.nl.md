@@ -11,16 +11,16 @@ summary: Servicecontracten die de apparaten van een klant dekken met een gegaran
 </script>
 
 Een servicecontract is een onderhoudsafspraak: een klant betaalt een vast bedrag per maand, en in
-ruil daarvoor zijn zijn apparaten gedekt met een gegarandeerde reactietijd. De module heet
-**Servicecontracten** (in de code `contracts`), met een eigen lijst op `/contracts`.
+ruil daarvoor worden de apparaten van de klant gedekt met een gegarandeerde reactietijd. De module
+heet **Servicecontracten** (in de code `contracts`), met een eigen lijst op `/contracts`.
 
 ## Wat de module toevoegt
 
 - **Contracten.** Elk contract heeft een nummer, een klant, een **niveau** (Basis, Standaard of
-  Premium), een begin- en einddatum, een maandbedrag, een reactietijd in uren en de apparaten van
-  de klant die het dekt. Een contract is Toekomstig, Actief of Verlopen, naar zijn data. De pagina
-  van het contract toont de gedekte apparaten en het gedekte werk dat er in de looptijd van het
-  contract aan is gedaan.
+  Premium), een begin- en einddatum, een maandbedrag, een reactietijd in uren en de apparaten van de
+  klant die het dekt. Een contract is Toekomstig, Actief of Verlopen, afhankelijk van zijn begin- en
+  einddatum. De pagina van het contract toont de gedekte apparaten en het gedekte werk dat er in de
+  looptijd van het contract aan is gedaan.
 - **Gratis werk.** Een opdracht is gedekt als de apparaten ervan gedekt waren door een contract dat
   actief was op de dag dat de opdracht werd gemaakt. Wat erbij inbegrepen is, hangt af van het
   niveau:
@@ -33,11 +33,11 @@ ruil daarvoor zijn zijn apparaten gedekt met een gegarandeerde reactietijd. De m
   van de apparaten (storingen, reparaties, onderhoud, keuringen), geen nieuw werk eraan, schade of
   ander werk.
 
-- **Reactietijden.** Een gedekte storing of reparatie is een call-out (in de app heet dat een
-  storing), waarop binnen de reactietijd van het contract gereageerd moet worden, gerekend vanaf het
-  moment dat de opdracht werd gemaakt. Er is gereageerd zodra hij is ingepland. Tot dan ligt hij op
-  schema, is hij **SLA in gevaar** zodra er minder dan een kwart van de tijd over is, en te laat na
-  de deadline. De opdracht draagt het label, in lijsten en op zijn pagina.
+- **Reactietijden.** Op een gedekte storing of reparatie (een call-out) moet binnen de reactietijd
+  van het contract gereageerd worden, gerekend vanaf het moment dat de opdracht werd gemaakt. Er is
+  gereageerd zodra hij is ingepland. Tot dan ligt hij op schema, is hij **SLA in gevaar** zodra er
+  minder dan een kwart van de tijd over is, en te laat na de deadline. De opdracht draagt het label,
+  in lijsten en op zijn pagina.
 - **Maandbedragen op facturen.** Heeft de tenant facturatie, dan wordt elke maand van de contracten
   van een klant aangeboden als post om te factureren, zodat het maandbedrag samen met de afgeronde
   opdrachten van de klant wordt gefactureerd.

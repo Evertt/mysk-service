@@ -21,7 +21,7 @@ hebben aandacht nodig, en hoe snel?
   tot 100: het deel van de punten dat Goed is bevonden. Punten op N.v.t. tellen niet mee. De
   onderdelen die de punten van de checklist controleren, krijgen op dezelfde manier een eigen
   score. De monteur kan daarna advies over het apparaat toevoegen. Elke score is een nieuw record,
-  dus het apparaat houdt een verloop bij, en de laatste is zijn conditie.
+  dus het apparaat bouwt een historie op, en de laatste is zijn conditie.
 - **Een status.** Elk apparaat is **Kritiek**, **Aandacht**, **Gepland** of **In orde**:
   - Kritiek: de conditie ligt onder de kritieke drempel, of de keuring is verlopen. Plan het binnen
     5 werkdagen in.
@@ -38,7 +38,7 @@ hebben aandacht nodig, en hoe snel?
   conditie vastleggen, die geldt tot er een nieuwere is, zoals die van de volgende afgeronde
   checklist.
 - **Onderdelen.** Op de pagina van een apparaat voegt kantoor onderdelen toe: een naam, het
-  **artikel** in de Onderdelen Shop dat het is (een materiaal), en de checklistpunten die het
+  **artikel** in de shop dat het is (een materiaal), en de checklistpunten die het
   controleren. Een afgekeurd punt van een onderdeel stelt eerst het artikel ervan voor.
 - **Instellingen.** Een manager stelt de twee drempels in (kritiek onder, aandacht onder) en of
   kritieke apparaten **automatisch worden ingepland**. Staat dat aan, dan krijgt elk kritiek
@@ -63,7 +63,7 @@ hebben aandacht nodig, en hoe snel?
   [Werkbonnen](/wiki/modules/checklists).
 - **Onderhoudsplannen** zet het volgende bezoek van een apparaat in de lijst, als kolom
   "Volgende", zie [Onderhoudsplannen](/wiki/modules/maintenance).
-  **Materialen** zijn de artikelen van de onderdelen, zie [Materialen](/wiki/modules/materials). De
+  **Materialen** zijn de artikelen van de onderdelen, zie [Materialen](/wiki/modules/materials).
   **Onderdelen Shop** zegt welke punten een artikel oplost, zie
   [Onderdelen Shop](/wiki/modules/parts-shop).
 
@@ -73,7 +73,7 @@ Onderdelenbeheer heeft geen module nodig.
 
 <HowItWorks />
 
-Onderdelenbeheer is eigenaar van de hooks waarop de modules eromheen antwoorden. Daarmee is deze
+Onderdelenbeheer declareert de hooks waarop de modules eromheen antwoorden. Daarmee is deze
 module het duidelijkste voorbeeld van een module waar andere modules op inhaken. In
 `api/extensions.ts` declareert de module:
 
@@ -82,7 +82,7 @@ module het duidelijkste voorbeeld van een module waar andere modules op inhaken.
   volgende bezoek, dat de lijst toont.
 - `condition.articles`: de artikelen van onderdelen (materialen).
 - `condition.checkpoints` en `condition.articleCheckpoints`: de punten die een onderdeel
-  controleren (Werkbonnen geeft de sjabloonpunten van een apparaat, de Onderdelen Shop de punten die
+  controleren (Werkbonnen geeft de sjabloonpunten van een apparaat, Onderdelen Shop de punten die
   een artikel oplost).
 - `condition.list.columns`: kolommen in zijn eigen apparatenlijst, die Werkbonnen aanvult met de
   keuringskolom.

@@ -10,8 +10,8 @@ summary: Facturen en creditnota's voor afgeronde opdrachten en de vergoedingen v
   import TryIt from "#wiki/parts/try-it.svelte";
 </script>
 
-Facturatie (in de code de module `invoices`) maakt van afgerond werk een rekening. Het is de
-module waarop andere bouwen: het Partnerprogramma heeft hem nodig, en Servicecontracten biedt hem
+Facturatie (in de code de module `invoices`) maakt van afgerond werk een factuur. Het is de
+module waarop andere bouwen: Partnerprogramma heeft hem nodig, en Servicecontracten biedt hem
 zijn vergoedingen aan.
 
 ## Wat de module toevoegt
@@ -49,7 +49,7 @@ zijn vergoedingen aan.
 ### Werkt samen met
 
 Facturatie heeft niets nodig en verrijkt niets. **Servicecontracten** biedt zijn maandbedragen
-aan (zie [Servicecontracten](/wiki/modules/contracts)), en het **Partnerprogramma** heeft Facturatie
+aan (zie [Servicecontracten](/wiki/modules/contracts)), en **Partnerprogramma** heeft Facturatie
 nodig voor zijn cijfers en betaalt een Cash Bonus uit als creditnota (zie
 [Partnerprogramma](/wiki/modules/partner-programme)).
 
@@ -58,11 +58,11 @@ nodig voor zijn cijfers en betaalt een Cash Bonus uit als creditnota (zie
 <HowItWorks />
 
 De regels van een factuur staan op één plek, `invoice.ts`: de nummering, de status, totalen in
-centen (de btw is het subtotaal maal het tarief, afgerond met half van nul af) en hoe een opdracht
-regels wordt. Een opdracht wordt een regel tegen zijn prijs vóór correcties, gevolgd door een regel
-per correctie van de modules van de tenant, zodat de regels optellen tot het totaal van de
-opdracht uit `priceOrders()`. De server past de regels toe in `server/`; creditnota's delen de
-factuurcode in `documents.ts`, naar `kind`.
+centen (de btw is het subtotaal maal het tarief, afgerond op hele centen, waarbij een halve cent van
+nul af wordt afgerond) en hoe een opdracht regels wordt. Een opdracht wordt een regel tegen zijn
+prijs vóór correcties, gevolgd door een regel per correctie van de modules van de tenant, zodat de
+regels optellen tot het totaal van de opdracht uit `priceOrders()`. De server past de regels toe in
+`server/`; creditnota's delen de factuurcode in `documents.ts`, naar `kind`.
 
 Wat er te factureren is, komt van twee plekken. Afgeronde opdrachten worden uit de kern gelezen. De
 vergoedingen van andere modules komen via de collector (een verzamelpunt waar modules op

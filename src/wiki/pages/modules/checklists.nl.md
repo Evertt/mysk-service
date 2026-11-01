@@ -77,14 +77,14 @@ verrijkt op deze punten, allemaal aangeleverd in `server/index.ts`:
   andere soort of een apparaat eraf halen zodra er een is vastgelegd.
 - `condition.signals` geeft Onderdelenbeheer de keuringsstatus, als SQL over `equipment`, en
   `condition.checkpoints` geeft de sjabloonpunten waarmee een onderdeel gecontroleerd kan worden.
-  Met de Onderdelen Shop aan koppelt `parts-shop.checkpoints` de artikelen aan de punten.
+  Met Onderdelen Shop aan koppelt `parts-shop.checkpoints` de artikelen aan de punten.
 - `notifications.rules` laat de bel gaan bij afgekeurde punten, en `access.rules` zegt wie de
   gegevens mag lezen en wijzigen.
 
-De module declareert ook eigen punten voor de modules die hem verrijken: de slot (een plek in een
+De module declareert ook eigen punten voor de modules die hem verrijken: het slot (een plek in een
 pagina die een andere module vult) `checklists.field.checklist` in het monteursportaal
 (Onderdelenbeheer stelt daar zijn adviesvraag), de slots voor afgekeurde punten
-`checklists.order.rejected` en `checklists.client.rejected` (de voorstellen van de Onderdelen Shop),
+`checklists.order.rejected` en `checklists.client.rejected` (de voorstellen van de shop),
 en de hook `checklists.completed`, waarop Onderdelenbeheer antwoordt door een conditie vast te
 leggen. De kolommen komen in de apparatenlijst en in de apparatenlijst van Onderdelenbeheer.
 

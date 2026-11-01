@@ -47,7 +47,7 @@ veiligheidsrisico en kost energie. Het menu-item staat in de zijbalk na Apparatu
 - **Energie** (verrijkt): een bewaakte deur die ook de deur van een dock is, toont de status van
   het dock op de deurkaart van Energie. Zie [Energie](/wiki/modules/energy).
 
-Docks hebben niets nodig.
+Docks heeft niets nodig.
 
 <TryIt as="planner" />
 

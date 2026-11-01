@@ -71,7 +71,7 @@ Elke batch kondigt zijn metingen aan als `energy_reading`, een **live type** in 
 wordt nooit gelogd, maar houdt de open pagina's live. Het manifest noemt ook de soorten opdrachten
 die een alert maakt (`orderTypes: ["repair", "survey"]`) en de ingang in het klantportaal
 (`portal`). De module levert `simulation.run` (een simulatie van P1-meters en deursensoren voor de
-demo), `customers.removingSite`, `notifications.rules` en `access.rules`, en declareert de slot
+demo), `customers.removingSite`, `notifications.rules` en `access.rules`, en declareert het slot
 `energy.door` (een plek in de pagina die een andere module vult), die docks vult.
 
 - <SourceLink path="src/modules/energy/module.ts">module.ts</SourceLink>: het manifest, en <SourceLink path="src/modules/energy">de map van de module</SourceLink>.
