@@ -38,8 +38,8 @@ const indexes = new Map<Locale, readonly SearchEntry[]>();
 
 /** The index of `pages` (the wiki's own by default) in `locale`, the current language by default. */
 export function searchIndex(
-	locale: Locale = getLocale(),
 	pages: readonly WikiPage[] = wikiPages,
+	locale: Locale = getLocale(),
 ): readonly SearchEntry[] {
 	if (pages !== wikiPages) return indexOf(pages, locale);
 	let index = indexes.get(locale);

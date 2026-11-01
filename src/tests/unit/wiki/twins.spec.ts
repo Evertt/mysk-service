@@ -3,15 +3,14 @@
  * sits `<slug>.nl.md`, the same page in Dutch, which the registry (`#wiki/pages.ts`) serves to a
  * Dutch visitor. This reads every page and twin as text and refuses
  *
- * - a page without its twin, unless `notYetTranslated` lists it; and a page that list names that
- *   has its twin, or that doesn't exist, so the list only shrinks;
- * - a twin without its page;
+ * - a page without its twin, and a twin without its page;
  * - a twin whose front-matter isn't exactly `title` and `summary` (the build adds `headings`): the
  *   section, order, status and coverage are the page's alone;
+ * - a twin with no prose, only components and whitespace (a stub);
  * - a twin that isn't built like its page, so a change to one that isn't made to the other fails:
- *   the same components in the same order, with the same literal `path`, `doc`, `line`, `symbol`
- *   and `as`; the same `<script>` imports; as many `##` headings; and links to the same wiki pages
- *   (`/wiki/…`, an `#anchor` or `?query` ignored: a heading's id is its language's).
+ *   the same components in the same order, with the same literal `path`, `doc`, `section`, `line`,
+ *   `symbol` and `as`; the same `<script>` imports; as many `##` headings; and links to the same
+ *   wiki pages (`/wiki/…`, an `#anchor` or `?query` ignored: a heading's id is its language's).
  *
  * Failures name the file and what differs. The checks also run on made-up pairs, to show each can
  * fail.
@@ -29,12 +28,6 @@ import {
 	tagAt,
 	wikiLinks,
 } from "./markup.test-support.ts";
-
-/**
- * The pages whose Dutch twin isn't written yet, by slug. Only ever shrinks: write the twin, then
- * take its page off the list (a listed page with a twin fails).
- */
-const notYetTranslated = [];
 
 const pagesDir = join(import.meta.dirname, "../../../wiki/pages");
 const twinSuffix = ".nl.md";
@@ -61,20 +54,12 @@ function wikiFiles() {
 	};
 }
 
-/** What's wrong with the pairs: pages without a twin the list doesn't excuse, the list's stale entries, twins without a page. */
-function unpaired(pages: string[], twins: string[], excused: readonly string[]): string[] {
+/** What's wrong with the pairs: pages without a twin, twins without a page. */
+function unpaired(pages: string[], twins: string[]): string[] {
 	return [
 		...pages
-			.filter((slug) => !twins.includes(slug) && !excused.includes(slug))
-			.map(
-				(slug) => `${slug}: no twin (write ${slug}${twinSuffix}, or list it in notYetTranslated)`,
-			),
-		...excused
-			.filter((slug) => twins.includes(slug))
-			.map((slug) => `${slug}: has its twin, take it off notYetTranslated`),
-		...excused
-			.filter((slug) => !pages.includes(slug))
-			.map((slug) => `${slug}: in notYetTranslated, but no such page`),
+			.filter((slug) => !twins.includes(slug))
+			.map((slug) => `${slug}: no twin (write ${slug}${twinSuffix})`),
 		...twins
 			.filter((slug) => !pages.includes(slug))
 			.map((slug) => `${slug}${twinSuffix}: a twin without its page ${slug}.md`),
@@ -104,8 +89,20 @@ function frontMatterProblems(source: string): string[] {
 	];
 }
 
-/** The attributes a component's place in the page is known by: what they link to, or who it signs in as. */
-const fixedAttributes = ["path", "doc", "line", "symbol", "as"] as const;
+/**
+ * The attributes a component's place in the page is known by: what they link to (a `DocsPointer`'s
+ * `section` is a heading of an English doc), or who it signs in as.
+ */
+const fixedAttributes = ["path", "doc", "section", "line", "symbol", "as"] as const;
+
+/** What's wrong with a twin's body: nothing but components, scripts and whitespace, so no prose. */
+function proseProblems(source: string): string[] {
+	const text = split(source)
+		.body.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/g, "")
+		.replace(/<!--[\s\S]*?-->/g, "")
+		.replace(/<\/?[A-Za-z][\w.]*(?:[^>"'{]|"[^"]*"|'[^']*'|\{[^}]*\})*>/g, "");
+	return /\p{L}/u.test(text) ? [] : ["no prose: only components and whitespace"];
+}
 
 /** A page's build, as the twins must share it. */
 interface Structure {
@@ -188,12 +185,19 @@ describe("the wiki's Dutch twins", () => {
 		expect(twins.map((twin) => twin.slug)).toContain("start/what-fieldworks-is");
 	});
 
-	test("every page has its twin, but those not translated yet; every twin has its page", () => {
+	test("every page has its twin; every twin has its page", () => {
 		expect(
 			unpaired(
 				pages.map((page) => page.slug),
 				twins.map((twin) => twin.slug),
-				notYetTranslated,
+			),
+		).toEqual([]);
+	});
+
+	test("a twin has prose", () => {
+		expect(
+			twins.flatMap((twin) =>
+				proseProblems(twin.source).map((problem) => `${twin.path}: ${problem}`),
 			),
 		).toEqual([]);
 	});
@@ -217,16 +221,12 @@ describe("the wiki's Dutch twins", () => {
 	});
 
 	describe("the checks find what they should (made-up pairs)", () => {
-		test("a page without a twin, a stale entry on the list, a twin without a page", () => {
-			expect(unpaired(["a/one", "a/two"], ["a/one"], [])).toEqual([
-				"a/two: no twin (write a/two.nl.md, or list it in notYetTranslated)",
+		test("a page without a twin, a twin without a page", () => {
+			expect(unpaired(["a/one"], ["a/one"])).toEqual([]);
+			expect(unpaired(["a/one", "a/two"], ["a/one"])).toEqual([
+				"a/two: no twin (write a/two.nl.md)",
 			]);
-			expect(unpaired(["a/one", "a/two"], ["a/one"], ["a/two"])).toEqual([]);
-			expect(unpaired(["a/one"], ["a/one"], ["a/one", "a/gone"])).toEqual([
-				"a/one: has its twin, take it off notYetTranslated",
-				"a/gone: in notYetTranslated, but no such page",
-			]);
-			expect(unpaired(["a/one"], ["a/one", "a/lost"], [])).toEqual([
+			expect(unpaired(["a/one"], ["a/one", "a/lost"])).toEqual([
 				"a/lost.nl.md: a twin without its page a/lost.md",
 			]);
 		});
@@ -278,7 +278,7 @@ describe("the wiki's Dutch twins", () => {
 			expect(differences(page, twin)).toEqual([]);
 		});
 
-		test("a component missing, added, out of order, or with another path, line, symbol, doc or as", () => {
+		test("a component missing, added, out of order, or with another path, line, symbol, doc, section or as", () => {
 			const page = made('<HowItWorks />\n\n<SourceLink path="src/a.ts" line={2}>x</SourceLink>');
 			const differ = (twin: string) => differences(page, made(twin));
 			expect(differ('<SourceLink path="src/a.ts" line={2}>x</SourceLink>')).toEqual([
@@ -302,9 +302,47 @@ describe("the wiki's Dutch twins", () => {
 					made('<DocsPointer doc="docs/agents/i18n.md" />'),
 				),
 			).toHaveLength(1);
+			expect(
+				differences(
+					made('<DocsPointer doc="docs/agents/tenancy.md" section="Tenancy" />'),
+					made('<DocsPointer doc="docs/agents/tenancy.md" section="Tenancy" />'),
+				),
+			).toEqual([]);
+			expect(
+				differences(
+					made('<DocsPointer doc="docs/agents/tenancy.md" section="Tenancy" />'),
+					made('<DocsPointer doc="docs/agents/tenancy.md" section="Huurders" />'),
+				),
+			).toEqual([
+				"components: page has [DocsPointer doc=docs/agents/tenancy.md section=Tenancy], twin has [DocsPointer doc=docs/agents/tenancy.md section=Huurders]",
+			]);
 			expect(differences(made('<TryIt as="planner" />'), made('<TryIt as="engineer" />'))).toEqual([
 				"components: page has [TryIt as=planner], twin has [TryIt as=engineer]",
 			]);
+		});
+
+		test("a twin without prose: only components, scripts and whitespace", () => {
+			expect(
+				proseProblems(made('Tekst met een <SourceLink path="src/a.ts">label</SourceLink>.')),
+			).toEqual([]);
+			expect(proseProblems(made("## Een kop"))).toEqual([]);
+			expect(
+				proseProblems(
+					made(
+						"<script>",
+						'\timport HowItWorks from "#wiki/parts/how-it-works.svelte";',
+						"</script>",
+						"",
+						"<HowItWorks />",
+						"",
+						"<DocsPointer",
+						'\tdoc="docs/agents/kit.md"',
+						"/>",
+						"",
+					),
+				),
+			).toEqual(["no prose: only components and whitespace"]);
+			expect(proseProblems(made(""))).toEqual(["no prose: only components and whitespace"]);
 		});
 
 		test("different imports", () => {

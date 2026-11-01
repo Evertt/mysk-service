@@ -12,11 +12,12 @@ import type { PageLoad } from "./$types";
 export const load = (async ({ params }) => {
 	const page = pageBySlug(params.slug);
 	if (!page) error(404);
-	const text = pageText(page);
+	const locale = getLocale();
+	const text = pageText(page, locale);
 	return {
 		page,
 		text,
-		untranslated: text.lang !== getLocale(),
+		untranslated: text.lang !== locale,
 		component: (await text.load()).default,
 	};
 }) satisfies PageLoad;

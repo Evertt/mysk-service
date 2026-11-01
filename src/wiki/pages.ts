@@ -15,11 +15,18 @@
  *   and `text`, its `PageText` per language: `text.en` always, `text.nl` where the twin exists.
  * - `PageText`: `title`, `summary`, `headings` (`{ text, id }`, the ids of that language's page)
  *   and `load()`, which imports that language's page component.
- * - `pageText(page, locale = getLocale())`: the text a visitor in `locale` reads, the twin where
- *   there is one and else English, with `lang`, the language it is in (`en` where it fell back).
- *   Everything that shows a page's title, summary or headings reads them through it.
+ * - `pageText(page, locale = getLocale())`: the text a visitor in `locale` reads (`ShownText`), the
+ *   twin where there is one and else English, with `lang`, the language it is in (`en` where it
+ *   fell back). Everything that shows a page's title, summary or headings reads them through it.
  * - `wikiPages` (sorted by section, `order`, then English title), `pageBySlug(slug)`,
  *   `pageHref(slug)`, and `wikiNav(pages?, locale?)`, the sidebar in the current language.
+ *
+ * The route (`src/routes/(wiki)/wiki/[...slug]/+page.ts`) returns `{ page, text, untranslated,
+ * component }`: the `WikiPage`, its `ShownText` in the visitor's language, whether that fell back
+ * to English, and the loaded page component. A page without its twin (a page just written, before
+ * its twin is) shows in English: the article has `lang="en"`, and a note above it says so in the
+ * visitor's language (`wiki_not_translated`). `twins.spec.ts` keeps that from shipping, but the
+ * fallback stays: it is how a new page appears while its twin is written.
  *
  * The front-matter comes from `virtual:wiki-pages` (`scripts/wiki-pages.ts`), read at build time,
  * not from the pages' modules: so a wiki page's chunk holds that page alone, in one language, and
@@ -176,14 +183,14 @@ export function pageBySlug(slug: string): WikiPage | undefined {
 	return wikiPages.find((page) => page.slug === slug);
 }
 
+/** A page's text as a visitor reads it (`pageText()`): `lang` is the language it is in. */
+export type ShownText = PageText & { lang: Locale };
+
 /**
  * The text of `page` a visitor in `locale` reads: its twin in that language, or else the English
  * page; `lang` is the language of what it returns (`en` where it fell back).
  */
-export function pageText(
-	page: WikiPage,
-	locale: Locale = getLocale(),
-): PageText & { lang: Locale } {
+export function pageText(page: WikiPage, locale: Locale = getLocale()): ShownText {
 	const text = page.text[locale];
 	return text ? { ...text, lang: locale } : { ...page.text.en, lang: baseLocale };
 }

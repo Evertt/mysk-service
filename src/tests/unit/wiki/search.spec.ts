@@ -7,7 +7,7 @@ import type { Component } from "svelte";
 import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import { getLocale, overwriteGetLocale } from "#lib/paraglide/runtime.js";
-import { buildPages } from "#wiki/pages.ts";
+import { buildPages, wikiPages } from "#wiki/pages.ts";
 import { entryHref, searchIndex, searchPages, type SearchEntry } from "#wiki/search.ts";
 
 const englishByDefault = getLocale;
@@ -139,7 +139,7 @@ describe("searchIndex", () => {
 	);
 
 	test("in English: the pages' titles and headings", () => {
-		expect(searchIndex("en", pages)).toEqual([
+		expect(searchIndex(pages, "en")).toEqual([
 			{ slug: "start/a", title: "A page" },
 			{ slug: "start/a", title: "A page", heading: "What it does", id: "what-it-does" },
 			{ slug: "start/b", title: "B page" },
@@ -148,22 +148,22 @@ describe("searchIndex", () => {
 	});
 
 	test("in Dutch: the twins', with the twins' heading ids, English where there's no twin", () => {
-		expect(searchIndex("nl", pages)).toEqual([
+		expect(searchIndex(pages, "nl")).toEqual([
 			{ slug: "start/a", title: "Een pagina" },
 			{ slug: "start/a", title: "Een pagina", heading: "Wat het doet", id: "wat-het-doet" },
 			{ slug: "start/b", title: "B page" },
 			{ slug: "start/b", title: "B page", heading: "Notes", id: "notes" },
 		]);
-		expect(searchPages("doet", searchIndex("nl", pages)).map(entryHref)).toEqual([
+		expect(searchPages("doet", searchIndex(pages, "nl")).map(entryHref)).toEqual([
 			"/wiki/start/a#wat-het-doet",
 		]);
-		expect(searchPages("doet", searchIndex("en", pages))).toEqual([]);
+		expect(searchPages("doet", searchIndex(pages, "en"))).toEqual([]);
 	});
 
 	test("is the current language's by default", () => {
-		expect(searchIndex()).toBe(searchIndex("en"));
+		expect(searchIndex()).toBe(searchIndex(wikiPages, "en"));
 		overwriteGetLocale(() => "nl");
-		expect(searchIndex()).toBe(searchIndex("nl"));
+		expect(searchIndex()).toBe(searchIndex(wikiPages, "nl"));
 		expect(searchIndex()).toContainEqual({
 			slug: "start/what-fieldworks-is",
 			title: "Wat Fieldworks is",
@@ -193,9 +193,9 @@ describe("the index of the real pages", () => {
 
 	test("has a heading as it reads, without its Markdown", () => {
 		for (const locale of ["en", "nl"] as const) {
-			expect(searchIndex(locale).filter((entry) => /[`*_[\]]/.test(entry.heading ?? ""))).toEqual(
-				[],
-			);
+			expect(
+				searchIndex(wikiPages, locale).filter((entry) => /[`*_[\]]/.test(entry.heading ?? "")),
+			).toEqual([]);
 		}
 	});
 });
