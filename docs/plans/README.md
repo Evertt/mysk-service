@@ -22,6 +22,7 @@ status.
 | [permissions.md](permissions.md)                                 | One way to ask who may read or change a record by its subject: a registry of rules per type (design)             |
 | [ui-consistency.md](ui-consistency.md)                           | One look for every page: the inconsistencies of the SHLTR/Lagoon UI and the steps to converge (plan)             |
 | [wiki.md](wiki.md)                                               | A public wiki at `/wiki` explaining every feature, with search and widgets fed by the code's own data (built)    |
+| [wiki-dutch.md](wiki-dutch.md)                                   | The wiki in Dutch too: a Dutch twin per page, the short strings as Paraglide messages (built)                    |
 
 ## The decisions in short
 

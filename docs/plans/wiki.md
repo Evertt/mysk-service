@@ -27,7 +27,8 @@ wherever a concept is clearer seen or tried than read.
   prerendered: a prerendered page can't show the visitor's theme without a flash, see "Decisions
   after the spike".)
 - **English only.** Pages are prose, not Paraglide messages; the wiki is exempt from the Paraglide
-  rule, with the reason in the guard's allow-list. Dutch is out of scope for now.
+  rule, with the reason in the guard's allow-list. Dutch was out of scope then; it came later, a
+  Dutch twin per page and the short strings as messages: see [wiki-dutch.md](wiki-dutch.md).
 - **Widgets import the real data, never a copy.** The lifecycle diagram reads `orderTransitions`,
   the module map the manifests, the theme gallery `src/lib/themes`. When the code changes, the
   wiki changes with it. Real components are embedded only where they're pure (badges, the table
@@ -154,7 +155,7 @@ Each step ends committed, with `pnpm run check`, `pnpm knip` and its specs green
 
 ## Out of scope
 
-- Dutch pages.
+- Dutch pages (built later: [wiki-dutch.md](wiki-dutch.md)).
 - Live tenant data in the wiki (it's tenantless).
 - A full-text search index; search covers titles and headings.
 

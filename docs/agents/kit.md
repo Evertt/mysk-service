@@ -263,8 +263,20 @@ A hand-rolled `setTimeout` debounce or observer is refused (`src/tests/unit/rune
   `built`, `partly built` or `planned`, and `covers`: `module:<id>`, `domain:<name>`,
   `shell:<name>`, `theme:<name>`) is checked by `buildPages()` (`src/wiki/pages.ts`), which names
   the file that's wrong. The route renders the title, so a page starts at `##`; its `##` headings
-  are what the search finds. English, no Paraglide messages. `coverage.spec.ts` fails until a
-  page covers each module, domain, shell and theme; `links.spec.ts` checks every link literally.
+  are what the search finds. `coverage.spec.ts` fails until a page covers each module, domain,
+  shell and theme; `links.spec.ts` checks every link literally.
+- **Its Dutch twin** is `<page>.nl.md` beside it, the same page in Dutch (docs/plans/wiki-dutch.md).
+  Its front-matter is only `title` and `summary`; the rest is the page's. It is built like its
+  page: the same components in the same order with the same `path`, `doc`, `section`, `line`,
+  `symbol` and `as`, the same imports, as many `##` headings and links to the same wiki pages
+  (`twins.spec.ts`, which also fails on a page without its twin). Write it per
+  `docs/agents/i18n.md`, "Dutch". A page without its twin shows in English with a note, which is
+  how a new page appears until its twin is written.
+- **Short strings** (the shell, the parts, the search, the widgets) are Paraglide messages:
+  reuse the app's own first (`label()` for enum values, the manifests' module names, `common_*`),
+  and add what's new to `messages/{en,nl}/wiki.json` (`wiki_*`). Code in a message goes between
+  backticks; `src/tests/unit/wiki/messages.spec.ts` refuses braces inside it (Paraglide would read
+  them as a variable) and code that differs between the languages.
 - **A page's parts** come from `#wiki/parts/`: `<HowItWorks />` between the half for users and
   the half for developers, `<SourceLink path="…" line={…}>` to the code at the commit the wiki was
   built from (`links.spec.ts` checks that the line still holds the identifier the label names, or
