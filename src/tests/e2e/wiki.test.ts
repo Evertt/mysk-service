@@ -5,6 +5,7 @@
 import type { Page } from "playwright";
 import { describe, expect, test } from "vite-plus/test";
 
+import { m } from "#lib/paraglide/messages.js";
 import { pageHref, wikiNav, wikiPages } from "#wiki/pages.ts";
 
 import { baseURL, fitsWidth, onPhone, users, useApp } from "./app.ts";
@@ -204,7 +205,7 @@ describe("signed out", () => {
 		const { page } = app;
 		await inDutch(page, async () => {
 			await app.go("/wiki/orders/lifecycle");
-			// The widget follows the app's language, also on a page still without its twin. The app's word for a quote, then the moves out of it in Dutch.
+			// The widget follows the app's language, like the page around it. The app's word for a quote, then the moves out of it in Dutch.
 			await page.getByRole("button", { name: "Nieuw", exact: true }).click();
 			const move = page.getByTestId("leaves-plan-scheduled");
 			await move.waitFor();
@@ -223,9 +224,7 @@ describe("signed out", () => {
 				expect(await page.locator("main h1").innerText()).toBe(untranslated!.text.en.title);
 				expect(await langOf(page, "main article")).toBe("en");
 				const note = page.getByTestId("wiki-untranslated");
-				expect(await note.innerText()).toBe(
-					"Deze pagina is nog niet vertaald, dus je leest hem in het Engels.",
-				);
+				expect(await note.innerText()).toBe(m.wiki_not_translated({}, { locale: "nl" }));
 				expect(await langOf(page, '[data-testid="wiki-untranslated"]')).toBe("nl");
 				// Its sidebar entry is English too, the page's own title.
 				expect(
