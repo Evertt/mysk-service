@@ -47,8 +47,8 @@ Alles draait om een paar soorten gegevens:
 
 - **Meerdere bedrijven, één app.** Elk bedrijf is een organisatie (een _tenant_) en ziet alleen
   zijn eigen gegevens. Niemand komt bij die van een ander door een id te raden.
-- **Optionele modules.** Servicecontracten, facturatie, onderhoudsplannen, planning, materialen,
-  werkbonnen met checklists en nog een paar zet je per organisatie aan. Een organisatie zonder een
+- **Optionele modules.** Servicecontracten, Facturatie, Onderhoudsplannen, Planning, Materialen,
+  Werkbonnen met checklists en nog een paar zet je per organisatie aan. Een organisatie zonder een
   module ziet die niet.
 - **Engels en Nederlands**, en een keuze uit thema's, in licht en donker.
 - **Live pagina's.** Als een collega een opdracht wijzigt, zie je dat op je pagina zonder te
@@ -71,7 +71,7 @@ De code is ingedeeld naar wie er eigenaar van is:
   module; een module voegt iets toe aan de kern via extension points (plekken waar de kern ruimte
   laat voor modules).
 - De drie **shells** zijn route groups (mappen met de routes van één omgeving): `(app)` voor
-  kantoor, `(field)/my` voor de monteurs en `(customer)/portal` voor klanten. In
+  het kantoor, `(field)/my` voor de monteurs en `(customer)/portal` voor klanten. In
   `src/lib/auth/shells.ts` staat waar elke shell begint en welke pagina's erbij horen.
 - Organisaties zijn eigenaar van alle bedrijfsgegevens. Elke query op een tenant-tabel is beperkt
   tot de ingelogde organisatie, en elke wijziging komt in het activiteitenlog.

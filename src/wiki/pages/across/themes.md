@@ -40,7 +40,7 @@ side by side:
 <ThemeGallery />
 
 A theme changes how things look, never what they mean. A status is coloured by its meaning (done,
-needs attention, new, critical) with the same tone tokens in every theme, so "completed" reads as
+needs attention, new, critical) with the same tone tokens in every theme, so "Completed" reads as
 good news whether the page is a blueprint or a sorbet.
 
 <HowItWorks />

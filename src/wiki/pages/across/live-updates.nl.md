@@ -46,11 +46,11 @@ waardoor een query per record lekte; de ene gedeelde stream is de oplossing, en 
 1. **Een wijziging wordt gemeld.** `recordActivity()` roept `announceChange()` aan zodra zijn
    transactie gecommit is. Aankondigingen worden in het geheugen bijgehouden: op Cloudflare bedient één
    Durable Object elk request, en op Node één proces. Zie <SourceLink path="src/lib/server/changes.ts" line={65}>announceChange</SourceLink>.
-2. **De live query van de shell geeft ze door.** Kantoor heeft `watchTenantChanges`, het
+2. **De live query van de shell geeft ze door.** Het kantoor heeft `watchTenantChanges`, het
    monteursportaal `watchFieldChanges` en het klantportaal `watchPortalChanges`, elk
    `liveFeed(types, feedFor())`. `feedFor()` houdt alleen de wijzigingen over aan records die de
    gebruiker mag lezen (dat vraagt het aan de [access registry](/wiki/internals/permissions)) en
-   beslist wat zijn publiek hoort: kantoor hoort wie de wijziging maakte en de actie; de anderen alleen of
+   beslist wat zijn publiek hoort: het kantoor hoort wie de wijziging maakte en de actie; de anderen alleen of
    het record is bijgewerkt of weg is, zonder de naam. Zie <SourceLink path="src/lib/server/live.ts" line={89}>liveFeed</SourceLink> en <SourceLink path="src/lib/server/live.ts" line={142}>feedFor</SourceLink>.
 3. **Het antwoord herhaalt de laatste tien seconden** (`FEED_WINDOW`), omdat een client die alleen
    het laatste antwoord leest anders wijzigingen mist die snel na elkaar kwamen. Hij onderscheidt ze

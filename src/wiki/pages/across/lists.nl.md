@@ -23,7 +23,7 @@ opzet: ken je er één, dan ken je ze allemaal.
   of klant, en elke groep krijgt een kopregel met het aantal (en totalen, waar een kolom die heeft).
   Groepen klap je in.
 - **Kolommen, dichtheid en weergaven.** Verberg kolommen, zet de rijen dichter op elkaar of ruimer,
-  en bewaar een set filters en sortering als weergave, voor jezelf of gedeeld met kantoor.
+  en bewaar een set filters en sortering als weergave, voor jezelf of gedeeld met het kantoor.
 - **De tabel bewaart zijn stand in de adresbalk.** Kopieer de link en een collega ziet dezelfde
   gefilterde, gesorteerde lijst. Kom je later terug, dan staat de lijst zoals je hem achterliet.
 - **Selecteer rijen** om er iets mee te doen: wijs tien opdrachten tegelijk aan een monteur toe,

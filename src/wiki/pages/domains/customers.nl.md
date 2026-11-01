@@ -46,12 +46,12 @@ zijn altijd van dezelfde klant: de database weigert een mengsel.
 
 ## Portaaltoegang
 
-De contactpersonen van een klant kunnen het klantportaal gebruiken. Op de pagina van de klant, onder
-**Portaaltoegang**, nodigt een eigenaar of beheerder een contactpersoon uit per e-mail, voor alle
-vestigingen van de klant of voor een paar ervan. De contactpersoon accepteert de uitnodiging, krijgt
-een account, en ziet vanaf dan alleen de opdrachten, apparaten en vestigingen van die klant. Als je de
-toegang intrekt, is de contactpersoon er niet meer bij. Iedereen op kantoor ziet wie toegang heeft; alleen eigenaren en
-beheerders kunnen dat wijzigen.
+De klantcontacten (de contactpersonen van een klant) kunnen het klantportaal gebruiken. Op de
+pagina van de klant, onder **Portaaltoegang**, nodigt een eigenaar of beheerder een klantcontact uit
+per e-mail, voor alle vestigingen van de klant of voor een paar ervan. Het klantcontact accepteert
+de uitnodiging, krijgt een account, en ziet vanaf dan alleen de opdrachten, apparaten en vestigingen
+van die klant. Als je de toegang intrekt, is het klantcontact er niet meer bij. Iedereen op kantoor
+ziet wie toegang heeft; alleen eigenaren en beheerders kunnen dat wijzigen.
 
 <TryIt as="planner" />
 
@@ -69,7 +69,7 @@ verwijderen.
 `portal_contact_site`. Elke tabel heeft een `organizationId`, en verwijzingen ertussen zijn
 samengestelde foreign keys waar de tenant (de organisatie) in zit, zodat een rij niet naar een
 andere tenant kan wijzen. Waar een record bij dezelfde klant moet horen (de vestiging van een
-apparaat, de apparaten van een opdracht, de vestigingen van een contactpersoon), zit ook
+apparaat, de apparaten van een opdracht, de vestigingen van een klantcontact), zit ook
 `customer_id` in de sleutel. Het diagram hierboven is uit die sleutels getekend.
 
 **Codes.** De code van een klant wordt gekozen door `nextNumber(tx, "customer")`, in dezelfde
@@ -83,14 +83,14 @@ bulkverwijderen in de lijst gebruiken hem allebei. Vestigingen doen hetzelfde in
 waar de modules meestemmen via het extension point `removingSite` (een plek waar de kern ruimte
 laat voor modules).
 
-**Portaalcontactpersonen** zijn leden met de rol `customer`, gekoppeld aan een `portal_contact`.
+**Klantcontacten** zijn leden met de rol `customer`, gekoppeld aan een `portal_contact`.
 Elke query van hen is beperkt tot de tenant, hun klant en hun vestigingen (`ofCustomer()`,
 `atSites()`, `customerOrders()`), en het access registry (het register dat zegt wie welke gegevens
 mag lezen of wijzigen) beslist de rest. Zie [wat elke rol in welke shell kan](/wiki/start/roles-and-shells).
 
-**Wat een vestiging toont**, hangt af van wie hem leest. Kantoor, en een monteur op de vestigingen
+**Wat een vestiging toont**, hangt af van wie hem leest. Het kantoor, en een monteur op de vestigingen
 van zijn opdrachten, zien de contactvoorkeuren en toegangsinstructies (de kolommen `onSite`); een
-contactpersoon van de klant ziet alleen het adres.
+klantcontact ziet alleen het adres.
 
 - <SourceLink path="src/lib/server/db/schema/customers.ts" line={8}><code>customer</code></SourceLink> en <SourceLink path="src/lib/server/db/schema/customers.ts" line={35} symbol="customerSite"><code>customer_site</code></SourceLink>
 - <SourceLink path="src/lib/server/db/schema/portal.ts" line={16} symbol="portalContact"><code>portal_contact</code></SourceLink>

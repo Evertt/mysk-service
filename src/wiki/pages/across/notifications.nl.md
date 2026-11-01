@@ -59,7 +59,7 @@ logregels, omdat er niets werd opgeslagen toen die gebeurden.
 3. **De query** houdt de logregels van de tenant over, die van anderen (of van het systeem), nieuwer
    dan 30 dagen, en voor de stip nieuwer dan `lastSeen`, en kiest dan de categorie met één `case`
    over alle regels. Zie <SourceLink path="src/lib/server/notifications/notifications.ts" line={54}>rulesFor</SourceLink>.
-4. **De stip is live.** De live query van de kantoorshell (`watchShell`) antwoordt opnieuw na elke
+4. **De stip is live.** De live query van de kantoorapp (`watchShell`) antwoordt opnieuw na elke
    gelogde wijziging, en de bel leest daaruit het nieuwe aantal.
 
 Een regel heeft alleen de logregel nodig om te beslissen. Heeft hij meer nodig dan erin staat, dan

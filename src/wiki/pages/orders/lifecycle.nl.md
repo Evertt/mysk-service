@@ -25,7 +25,7 @@ gefactureerd heeft hij steeds één **status**, en die zegt wat er daarna mee ma
 | **Geannuleerd**           | Gaat niet door, of een melding van een klant die is afgewezen.              |
 
 Opdrachten die op kantoor worden gemaakt, beginnen als Nieuw. Alleen een melding van een klant
-begint als te accepteren (zie [opdrachten die op acceptatie wachten](/wiki/orders/awaiting-acceptance)).
+begint als Nieuw (te accepteren): zie [Te accepteren opdrachten](/wiki/orders/awaiting-acceptance).
 
 ## Probeer de stappen
 
@@ -46,7 +46,7 @@ Elke stap heeft een naam, een **werkwoord** (in de code een _verb_), en iemand d
   handtekening van de klant.
 - **Facturatie** maakt een afgeronde opdracht _Gefactureerd_ als er een factuur voor wordt
   verstuurd, en weer Afgerond als die factuur wordt geannuleerd.
-- **Kantoor** kan een status ook met de hand _zetten_: in het opdrachtformulier, in de statuskolom
+- **Het kantoor** kan een status ook met de hand _zetten_: in het opdrachtformulier, in de statuskolom
   van de lijst, of met een bulkactie. Met de hand kan het een opdracht elke status geven uit Nieuw,
   Ingepland, In behandeling, Afgerond of Geannuleerd, maar nooit Gefactureerd, en nooit bij een
   opdracht met de status Gefactureerd of Nieuw (te accepteren).
@@ -65,7 +65,7 @@ ingeplande opdracht. Ze kunnen de server niet tegenspreken, want ze vragen het a
 **Eén tabel.** De regels zijn `orderTransitions`, de statusovergangen (transitions), in
 `src/lib/orders/lifecycle.ts`: een rij per
 werkwoord (`set`, `plan`, `accept`, `reject`, `start`, `complete`, `invoice`, `uninvoice`). Een rij
-zegt wie de stap zet (`by`), vanuit welke statussen en naar welke, de `action` van de regel in het
+zegt wie de stap zet (`by`), vanuit welke statussen en naar welke, de `action` van de logregel in het
 activiteitenlog, de weigering, en twee keuzes met een standaardwaarde:
 
 - `completedAt`: volgt de status (`"follows"`: gezet als hij klaar is, anders gewist), is het
@@ -91,7 +91,7 @@ wie hem aanroept. Die:
 4. legt de wijziging voor aan de modules (`saveOrderParts()`), die kunnen weigeren, zoals
    materialen bij te weinig voorraad;
 5. doet wat het werkwoord zelf schrijft: het besluit over de melding, de aftekening;
-6. logt één regel met `recordActivity()`.
+6. schrijft één logregel met `recordActivity()`.
 
 Het opdrachtformulier is de enige andere die schrijft. Het slaat zijn velden en apparaten zelf op,
 dus het krijgt een handle, `beginOrderChange()`, die de opdracht bewaakt en de statuskolommen geeft

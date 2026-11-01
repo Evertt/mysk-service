@@ -52,14 +52,14 @@ monteur.
 
 ## Het klantportaal
 
-Voor de eigen contactpersonen van de klant. Het begint op `/portal`: een knop om een storing te
+Voor de klantcontacten, de eigen contactpersonen van de klant. Het begint op `/portal`: een knop om een storing te
 melden, de open opdrachten van de klant (ook die nog niet geaccepteerd zijn) en het laatst afgeronde
 werk. Daarnaast zijn er pagina's voor hun opdrachten, apparaten en locaties.
 
-Een contactpersoon ziet alleen de gegevens van zijn eigen klant, en als het kantoor hem voor slechts
+Een klantcontact ziet alleen de gegevens van zijn eigen klant, en als het kantoor hem voor slechts
 een paar vestigingen heeft uitgenodigd, alleen die van die vestigingen. De notities van de monteurs
 ziet hij niet; van een monteur ziet hij de voornaam. De rol is `customer`; een eigenaar of
-beheerder nodigt een contactpersoon uit vanaf de pagina van de klant, onder Portaaltoegang.
+beheerder nodigt een klantcontact uit vanaf de pagina van de klant, onder Portaaltoegang.
 
 ## En een vierde plek: /ops
 
@@ -98,8 +98,8 @@ een pagina direct aanroept, de gate de toegangscontrole die ervoor zit, en het a
 register dat zegt wie welke gegevens mag lezen of wijzigen. Zo krijgt een klant die het opdrachtnummer van een
 andere klant raadt een 404, via welke pagina hij het ook vraagt.
 
-De demoaccounts volgen dezelfde verdeling: Jan is medewerker (kantoor), Lev monteur, Marieke
-contactpersoon van een klant.
+De demoaccounts volgen dezelfde verdeling: Jan is medewerker (op kantoor), Lev monteur, Marieke
+klantcontact.
 
 - <SourceLink path="src/lib/auth/shells.ts" line={28}><code>shells</code> en <code>shellOf()</code></SourceLink>
 - <SourceLink path="src/lib/auth/roles.ts">de rollen</SourceLink>, met <code>isFieldEngineer()</code> en

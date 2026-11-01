@@ -32,7 +32,7 @@ Vier schermen tonen het, en geen twee precies hetzelfde:
   monteur met zijn volledige naam. De apparaten staan erop zoals de klant ze ziet.
 
 Zo leest een klant nooit de notities van een monteur, ziet een monteur niet wie op kantoor de
-aftekening vastlegde, en ziet alleen kantoor de garantiedatum van een apparaat. De afgedrukte
+aftekening vastlegde, en ziet alleen het kantoor de garantiedatum van een apparaat. De afgedrukte
 **werkbon** gaat naar de klant, dus hij is geschreven zoals de klant hem ziet, met de monteur bij
 zijn volledige naam.
 
@@ -67,8 +67,8 @@ dat zegt wie welke gegevens mag lezen of wijzigen) om de voorwaarde voor de opdr
 - `await officeOrder(number)`: de opdracht van de tenant, de organisatie;
 - `await engineerWork(ref)`: de eigen opdracht van de monteur;
 - `await customerWork(access, number)`: die van de klant, met alleen de apparaten op de vestigingen
-  van de contactpersoon;
-- `await printedWorkOrder(number, viewer)`: voor kantoor elke opdracht; voor een contactpersoon
+  van het klantcontact;
+- `await printedWorkOrder(number, viewer)`: voor het kantoor elke opdracht; voor een klantcontact
   alleen afgeronde.
 
 Een opdracht die de scope niet bereikt, leest als `undefined`, en de aanroeper antwoordt met een 404

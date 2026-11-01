@@ -1,6 +1,6 @@
 ---
 title: Onderdelen Shop
-summary: Partners bestellen vervangingsonderdelen in het klantportaal en betalen met hun Parts Credit; kantoor bevestigt, verzendt en levert.
+summary: Partners bestellen vervangingsonderdelen in het klantportaal en betalen met hun Parts Credit; het kantoor bevestigt, verzendt en levert.
 ---
 
 <script>
@@ -29,7 +29,7 @@ Materialen.
   factuur. Bij het afrekenen zie je het beschikbare saldo, de bestelling en het saldo erna. Over een
   bestelling die met Parts Credit is betaald, wordt geen btw gerekend. De bestelling wordt geweigerd
   als het credit of de voorraad niet genoeg is, of als het bedrijf niet in het partnerprogramma zit.
-- **Shopbestellingen.** Kantoor ziet de shopbestellingen en brengt elke bestelling door
+- **Shopbestellingen.** Het kantoor ziet de shopbestellingen en brengt elke bestelling door
   **Bevestigen**, **Verzenden** en **Geleverd melden**. De status is Geplaatst, Bevestigd,
   Verzonden, Geleverd of Geannuleerd. Een shopbestelling kan worden geannuleerd zolang hij niet is verzonden: het credit
   gaat terug in de wallet van de partner (credit dat intussen is vervallen, blijft vervallen) en de

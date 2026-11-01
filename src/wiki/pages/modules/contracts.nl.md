@@ -38,7 +38,7 @@ heet **Servicecontracten** (in de code `contracts`), met een eigen lijst op `/co
   gereageerd zodra hij is ingepland. Tot dan ligt hij op schema, is hij **SLA in gevaar** zodra er
   minder dan een kwart van de tijd over is, en te laat na de deadline. De opdracht draagt het label,
   in lijsten en op zijn pagina.
-- **Maandbedragen op facturen.** Heeft de tenant facturatie, dan wordt elke maand van de contracten
+- **Maandbedragen op facturen.** Heeft de tenant Facturatie, dan wordt elke maand van de contracten
   van een klant aangeboden als post om te factureren, zodat het maandbedrag samen met de afgeronde
   opdrachten van de klant wordt gefactureerd.
 
@@ -75,7 +75,7 @@ waar de kern ruimte laat voor modules):
 - `orders.tag` geeft het SLA-label terug van een opdracht waarvan de reactie in gevaar of te laat
   is.
 - `invoices.billableItems` geeft een regel per maand van de contracten van de klant in de periode
-  van de factuur (het doet alleen mee als facturatie aan staat).
+  van de factuur (het doet alleen mee als Facturatie aan staat).
 
 De regels staan op één plek, `coverage.ts`: welke opdrachten een contract dekt, wat een niveau
 inbegrijpt (`coveredAmount()`) en hoe de stand van een deadline volgt uit de reactietijd

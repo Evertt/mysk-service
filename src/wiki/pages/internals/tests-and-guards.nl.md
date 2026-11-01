@@ -20,7 +20,7 @@ Wat dat betekent buiten de code:
   onderdeel zonder die test is niet af.
 - **Wat een rol mag, wordt getest, niet aangenomen.** Wat een monteur mag doen en wat een
   klantcontact ziet, zijn specs, dus een refactor kan het niet stilletjes verruimen.
-- **De echte app wordt bestuurd in een echte browser.** Een volledige run bestuurt kantoor, het
+- **De echte app wordt bestuurd in een echte browser.** Een volledige run bestuurt de kantoorapp, het
   monteursportaal en het klantportaal op een productiebuild.
 - **Deze wiki wordt ook getest.** Elke module, elk domein, elke shell (de omgeving van kantoor,
   monteurs of klanten) en elk thema moet door een pagina gedekt zijn, en elke link naar een bestand

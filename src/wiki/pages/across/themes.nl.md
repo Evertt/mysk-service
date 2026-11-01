@@ -40,7 +40,7 @@ dat thema, licht en donker naast elkaar:
 
 Een thema verandert hoe iets eruitziet, nooit wat het betekent. Een status krijgt zijn kleur naar
 zijn betekenis (klaar, aandacht nodig, nieuw, kritiek), met dezelfde tone tokens (de kleurvariabelen
-per betekenis) in elk thema, dus "afgerond" leest als goed nieuws, of de pagina nu een blauwdruk is
+per betekenis) in elk thema, dus "Afgerond" leest als goed nieuws, of de pagina nu een blauwdruk is
 of een sorbet.
 
 <HowItWorks />

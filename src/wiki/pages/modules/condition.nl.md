@@ -34,16 +34,16 @@ hebben aandacht nodig, en hoe snel?
 
 - **De pagina Onderdelenbeheer.** Een lijst van apparaten met hun scorebalk en status, een legenda
   die de statussen uitlegt, het activiteitenlog van de apparaten, en uitleg over de vier stappen:
-  koppelen, monitoren, plannen, uitvoeren en vastleggen. Kantoor kan als correctie met de hand een
+  koppelen, monitoren, plannen, uitvoeren en vastleggen. Het kantoor kan als correctie met de hand een
   conditie vastleggen, die geldt tot er een nieuwere is, zoals die van de volgende afgeronde
   checklist.
-- **Onderdelen.** Op de pagina van een apparaat voegt kantoor onderdelen toe: een naam, het
+- **Onderdelen.** Op de pagina van een apparaat voegt het kantoor onderdelen toe: een naam, het
   **artikel** in de shop dat het is (een materiaal), en de checklistpunten die het
   controleren. Een afgekeurd punt van een onderdeel stelt eerst het artikel ervan voor.
 - **Instellingen.** Een manager stelt de twee drempels in (kritiek onder, aandacht onder) en of
   kritieke apparaten **automatisch worden ingepland**. Staat dat aan, dan krijgt elk kritiek
   apparaat zonder open opdracht elke dag een onderhoudsopdracht: een nieuwe opdracht met prioriteit
-  Hoog, die kantoor nog moet inplannen en die binnen 5 werkdagen moet gebeuren.
+  Hoog, die het kantoor nog moet inplannen en die binnen 5 werkdagen moet gebeuren.
 
 ### Waar je het ziet
 
@@ -59,7 +59,7 @@ hebben aandacht nodig, en hoe snel?
 ### Werkt samen met
 
 - **Werkbonnen** (verrijkt, en wordt erdoor verrijkt): zonder Werkbonnen zijn er geen scores uit
-  keuringen, dus is de conditie alleen wat kantoor vastlegt. Zie
+  keuringen, dus is de conditie alleen wat het kantoor vastlegt. Zie
   [Werkbonnen](/wiki/modules/checklists).
 - **Onderhoudsplannen** zet het volgende bezoek van een apparaat in de lijst, als kolom
   "Volgende", zie [Onderhoudsplannen](/wiki/modules/maintenance).

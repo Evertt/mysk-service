@@ -16,7 +16,7 @@ bel, in een live update.
 
 | Wie                                | Leest                                                                                                                            |
 | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| **Kantoor** (planners)             | De records van de organisatie, voor de modules die de organisatie heeft.                                                         |
+| **Het kantoor** (planners)         | De records van de organisatie, voor de modules die de organisatie heeft.                                                         |
 | **Managers** (eigenaar, beheerder) | Ook wat alleen managers zien: leden, uitnodigingen, de portaaltoegang van een klant en integratietokens.                         |
 | **Een monteur**                    | De opdrachten die aan hem zijn toegewezen, en elk apparaat en elke locatie, want de QR-code van de buren scannen is het product. |
 | **Een klantcontact**               | De opdrachten, apparaten en vestigingen van de eigen klant, en alleen de vestigingen die hij kreeg.                              |

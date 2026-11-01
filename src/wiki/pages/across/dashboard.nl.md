@@ -13,7 +13,7 @@ summary: De startpagina van kantoor, met de cijfers van de dag, het eerstvolgend
 Een planner komt na het inloggen op het dashboard. Het begint met een groet die past bij het
 moment van de dag, en een rij tegels:
 
-- **Open opdrachten**: opdrachten die nieuw, ingepland of in behandeling zijn, hoeveel daarvan nog
+- **Open opdrachten**: opdrachten met de status Nieuw, Ingepland of In behandeling, hoeveel daarvan nog
   geen monteur hebben, en hoeveel opdrachten er de laatste zeven dagen zijn gemaakt, tegenover de
   zeven dagen daarvoor.
 - **Te accepteren**: opdrachten die klanten in hun portaal hebben gemeld. De tegel is een link naar
@@ -30,8 +30,8 @@ week zijn gemaakt naar status, en de laatste activiteit. De kaarten staan in kol
 pagina heeft één kolom op een telefoon, twee op een laptop en drie op een breed scherm.
 
 Zet een module aan en het dashboard groeit mee. Materialen voegt een tegel voor lage voorraad toe,
-Onderdelenbeheer en Energie hun eigen tegels, de Onderdelen Shop zijn open bestellingen;
-Servicecontracten, Facturatie, Onderhoudsplannen en het Partnerprogramma voegen elk een kaart toe.
+Onderdelenbeheer en Energie hun eigen tegels, Onderdelen Shop zijn open bestellingen;
+Servicecontracten, Facturatie, Onderhoudsplannen en Partnerprogramma voegen elk een kaart toe.
 Een tenant (een organisatie in de app) zonder een module ziet de tegel ervan nooit.
 
 De cijfers zijn live: als iemand in de organisatie iets wijzigt, vragen de tegels, de grafieken en

@@ -38,7 +38,7 @@ Credit. In de app heet het **Partnerprogramma**; bij SHLTR is het de Partner Bon
   - Cash is een bedrag om uit te betalen, als losse creditnota in Facturatie, of buiten de
     app.
 - **De wallet.** Een grootboek met boekingen: Toegekend, Besteed, Teruggeboekt, Vervallen en
-  Correctie. Kantoor kan met de hand een boeking toevoegen, voor credit dat buiten de shop is
+  Correctie. Het kantoor kan met de hand een boeking toevoegen, voor credit dat buiten de shop is
   besteed of credit dat erbij komt. Credit waarvan de datum voorbij is, vervalt vanzelf, in de
   dagelijkse taak.
 

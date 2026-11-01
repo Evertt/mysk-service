@@ -21,7 +21,7 @@ Zijn opdracht staat erbij als wachtend op kantoor. Zodra de planner beslist, zie
 veranderen: ingepland, met de voornaam van de monteur, of **afgewezen, met de reden die de planner
 schreef**.
 
-## Wat kantoor ziet
+## Wat het kantoor ziet
 
 - Een badge bij **Opdrachten** in het menu en een kaart op het dashboard tellen de meldingen die
   wachten. De kaart opent de opdrachtenlijst, gefilterd op die meldingen. De bel geeft een melding
@@ -53,8 +53,8 @@ Een te accepteren opdracht blijft bewust buiten alles wat werk telt of plant:
 <HowItWorks />
 
 **Het aanmaken.** Het formulier `reportBreakdown` van het portaal controleert of het apparaat er een
-is dat de contactpersoon ziet, en roept dan `requestOrder(tx, draft)` aan in een transactie. Dat is
-`createOrders()` (gecontroleerd, genummerd, gelogd als aangemaakt, door de contactpersoon) met de
+is dat het klantcontact ziet, en roept dan `requestOrder(tx, draft)` aan in een transactie. Dat is
+`createOrders()` (gecontroleerd, genummerd, gelogd als aangemaakt, door het klantcontact) met de
 status `awaiting_acceptance`, plus een rij in `order_request` die bijhoudt wie hem meldde
 (`reporterName`) en, later, wie besliste, wanneer en waarom.
 

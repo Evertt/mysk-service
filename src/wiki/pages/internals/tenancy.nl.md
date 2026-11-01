@@ -23,7 +23,7 @@ ze; wat iemand ziet, wisselt mee.
 
 **Optionele modules** worden ook per organisatie aangezet. Zet Facturatie uit voor een tenant, en
 de pagina's van de module, zijn remote functions (functies op de server die een pagina direct
-aanroept) en zijn regels in het log worden voor die tenant niet gevonden.
+aanroept) en zijn logregels worden voor die tenant niet gevonden.
 
 ## Probeer het
 

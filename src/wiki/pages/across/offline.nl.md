@@ -1,6 +1,6 @@
 ---
 title: Offline en de service worker
-summary: Een service worker laat kantoor direct reageren door te tonen wat hij de vorige keer zag terwijl hij op nieuws controleert; het is geen offline modus.
+summary: Een service worker laat de kantoorapp direct reageren door te tonen wat hij de vorige keer zag terwijl hij op nieuws controleert; het is geen offline modus.
 ---
 
 <script>
@@ -11,7 +11,7 @@ summary: Een service worker laat kantoor direct reageren door te tonen wat hij d
 </script>
 
 Dit is deels gebouwd, en de titel belooft meer dan het doet: Fieldworks is geen offline app. Een
-service worker (een script dat de browser los van de pagina draait) maakt kantoor snel en komt door
+service worker (een script dat de browser los van de pagina draait) maakt de kantoorapp snel en komt door
 korte onderbrekingen van de verbinding heen. Zonder verbinding werken kan er niet mee.
 
 **Wat je krijgt**
@@ -39,7 +39,7 @@ korte onderbrekingen van de verbinding heen. Zonder verbinding werken kan er nie
 - Valt de verbinding weg, dan toont een deel van een pagina dat mislukt "Je bent offline. Zodra je
   weer online bent, probeert dit het vanzelf opnieuw", en het probeert opnieuw als de browser zegt
   dat hij terug is.
-- Alleen kantoor bewaart antwoorden. Elke pagina cachet de bestanden van de app, maar het
+- Alleen de kantoorapp bewaart antwoorden. Elke pagina cachet de bestanden van de app, maar het
   monteursportaal en het klantportaal vragen de worker niet om hun gegevens te bewaren.
 
 <TryIt as="planner" />
@@ -59,7 +59,7 @@ van zijn payloads, bewaard onder een eigen URL.
 - **Na een wijziging.** Elk ander request (een command, een formulier, inloggen) markeert alles wat
   ervoor is bewaard als verouderd, zodat die queries eerst naar het netwerk gaan. Het verouderde
   bewaarde antwoord wordt alleen gebruikt als de server niet bereikbaar is.
-- **Afgebakend.** De kantoorshell vertelt de worker van wie deze gegevens zijn (`swr:scope`:
+- **Afgebakend.** De kantoorapp vertelt de worker van wie deze gegevens zijn (`swr:scope`:
   gebruiker, organisatie, taal, tijdzone en versie van de app), en elke scope heeft een eigen
   cache. Afmelden of van organisatie wisselen verwijdert die. Zonder scope wordt niets bewaard. Zie <SourceLink path="src/routes/(app)/swr-worker.ts" line={55}>connectSwrWorker</SourceLink>.
 - **Opwarmen.** De worker onthoudt welke queries elke pagina deed, en vraagt ze opnieuw op voor de

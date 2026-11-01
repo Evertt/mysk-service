@@ -25,7 +25,7 @@ staat in de zijbalk direct na Apparatuur.
 - **De pagina Werkbonnen.** De hoofdpagina van de module toont de apparaten waarvan de categorie een
   sjabloon heeft, met een badge per jaar (open of afgerond). Kies een apparaat om de checklist van
   dit jaar en de historie te zien, of start de keuring of het onderhoud van dit jaar. Starten maakt
-  een opdracht, met de status Nieuw en nog niet ingepland, en de checklist komt erbij. Kantoor kan
+  een opdracht, met de status Nieuw en nog niet ingepland, en de checklist komt erbij. Het kantoor kan
   de checklist ook invullen voor een monteur, bijvoorbeeld van een papieren formulier dat is
   teruggebracht.
 - **Invullen.** Op een inspectie- of onderhoudsopdracht heeft elk apparaat een eigen checklist. De
@@ -88,9 +88,9 @@ pagina die een andere module vult) `checklists.field.checklist` in het monteursp
 en de hook `checklists.completed`, waarop Onderdelenbeheer antwoordt door een conditie vast te
 leggen. De kolommen komen in de apparatenlijst en in de apparatenlijst van Onderdelenbeheer.
 
-De monteur en kantoor vullen een checklist in met dezelfde code: een `Filler` van de soort
+De monteur en het kantoor vullen een checklist in met dezelfde code: een `Filler` van de soort
 `engineer` of `office` (monteurs alleen hun eigen opdrachten terwijl die in behandeling zijn,
-kantoor elke open opdracht). Elke wijziging wordt in een transactie opgeslagen. De keuringsstatus
+het kantoor elke open opdracht). Elke wijziging wordt in een transactie opgeslagen. De keuringsstatus
 is één functie in `model.ts` en dezelfde regel in SQL voor de kolom in de lijst, die geen
 parameters bindt omdat Onderdelenbeheer hem vaak herhaalt in één statement.
 
@@ -98,7 +98,7 @@ parameters bindt omdat Onderdelenbeheer hem vaak herhaalt in één statement.
 - <SourceLink path="src/modules/checklists/server/checklists.ts" line={202}>syncChecklists()</SourceLink>:
   de checklists die de apparaten van een opdracht volgen.
 - <SourceLink path="src/modules/checklists/server/field.ts" line={45}>Filler</SourceLink>: één set
-  regels voor de monteur en kantoor.
+  regels voor de monteur en het kantoor.
 - <SourceLink path="src/modules/checklists/model.ts" line={239}>inspectionStatus()</SourceLink>: geldig,
   bijna verlopen, verlopen, afgekeurd, geen.
 

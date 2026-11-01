@@ -27,10 +27,10 @@ Erop staan:
 - de apparaten, elk met zijn checklist: elk punt met zijn uitkomst, gegroepeerd, en de opmerkingen;
 - de handtekeningen van de monteur en de klant, met de namen.
 
-Kantoor en de contactpersonen van de klant kunnen hem allebei openen. Een contactpersoon ziet de
+Het kantoor en de klantcontacten kunnen hem allebei openen. Een klantcontact ziet de
 versie die voor hem geschreven is: alleen de apparaten op zijn vestigingen, geen notities van de
-monteur, en van het kantoorgedeelte van een checklist alleen dat kantoor het heeft afgerond. Een
-contactpersoon kan alleen de werkbon van een afgeronde opdracht openen.
+monteur, en van het kantoorgedeelte van een checklist alleen dat het kantoor het heeft afgerond. Een
+klantcontact kan alleen de werkbon van een afgeronde opdracht openen.
 
 Hij hoort bij de module **Werkbonnen** (`checklists`), omdat de checklists het grootste deel van de
 pagina zijn. Zonder die module staat de aftekening van een opdracht op zijn pagina, maar is er geen
@@ -51,13 +51,13 @@ besloten, en er zijn nog open vragen over wie hem krijgt en hoe hij wordt verstu
 **De gegevens zijn het werkverslag.** De werkbon wordt gebouwd uit het werkverslag van de opdracht
 (zie [wat er van het werk wordt bijgehouden](/wiki/orders/work-record)): `loadWorkOrder(number, viewer)`
 in de checklistsmodule neemt het bereik van `printedWorkOrder(number, viewer)` (voor kantoor elke
-opdracht; voor een contactpersoon diens afgeronde opdrachten, met alleen de apparaten op zijn
+opdracht; voor een klantcontact diens afgeronde opdrachten, met alleen de apparaten op zijn
 vestigingen), leest het verslag met `readWorkRecord()`, de opdracht en de klant ernaast, en elke
 checklist van de getoonde apparaten. Die ene functie bedient twee pagina's, dus de versie van
 kantoor en die van de klant komen uit dezelfde regels.
 
 **De pagina** is `detail/work-order.svelte`, verpakt in `PrintSheet` met de printstijlen van de
-pagina. Het is de enige plek waar de opmaak wordt bepaald. Kantoor komt er via
+pagina. Het is de enige plek waar de opmaak wordt bepaald. Het kantoor komt er via
 `/checklists/work-orders/[number]`, en het klantportaal heeft een eigen route in dezelfde module.
 Beide zijn te bereiken met een link op de checklistkaart in een slot (een plek op een pagina waar een module iets
 kan neerzetten) op de pagina van de opdracht. Op kantoor (`orders.detail.side`) staat de kaart er

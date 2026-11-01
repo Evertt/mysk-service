@@ -12,7 +12,7 @@ summary: De elf optionele modules, hoe een tenant ze aan- en uitzet, en wat van 
 </script>
 
 Fieldworks heeft een kern: opdrachten, klanten, apparatuur en monteurs, met daaromheen de
-kantoor-app, het monteursportaal en het klantportaal. Al het andere is een **module**, een functie
+kantoorapp, het monteursportaal en het klantportaal. Al het andere is een **module**, een functie
 die een tenant (een organisatie in de app) aan of uit kan zetten. Een tenant die nooit onderhoud
 plant, heeft geen onderhoudspagina's, geen onderhoudskolommen en geen onderhoudstaken. Bij SHLTR,
 de demo-tenant, staan ze alle elf aan.
