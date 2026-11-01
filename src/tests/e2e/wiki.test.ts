@@ -145,10 +145,10 @@ describe("signed out", () => {
 		const { page } = app;
 		await inDutch(page, async () => {
 			await app.go(first);
-			await page.getByRole("button", { name: "Search the wiki" }).click();
+			await page.getByRole("button", { name: "Zoek in de wiki" }).click();
 			await page
 				.getByRole("dialog")
-				.getByRole("combobox", { name: "Search the wiki" })
+				.getByRole("combobox", { name: "Zoek in de wiki" })
 				.fill("wie ermee werken");
 			await page
 				.getByRole("dialog")
@@ -156,6 +156,61 @@ describe("signed out", () => {
 				.click();
 			await page.waitForURL((url) => url.hash === "#wie-ermee-werken");
 			expect(await page.locator("main h2#wie-ermee-werken").innerText()).toBe("Wie ermee werken");
+		});
+	});
+
+	test("a Dutch visitor sees no English chrome: the header, the sidebar's sections and the search", async () => {
+		const { page } = app;
+		await inDutch(page, async () => {
+			await app.go(first);
+			const open = page.getByRole("link", { name: "Open de app" });
+			expect(await open.getAttribute("href")).toBe("/");
+			expect(await page.getByRole("link", { name: "Open the app" }).count()).toBe(0);
+			expect(await page.getByRole("button", { name: "Search the wiki" }).count()).toBe(0);
+			expect(await page.locator("header").innerText()).toContain("Zoek in de wiki…");
+
+			const groups = await page
+				.locator('nav [data-sidebar="group-label"]')
+				.evaluateAll((labels) => labels.map((label) => label.textContent));
+			expect(groups[0]).toBe("Aan de slag");
+			expect(groups).toContain("Opdrachten");
+			expect(groups).not.toContain("Start");
+			expect(groups).not.toContain("Orders");
+
+			// The search's dialog, with no match.
+			await page.getByRole("button", { name: "Zoek in de wiki" }).click();
+			await page
+				.getByRole("dialog")
+				.getByRole("combobox", { name: "Zoek in de wiki" })
+				.fill("zzzzzzzz");
+			expect(await page.getByRole("dialog").innerText()).toContain(
+				"Geen pagina past bij “zzzzzzzz”.",
+			);
+		});
+	});
+
+	test("a Dutch visitor's 404 is in Dutch, with the way back to the wiki", async () => {
+		const { page } = app;
+		await inDutch(page, async () => {
+			await app.expectingErrors(() => app.go("/wiki/nope"));
+			expect(await page.title()).toBe("Pagina niet gevonden · Fieldworks-wiki");
+			expect(
+				await page.getByRole("link", { name: "Terug naar de wiki" }).getAttribute("href"),
+			).toBe("/wiki");
+		});
+	});
+
+	test("a Dutch visitor's widgets and parts are in Dutch: how it works, the lifecycle", async () => {
+		const { page } = app;
+		await inDutch(page, async () => {
+			await app.go("/wiki/orders/lifecycle");
+			// The widget follows the app's language, also on a page still without its twin. The app's word for a quote, then the moves out of it in Dutch.
+			await page.getByRole("button", { name: "Nieuw", exact: true }).click();
+			const move = page.getByTestId("leaves-plan-scheduled");
+			await move.waitFor();
+			expect(await move.innerText()).toBe("plan naar Ingepland, door een planner");
+			expect(await page.getByRole("list", { name: "Gaat verder via" }).count()).toBe(1);
+			expect(await page.locator("main figure").first().innerText()).not.toContain("Leaves by");
 		});
 	});
 
