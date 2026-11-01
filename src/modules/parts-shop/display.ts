@@ -4,7 +4,7 @@ import type { BadgeDisplay } from "#lib/i18n/index.ts";
 import { shopLabels } from "./labels.ts";
 import type { ProductStock, ShopOrderStatus } from "./model.ts";
 
-/** A product's stock: "Op voorraad", "Laag voorraad" or "Op aanvraag". */
+/** A product's stock: "Op voorraad", "Lage voorraad" or "Op aanvraag". */
 export const productStockDisplay = shopLabels.withLabels("productStock", {
 	in_stock: { tone: "success" },
 	low: { tone: "warning" },

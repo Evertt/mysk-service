@@ -255,3 +255,39 @@ state machines:
 
 A context is `createContext()`, and a time that moves on is `Clock` (`#lib/hooks/clock.svelte.ts`).
 A hand-rolled `setTimeout` debounce or observer is refused (`src/tests/unit/runed.spec.ts`).
+
+## Wiki
+
+- **A wiki page** is an mdsvex `.md` file, `src/wiki/pages/<section>/<page>.md`, served at
+  `/wiki/<section>/<page>`. Its front-matter (`title`, `summary`, `section`, `order`, `status`:
+  `built`, `partly built` or `planned`, and `covers`: `module:<id>`, `domain:<name>`,
+  `shell:<name>`, `theme:<name>`) is checked by `buildPages()` (`src/wiki/pages.ts`), which names
+  the file that's wrong. The route renders the title, so a page starts at `##`; its `##` headings
+  are what the search finds. `coverage.spec.ts` fails until a page covers each module, domain,
+  shell and theme; `links.spec.ts` checks every link literally.
+- **Its Dutch twin** is `<page>.nl.md` beside it, the same page in Dutch (docs/plans/wiki-dutch.md).
+  Its front-matter is only `title` and `summary`; the rest is the page's. It is built like its
+  page: the same components in the same order with the same `path`, `doc`, `section`, `line`,
+  `symbol` and `as`, the same imports, as many `##` headings, links to the same wiki pages and the
+  same inline code and code blocks, and its prose is a translation, not the page copied
+  (`twins.spec.ts`). Write it per
+  `docs/agents/i18n.md`, "Dutch". A page without its twin shows in English with a note, which is
+  how it appears while you write it, locally: CI's twins spec fails a page without its twin.
+- **Short strings** (the shell, the parts, the search, the widgets) are Paraglide messages:
+  reuse the app's own first (`label()` for enum values, the manifests' module names, `common_*`),
+  and add what's new to `messages/{en,nl}/wiki.json` (`wiki_*`). Code in a message goes between
+  backticks; `src/tests/unit/wiki/messages.spec.ts` refuses braces inside it (Paraglide would read
+  them as a variable) and code that differs between the languages.
+- **A page's parts** come from `#wiki/parts/`: `<HowItWorks />` between the half for users and
+  the half for developers, `<SourceLink path="…" line={…}>` to the code at the commit the wiki was
+  built from (`links.spec.ts` checks that the line still holds the identifier the label names, or
+  its `symbol="…"` where the label names none: an edit above it moves it),
+  `<DocsPointer doc="…" section="…" />` to the rules, `<TryIt as="planner" />` (one click signs
+  in as that demo role, shown only where the demo's sign-in is on and the visitor isn't in it)
+  and `<Diagram viewBox label>` with SVG coloured by the theme's variables. A line that starts
+  with a component tag ends the Markdown paragraph before it: keep a tag on the line of the text
+  it belongs to.
+- **A widget** is a folder in `src/wiki/widgets/`: a `.ts` that reads what it shows from the app's
+  own code (the transition table, the module graph, the themes), so it can't drift, with a spec
+  in `src/tests/unit/wiki/widgets/`; and a `.svelte` that renders it with the kit's components,
+  needs no props, and has a component spec when it has state.

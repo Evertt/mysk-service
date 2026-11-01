@@ -5,6 +5,7 @@
 	JavaScript. The language is in the header, with the theme and the mode (`app-header.svelte`).
 -->
 <script lang="ts">
+	import BookOpenIcon from "@lucide/svelte/icons/book-open";
 	import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down";
 
 	import { getCurrentUser } from "#lib/auth/session.remote.ts";
@@ -68,6 +69,14 @@
 					<ViewAs current={viewAs.current} inMenu />
 					<DropdownMenu.Separator />
 				{/if}
+				<!-- The public wiki (`/wiki`), which signed-in members may open too. -->
+				<DropdownMenu.Group>
+					<DropdownMenu.Item>
+						{#snippet child({ props })}
+							<a {...props} href="/wiki"><BookOpenIcon />{m.common_wiki()}</a>
+						{/snippet}
+					</DropdownMenu.Item>
+				</DropdownMenu.Group>
 				<SignOutButton menuItem />
 			</DropdownMenu.Content>
 		</DropdownMenu.Root>

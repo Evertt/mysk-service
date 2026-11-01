@@ -13,7 +13,7 @@
 	"shop_enum_product_unit_piece": "per stuk",
 	"shop_enum_product_unit_pair": "per paar",
 	"shop_enum_product_stock_in_stock": "Op voorraad",
-	"shop_enum_product_stock_low": "Laag voorraad",
+	"shop_enum_product_stock_low": "Lage voorraad",
 	"shop_enum_product_stock_on_request": "Op aanvraag",
 	"shop_enum_shop_order_status_placed": "Geplaatst",
 	"shop_enum_shop_order_status_confirmed": "Bevestigd",
@@ -214,8 +214,8 @@
 			],
 			"selectors": ["countPlural"],
 			"match": {
-				"countPlural=one": "{countText} artikel met laag voorraad: bestel op tijd om vertraging te voorkomen.",
-				"countPlural=*": "{countText} artikelen met laag voorraad: bestel op tijd om vertraging te voorkomen."
+				"countPlural=one": "{countText} artikel met lage voorraad: bestel op tijd om vertraging te voorkomen.",
+				"countPlural=*": "{countText} artikelen met lage voorraad: bestel op tijd om vertraging te voorkomen."
 			}
 		}
 	],

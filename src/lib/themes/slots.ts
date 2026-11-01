@@ -174,6 +174,8 @@ export type GeneratedSlot =
 	| "sidebar-trigger"
 	| "sidebar-wrapper"
 	| "skeleton"
+	| "switch"
+	| "switch-thumb"
 	| "sync-indicator"
 	| "table"
 	| "table-body"

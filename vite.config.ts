@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import { globSync, readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
@@ -6,6 +7,7 @@ import autoAdapter from "@sveltejs/adapter-auto";
 import cloudflareAdapter from "@sveltejs/adapter-cloudflare";
 import { sveltekit } from "@sveltejs/kit/vite";
 import tailwindcss from "@tailwindcss/vite";
+import { mdsvex } from "mdsvex";
 import type { ImportsMap } from "unplugin-auto-import/types";
 import AutoImport from "unplugin-auto-import/vite";
 import { defineConfig, lazyPlugins } from "vite-plus";
@@ -18,6 +20,7 @@ import {
 	paraglideOutput,
 	paraglideOutputStructure,
 } from "./scripts/paraglide.ts";
+import { wikiMdsvex, wikiPagesPlugin } from "./scripts/wiki-pages.ts";
 
 // Links the modules in `src/modules` into the app before anything reads `src/routes` or the
 // registries (SvelteKit's sync, Vitest, the editor), see scripts/modules.ts.
@@ -59,6 +62,22 @@ function shadcnImports(): ImportsMap {
 	});
 	return Object.fromEntries(entries);
 }
+
+/**
+ * The commit the wiki's links to the source point at (`#wiki/parts/github.ts`): the code the pages
+ * were built with. `develop` where there's no git (a build from an archive).
+ */
+const wikiCommit = (() => {
+	try {
+		return execSync("git rev-parse HEAD", {
+			cwd: import.meta.dirname,
+			encoding: "utf8",
+			stdio: ["ignore", "pipe", "ignore"],
+		}).trim();
+	} catch {
+		return "develop";
+	}
+})();
 
 /** The unit tests that run in Node (`*.svelte.spec.ts` run in the browser). */
 const serverSpecs = {
@@ -112,6 +131,7 @@ const isolatedServerSpecs = nodeSpecs
 	.map(({ file }) => file);
 
 export default defineConfig({
+	define: { __WIKI_COMMIT__: JSON.stringify(wikiCommit) },
 	run: {
 		cache: {
 			scripts: true,
@@ -177,12 +197,20 @@ export default defineConfig({
 	// scan doesn't reach them or what they import (e.g. their icons). Those were found on the first
 	// page that used them, after the deps cache was cleared: Vite then pre-bundled them again and
 	// reloaded the page. Scanning the components, and the modules' manifests (their nav icons), finds
-	// them up front.
+	// them up front. The wiki's parts and shell (`src/wiki`) are imported by the pages, which are
+	// loaded on demand, so they need the same.
 	optimizeDeps: {
-		entries: ["src/lib/**/*.svelte", "src/modules/**/*.svelte", "src/modules/*/module.ts"],
+		entries: [
+			"src/lib/**/*.svelte",
+			"src/modules/**/*.svelte",
+			"src/modules/*/module.ts",
+			"src/wiki/**/*.svelte",
+		],
 	},
 	plugins: lazyPlugins(() => [
 		modulesPlugin(import.meta.dirname),
+		// The wiki's pages' front-matter, for its registry, sidebar and search (scripts/wiki-pages.ts).
+		wikiPagesPlugin(import.meta.dirname),
 		AutoImport({
 			include: [/\.svelte$/, /\.svelte\?svelte/, /\.ts$/],
 			// Paraglide's messages (`m.title()`), and the shadcn-svelte components.
@@ -192,6 +220,18 @@ export default defineConfig({
 		}),
 		tailwindcss(),
 		sveltekit({
+			extensions: [".svelte", ".md"],
+			// The wiki's pages (`src/wiki/pages`), their `##` headings with ids and listed in their
+			// front-matter, for the wiki's search (`scripts/wiki-headings.ts`).
+			preprocess: [mdsvex(wikiMdsvex)],
+			// mdsvex 0.12 still writes `<script context="module">` for a page's front-matter, which
+			// Svelte 5 calls deprecated: a warning per wiki page per compile, in every build, dev
+			// server and test run, about code nobody can change here. Only that warning, only in `.md`.
+			onwarn: (warning, handle) => {
+				if (warning.code === "script_context_deprecated" && warning.filename?.endsWith(".md"))
+					return;
+				handle(warning);
+			},
 			compilerOptions: {
 				// Force runes mode for the project, except for libraries. Can be removed in svelte 6.
 				runes: ({ filename }) =>
@@ -240,7 +280,8 @@ export default defineConfig({
 				// ("Failed to fetch dynamically imported module", an iframe that isn't ready, or a second
 				// copy of Svelte's runtime). Scanning the components as well finds them up front. These
 				// entries replace the default ones, so they name the test files too, and every component
-				// in `src/lib` (not only `ui/`: e.g. the data table's own icons).
+				// in `src/lib` (not only `ui/`: e.g. the data table's own icons), and the wiki's parts
+				// (`src/wiki`: their icons, found mid-run, failed the first run that used them).
 				optimizeDeps: {
 					entries: [
 						"src/tests/unit/**/*.svelte.{test,spec}.{js,ts}",
@@ -248,6 +289,7 @@ export default defineConfig({
 						"src/lib/**/*.svelte",
 						"src/modules/**/*.svelte",
 						"src/modules/*/module.ts",
+						"src/wiki/**/*.svelte",
 					],
 				},
 				test: {

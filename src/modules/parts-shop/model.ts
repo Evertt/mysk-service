@@ -94,7 +94,7 @@ export const isOrderable = (product: Pick<CatalogueProduct, "onRequest" | "credi
 	!product.onRequest && product.creditEligible;
 
 /**
- * What the portal shows of a product's stock ("Op voorraad", "Laag voorraad", "Op aanvraag"): on
+ * What the portal shows of a product's stock ("Op voorraad", "Lage voorraad", "Op aanvraag"): on
  * request when it's ordered so, or out; else low below the low threshold (as the materials' levels
  * have it), or in stock.
  * @labels productStock

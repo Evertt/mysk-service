@@ -6,7 +6,7 @@
  * - `currentEngineer()` hands out no `id` (nor `userId`, the way back to it): the type check
  *   (svelte-check) runs the assertion below;
  * - `requireEngineer` (which has it) is used only in `src/lib/server/auth/` and by the gates
- *   (`src/lib/server/remote-functions.ts`);
+ *   (`src/lib/server/remote-functions.ts`), and named by the files of `namesRequireEngineer`;
  * - `engineer.userId` is read only there and by the office's account form (`src/lib/engineers/`);
  * - an engineer-gated file (in `src/routes/(field)/` or a module's `portal/`, or one that makes
  *   remote functions with `forEngineers`) reads orders only through the scope: no
@@ -40,17 +40,21 @@ interface SourceFile {
 const code = (source: string) =>
 	source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
+/** The files besides the auth files that may name `requireEngineer`, each with why. */
+const namesRequireEngineer = [
+	// The gates: `forEngineers = remoteSet(requireEngineer, …)`.
+	"src/lib/server/remote-functions.ts",
+	// the wiki: documents the gates' checks by name; never imports or calls them (docs/plans/wiki.md)
+	"src/wiki/widgets/gate-table/gates.ts",
+];
+
 /** What breaks the scope's rules in `files`, as `path: what`. */
 export function scopeBreaches(files: readonly SourceFile[]) {
 	return files.flatMap(({ path, source }) => {
 		const text = code(source);
 		const found: string[] = [];
 		const inAuth = path.startsWith("src/lib/server/auth/");
-		if (
-			!inAuth &&
-			path !== "src/lib/server/remote-functions.ts" &&
-			/\brequireEngineer\b/.test(text)
-		) {
+		if (!inAuth && !namesRequireEngineer.includes(path) && /\brequireEngineer\b/.test(text)) {
 			found.push("requireEngineer");
 		}
 		if (!inAuth && !path.startsWith("src/lib/engineers/") && /\bengineer\.userId\b/.test(text)) {
