@@ -23,7 +23,7 @@ koelmachine. Onder **Apparatuur** houdt kantoor ze bij. Per apparaat:
 - wanneer het is geïnstalleerd, en tot wanneer de garantie loopt.
 
 Een **locatie** is een plek met een naam op een vestiging: "Expeditie noord", "Dock 03", "Kantoor
-1e", met een hint hoe je hem vindt. Met locaties vind je de apparaten van een vestiging terug op de
+1e", met een aanwijzing hoe je hem vindt. Met locaties vind je de apparaten van een vestiging terug op de
 plek waar ze staan.
 
 ## Servicegeschiedenis
@@ -43,7 +43,7 @@ code doet, hangt af van wie hem scant:
 | ------------------------------------ | ----------------------------------------------------------------------------------------------- |
 | **Een monteur**                      | het apparaat (of de plek) in het monteursportaal, met zijn open opdrachten ervoor               |
 | **Een contactpersoon van een klant** | **Storing melden**, met het apparaat al ingevuld (of de apparaten van de plek om uit te kiezen) |
-| **Kantoor**                          | de pagina van het apparaat of de plek in de kantoor-app                                         |
+| **Kantoor**                          | de pagina van het apparaat of de plek in de kantoorapp                                          |
 
 De code werkt alleen voor wie erbij hoort: wie niet is ingelogd, gaat naar de inlogpagina en daarna
 terug naar dezelfde code; iemand van een ander bedrijf, of een klant die het apparaat van een andere
@@ -63,9 +63,9 @@ beide zijn samengestelde foreign keys, dus de database weigert een mengsel. Een 
 opdrachten kun je niet verwijderen, een locatie met apparaten ook niet, en een categorie die in
 gebruik is evenmin. Serienummers zijn uniek binnen een tenant (een organisatie).
 
-**De codes.** De URL is `/q/<token>`. Het token is niet het id van het gegeven: `newQrToken()` maakt
-24 hexadecimale tekens (96 willekeurige bits) uit de cryptografische willekeurige getallen van het
-platform, één keer, als het gegeven wordt aangemaakt. Zo kun je een code niet uit een andere raden,
+**De codes.** De URL is `/q/<token>`. Het token is niet het id van het record: `newQrToken()` maakt
+24 hexadecimale cijfers (96 willekeurige bits) uit de cryptografisch veilige toevalsgetallen van
+het platform, één keer, als het record wordt aangemaakt. Zo kun je een code niet uit een andere raden,
 en blijft hij hetzelfde als het apparaat een andere naam krijgt of verhuist. Een unieke index houdt
 tokens uniek over alle tenants heen, en die heeft het opzoeken nodig: het is de enige plek die met
 opzet over tenants heen leest, omdat de code niet zegt van wie hij is.
@@ -75,7 +75,7 @@ opzet over tenants heen leest, omdat de code niet zegt van wie hij is.
 1. Niet ingelogd: doorsturen naar de inlogpagina, en daarna terug naar `/q/<token>`.
 2. `resolveQrCode(token, userId)` zoekt het apparaat of de locatie, en het lidmaatschap van de
    gebruiker in de tenant _daarvan_. Niets gevonden betekent 404. Is de gebruiker contactpersoon
-   van een klant, dan wordt het access registry (het register dat zegt wie welke gegevens mag lezen)
+   van een klant, dan wordt het access registry (het register dat zegt wie welke gegevens mag lezen of wijzigen)
    gevraagd of hij dat apparaat of die locatie mag lezen (van zijn klant, op een vestiging die hij
    ziet), anders 404.
 3. Hoort de code bij een andere organisatie van de gebruiker, dan wordt dat zijn huidige.
@@ -87,7 +87,7 @@ Beide portalen noemen `/q/[token]` bij de routes die van hen zijn (`shells.ts`),
 de pagina's een scanner er niet van wegstuurt.
 
 **Een apparaat lezen** gaat via `readUnits(scope)` (`src/lib/equipment/server/units.ts`), die het
-apparaat teruggeeft zoals zijn lezer het ziet: kantoor ziet de garantie en het QR-token van een
+apparaat teruggeeft zoals zijn doelgroep het ziet: kantoor ziet de garantie en het QR-token van een
 locatie, de monteur de contact- en toegangsgegevens van de vestiging, de contactpersoon van de klant
 alleen het adres van de vestiging. De scopes (`officeUnits()`, `engineerUnits()`,
 `customerUnits(access)`) halen hun rijen uit het access registry. Zie

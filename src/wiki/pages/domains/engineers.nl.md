@@ -10,7 +10,7 @@ summary: De mensen die opdrachten uitvoeren, hun specialisme en tarief, hoe het 
 	import TryIt from "#wiki/parts/try-it.svelte";
 </script>
 
-Een **monteur** is iemand die opdrachten uitvoert. Onder **Monteurs** in de kantoor-app beheer je
+Een **monteur** is iemand die opdrachten uitvoert. Onder **Monteurs** in de kantoorapp beheer je
 ze: een naam, e-mail en telefoon; een **specialisme** (elektrotechniek, werktuigbouw,
 klimaattechniek, sanitair of regeltechniek); een **regio** (Noord, Oost, Zuid, West of Midden, of
 een eigen regio); een **uurtarief**; wanneer ze in dienst kwamen; en of ze **actief** zijn.
@@ -24,12 +24,12 @@ eerstvolgende bovenaan, de opdrachten die hij het laatst afrondde, en hoeveel uu
 Een opdracht inplannen is een monteur, een dag en een tijd kiezen. De lijst met monteurs zet de
 monteurs met een specialisme dat bij de opdracht past bovenaan: de categorie van elk apparaat zegt
 welk specialisme het onderhoudt, dus bij een opdracht aan een apparaat waarvan de categorie bij
-klimaattechniek hoort, staan de monteurs klimaattechniek bovenaan. Je kunt nog steeds iedereen
+klimaattechniek hoort, staan de monteurs met klimaattechniek bovenaan. Je kunt nog steeds iedereen
 kiezen die actief is. Een inactieve monteur kan geen nieuw werk krijgen, en een opdracht die nog te
 accepteren of al gefactureerd is, kun je helemaal niet toewijzen.
 
 Het uurtarief bepaalt de prijs van de arbeid bij de opdrachten die een monteur doet: de uren die hij
-schrijft maal zijn tarief. Een opdracht die nog geen monteur heeft, wordt geschat tegen een
+schrijft maal zijn tarief. Een opdracht die nog geen monteur heeft, wordt geschat op basis van een
 standaardtarief.
 
 Een klant ziet alleen de **voornaam** van een monteur, bij zijn opdrachten.
@@ -68,8 +68,8 @@ toegangscontrole), `requireEngineer()`, zoekt één keer per verzoek de monteur 
 gekoppeld is, en `await currentEngineer()` geeft die terug. De opdrachten die een monteur bereikt,
 zijn de opdrachten van de tenant die aan hem zijn toegewezen, via helpers die het id van de monteur
 zelf lezen: `engineerOrders()` voor een query, `engineerOrder(ref)` voor één opdracht, en
-`engineerOrderNotFound(ref)` voor de ene 404. Een gegeven dat een monteur schrijft, neemt zijn
-monteur over van de opdracht die hij bereikte. Een spec (een test die dit bewaakt) houdt het id van
+`engineerOrderNotFound(ref)` voor de ene 404. Een record dat een monteur schrijft, krijgt de
+monteur van de opdracht die hij bereikte. Een spec (een test die dit bewaakt) houdt het id van
 de monteur binnen dat bestand. Apparaten en locaties (de QR-pagina's) zijn voor elke monteur die van
 de tenant.
 
@@ -77,7 +77,7 @@ de tenant.
 lid is van de tenant en niet aan een andere monteur gekoppeld is, werkt `userId` bij, en logt het,
 met de accounts bij naam.
 
-**Verwijderen** is `removeEngineer`, gemaakt door `defineRemoval()`: de blockers zijn de opdrachten
+**Verwijderen** is `removeEngineer`, gemaakt door `defineRemoval()`: de blockers (wat het verwijderen tegenhoudt) zijn de opdrachten
 die aan de monteur zijn toegewezen.
 
 **De volgorde van de monteurs** voor een opdracht is `fittingFirst(engineers, specialties)` in

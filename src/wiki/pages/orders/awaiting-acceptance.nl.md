@@ -12,8 +12,8 @@ summary: Hoe een storing die een klant meldt, wacht tot een planner hem acceptee
 
 Een klant die een apparaat ziet uitvallen, belt niet naar kantoor: hij opent het klantportaal en
 kiest **Storing melden**, bij het apparaat (of door de QR-code te scannen), met een beschrijving en
-een urgentie (normaal, hoog of spoed). Daarmee ontstaat een opdracht, maar nog geen werk. Die heeft
-de status **Nieuw (te accepteren)** tot een planner beslist.
+een urgentie (normaal, hoog of spoed). Daarmee ontstaat een opdracht, maar nog geen werk. De opdracht
+heeft de status **Nieuw (te accepteren)** tot een planner beslist.
 
 ## Wat de klant ziet
 
@@ -33,7 +33,7 @@ schreef**.
   - **Afwijzen.** Een reden is verplicht. De opdracht wordt geannuleerd en de klant leest de reden.
 - Is er beslist, dan zegt de kaart wat er besloten is en door wie.
 
-Elk kantoorlid kan beslissen, net als bij inplannen. Opdrachten die op kantoor worden gemaakt,
+Elke kantoormedewerker kan beslissen, net als bij inplannen. Opdrachten die op kantoor worden gemaakt,
 wachten nooit: die beginnen met de status Nieuw.
 
 ## Zolang er niet beslist is, is het geen werk
@@ -59,18 +59,18 @@ status `awaiting_acceptance`, plus een rij in `order_request` die bijhoudt wie h
 (`reporterName`) en, later, wie besliste, wanneer en waarom.
 
 **Geen open werk.** `openOrderStatuses` bevat `awaiting_acceptance` niet; `pendingOrderStatuses`,
-wat volgens de klant nog gedaan moet worden, wel. `holdsStock()` van de materialenmodule en
-`waitingStatuses` van de contractenmodule (`src/modules/contracts/coverage.ts`) maken de regels
+de klantweergave van wat nog gedaan moet worden, wel. `holdsStock()` van de materialenmodule en
+`waitingStatuses` van de contractenmodule (`src/modules/contracts/coverage.ts`) bepalen de regels
 voor voorraad en reactietijd hierboven.
 
 **Beslissen.** Beide knoppen roepen `transitionOrder()` aan, de enige manier om een status te
 wijzigen (zie [hoe een opdracht door zijn statussen gaat](/wiki/orders/lifecycle)):
 
-- `accept`: van te accepteren naar nieuw, gelogd als _geaccepteerd_. Met een planning roept hij
+- `accept`: van Nieuw (te accepteren) naar Nieuw, gelogd als _geaccepteerd_. Met een planning roept hij
   daarna in dezelfde transactie het werkwoord `plan` aan (gelogd als _ingepland_).
-- `reject`: naar geannuleerd, gelogd als _afgewezen_, met de reden als notitie bij de logregel.
+- `reject`: naar Geannuleerd, gelogd als _afgewezen_, met de reden als notitie bij de logregel.
 
-Dat zijn `acceptReportedOrder` en `rejectReportedOrder`, met een gate voor elk kantoorlid
+Dat zijn `acceptReportedOrder` en `rejectReportedOrder`, met een gate voor elke kantoormedewerker
 (`forMembers`): de toegangscontrole die vóór de functie op de server draait. Een opdracht waarover
 al beslist is, wordt geweigerd.
 

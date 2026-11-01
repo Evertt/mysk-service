@@ -9,8 +9,8 @@ summary: Een app voor buitendienstwerk, om werk bij klanten op locatie te planne
 	import DocsPointer from "#wiki/parts/docs-pointer.svelte";
 </script>
 
-Fieldworks is een app voor buitendienstwerk: kantoor plant opdrachten op de vestigingen van
-klanten, monteurs voeren ze uit, en klanten volgen alles in hun eigen portaal.
+Fieldworks is een app voor buitendienstwerk: het kantoor plant opdrachten voor de vestigingen
+van klanten, monteurs voeren ze uit, en klanten volgen alles in hun eigen portaal.
 
 Een bedrijf dat bij zijn klanten apparatuur installeert, onderhoudt en keurt (deuren, docks,
 trappen, airco) houdt hier alles bij: wie de klanten zijn, wat waar staat, welk werk er besteld
@@ -20,11 +20,11 @@ is, wie het deed en wat het kostte.
 
 Drie soorten mensen gebruiken het, elk in een eigen omgeving (een _shell_):
 
-- **Kantoor** (planners, eigenaren, beheerders) werkt in de kantoor-app. Zij beheren de klanten,
+- **Het kantoor** (planners, eigenaren, beheerders) werkt in de kantoorapp. Zij beheren de klanten,
   vestigingen en apparaten, maken en plannen opdrachten, houden het dashboard en het
   activiteitenlog in de gaten, en zetten de optionele modules aan en uit.
 - **Monteurs** werken in het monteursportaal, gemaakt voor de telefoon. Ze zien de opdrachten die
-  voor hen gepland zijn, starten een klus, schrijven uren en notities, en ronden de klus af met de
+  voor hen gepland zijn, starten een klus, boeken uren en notities, en ronden de klus af met de
   handtekening van de klant.
 - **Klanten** werken in het klantportaal. Ze melden een storing, volgen hun opdrachten en zien hun
   eigen apparaten en vestigingen.
@@ -39,8 +39,8 @@ Alles draait om een paar soorten gegevens:
 - Een **klant** heeft **vestigingen**, en een vestiging heeft **apparaten** (de apparatuur), op
   **locaties** met een naam. Zie [Klanten](/wiki/domains/customers) en
   [Apparatuur](/wiki/domains/equipment).
-- Een **opdracht** is werk voor een klant, meestal aan een of meer van zijn apparaten. Die
-  doorloopt een vaste [levenscyclus](/wiki/orders/lifecycle), van nieuw tot gefactureerd.
+- Een **opdracht** is werk voor een klant, meestal aan een of meer van zijn apparaten.
+  Een opdracht doorloopt een vaste [levenscyclus](/wiki/orders/lifecycle), van nieuw tot gefactureerd.
 - Een **monteur** voert opdrachten uit. Zie [Monteurs](/wiki/domains/engineers).
 
 ## Wat er nog meer in zit
@@ -59,11 +59,11 @@ Alles draait om een paar soorten gegevens:
 <HowItWorks />
 
 Fieldworks is een SvelteKit-app op Svelte 5, met remote functions (functies op de server die een
-pagina direct aanroept), op SQLite met Drizzle: libsql op Node, een Durable Object op Cloudflare.
+pagina rechtstreeks kan aanroepen), op SQLite met Drizzle: libsql op Node, een Durable Object op Cloudflare.
 Inloggen gaat met better-auth, de teksten met Paraglide (Engels en Nederlands), en de tooling is
 Vite+ met pnpm.
 
-De code is verdeeld naar wie de eigenaar is:
+De code is ingedeeld naar wie er eigenaar van is:
 
 - De vier **kerndomeinen** (opdrachten, klanten, apparatuur, monteurs) staan in
   `src/lib/<domain>/`, per onderdeel: `ui/`, `list/`, `form/`, `detail/`, `server/`.
@@ -72,7 +72,7 @@ De code is verdeeld naar wie de eigenaar is:
   laat voor modules).
 - De drie **shells** zijn route groups (mappen met de routes van één omgeving): `(app)` voor
   kantoor, `(field)/my` voor de monteurs en `(customer)/portal` voor klanten. In
-  `src/lib/auth/shells.ts` staat waar elke shell begint en welke pagina's van hem zijn.
+  `src/lib/auth/shells.ts` staat waar elke shell begint en welke pagina's erbij horen.
 - Organisaties zijn eigenaar van alle bedrijfsgegevens. Elke query op een tenant-tabel is beperkt
   tot de ingelogde organisatie, en elke wijziging komt in het activiteitenlog.
 

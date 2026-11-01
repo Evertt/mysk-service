@@ -18,7 +18,7 @@ Nederlands, zoals bij een Nederlands bedrijf, in welke taal je de app ook gebrui
 
 Waar de demo aan staat (op staging, en op de eigen computer van een ontwikkelaar), heeft de
 inlogpagina onder het formulier drie knoppen, **Inloggen als**: Planner, Monteur en Klant. Eén klik
-en je bent ingelogd; je typt niets. De knoppen **Probeer het** op deze pagina doen hetzelfde: elke
+en je bent ingelogd; je typt niets. De knoppen **Probeer het als …** op deze pagina doen hetzelfde: elke
 knop logt je in met zijn rol en opent de startpagina van die rol. Ze verschijnen alleen waar de
 demo aan staat en je nog niet in de demo bent ingelogd. Ben je dat wel, dan wissel je met
 **Bekijk als** (zie hieronder).
@@ -44,7 +44,7 @@ Probeer eens:
 
 ## Als monteur
 
-Je komt binnen in het monteursportaal, als Lev Hoekstra, op een pagina in de vorm van een telefoon.
+Je komt binnen in het monteursportaal, als Lev Hoekstra, op een pagina in telefoonformaat.
 
 <TryIt as="engineer" />
 
@@ -62,8 +62,8 @@ Je komt binnen in het klantportaal, als Marieke Verhoeven, die bij Riedel B.V. w
 <TryIt as="customer" />
 
 1. Kies **Storing melden** bij een van de apparaten. De melding verschijnt bij je opdrachten, als
-   nog te accepteren.
-2. Open een opdracht die klaar is: de aftekening, en de werkbon waar die module aan staat.
+   **Opdracht nog niet geaccepteerd**.
+2. Open een opdracht die klaar is: de aftekening, en de werkbon, als de module aan staat.
 3. Open een apparaat: de keuringsstatus en de geschiedenis.
 
 Je ziet alleen de gegevens van Riedel. De opdrachten en apparaten van de andere klanten staan er
@@ -72,8 +72,8 @@ niet bij, en je komt er ook niet bij door het adres te veranderen.
 ## Wisselen zonder uit te loggen
 
 Ben je eenmaal binnen, dan heeft het gebruikersmenu **Bekijk als**, met dezelfde drie rollen en de
-huidige aangevinkt. Kies een andere en je bent ingelogd als die rol en gaat naar de startpagina
-ervan. Zo zie je het snelst één wijziging van twee kanten: meld een storing als klant, accepteer
+huidige aangevinkt. Kies een andere en je wordt ingelogd als die rol en naar de startpagina ervan
+gestuurd. Zo zie je het snelst één wijziging van twee kanten: meld een storing als klant, accepteer
 hem als planner, en zie de opdracht van de klant veranderen.
 
 Geen van de drie is eigenaar of beheerder. Iedereen kan de demo openen, dus geen van hen kan de
@@ -83,8 +83,8 @@ leden, uitnodigingen of instellingen van SHLTR wijzigen.
 
 Het inloggen gaat zonder wachtwoord, dus het bestaat alleen waar de omgeving dat zegt:
 `DEMO_SIGN_IN=true` (in de variabelen van staging in `wrangler.jsonc`, of in de `.env` van een
-ontwikkelaar). Productie zet die niet. Waar hij uit staat, wordt er niets van getoond, en elke
-aanroep ervan antwoordt met 404 voordat hij leest wat er is gepost.
+ontwikkelaar). Productie zet die niet. Waar het uit staat, wordt er niets van getoond, en elke
+aanroep ervan antwoordt met 404 voordat er gelezen wordt wat er is gepost.
 
 **De browser stuurt alleen de naam van de rol.** De server koppelt die aan een vast account
 (`demoAccounts` in `src/routes/demo-accounts.server.ts`: Jan, Lev, Marieke) en controleert dat het

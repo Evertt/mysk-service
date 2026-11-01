@@ -1,6 +1,6 @@
 ---
 title: Het werkverslag
-summary: Wat er op de locatie van een opdracht is gedaan, op één plek gelezen, en voor elke lezer alleen wat die mag zien.
+summary: Wat er op de locatie van een opdracht is gedaan, op één plek gelezen, en voor elke doelgroep alleen wat die mag zien.
 ---
 
 <script>
@@ -37,7 +37,7 @@ aftekening vastlegde, en ziet alleen kantoor de garantiedatum van een apparaat. 
 zijn volledige naam.
 
 De apparaten staan in elke shell (elke omgeving) op dezelfde manier: een rij per apparaat met zijn
-categorie en locatie, gelinkt aan zijn pagina in die shell, met de naam van de vestiging erbij als
+categorie en locatie, met een link naar zijn pagina in die shell, met de naam van de vestiging erbij als
 de apparaten van de opdracht op meer dan één vestiging staan.
 
 <TryIt as="engineer" /> <TryIt as="customer" />
@@ -59,9 +59,9 @@ verslag van een klant heeft helemaal geen eigenschap `notes`, dus een pagina kan
 ongeluk tonen. Een nieuwe kolom die een portaal niet mag zien, wordt een sleutel in de tabel, geen
 eigen select van een pagina.
 
-**Een scope kiest de opdracht en noemt de lezer.** Een scope is het bereik: welke opdracht, voor
+**Een scope kiest de opdracht en noemt de doelgroep.** Een scope is het bereik: welke opdracht, voor
 wie. Alleen deze functies maken er een, elk async, en ze vragen het access registry (het register
-dat zegt wie welke gegevens mag lezen) om de voorwaarde voor de opdracht
+dat zegt wie welke gegevens mag lezen of wijzigen) om de voorwaarde voor de opdracht
 (`visibleOrNone("order", …)`), zodat een pagina, een lijst en `mayRead()` het eens zijn:
 
 - `await officeOrder(number)`: de opdracht van de tenant, de organisatie;
@@ -76,7 +76,7 @@ met een eigen melding.
 
 **De vestigingen** zijn de verschillende vestigingen van de apparaten; bij een opdracht zonder
 apparaten de vestiging van de klant als die er maar één heeft, anders geen. De apparaten worden
-gelezen zoals hun lezer ze ziet, door `readUnits()` (`src/lib/equipment/server/units.ts`); zie
+gelezen zoals hun doelgroep ze ziet, door `readUnits()` (`src/lib/equipment/server/units.ts`); zie
 [Apparatuur](/wiki/domains/equipment).
 
 **Tonen** gaat met componenten voor elke shell: `<WorkUnits>`, `<SignOff>` en `<NotesList>`

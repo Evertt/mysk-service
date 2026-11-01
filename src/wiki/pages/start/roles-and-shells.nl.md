@@ -10,14 +10,14 @@ summary: Wie Fieldworks gebruiken, de drie shells waarin ze werken, en wat elke 
 	import RoleSwitcher from "#wiki/widgets/role-switcher/role-switcher.svelte";
 </script>
 
-Fieldworks is één app met drie **shells** (omgevingen, elk met hun eigen pagina's): de kantoor-app,
+Fieldworks is één app met drie **shells** (omgevingen, elk met eigen pagina's): de kantoorapp,
 het monteursportaal en het klantportaal. Iemand werkt in één daarvan, en welke dat is, hangt af van
 zijn rol in de organisatie. Elke shell heeft eigen pagina's, een eigen menu en eigen grenzen aan
 wat hij laat zien.
 
 <RoleSwitcher />
 
-## De kantoor-app
+## De kantoorapp
 
 Voor de mensen die het bedrijf draaien: planners, en de eigenaren en beheerders die ook de
 organisatie beheren. Hij begint op `/`, het dashboard, en het hele bedrijf zit erin:
@@ -53,40 +53,40 @@ monteur.
 ## Het klantportaal
 
 Voor de eigen contactpersonen van de klant. Het begint op `/portal`: een knop om een storing te
-melden, de open opdrachten van de klant (ook die nog niet geaccepteerd zijn) en het werk dat het
-laatst is afgerond. Daarnaast zijn er pagina's voor hun opdrachten, apparaten en locaties.
+melden, de open opdrachten van de klant (ook die nog niet geaccepteerd zijn) en het laatst afgeronde
+werk. Daarnaast zijn er pagina's voor hun opdrachten, apparaten en locaties.
 
-Een contactpersoon ziet alleen de gegevens van zijn eigen klant, en als kantoor hem maar voor een
-paar vestigingen heeft uitgenodigd, alleen die van die vestigingen. De notities van de monteurs
+Een contactpersoon ziet alleen de gegevens van zijn eigen klant, en als het kantoor hem voor slechts
+een paar vestigingen heeft uitgenodigd, alleen die van die vestigingen. De notities van de monteurs
 ziet hij niet; van een monteur ziet hij de voornaam. De rol is `customer`; een eigenaar of
 beheerder nodigt een contactpersoon uit vanaf de pagina van de klant, onder Portaaltoegang.
 
 ## En een vierde plek: /ops
 
-Ontwikkelaars hebben een klein gedeelte op `/ops` om de bugmeldingen te lezen die mensen opnemen.
+Ontwikkelaars hebben een klein gedeelte op `/ops` om de meldingen te lezen die mensen via Probleem melden vastleggen.
 Het is geen shell van een tenant (een organisatie in de app) en staat niet in `shells.ts`; alleen
 de e-mailadressen in `DEVELOPER_EMAILS` komen erin.
 
 <HowItWorks />
 
 Eén bestand kent de shells: `src/lib/auth/shells.ts`. Elke shell heeft een `name`, een `home` (waar
-zijn leden beginnen, en waar de guard ze naar terugstuurt vanaf een pagina die niet van hen is) en
-`owns(routeId)` (welke pagina's van hem zijn, op het route-id van SvelteKit, zodat de pagina's van
+zijn leden beginnen, en waar de guard ze naartoe terugstuurt vanaf een pagina die niet van hen is) en
+`owns(routeId)` (welke pagina's van hem zijn, op basis van het route-id van SvelteKit, zodat de pagina's van
 een module in dezelfde route group meetellen). De guard is de controle die bij elke pagina
 meekijkt; een route group is een map met de routes van één omgeving.
 
-| Shell      | `home`    | Van hem                                                                        |
+| Shell      | `home`    | Eigen routes                                                                   |
 | ---------- | --------- | ------------------------------------------------------------------------------ |
 | `office`   | `/`       | elke route behalve het klantportaal (een kantoormedewerker mag `/my` bekijken) |
 | `engineer` | `/my`     | de route group `(field)`, en de links van de QR-codes, `/q/[token]`            |
 | `customer` | `/portal` | de route group `(customer)`, en de links van de QR-codes                       |
 
-**Welke shell een lid krijgt**, zegt `shellOf(roles)`, op basis van zijn rollen in de huidige
+**Welke shell een lid krijgt**, bepaalt `shellOf(roles)`, op basis van zijn rollen in de huidige
 organisatie: een lid met als enige teamrol `engineer` krijgt het monteursportaal, een lid met als
-enige rol `customer` het klantportaal, ieder ander de kantoor-app. Wie naast `engineer` ook een
+enige rol `customer` het klantportaal, ieder ander de kantoorapp. Wie naast `engineer` ook een
 kantoorrol heeft, werkt op kantoor.
 
-**De guard** is `handleGuard` in `hooks.server.ts`. Bij elke paginaopvraag van een ingelogde
+**De guard** is `handleGuard` in `hooks.server.ts`. Bij elk paginaverzoek van een ingelogde
 gebruiker vraagt hij `shellOf(roles).owns(routeId)`, en hij stuurt door naar de `home` van de
 shell als de pagina niet van die shell is. Wie niet is ingelogd, gaat naar de inlogpagina en daarna
 terug. `/wiki` is openbaar en blijft erbuiten.
@@ -95,10 +95,10 @@ De guard beslist alleen welke pagina je mag openen. Wat je mag lezen, beslist de
 keer: via de gate waarmee elke remote function is gemaakt (`forMembers`, `forEngineers`,
 `forCustomers`, …) en via het access registry. Een remote function is een functie op de server die
 een pagina direct aanroept, de gate de toegangscontrole die ervoor zit, en het access registry het
-register dat zegt wie welke gegevens mag lezen. Zo krijgt een klant die het opdrachtnummer van een
+register dat zegt wie welke gegevens mag lezen of wijzigen. Zo krijgt een klant die het opdrachtnummer van een
 andere klant raadt een 404, via welke pagina hij het ook vraagt.
 
-De demo-accounts volgen dezelfde verdeling: Jan is medewerker (kantoor), Lev monteur, Marieke
+De demoaccounts volgen dezelfde verdeling: Jan is medewerker (kantoor), Lev monteur, Marieke
 contactpersoon van een klant.
 
 - <SourceLink path="src/lib/auth/shells.ts" line={28}><code>shells</code> en <code>shellOf()</code></SourceLink>

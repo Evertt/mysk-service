@@ -12,7 +12,7 @@ summary: De bedrijven waarvoor het werk wordt gedaan, hun vestigingen, en hoe di
 </script>
 
 Een **klant** is een bedrijf dat apparatuur bezit en werk bestelt. Onder **Klanten** in de
-kantoor-app beheer je ze: een code (`CUST-0001`, genummerd door de app), een naam, een
+kantoorapp beheer je ze: een code (`CUST-0001`, genummerd door de app), een naam, een
 contactpersoon met e-mail en telefoon, een plaats en land, en een segment (grootzakelijk,
 middenmarkt of kleinbedrijf).
 
@@ -40,7 +40,7 @@ Een klant houdt altijd minstens één vestiging, want zijn apparaten moeten erge
 Lees een pijl als "heeft": een klant heeft vestigingen, apparaten en opdrachten. Een vestiging heeft
 locaties (plekken met een naam, zoals "Dock 03") en apparaten. Een apparaat staat op één vestiging,
 en kan op een van de locaties van die vestiging staan. Een opdracht is voor een klant, gaat over een
-paar apparaten van die klant (geen bij een opname of een nieuwe installatie), en kan een monteur
+paar apparaten van die klant (geen bij een Offerte opname of een nieuwe installatie), en kan een monteur
 hebben. De apparaten van de klant, de apparaten van de opdracht en de vestiging van het apparaat
 zijn altijd van dezelfde klant: de database weigert een mengsel.
 
@@ -49,8 +49,8 @@ zijn altijd van dezelfde klant: de database weigert een mengsel.
 De contactpersonen van een klant kunnen het klantportaal gebruiken. Op de pagina van de klant, onder
 **Portaaltoegang**, nodigt een eigenaar of beheerder een contactpersoon uit per e-mail, voor alle
 vestigingen van de klant of voor een paar ervan. De contactpersoon accepteert de uitnodiging, krijgt
-een account, en ziet vanaf dan alleen de opdrachten, apparaten en vestigingen van die klant. Wie de
-toegang intrekt, haalt hem eruit. Iedereen op kantoor ziet wie toegang heeft; alleen eigenaren en
+een account, en ziet vanaf dan alleen de opdrachten, apparaten en vestigingen van die klant. Als je de
+toegang intrekt, is de contactpersoon er niet meer bij. Iedereen op kantoor ziet wie toegang heeft; alleen eigenaren en
 beheerders kunnen dat wijzigen.
 
 <TryIt as="planner" />
@@ -68,7 +68,7 @@ verwijderen.
 **Vier tabellen.** `customer`, `customer_site` en (voor het portaal) `portal_contact` en
 `portal_contact_site`. Elke tabel heeft een `organizationId`, en verwijzingen ertussen zijn
 samengestelde foreign keys waar de tenant (de organisatie) in zit, zodat een rij niet naar een
-andere tenant kan wijzen. Waar een gegeven bij dezelfde klant moet horen (de vestiging van een
+andere tenant kan wijzen. Waar een record bij dezelfde klant moet horen (de vestiging van een
 apparaat, de apparaten van een opdracht, de vestigingen van een contactpersoon), zit ook
 `customer_id` in de sleutel. Het diagram hierboven is uit die sleutels getekend.
 
@@ -86,7 +86,7 @@ laat voor modules).
 **Portaalcontactpersonen** zijn leden met de rol `customer`, gekoppeld aan een `portal_contact`.
 Elke query van hen is beperkt tot de tenant, hun klant en hun vestigingen (`ofCustomer()`,
 `atSites()`, `customerOrders()`), en het access registry (het register dat zegt wie welke gegevens
-mag lezen) beslist de rest. Zie [wat elke rol in welke shell kan](/wiki/start/roles-and-shells).
+mag lezen of wijzigen) beslist de rest. Zie [wat elke rol in welke shell kan](/wiki/start/roles-and-shells).
 
 **Wat een vestiging toont**, hangt af van wie hem leest. Kantoor, en een monteur op de vestigingen
 van zijn opdrachten, zien de contactvoorkeuren en toegangsinstructies (de kolommen `onSite`); een

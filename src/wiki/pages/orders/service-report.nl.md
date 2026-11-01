@@ -40,7 +40,7 @@ werkbon om af te drukken.
 
 ## Wat er gepland is
 
-Het plan voor de pdf (hieronder gelinkt) is om de pdf te maken als een opdracht wordt afgerond,
+Het plan voor de pdf (met een link hieronder) is om de pdf te maken als een opdracht wordt afgerond,
 zodat de klant niets hoeft af te drukken: dezelfde werkbon als pdf maken, bewaren, naar de
 contactpersoon van de klant mailen, en in beide portalen tonen. Omdat de pdf vastlegt wat er
 getekend is, zou hij niet veranderen als de opdracht later wordt bewerkt. Over het plan is nog niet
@@ -59,7 +59,7 @@ kantoor en die van de klant komen uit dezelfde regels.
 **De pagina** is `detail/work-order.svelte`, verpakt in `PrintSheet` met de printstijlen van de
 pagina. Het is de enige plek waar de opmaak wordt bepaald. Kantoor komt er via
 `/checklists/work-orders/[number]`, en het klantportaal heeft een eigen route in dezelfde module.
-Beide zijn gelinkt vanaf de checklistkaart in een slot (een plek op een pagina waar een module iets
+Beide zijn te bereiken met een link op de checklistkaart in een slot (een plek op een pagina waar een module iets
 kan neerzetten) op de pagina van de opdracht. Op kantoor (`orders.detail.side`) staat de kaart er
 als de opdracht checklists heeft, ingevuld of niet. In het portaal (`client.order`) toont hij de
 afgeronde checklists, en krijgt hij de knop zodra de opdracht klaar is.

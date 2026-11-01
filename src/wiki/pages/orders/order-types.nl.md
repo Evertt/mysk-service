@@ -37,7 +37,7 @@ kiest, wordt de prioriteit van de opdracht.
 
 ## Eigen namen, en de types die je niet gebruikt
 
-De set types ligt vast: de regels van de app hangen ervan af (contractdekking, reactietijden,
+De lijst met types ligt vast: de regels van de app hangen ervan af (contractdekking, reactietijden,
 checklists), dus een bedrijf kan er geen toevoegen. Het kan wel twee dingen, onder
 **Instellingen → Opdrachttypes** (eigenaren en beheerders):
 
@@ -61,7 +61,7 @@ instellingenpagina zegt waarvoor elk type nodig is.
 **De types zijn een enum** in `src/lib/models.ts` (`orderTypes`), gedeeld door het schema, de seed
 en de UI. De wijzigingen van een tenant (een organisatie) zijn rijen in `order_type_setting`: het
 type, de namen per locale (JSON) en `hidden`. Een type waaraan niets is gewijzigd, heeft geen rij,
-en wie het terugzet naar standaard, verwijdert de rij.
+en als je het terugzet naar standaard, wordt de rij verwijderd.
 
 **De labels lezen de namen van de tenant.** `label("orderType", value)` vraagt `nameOrderTypes()`
 (`src/lib/orders/types.ts`) eerst om de naam van de tenant, en valt anders terug op het
@@ -75,7 +75,7 @@ verborgen zijn, plus het eigen type van de opdracht als dat sindsdien is verborg
 **Wat verborgen mag worden**, bepaalt `requiredOrderTypes(enabled)` in
 `src/lib/orders/server/types.ts`: die geeft storing, en elk type in de `orderTypes` van het manifest
 van een ingeschakelde module. `effectiveOrderTypes()` negeert de vlag `hidden` bij een type dat
-nodig is, ook als die werd gezet voordat de module aanging.
+nodig is, ook als die werd gezet voordat de module aan werd gezet.
 
 **Opslaan** is `saveOrderTypeSetting()` in hetzelfde bestand, een remote form (een formulier dat
 direct een functie op de server aanroept) alleen voor managers (`saveOrderType`).
