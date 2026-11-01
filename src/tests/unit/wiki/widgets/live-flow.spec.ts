@@ -3,7 +3,8 @@ import { join } from "node:path";
 
 import { describe, expect, test } from "vite-plus/test";
 
-import { codeParts, liveSteps } from "#wiki/widgets/live-flow/live-flow.ts";
+import { codeParts } from "#wiki/code-parts.ts";
+import { liveSteps } from "#wiki/widgets/live-flow/live-flow.ts";
 
 const root = join(import.meta.dirname, "../../../../..");
 
@@ -17,10 +18,22 @@ describe("the live-update flow", () => {
 	});
 
 	test("it names recordActivity() and the shell's feed", () => {
-		const text = liveSteps.map((step) => `${step.title} ${step.detail}`).join(" ");
+		const text = liveSteps.map((step) => `${step.title()} ${step.detail()}`).join(" ");
 		expect(text).toContain("recordActivity()");
 		expect(text).toContain("refreshOnRecordChange()");
 		expect(text).toMatch(/feed/);
+	});
+
+	test("every step's text is whole: its code in backticks, no placeholder left over", () => {
+		for (const step of liveSteps) {
+			for (const text of [step.title(), step.detail(), step.box()]) {
+				expect(text, step.id).not.toContain("undefined");
+				expect(text, step.id).not.toMatch(/[{}]/);
+			}
+		}
+		expect(liveSteps.find((step) => step.id === "log")?.detail()).toContain(
+			"`recordActivity(tx, entry)`",
+		);
 	});
 
 	test("the code in a step's text is what's between backticks", () => {

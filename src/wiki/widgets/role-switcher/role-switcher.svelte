@@ -8,8 +8,8 @@
 	import CheckIcon from "@lucide/svelte/icons/check";
 	import XIcon from "@lucide/svelte/icons/x";
 
+	import { demoRoleLabels } from "#routes/demo-roles.ts";
 	import TryIt from "#wiki/parts/try-it.svelte";
-	import { roleNames } from "#wiki/roles.ts";
 
 	import { roleCards, shellTitles } from "./roles.ts";
 </script>
@@ -25,10 +25,10 @@
 			>
 				<div class="grid gap-1">
 					<h3 id="role-{card.role}" class="text-base font-semibold first-letter:uppercase">
-						{roleNames[card.role]}
+						{demoRoleLabels[card.role]()}
 					</h3>
 					<p class="text-sm text-muted-foreground">
-						{shellTitles[card.shell]}, starting at
+						{m.wiki_roles_starts_at({ shell: shellTitles[card.shell]() })}
 						<code class="font-mono text-foreground">{card.home}</code>
 					</p>
 				</div>
@@ -36,13 +36,13 @@
 					{#each card.can as line (line)}
 						<li class="flex gap-2">
 							<CheckIcon class="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-							<span><span class="sr-only">Can: </span>{line}</span>
+							<span><span class="sr-only">{m.wiki_roles_can()}</span> {line()}</span>
 						</li>
 					{/each}
 					{#each card.cannot as line (line)}
 						<li class="flex gap-2 text-muted-foreground">
 							<XIcon class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-							<span><span class="sr-only">Cannot: </span>{line}</span>
+							<span><span class="sr-only">{m.wiki_roles_cannot()}</span> {line()}</span>
 						</li>
 					{/each}
 				</ul>

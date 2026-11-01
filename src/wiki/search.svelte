@@ -43,11 +43,11 @@
 	variant="outline"
 	size="sm"
 	class="w-9 justify-start px-0 text-muted-foreground sm:w-56 sm:px-3"
-	aria-label="Search the wiki"
+	aria-label={m.wiki_search()}
 	onclick={() => (open = true)}
 >
 	<SearchIcon class="mx-auto sm:mx-0" />
-	<span class="hidden sm:inline">Search the wiki…</span>
+	<span class="hidden sm:inline">{m.wiki_search_placeholder()}</span>
 	<kbd
 		class="pointer-events-none ml-auto hidden rounded border bg-muted px-1.5 font-mono text-[10px] font-medium sm:inline"
 	>
@@ -58,14 +58,18 @@
 <Command.Dialog
 	bind:open
 	shouldFilter={false}
-	title="Search the wiki"
-	description="Find a page by its title or one of its headings."
+	title={m.wiki_search()}
+	description={m.wiki_search_description()}
 >
-	<Command.Input bind:value={query} placeholder="Search the wiki…" aria-label="Search the wiki" />
+	<Command.Input
+		bind:value={query}
+		placeholder={m.wiki_search_placeholder()}
+		aria-label={m.wiki_search()}
+	/>
 	<Command.List>
 		{#if query.trim() && results.length === 0}
 			<p class="py-6 text-center text-sm text-muted-foreground">
-				No page matches “{query.trim()}”.
+				{m.wiki_search_none({ query: query.trim() })}
 			</p>
 		{/if}
 		{#each results as entry (entryHref(entry))}

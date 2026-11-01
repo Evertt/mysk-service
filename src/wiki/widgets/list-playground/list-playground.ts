@@ -2,32 +2,34 @@
  * The logic of `<ListPlayground>`: 25 fixture rows shaped like the orders list, and what a search,
  * a status filter and grouping by status make of them. The search is the lists' rule
  * (`searchWords()` from the list kit): each word of the search is in one of the searched columns,
- * in any case.
+ * in any case. The sites are message functions (the customers are names), read where they are
+ * shown and searched.
  */
 import { searchWords } from "#lib/components/data-table/search-words.ts";
 import { type OrderStatus, orderStatuses } from "#lib/models.ts";
+import { m } from "#lib/paraglide/messages.js";
 
 export interface PlaygroundRow {
 	id: number;
 	number: string;
 	customer: string;
-	site: string;
+	site: () => string;
 	status: OrderStatus;
 	/** A day, `yyyy-mm-dd`; none until the order is planned. */
 	scheduledFor: string | null;
 }
 
 const customers = [
-	["Harbour Café", "Quay 4"],
-	["Northgate Logistics", "Depot 2"],
-	["Pier 9 Cold Storage", "Hall A"],
-	["Southfield School", "Main building"],
-	["Valley Dairy", "Milking shed"],
-	["Riverside Garden Centre", "Greenhouse"],
-	["Beacon Hotel", "Kitchen"],
-	["Millstone Bakery", "Ovens"],
-	["Linden Care Home", "East wing"],
-	["Ironside Foundry", "Casting floor"],
+	["Harbour Café", m.wiki_list_site_quay_4],
+	["Northgate Logistics", m.wiki_list_site_depot_2],
+	["Pier 9 Cold Storage", m.wiki_list_site_hall_a],
+	["Southfield School", m.wiki_list_site_main_building],
+	["Valley Dairy", m.wiki_list_site_milking_shed],
+	["Riverside Garden Centre", m.wiki_list_site_greenhouse],
+	["Beacon Hotel", m.wiki_list_site_kitchen],
+	["Millstone Bakery", m.wiki_list_site_ovens],
+	["Linden Care Home", m.wiki_list_site_east_wing],
+	["Ironside Foundry", m.wiki_list_site_casting_floor],
 ] as const;
 
 const statuses: readonly OrderStatus[] = [
@@ -76,7 +78,7 @@ interface PlaygroundGroup {
 
 /** The rows a search keeps: each of its words is in one of the row's searched columns. */
 function matches(row: PlaygroundRow, words: readonly string[]) {
-	const text = `${row.number} ${row.customer} ${row.site}`.toLowerCase();
+	const text = `${row.number} ${row.customer} ${row.site()}`.toLowerCase();
 	return words.every((word) => text.includes(word.toLowerCase()));
 }
 

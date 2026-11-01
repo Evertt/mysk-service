@@ -36,7 +36,7 @@ describe("the list playground", () => {
 		const { groups } = playground(fixtureRows, { search: ` ${first}   ${second} ` });
 		expect(groups[0].rows.map((row) => row.id)).toContain(fixtureRows[0].id);
 		for (const row of groups[0].rows) {
-			const text = `${row.number} ${row.customer} ${row.site}`.toLowerCase();
+			const text = `${row.number} ${row.customer} ${row.site()}`.toLowerCase();
 			expect(text).toContain(first.toLowerCase());
 			expect(text).toContain(second.toLowerCase());
 		}

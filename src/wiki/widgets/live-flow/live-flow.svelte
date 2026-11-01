@@ -13,11 +13,13 @@
 	import PlayIcon from "@lucide/svelte/icons/play";
 	import { useInterval } from "runed";
 
+	import { formatNumber } from "#lib/i18n/format.ts";
 	import { cn } from "#lib/utils.ts";
 	import Diagram from "#wiki/parts/diagram.svelte";
 	import { githubUrl } from "#wiki/parts/github.ts";
+	import InlineCode from "#wiki/parts/inline-code.svelte";
 
-	import { codeParts, liveSteps } from "./live-flow.ts";
+	import { liveSteps } from "./live-flow.ts";
 
 	let { pace = 2000 }: { /** How long Play shows each step (ms). */ pace?: number } = $props();
 
@@ -50,15 +52,11 @@
 	const left = (index: number) => index * (box.width + box.gap);
 	const centre = (index: number) => left(index) + box.width / 2;
 	const divider = left(3) - box.gap / 2;
-	const short = (id: string) => id[0].toUpperCase() + id.slice(1);
 </script>
 
 <figure class="not-prose @container my-6 rounded-xl border bg-card p-3 text-card-foreground sm:p-4">
 	<div class="mx-auto w-full max-w-[30rem] [&>svg]:my-0">
-		<Diagram
-			viewBox="0 0 {width} {height}"
-			label="A change travels from the server, through the log and the shell's feed, to the page in the browser."
-		>
+		<Diagram viewBox="0 0 {width} {height}" label={m.wiki_live_diagram()}>
 			<line
 				x1={divider}
 				x2={divider}
@@ -69,10 +67,12 @@
 				stroke-dasharray="4 4"
 			/>
 			<text x={divider - 8} y="12" text-anchor="end" font-size="14" class="fill-muted-foreground">
-				server
+				{m.wiki_live_server()}
 			</text>
-			<text x={divider + 8} y="12" font-size="14" class="fill-muted-foreground">browser</text>
-			{#each liveSteps as { id }, index (id)}
+			<text x={divider + 8} y="12" font-size="14" class="fill-muted-foreground">
+				{m.wiki_live_browser()}
+			</text>
+			{#each liveSteps as { id, box: name }, index (id)}
 				{@const state = index < current ? "done" : index === current ? "current" : "next"}
 				{#if index > 0}
 					<path
@@ -115,7 +115,7 @@
 							state === "next" && "fill-muted-foreground",
 						)}
 					>
-						{short(id)}
+						{name()}
 					</text>
 				</g>
 			{/each}
@@ -129,19 +129,17 @@
 
 	<div class="mt-4 min-h-36" aria-live="polite">
 		<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-			Step {current + 1} of {liveSteps.length}
+			{m.wiki_live_step({
+				current: formatNumber(current + 1),
+				total: formatNumber(liveSteps.length),
+			})}
 		</p>
-		<p class="mt-1 font-semibold">{step.title}</p>
+		<p class="mt-1 font-semibold">{step.title()}</p>
 		<p class="mt-1 text-sm text-muted-foreground">
-			{#each codeParts(step.detail) as part, index (index)}
-				{#if part.code}
-					<code class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
-						>{part.text}</code
-					>
-				{:else}
-					{part.text}
-				{/if}
-			{/each}
+			<InlineCode
+				text={step.detail()}
+				class="rounded bg-muted px-1 py-0.5 font-mono text-xs text-foreground"
+			/>
 		</p>
 		<a
 			href={githubUrl(step.source)}
@@ -157,20 +155,20 @@
 	<div class="mt-3 flex flex-wrap items-center gap-2">
 		<Button variant="outline" size="sm" disabled={current === 0} onclick={() => go(current - 1)}>
 			<ArrowLeftIcon />
-			Back
+			{m.common_back()}
 		</Button>
 		<Button variant="outline" size="sm" disabled={current === last} onclick={() => go(current + 1)}>
-			Next
+			{m.wiki_live_next()}
 			<ArrowRightIcon />
 		</Button>
 		<!-- One button, so it keeps the focus as it turns from Play to Pause and back. -->
 		<Button size="sm" onclick={() => (player.isActive ? player.pause() : play())}>
 			{#if player.isActive}
 				<PauseIcon />
-				Pause
+				{m.simulation_pause()}
 			{:else}
 				<PlayIcon />
-				{current === last ? "Play again" : "Play"}
+				{current === last ? m.wiki_live_play_again() : m.wiki_live_play()}
 			{/if}
 		</Button>
 	</div>

@@ -30,17 +30,20 @@
 </script>
 
 <Sidebar.Provider>
-	<NavSidebar {groups} label="Wiki">
+	<NavSidebar {groups} label={m.common_wiki()}>
 		{#snippet header()}
 			<Sidebar.Menu>
 				<Sidebar.MenuItem>
-					<Sidebar.MenuButton size="lg" tooltipContent="Fieldworks wiki">
+					<Sidebar.MenuButton
+						size="lg"
+						tooltipContent={m.wiki_title({ name: m.common_app_name() })}
+					>
 						{#snippet child({ props })}
 							<a {...props} href="/wiki">
 								<BrandMark icon={BookOpenIcon} sidebar />
 								<span class="grid flex-1 text-left text-sm leading-tight">
-									<span class="truncate font-medium">Fieldworks</span>
-									<span class="truncate text-xs text-sidebar-foreground/70">Wiki</span>
+									<span class="truncate font-medium">{m.common_app_name()}</span>
+									<span class="truncate text-xs text-sidebar-foreground/70">{m.common_wiki()}</span>
 								</span>
 							</a>
 						{/snippet}
@@ -65,9 +68,15 @@
 			<div class="ml-auto flex shrink-0 items-center gap-1">
 				<!-- The app's home, loaded in full: the guard, which sees only full page loads, sends a
 					visitor who isn't signed in to the login page, and everyone else to their shell's home. -->
-				<Button href="/" data-sveltekit-reload variant="ghost" size="sm" aria-label="Open the app">
+				<Button
+					href="/"
+					data-sveltekit-reload
+					variant="ghost"
+					size="sm"
+					aria-label={m.wiki_open_app()}
+				>
 					<AppWindowIcon />
-					<span class="hidden sm:inline">Open the app</span>
+					<span class="hidden sm:inline">{m.wiki_open_app()}</span>
 				</Button>
 				<AppearanceSwitchers />
 			</div>

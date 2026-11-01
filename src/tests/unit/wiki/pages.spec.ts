@@ -224,7 +224,10 @@ describe("wikiNav", () => {
 			{ "./pages/start/a.md": loader, "./pages/orders/b.md": loader },
 		);
 		const groups = wikiNav(pages);
-		expect(groups.map((g) => g.label)).toEqual([sectionInfo.start.title, sectionInfo.orders.title]);
+		expect(groups.map((g) => g.label)).toEqual([
+			sectionInfo.start.title(),
+			sectionInfo.orders.title(),
+		]);
 		expect(groups.map((g) => g.items.map((i) => i.href))).toEqual([
 			["/wiki/start/a"],
 			["/wiki/orders/b"],

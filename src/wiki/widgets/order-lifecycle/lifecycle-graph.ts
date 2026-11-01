@@ -10,6 +10,7 @@ import {
 	orderTransitions,
 	type TransitionRule,
 } from "#lib/orders/index.ts";
+import { m } from "#lib/paraglide/messages.js";
 
 import { arrowHead, type Point, round } from "../arrow.ts";
 
@@ -48,13 +49,13 @@ export function edgesOf(status: OrderStatus, edges: LifecycleEdge[] = lifecycleE
 	};
 }
 
-/** Who makes a move, as the wiki says it. */
-export const actorLabels: Record<OrderActor, string> = {
-	office: "the office",
-	planner: "a planner",
-	acceptance: "a planner accepting a report",
-	engineer: "the engineer",
-	invoicing: "invoicing",
+/** Who makes a move, as the wiki says it: message functions, read where they are shown. */
+export const actorLabels: Record<OrderActor, () => string> = {
+	office: m.wiki_actor_office,
+	planner: m.wiki_actor_planner,
+	acceptance: m.wiki_actor_acceptance,
+	engineer: m.wiki_actor_engineer,
+	invoicing: m.wiki_actor_invoicing,
 };
 
 /**

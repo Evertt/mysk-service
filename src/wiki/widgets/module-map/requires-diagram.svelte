@@ -44,10 +44,7 @@
 </script>
 
 <div class="mx-auto w-full max-w-[24rem] [&>svg]:my-0">
-	<Diagram
-		viewBox="0 0 {width} {height}"
-		label="What requires what: a module is on only while every module it requires is on."
-	>
+	<Diagram viewBox="0 0 {width} {height}" label={m.wiki_modules_diagram()}>
 		{#each requires as { from, to } (`${from}-${to}`)}
 			{@const shape = requiresShape(positions.get(from)!, positions.get(to)!)}
 			{@const broken = states[to] !== "on"}

@@ -141,18 +141,24 @@ test("try it, signed in to the demo: nothing (the user menu's View as switches r
 	expect(container.querySelector("form")).toBeNull();
 });
 
-test("try it names the role in English, also where the app speaks Dutch", async () => {
+test("try it names the role by the demo roles' labels", async () => {
+	demo.enabled = true;
+	await render(TryIt, { as: "engineer" });
+	await expect.element(page.getByRole("button", { name: "Try it as the engineer" })).toBeVisible();
+	await render(TryIt, { as: "customer" });
+	await expect.element(page.getByRole("button", { name: "Try it as the customer" })).toBeVisible();
+});
+
+test("try it reads Dutch where the app does, with the demo roles' Dutch labels", async () => {
 	demo.enabled = true;
 	overwriteGetLocale(() => "nl");
 	try {
 		await render(TryIt, { as: "engineer" });
 		await expect
-			.element(page.getByRole("button", { name: "Try it as the field engineer" }))
+			.element(page.getByRole("button", { name: "Probeer het als monteur" }))
 			.toBeVisible();
 		await render(TryIt, { as: "customer" });
-		await expect
-			.element(page.getByRole("button", { name: "Try it as the customer contact" }))
-			.toBeVisible();
+		await expect.element(page.getByRole("button", { name: "Probeer het als klant" })).toBeVisible();
 	} finally {
 		overwriteGetLocale(englishByDefault);
 	}

@@ -11,6 +11,7 @@
 
 	import Callout from "#lib/components/callout.svelte";
 	import FilterChips from "#lib/components/filter-chips.svelte";
+	import InlineCode from "#wiki/parts/inline-code.svelte";
 
 	import TenancyDiagram from "./tenancy-diagram.svelte";
 	import { type FixtureOrder, fixtureOrders, runQuery } from "./tenancy.ts";
@@ -31,9 +32,9 @@
 <figure class="not-prose @container my-6 rounded-xl border bg-card p-3 text-card-foreground sm:p-4">
 	<div class="flex flex-col gap-3 @xl:flex-row @xl:flex-wrap @xl:items-end @xl:gap-x-6">
 		<div class="grid gap-1.5">
-			<span class="text-xs font-medium text-muted-foreground">Signed in to</span>
+			<span class="text-xs font-medium text-muted-foreground">{m.wiki_tenancy_signed_in()}</span>
 			<FilterChips
-				label="Signed in to"
+				label={m.wiki_tenancy_signed_in()}
 				options={[
 					{ label: "North", value: "North" },
 					{ label: "South", value: "South" },
@@ -45,58 +46,67 @@
 			/>
 		</div>
 		<div class="grid gap-1.5">
-			<Label for="{id}-order" class="text-xs text-muted-foreground">Reading</Label>
+			<Label for="{id}-order" class="text-xs text-muted-foreground"
+				>{m.wiki_tenancy_reading()}</Label
+			>
 			<NativeSelect.Root id="{id}-order" bind:value={asked} size="sm">
-				<NativeSelect.Option value="">every order</NativeSelect.Option>
+				<NativeSelect.Option value="">{m.wiki_tenancy_every_order()}</NativeSelect.Option>
 				{#each fixtureOrders as order (order.id)}
 					<NativeSelect.Option value={String(order.id)}>
-						the order with id {order.id} ({order.organization}'s)
+						{m.wiki_tenancy_order({ id: String(order.id), tenant: order.organization })}
 					</NativeSelect.Option>
 				{/each}
 			</NativeSelect.Root>
 		</div>
 		<div class="flex items-center gap-2 @xl:h-8">
 			<Switch id="{id}-scoped" bind:checked={scoped} />
-			<Label for="{id}-scoped">Scoped with <code class="font-mono">inTenant()</code></Label>
+			<Label for="{id}-scoped"><InlineCode text={m.wiki_tenancy_scoped()} /></Label>
 		</div>
 	</div>
 
 	<div class="mt-4 grid gap-4 @xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] @xl:items-center">
 		<pre
 			class="overflow-x-auto rounded-lg border bg-muted/50 p-3 font-mono text-xs leading-relaxed text-foreground"
-			aria-label="The query"><code>{answer.sql}</code></pre>
+			aria-label={m.wiki_tenancy_query()}><code>{answer.sql}</code></pre>
 		<TenancyDiagram {tenant} {rows} refusedId={"refused" in answer ? orderId : undefined} />
 	</div>
 
 	<div class="mt-4" aria-live="polite">
 		{#if "refused" in answer}
-			<Callout tone="success" icon={ShieldCheckIcon} title="404 Not found">
+			<Callout tone="success" icon={ShieldCheckIcon} title={m.wiki_tenancy_refused_title()}>
 				<p>
-					Order {orderId} is {owner}'s, so for {tenant} it doesn't exist:
-					<code class="font-mono">idInTenant()</code> found nothing, and the page answers as for an id
-					no one has.
+					<InlineCode
+						text={m.wiki_tenancy_refused({
+							id: String(orderId),
+							owner: owner ?? "",
+							tenant,
+						})}
+					/>
 				</p>
 			</Callout>
 		{:else}
 			{#if leaks}
-				<Callout tone="danger" icon={ShieldAlertIcon} title="A leak" class="mb-3">
+				<Callout
+					tone="danger"
+					icon={ShieldAlertIcon}
+					title={m.wiki_tenancy_leak_title()}
+					class="mb-3"
+				>
 					<p>
-						{tenant} reads {leaks === 1 ? "an order" : `${leaks} orders`} of another tenant's. Ids are
-						global; only the scope keeps a tenant to its own rows.
+						{m.wiki_tenancy_leak({ tenant, orders: m.common_count_orders({ count: leaks }) })}
 					</p>
 				</Callout>
 			{/if}
 			<Table.Root>
 				<Table.Caption class="mt-2 text-xs">
-					What {tenant} gets: {rows.length}
-					{rows.length === 1 ? "order" : "orders"}
+					{m.wiki_tenancy_gets({ tenant, orders: m.common_count_orders({ count: rows.length }) })}
 				</Table.Caption>
 				<Table.Header>
 					<Table.Row>
 						<Table.Head>id</Table.Head>
-						<Table.Head class="hidden @md:table-cell">Number</Table.Head>
-						<Table.Head>Customer</Table.Head>
-						<Table.Head>Tenant</Table.Head>
+						<Table.Head class="hidden @md:table-cell">{m.client_column_number()}</Table.Head>
+						<Table.Head>{m.orders_column_customer()}</Table.Head>
+						<Table.Head>{m.wiki_tenancy_column_tenant()}</Table.Head>
 					</Table.Row>
 				</Table.Header>
 				<Table.Body>

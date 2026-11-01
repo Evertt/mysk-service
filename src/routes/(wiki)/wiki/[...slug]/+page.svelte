@@ -17,7 +17,7 @@
 </script>
 
 <svelte:head>
-	<title>{data.text.title} · Fieldworks wiki</title>
+	<title>{data.text.title} · {m.wiki_title({ name: m.common_app_name() })}</title>
 </svelte:head>
 
 {#if data.untranslated}
