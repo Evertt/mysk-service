@@ -262,7 +262,9 @@ describe("the real pages", () => {
 		expect(pageBySlug("nope/nothing")).toBeUndefined();
 	});
 
-	test("one page loads by its slug, with its component", async () => {
+	// Loading the page compiles it and its widget (and the orders barrel behind it): fast alone, but
+	// past Vitest's 5 s on a cold cache beside the whole suite.
+	test("one page loads by its slug, with its component", { timeout: 20_000 }, async () => {
 		const page = pageBySlug("orders/lifecycle");
 		expect(page?.text.en.headings).toContainEqual({ text: "Try the moves", id: "try-the-moves" });
 		expect((await page!.text.en.load()).default).toBeTypeOf("function");
