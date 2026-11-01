@@ -43,9 +43,6 @@ const notYetTranslated = [
 	"across/notifications",
 	"across/offline",
 	"across/themes",
-	"domains/customers",
-	"domains/engineers",
-	"domains/equipment",
 	"internals/cloudflare",
 	"internals/extension-points",
 	"internals/gates",
@@ -64,13 +61,6 @@ const notYetTranslated = [
 	"modules/partner-programme",
 	"modules/parts-shop",
 	"modules/schedule",
-	"orders/awaiting-acceptance",
-	"orders/lifecycle",
-	"orders/order-types",
-	"orders/service-report",
-	"orders/work-record",
-	"start/roles-and-shells",
-	"start/try-the-demo",
 ];
 
 const pagesDir = join(import.meta.dirname, "../../../wiki/pages");
