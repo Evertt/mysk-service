@@ -17,7 +17,8 @@ draait eerst. Weigert hij, dan draait de eigen code van de functie nooit.
 
 Daarom gedraagt dezelfde URL zich anders voor verschillende mensen. Een planner kan de
 opdrachtenlijst laden; een monteur die dezelfde functie aanroept, krijgt een 403 en gebruikt in
-plaats daarvan de functies van het monteursportaal; iemand die niet is ingelogd, krijgt een 401. Een klantcontact komt bij de functies van het klantportaal en de paar die elke rol mag aanroepen.
+plaats daarvan de functies van het monteursportaal; iemand die niet is ingelogd, krijgt een 401. Een
+klantcontact komt bij de functies van het klantportaal en de paar die elke rol mag aanroepen.
 
 Kies wie er aanroept en zie wat elke gate doet:
 
@@ -38,7 +39,7 @@ export const getOrder = forMembers.query(v.string(), async (number) => {
 
 Een functie die zijn gate vergeet, valt niet te schrijven, en dat is precies de bedoeling.
 
-- **`gated()`** wikkelt de handler in. Het draait de gate, en start dan de handler als het publiek
+- **`gated()`** omhult de handler. Het draait de gate, en start dan de handler als het publiek
   dat de gate toeliet (`asAdmitted()`), dus een lid dat zowel beheerder als monteur is, is de
   monteur in de functies van het monteursportaal. SvelteKit heeft het argument dan al gevalideerd.
   Een `Refused` die de handler gooit (`#lib/server/refused.ts`), wordt bij een formulier
@@ -60,7 +61,7 @@ Een functie die zijn gate vergeet, valt niet te schrijven, en dat is precies de 
   bereikt, is aan de [access registry](/wiki/internals/permissions), en elke query blijft beperkt
   tot de [tenant](/wiki/internals/tenancy).
 
-In de browser verbergt een pagina de knoppen voor managers (eigenaar en beheerder) met
-`await canManage()`, maar dat verbergt alleen: de gate `forManagers` weigert iedereen anders nog steeds.
+In de browser verbergt een pagina de bediening voor managers met `await canManage()`, maar dat
+verbergt alleen: de gate `forManagers` weigert iedereen anders nog steeds.
 
 <DocsPointer doc="docs/agents/tenancy.md" />

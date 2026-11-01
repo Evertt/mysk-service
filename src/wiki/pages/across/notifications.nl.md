@@ -19,22 +19,22 @@ dagen, per dag, elk met een icoon voor de categorie en de zin uit het log.
 
 - **Melding van een klant.** Een klant heeft in zijn portaal een storing gemeld en die wacht op
   acceptatie.
-- **Waarschuwing.** Het systeem heeft zelf een opdracht gemaakt: een onderhoudsplan werd
-  opeisbaar, de conditie van een apparaat werd kritiek, een dockdeur bleef te lang open. Een
-  deuralarm van de module Docks telt ook mee.
+- **Waarschuwing.** Het systeem heeft zelf een opdracht gemaakt: een onderhoudsplan kwam aan de
+  beurt, de conditie van een apparaat werd kritiek, een dockdeur bleef te lang open. Een deuralarm
+  van de module Docks telt ook mee.
 - **Voortgang in het veld.** Een monteur is aan een opdracht begonnen of heeft hem afgerond, of een
   checklist werd afgerond met een punt dat is afgekeurd.
 - **Jouw gegevens.** Iemand wijzigde een record dat jij hebt aangemaakt of als laatste hebt
   gewijzigd.
 
 **In het monteursportaal** meldt de bel een monteur wanneer een opdracht aan hem wordt toegewezen,
-van hem wordt afgehaald, op een ander moment wordt ingepland, of wordt geannuleerd terwijl hij van
-hem is.
+van hem wordt afgehaald, op een ander moment wordt ingepland, of wordt geannuleerd terwijl de
+opdracht nog van hem is.
 
 Je eigen wijzigingen laten nooit je eigen bel gaan. Open je het paneel, dan telt wat het toont als
 gezien, tot en met de nieuwste logregel erin, dus iets wat binnenkomt terwijl het openstaat, blijft
 ongelezen. Een tabblad dat al openstaat, werkt de stip zelf bij
-([live pagina's](/wiki/across/live-updates)).
+([live updates](/wiki/across/live-updates)).
 
 <TryIt as="planner" />
 
@@ -65,7 +65,7 @@ logregels, omdat er niets werd opgeslagen toen die gebeurden.
 Een regel heeft alleen de logregel nodig om te beslissen. Heeft hij meer nodig dan erin staat, dan
 voeg je dat aan de logregel toe (`changes`), en sla je geen eigen record op. Regels schrijven hun
 constanten erin met `literal()` en lezen de tabellen van de tenant alleen via gecorreleerde
-subqueries, zodat een statement met alle regels weinig waarden bindt. Dat telt, omdat een statement
-op Cloudflare hoogstens 100 waarden bindt.
+subqueries, zodat een statement met alle regels weinig waarden bindt. Dat is van belang, omdat een
+statement op Cloudflare hoogstens 100 waarden bindt.
 
 <DocsPointer doc="docs/agents/modules.md" section="Extension points" />

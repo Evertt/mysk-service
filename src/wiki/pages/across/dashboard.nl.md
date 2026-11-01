@@ -35,7 +35,7 @@ Servicecontracten, Facturatie, Onderhoudsplannen en het Partnerprogramma voegen 
 Een tenant (een organisatie in de app) zonder een module ziet de tegel ervan nooit.
 
 De cijfers zijn live: als iemand in de organisatie iets wijzigt, vragen de tegels, de grafieken en
-de recente activiteit opnieuw op ([live pagina's](/wiki/across/live-updates)). Monteurs en klanten
+de recente activiteit opnieuw op ([live updates](/wiki/across/live-updates)). Monteurs en klanten
 hebben hun eigen startpagina en zien deze nooit.
 
 <TryIt as="planner" />
@@ -43,7 +43,7 @@ hebben hun eigen startpagina en zien deze nooit.
 <HowItWorks />
 
 De pagina vraagt zijn gegevens op in twee queries, `getDashboard` (de tegels en de komende
-opdrachten) en `getCharts`, allebei achter de gate `forMembers` (alleen kantoor), en elke select
+opdrachten) en `getCharts`, allebei achter de gate `forMembers`, en elke select
 erin is beperkt met `inTenant()`. De omzet is geen som in SQL: elke afgeronde opdracht wordt geprijsd
 met `priceOrders()`, omdat de modules prijzen aanpassen. Zie <SourceLink path="src/routes/(app)/(dashboard)/dashboard.remote.ts" line={25}>getDashboard</SourceLink>.
 
@@ -51,9 +51,9 @@ Modules komen op de pagina via twee slots (plekken waar een module iets in kan z
 `StatTile`) en <SourceLink path="src/lib/dashboard/extensions.ts" line={17}>dashboard.cards</SourceLink>.
 Een module zet een component in `slots/dashboard.stats/` of `slots/dashboard.cards/`, en dat laadt
 zijn eigen gegevens met de remote functions van de module. Elke bijdrage staat in een eigen error
-boundary, dus een kaart die faalt toont een melding en de rest van de pagina gaat gewoon door. Een
-kaart die ruimte nodig heeft, zet `data-wide` op zijn root en beslaat twee kolommen waar er twee
-zijn.
+boundary, dus een kaart die een fout geeft, toont een melding en de rest van de pagina gaat gewoon
+door. Een kaart die ruimte nodig heeft, zet `data-wide` op zijn root en beslaat twee kolommen waar
+er twee zijn.
 
 De tegels gebruiken `<StatTile>` en zijn trend (`compare()` in `stat-trend.ts`), die beslist of een
 verandering goed nieuws is, slecht nieuws of geen van beide: meer gemaakte opdrachten is geen van

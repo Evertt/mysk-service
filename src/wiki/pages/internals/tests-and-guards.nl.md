@@ -9,7 +9,7 @@ summary: Vier soorten tests, plus guard specs die de handgeschreven manier weige
 	import SourceLink from "#wiki/parts/source-link.svelte";
 </script>
 
-Fieldworks is zo gebouwd dat de verkeerde manier om iets te doen een test laat falen, met een
+Fieldworks is zo gebouwd dat de verkeerde manier om iets te doen een test laat mislukken, met een
 melding die de goede manier noemt. Zo blijft een codebase waar veel mensen, en veel agents,
 tegelijk aan werken één codebase.
 
@@ -20,11 +20,12 @@ Wat dat betekent buiten de code:
   onderdeel zonder die test is niet af.
 - **Wat een rol mag, wordt getest, niet aangenomen.** Wat een monteur mag doen en wat een
   klantcontact ziet, zijn specs, dus een refactor kan het niet stilletjes verruimen.
-- **De echte app wordt bestuurd in een echte browser.** Een schone run bestuurt kantoor, het
+- **De echte app wordt bestuurd in een echte browser.** Een volledige run bestuurt kantoor, het
   monteursportaal en het klantportaal op een productiebuild.
-- **Deze wiki wordt ook getest.** Elke module, elk domein, elke shell (de omgeving van kantoor, monteurs of klanten) en elk thema moet door een
-  pagina gedekt zijn, en elke link naar een bestand of een andere pagina moet bestaan. Een module
-  die zonder pagina wordt toegevoegd, laat de build falen.
+- **Deze wiki wordt ook getest.** Elke module, elk domein, elke shell (de omgeving van kantoor,
+  monteurs of klanten) en elk thema moet door een pagina gedekt zijn, en elke link naar een bestand
+  of een andere pagina moet bestaan. Een module die zonder pagina wordt toegevoegd, laat de build
+  mislukken.
 
 <HowItWorks />
 
@@ -79,15 +80,15 @@ overtreders. Een paar ervan:
 Een guard met uitzonderingen heeft een allow-list die zegt _waarom_ elke uitzondering blijft.
 
 De wiki heeft twee guards van zichzelf: `coverage.spec.ts` (elke module-id, elk kerndomein, elke
-shell en elk thema staat in de `covers` van een pagina, dus een nieuwe faalt tot een pagina hem dekt) en `links.spec.ts` (elk pad van een `SourceLink`, elke docs pointer en
-elke link `/wiki/…` noemt iets wat bestaat). Zie <SourceLink path="src/tests/unit/wiki/coverage.spec.ts">coverage.spec.ts</SourceLink> en <SourceLink path="src/tests/unit/wiki/links.spec.ts">links.spec.ts</SourceLink>.
+shell en elk thema staat in de `covers` van een pagina, dus een nieuwe mislukt tot een pagina hem
+dekt) en `links.spec.ts` (elk pad van een `SourceLink`, elke docs pointer en elke link `/wiki/…` noemt iets wat bestaat). Zie <SourceLink path="src/tests/unit/wiki/coverage.spec.ts">coverage.spec.ts</SourceLink> en <SourceLink path="src/tests/unit/wiki/links.spec.ts">links.spec.ts</SourceLink>.
 
-## Ze draaien
+## Tests uitvoeren
 
-`pnpm test` draait alles en draait elk bestand dat faalt één keer opnieuw, vers; een bestand dat
-twee keer faalt, is een echte fout. `pnpm test:unit` draait elke spec zonder e2e, en dat is het
-commando na het mergen van een branch, omdat een guard spec faalt op code die een andere branch
-meebracht. Draai voor je commit `pnpm run check`, `pnpm knip` en de tests van wat je hebt
+`pnpm test` draait alles en draait elk bestand dat mislukt één keer helemaal opnieuw; een bestand
+dat twee keer mislukt, is een echte fout. `pnpm test:unit` draait elke spec zonder e2e, en dat is
+het commando na het mergen van een branch, omdat een guard spec mislukt op code die een andere
+branch meebracht. Draai voor je commit `pnpm run check`, `pnpm knip` en de tests van wat je hebt
 gewijzigd.
 
 <DocsPointer doc="docs/agents/tests.md" />

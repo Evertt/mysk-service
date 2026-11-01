@@ -17,7 +17,7 @@ staging-omgeving.
 
 Wat dat betekent voor wie de app gebruikt:
 
-- **Het is snel.** Er zit geen netwerk tussen de code en de gegevens, dus een query is een
+- **Het is snel.** Er zit geen netwerkstap tussen de code en de gegevens, dus een query is een
   functieaanroep en geen heen-en-weer naar een databaseserver.
 - **Dagelijkse taken draaien vanzelf.** Om 04:00 UTC start een cron trigger (een getimede opdracht)
   de dagelijkse taken, zoals de onderhoudsplannen die opdrachten worden. Elke 15 minuten laat een
@@ -71,7 +71,7 @@ Wat daaruit volgt:
   neemt er 32.766), en `db` dwingt hem overal af, ook in tests. Lijsten van waarden gaan via
   `inList()` en `insertRows()`.
 - **Live wijzigingen staan in het geheugen.** `announceChange()` bereikt de live queries van het
-  object, dat elk request bedient, dus [live pagina's](/wiki/across/live-updates) werken zonder
+  object, dat elk request bedient, dus [live updates](/wiki/across/live-updates) werken zonder
   broker. Een Node-omgeving met meer instanties zou er een nodig hebben.
 - **Code die draait terwijl een module laadt, mag niet aan `db` komen.** Op Cloudflare is er buiten
   een request geen.

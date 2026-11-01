@@ -63,7 +63,7 @@ en een index per subject en per parent. Zodra de transactie is gecommit, meldt d
 wijziging aan de live queries (`announceChange()`), en dat is het verhaal van de volgende pagina.
 
 Het log wordt gelezen via de [access registry](/wiki/internals/permissions): de pagina Activiteit
-en de feeds tonen alleen regels over records die de kijker mag lezen, en laten de types weg van een
+en de feeds tonen alleen regels over records die de gebruiker mag lezen, en laten de types weg van een
 module die de tenant heeft uitgezet. Die regels blijven in de database; zet de module weer aan en
 ze komen terug.
 

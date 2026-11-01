@@ -18,23 +18,23 @@ bedrijf heeft (opdrachten, klanten, apparatuur, monteurs), doet hier zelf niets 
 materialen nergens.
 
 Dat werkt via **extension points**: plekken waar de kern zegt "alles wat aanstaat, mag hier iets
-toevoegen". Een module plugt in, nooit andersom. De punten zijn er in een paar soorten:
+toevoegen". Een module steekt zich erin, nooit andersom. De punten zijn er in een paar soorten:
 
-| Soort               | De module voegt toe…                                        | Voorbeeld                                              |
-| ------------------- | ----------------------------------------------------------- | ------------------------------------------------------ |
-| **Slot**            | een kaart of tegel op een pagina van de kern                | `orders.detail.side`, `dashboard.cards`                |
-| **Formulierslot**   | velden in een formulier van de kern, mee gevalideerd        | `orders.form` van het opdrachtformulier                |
-| **Bulkactie**       | een actie op de geselecteerde rijen van een lijst           | `orders.list.bulk`                                     |
-| **Lijstkolom**      | een kolom in een lijst die de server bouwt                  | `equipment.list.columns`                               |
-| **Collector**       | zijn deel van een antwoord, zoals een kostenpost            | `orders.costs`, `notifications.rules`, `access.rules`  |
-| **Event**           | een reactie nadat een wijziging is gecommit                 | `orders.committed`                                     |
-| **Vote**            | een weigering, als hij iets moet tegenhouden                | `customers.removingSite`                               |
-| **Save hook**       | zijn deel van het opslaan, in de transactie van de eigenaar | `orders.saving`, `orders.units`                        |
-| **Dagelijkse taak** | werk om één keer per dag te doen, als het systeem           | de plannen van Onderhoudsplannen die opdrachten worden |
+| Soort               | De module voegt toe…                                        | Voorbeeld                                             |
+| ------------------- | ----------------------------------------------------------- | ----------------------------------------------------- |
+| **Slot**            | een kaart of tegel op een pagina van de kern                | `orders.detail.side`, `dashboard.cards`               |
+| **Formulierslot**   | velden in een formulier van de kern, mee gevalideerd        | `orders.form` van het opdrachtformulier               |
+| **Bulkactie**       | een actie op de geselecteerde rijen van een lijst           | `orders.list.bulk`                                    |
+| **Lijstkolom**      | een kolom in een serverlijst                                | `equipment.list.columns`                              |
+| **Collector**       | zijn deel van een antwoord, zoals een kostenpost            | `orders.costs`, `notifications.rules`, `access.rules` |
+| **Event**           | een reactie nadat een wijziging is gecommit                 | `orders.committed`                                    |
+| **Vote**            | een weigering, als hij iets moet tegenhouden                | `customers.removingSite`                              |
+| **Save hook**       | zijn deel van het opslaan, in de transactie van de eigenaar | `orders.saving`, `orders.units`                       |
+| **Dagelijkse taak** | werk om één keer per dag te doen, als het systeem           | de onderhoudsplannen die opdrachten worden            |
 
 Een pagina die toont wat een slot bijdraagt, zet elk deel in een eigen boundary (een vangnet voor
-fouten). Faalt de kaart van een module, dan toont die kaart een melding en gaat de rest van de
-pagina gewoon door.
+fouten). Geeft de kaart van een module een fout, dan toont die kaart een melding en gaat de rest van
+de pagina gewoon door.
 
 <Diagram viewBox="0 0 440 170" label="Een pagina van de kern biedt een slot aan. Modules die aanstaan, zoals Materialen en Onderdelenbeheer, dragen eraan bij. Een module die uitstaat niet.">
 	<g font-size="12" text-anchor="middle">
@@ -60,9 +60,9 @@ importeert er nooit uit. De tabellen van een module verwijzen naar tabellen van 
 andersom. Omdat de module de pagina's van de kern niet importeert en de kern de module niet, moet
 de verbinding op een andere manier gevonden worden: een generator.
 
-**De generator** (`scripts/modules.ts`, gedraaid door `pnpm generate` en als Vite laadt) leest de
+**De generator** (`scripts/modules.ts`, gestart door `pnpm generate` en als Vite laadt) leest de
 modulemappen en schrijft de registers die de kern wel importeert: de manifesten, de hooks, de
-bijdragen aan de slots, de formulierdelen en de lijstkolommen (`*.gen.ts`, in gitignore). Een
+bijdragen aan de slots, de formulierdelen en de lijstkolommen (`*.gen.ts`, door git genegeerd). Een
 module draagt bij door een bestand te zetten in een map met de naam van het punt:
 `slots/orders.detail.side/…`, `columns/equipment.list.columns.ts`, `form-parts/orders.form.ts`. Zie <SourceLink path="src/lib/extensions/define.ts" line={167}>defineSlot</SourceLink> voor hoe een punt
 wordt gedeclareerd.

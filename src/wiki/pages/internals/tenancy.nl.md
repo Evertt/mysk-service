@@ -15,11 +15,11 @@ Fieldworks bedient veel bedrijven vanuit één app en één database. Elk bedrij
 opdrachten, facturen en alles wat je verder ziet. Iemand bij het ene bedrijf kan de records van een
 ander bedrijf niet zien, niet wijzigen en zelfs niet te weten komen: niet via een lijst, een
 zoekopdracht, een link die iemand hem stuurt, of een id dat hij in de adresbalk typt. Een record
-van een ander antwoordt precies zoals een record dat niet bestaat: met een 404.
+van een ander reageert precies als een record dat niet bestaat: met een 404.
 
 Twee demo-organisaties laten het zien. Ingelogd bij North zie je nooit de opdrachten van South. En
 iemand kan bij meer dan één organisatie horen (een boekhouder, bijvoorbeeld) en wisselt dan tussen
-ze; wat hij ziet, wisselt mee.
+ze; wat iemand ziet, wisselt mee.
 
 **Optionele modules** worden ook per organisatie aangezet. Zet Facturatie uit voor een tenant, en
 de pagina's van de module, zijn remote functions (functies op de server die een pagina direct
@@ -27,7 +27,7 @@ aanroept) en zijn regels in het log worden voor die tenant niet gevonden.
 
 ## Probeer het
 
-De simulator hieronder is één tabel `order` die twee tenants delen. Draai een query als North of
+De simulator hieronder is één tabel `order` die twee tenants delen. Voer een query uit als North of
 South, met de scope van de tenant of zonder, voor alle opdrachten of voor één op zijn id. Kies de
 opdracht van South terwijl je bij North bent ingelogd, en zet de scope uit: dat is het lek dat de
 scope van elke query voorkomt.
@@ -64,7 +64,7 @@ invoegt, en transacties gaan om de beurt, dus gelijktijdig aanmaken kan niet het
 kiezen. Opdrachten worden alleen gemaakt via `createOrders(tx, drafts)` en veranderen alleen van
 status via `transitionOrder()`.
 
-**Rollen binnen een tenant** beperken verder. Een buitendienstmonteur bereikt de opdrachten die aan
+**Rollen binnen een tenant** beperken verder. Een monteur bereikt de opdrachten die aan
 hem zijn toegewezen, een klantcontact de records van de eigen klant op de vestigingen die hij ziet;
 hun helpers (`engineerOrders()`, `customerOrders()`) staan in `src/lib/server/auth/`, en de
 [access registry](/wiki/internals/permissions) gebruikt ze opnieuw als zijn regels.

@@ -21,8 +21,8 @@ korte onderbrekingen van de verbinding heen. Zonder verbinding werken kan er nie
   veranderd, dan werkt de pagina zich een moment later bij. Tijdens het controleren staat er een
   wolkje met een draaiende pijl in de kopbalk (na een korte wachttijd, zodat een snelle controle
   niet knippert).
-- **Hang je met de muis boven een link, dan warmt zijn pagina op.** Tegen de tijd dat je klikt, zijn de gegevens van die
-  pagina vaak al vers.
+- **Hang je met de muis boven een link, dan warmt zijn pagina op.** Tegen de tijd dat je klikt, zijn
+  de gegevens van die pagina vaak al vers.
 - **De bestanden van de app komen uit de cache van de browser**, dus bij herladen wacht je niet op
   het JavaScript van de app.
 - **Je eigen wijzigingen gaan voor.** Nadat je iets hebt opgeslagen, stopt de worker met oudere

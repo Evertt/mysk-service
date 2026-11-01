@@ -32,9 +32,9 @@ dat moment.
 
 Wat er wel en niet wordt opgenomen:
 
-- **Het neemt de pagina op, niet het scherm.** Wat je ziet, wordt opnieuw opgebouwd uit de opbouw
-  van de pagina, je klikken, je scrollen en wat je typt. Niets buiten het browsertabblad wordt
-  vastgelegd.
+- **Het neemt de pagina op, niet het scherm.** Wat je ziet, wordt opnieuw samengesteld uit de
+  structuur van de pagina, je klikken, je scrollen en wat je typt. Niets buiten het browsertabblad
+  wordt vastgelegd.
 - **Wachtwoordvelden worden afgeschermd**, en elk element met `data-private` blijft weg. Andere
   velden worden opgenomen zoals je ze typt, dus typ niets wat je de developers niet zou laten zien.
 - **Requests worden vastgelegd met naam, status, duur en grootte**, nooit met wat ze verstuurden
@@ -48,12 +48,12 @@ Wat er wel en niet wordt opgenomen:
 	<g font-size="12" text-anchor="middle">
 		<rect x="4" y="40" width="110" height="60" rx="8" fill="none" stroke="var(--border)" stroke-width="1.5" />
 		<text x="59" y="66" fill="var(--foreground)">Recorder</text>
-		<text x="59" y="84" fill="var(--muted-foreground)">rrweb, gezipt</text>
+		<text x="59" y="84" fill="var(--muted-foreground)">rrweb + gzip</text>
 		<rect x="152" y="40" width="136" height="60" rx="8" fill="none" stroke="var(--primary)" stroke-width="1.5" />
 		<text x="220" y="66" fill="var(--foreground)">POST /bug-reports</text>
 		<text x="220" y="84" fill="var(--muted-foreground)">opslag, rij, mail</text>
 		<rect x="326" y="40" width="110" height="60" rx="8" fill="none" stroke="var(--border)" stroke-width="1.5" />
-		<text x="381" y="66" fill="var(--foreground)">Terugkijken</text>
+		<text x="381" y="66" fill="var(--foreground)">Terugkijkpagina</text>
 		<text x="381" y="84" fill="var(--muted-foreground)">voor developers</text>
 		<path d="M 116 70 H 150 M 290 70 H 324" stroke="var(--muted-foreground)" stroke-width="1.5" fill="none" />
 		<path d="M 145 65 l 6 5 l -6 5 M 319 65 l 6 5 l -6 5" stroke="var(--muted-foreground)" stroke-width="1.5" fill="none" />
@@ -61,17 +61,18 @@ Wat er wel en niet wordt opgenomen:
 </Diagram>
 
 - **Opnemen.** De recorder laadt rrweb bij de eerste opname (het zit niet in de bundle van de app),
-  met de console-plugin voor fouten en waarschuwingen, en wikkelt `fetch` in om de aanroepen van
+  met de console-plugin voor fouten en waarschuwingen, en omhult `fetch` om de aanroepen van
   remote functions (functies op de server die de pagina direct aanroept) vast te leggen. Eén
   recorder per tabblad, buiten elk component, zodat een opname doorloopt als je zonder herladen naar
-  een andere pagina gaat, ook van kantoor naar het monteursportaal. Zijn fases (`idle`, `recording`, `stopping`,
-  `sending`) en de stappen ertussen vormen een kleine state machine. Zie <SourceLink path="src/lib/bug-reports/recorder.svelte.ts" line={71} symbol="record">de opties van rrweb</SourceLink>
+  een andere pagina gaat, ook van kantoor naar het monteursportaal. Zijn fases (`idle`,
+  `recording`, `stopping`, `sending`) en de stappen ertussen vormen een kleine state machine. Zie <SourceLink path="src/lib/bug-reports/recorder.svelte.ts" line={71} symbol="record">de opties van rrweb</SourceLink>
   en <SourceLink path="src/lib/bug-reports/machine.ts" line={11} symbol="Phase">de fases</SourceLink>.
-- **Grenzen.** `maxRecordingMs` is tien minuten, `maxReportBytes` 20 MB gezipt. De server weigert
-  een request zonder `Content-Length` (411) en een boven de grens (413) voordat hij één byte leest.
+- **Grenzen.** `maxRecordingMs` is tien minuten, `maxReportBytes` 20 MB met gzip ingepakt. De server
+  weigert een request zonder `Content-Length` (411) en een boven de grens (413) voordat hij één byte
+  leest.
 - **Het endpoint** is `POST /bug-reports`, een gewoon endpoint en geen remote form, omdat de
   recorder vanuit een script verstuurt en het endpoint eerst de lengte kan controleren. Het laat een
-  kantoorlid of een buitendienstmonteur toe, geen klantcontact, en bewaart de melding onder de eigen
+  kantoormedewerker of een monteur toe, geen klantcontact, en bewaart de melding onder de eigen
   tenant en gebruiker van de melder, wat de body ook zegt. Zie <SourceLink path="src/lib/server/bug-reports/upload.ts" line={64}>receiveBugReport</SourceLink>.
 - **Opslag.** Eerst de opname, dan de rij in `bug_report`, dan de mail, buiten elke transactie. Op
   Cloudflare staan de opnames in een R2-bucket (`BUG_REPORTS`); elders in een map. Beide zitten
