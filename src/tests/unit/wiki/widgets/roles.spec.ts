@@ -32,7 +32,7 @@ describe("the role switcher's cards", () => {
 		for (const card of roleCards) {
 			expect(card.can.length, card.role).toBeGreaterThan(2);
 			expect(
-				card.can.every((line) => line.trim() !== ""),
+				card.can.every((line) => line().trim() !== ""),
 				card.role,
 			).toBe(true);
 		}

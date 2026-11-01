@@ -52,10 +52,7 @@
 </script>
 
 <div class="mx-auto w-full max-w-[24rem] [&>svg]:my-0">
-	<Diagram
-		viewBox="0 0 {width} {height}"
-		label="The order table both tenants share, and the rows {tenant}'s query reads of it."
-	>
+	<Diagram viewBox="0 0 {width} {height}" label={m.wiki_tenancy_diagram({ tenant })}>
 		{#each tenants as organization, index (organization)}
 			<text
 				x="0"

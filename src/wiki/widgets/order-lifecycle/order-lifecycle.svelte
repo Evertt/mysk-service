@@ -11,6 +11,7 @@
 	import type { OrderActor } from "#lib/orders/index.ts";
 	import { cn } from "#lib/utils.ts";
 	import Diagram from "#wiki/parts/diagram.svelte";
+	import InlineCode from "#wiki/parts/inline-code.svelte";
 
 	import {
 		actorLabels,
@@ -87,15 +88,17 @@
 					<span class={cn("mt-2 w-4 shrink-0 border-t-2", tones[edge.by].line)}></span>
 					<span>
 						<code class="rounded bg-muted px-1 py-0.5 font-mono text-xs">{edge.verb}</code>
-						{towards === "to" ? "to" : "from"}
+						{towards === "to" ? m.wiki_lifecycle_to() : m.wiki_lifecycle_from()}
 						<span class="font-medium">{label("orderStatus", edge[towards])}</span>,
-						<span class="text-muted-foreground">by {actorLabels[edge.by]}</span>
+						<span class="text-muted-foreground"
+							>{m.wiki_lifecycle_by({ actor: actorLabels[edge.by]() })}</span
+						>
 					</span>
 				</li>
 			{/each}
 		</ul>
 	{:else}
-		<p class="mt-1.5 text-sm text-muted-foreground">Nothing.</p>
+		<p class="mt-1.5 text-sm text-muted-foreground">{m.wiki_lifecycle_nothing()}</p>
 	{/if}
 {/snippet}
 
@@ -103,10 +106,7 @@
 	<div class="grid gap-4 @xl:grid-cols-[minmax(0,1fr)_15rem]">
 		<!-- Only as tall as the drawing (not the row), so the statuses placed in percent sit on it. -->
 		<div class="relative mx-auto w-full max-w-[26rem] self-start [&>svg]:my-0">
-			<Diagram
-				viewBox="0 0 {width} {height}"
-				label="The order lifecycle: its statuses, and the moves between them coloured by who makes them."
-			>
+			<Diagram viewBox="0 0 {width} {height}" label={m.wiki_lifecycle_diagram()}>
 				{#each drawn as { edge, role: edgeRole, shape } (`${edge.verb}-${edge.from}-${edge.to}`)}
 					<g
 						data-verb={edge.verb}
@@ -175,27 +175,25 @@
 							>{chosen}</code
 						>
 					</p>
-					{@render moveList("Leaves by", moves.out, "to")}
-					{@render moveList("Arrives by", moves.in, "from")}
+					{@render moveList(m.wiki_lifecycle_leaves(), moves.out, "to")}
+					{@render moveList(m.wiki_lifecycle_arrives(), moves.in, "from")}
 				{:else}
 					<p class="text-muted-foreground">
-						Choose a status to see how an order leaves it, how it gets there, and who makes each
-						move.
+						{m.wiki_lifecycle_choose()}
 					</p>
 				{/if}
 			</div>
-			<ul aria-label="Who makes a move" class="grid gap-1.5 text-xs text-muted-foreground">
+			<ul aria-label={m.wiki_lifecycle_who()} class="grid gap-1.5 text-xs text-muted-foreground">
 				{#each Object.entries(actorLabels) as [actor, who] (actor)}
 					<li class="flex items-center gap-2">
 						<span class={cn("w-5 shrink-0 border-t-2", tones[actor as OrderActor].line)}></span>
-						<span class="first-letter:uppercase">{who}</span>
+						<span class="first-letter:uppercase">{who()}</span>
 					</li>
 				{/each}
 			</ul>
 		</div>
 	</div>
 	<figcaption class="mt-3 text-xs text-muted-foreground">
-		Drawn from <code class="font-mono">orderTransitions</code>; the office's moves by hand show
-		around the status you choose.
+		<InlineCode text={m.wiki_lifecycle_caption()} />
 	</figcaption>
 </figure>

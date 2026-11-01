@@ -58,11 +58,11 @@
 				<p class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
 					<code class="font-mono">{module.id}</code>
 					{#if state === "on"}
-						<Badge variant="success">On</Badge>
+						<Badge variant="success">{m.common_on()}</Badge>
 					{:else if state === "off"}
-						<Badge variant="neutral">Off</Badge>
+						<Badge variant="neutral">{m.common_off()}</Badge>
 					{:else}
-						<Badge variant="warning">Off: needs {names(missing)}</Badge>
+						<Badge variant="warning">{m.wiki_modules_needs({ names: names(missing) })}</Badge>
 					{/if}
 				</p>
 			</div>
@@ -79,13 +79,13 @@
 			<dl class="mt-2 grid gap-0.5 text-xs">
 				{#if node.requires.length}
 					<div class="flex gap-1.5">
-						<dt class="text-muted-foreground">Requires</dt>
+						<dt class="text-muted-foreground">{m.wiki_modules_requires()}</dt>
 						<dd class="font-medium">{names(node.requires)}</dd>
 					</div>
 				{/if}
 				{#if node.enhances.length}
 					<div class="flex gap-1.5">
-						<dt class="text-muted-foreground">Adds to</dt>
+						<dt class="text-muted-foreground">{m.wiki_modules_adds_to()}</dt>
 						<dd>{names(node.enhances)}</dd>
 					</div>
 				{/if}

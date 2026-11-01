@@ -81,7 +81,7 @@ describe("the gate table", () => {
 	});
 
 	test("each gate says whom it admits, and none is listed twice", () => {
-		expect(gates.every((gate) => gate.admits.length > 20)).toBe(true);
+		expect(gates.every((gate) => gate.admits().length > 20)).toBe(true);
 		expect(new Set(gates.map((gate) => gate.name)).size).toBe(gates.length);
 	});
 });

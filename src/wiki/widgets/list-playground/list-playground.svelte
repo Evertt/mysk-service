@@ -10,7 +10,7 @@
 	import SearchIcon from "@lucide/svelte/icons/search";
 
 	import EnumBadge from "#lib/components/enum-badge.svelte";
-	import { formatDate } from "#lib/i18n/format.ts";
+	import { formatDate, formatNumber } from "#lib/i18n/format.ts";
 	import { orderStatuses } from "#lib/models.ts";
 	import { orderStatusDisplay } from "#lib/orders/index.ts";
 
@@ -34,16 +34,22 @@
 <figure class="not-prose @container my-6 rounded-xl border bg-card p-3 text-card-foreground sm:p-4">
 	<div class="flex flex-col gap-3 @xl:flex-row @xl:flex-wrap @xl:items-end @xl:gap-x-4">
 		<div class="grid gap-1.5 @xl:w-56">
-			<Label for="{id}-search" class="text-xs text-muted-foreground">Search</Label>
+			<Label for="{id}-search" class="text-xs text-muted-foreground">{m.wiki_list_search()}</Label>
 			<InputGroup.Root>
 				<InputGroup.Addon><SearchIcon /></InputGroup.Addon>
-				<InputGroup.Input id="{id}-search" placeholder="Try “harbour 1”…" bind:value={search} />
+				<InputGroup.Input
+					id="{id}-search"
+					placeholder={m.wiki_list_search_placeholder()}
+					bind:value={search}
+				/>
 			</InputGroup.Root>
 		</div>
 		<div class="grid gap-1.5">
-			<Label for="{id}-status" class="text-xs text-muted-foreground">Status</Label>
+			<Label for="{id}-status" class="text-xs text-muted-foreground"
+				>{m.orders_column_status()}</Label
+			>
 			<NativeSelect.Root id="{id}-status" bind:value={status} size="sm">
-				<NativeSelect.Option value="">All statuses</NativeSelect.Option>
+				<NativeSelect.Option value="">{m.wiki_list_all_statuses()}</NativeSelect.Option>
 				{#each orderStatuses as option (option)}
 					<NativeSelect.Option value={option}
 						>{orderStatusDisplay[option].label}</NativeSelect.Option
@@ -53,7 +59,7 @@
 		</div>
 		<div class="flex items-center gap-2 @xl:h-8">
 			<Switch id="{id}-group" bind:checked={grouped} />
-			<Label for="{id}-group">Group by status</Label>
+			<Label for="{id}-group">{m.wiki_list_group()}</Label>
 		</div>
 		{#if filtered}
 			<Button
@@ -64,7 +70,7 @@
 					status = "";
 				}}
 			>
-				Reset
+				{m.common_table_reset()}
 			</Button>
 		{/if}
 	</div>
@@ -72,19 +78,24 @@
 	<div class="mt-4" aria-live="polite">
 		<Table.Root>
 			<Table.Caption class="mt-2 text-xs">
-				{shown.total} of {fixtureRows.length} orders
-				<span class="text-muted-foreground">(simplified: no URL state, no saved views)</span>
+				{m.wiki_list_count({
+					shown: formatNumber(shown.total),
+					total: formatNumber(fixtureRows.length),
+				})}
+				<span class="text-muted-foreground">{m.wiki_list_simplified()}</span>
 			</Table.Caption>
 			<Table.Header>
 				<Table.Row>
-					<Table.Head>Order</Table.Head>
-					<Table.Head>Customer</Table.Head>
-					<Table.Head class="hidden @md:table-cell">Site</Table.Head>
+					<Table.Head>{m.orders_column_order()}</Table.Head>
+					<Table.Head>{m.orders_column_customer()}</Table.Head>
+					<Table.Head class="hidden @md:table-cell">{m.equipment_column_site()}</Table.Head>
 					<!-- Grouped, the group's header says it: as the real table leaves the grouped column out. -->
 					{#if !grouped}
-						<Table.Head>Status</Table.Head>
+						<Table.Head>{m.orders_column_status()}</Table.Head>
 					{/if}
-					<Table.Head class="hidden text-right @md:table-cell">Scheduled</Table.Head>
+					<Table.Head class="hidden text-right @md:table-cell"
+						>{m.orders_column_scheduled()}</Table.Head
+					>
 				</Table.Row>
 			</Table.Header>
 			<Table.Body>
@@ -103,7 +114,8 @@
 						<Table.Row data-row={row.id}>
 							<Table.Cell class="font-mono text-xs">{row.number}</Table.Cell>
 							<Table.Cell>{row.customer}</Table.Cell>
-							<Table.Cell class="hidden text-muted-foreground @md:table-cell">{row.site}</Table.Cell
+							<Table.Cell class="hidden text-muted-foreground @md:table-cell"
+								>{row.site()}</Table.Cell
 							>
 							{#if !group.status}
 								<Table.Cell>
@@ -115,13 +127,15 @@
 							</Table.Cell>
 						</Table.Row>
 					{/each}
-				{:else}
+				{/each}
+				<!-- Not grouped, the one group is there without rows, so the empty row is the total's. -->
+				{#if shown.total === 0}
 					<Table.Row>
 						<Table.Cell colspan={5} class="py-8 text-center text-muted-foreground">
-							No orders match.
+							{m.wiki_list_no_match()}
 						</Table.Cell>
 					</Table.Row>
-				{/each}
+				{/if}
 			</Table.Body>
 		</Table.Root>
 	</div>

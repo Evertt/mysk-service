@@ -9,7 +9,11 @@
  * of its own. It names each gate's check as the app does (`requireMember`), and never imports or
  * calls one: the guard that keeps `requireEngineer` to the auth files lets this file name it
  * (`engineer-scope.spec.ts`).
+ *
+ * Every text is a message function, read where it is shown (`gate-table.svelte`).
  */
+import { m } from "#lib/paraglide/messages.js";
+
 type GateName =
 	| "forMembers"
 	| "forManagers"
@@ -22,12 +26,12 @@ type GateName =
 
 /** Who may be calling, for the table's picker. */
 export const callers = [
-	{ id: "admin", label: "Owner or admin" },
-	{ id: "planner", label: "Planner (a member)" },
-	{ id: "engineer", label: "Field engineer" },
-	{ id: "customer", label: "Customer's contact" },
-	{ id: "bare", label: "Signed in, no organization" },
-	{ id: "anonymous", label: "Signed out" },
+	{ id: "admin", label: m.wiki_gate_caller_admin },
+	{ id: "planner", label: m.wiki_gate_caller_planner },
+	{ id: "engineer", label: m.wiki_gate_caller_engineer },
+	{ id: "customer", label: m.wiki_gate_caller_customer },
+	{ id: "bare", label: m.wiki_gate_caller_bare },
+	{ id: "anonymous", label: m.wiki_gate_caller_anonymous },
 ] as const;
 
 export type CallerId = (typeof callers)[number]["id"];
@@ -38,9 +42,9 @@ const members = ["admin", "planner", "engineer", "customer"] as const;
 export const gates: readonly {
 	name: GateName;
 	/** Whom it admits, in a sentence. */
-	admits: string;
+	admits: () => string;
 	/** What it is used for. */
-	forWhat: string;
+	forWhat: () => string;
 	/** The check it runs before the handler, by its name in the app; `null` for none. */
 	check:
 		| "requireMember"
@@ -56,57 +60,57 @@ export const gates: readonly {
 }[] = [
 	{
 		name: "forMembers",
-		admits: "A signed-in member of the organization who isn't a field engineer: the office.",
-		forWhat: "Almost everything.",
+		admits: m.wiki_gate_members_admits,
+		forWhat: m.wiki_gate_members_for,
 		check: "requireMember",
 		reaches: ["admin", "planner"],
 	},
 	{
 		name: "forManagers",
-		admits: "An owner or admin of the organization.",
-		forWhat: "The organization's settings.",
+		admits: m.wiki_gate_managers_admits,
+		forWhat: m.wiki_gate_managers_for,
 		check: "requireManager",
 		reaches: ["admin"],
 	},
 	{
 		name: "forEngineers",
-		admits: "A user linked to an engineer record.",
-		forWhat: "The engineer portal.",
+		admits: m.wiki_gate_engineers_admits,
+		forWhat: m.wiki_gate_engineers_for,
 		check: "requireEngineer",
 		reaches: ["engineer"],
 	},
 	{
 		name: "forCustomers",
-		admits: "A customer's contact, linked to one of the organization's customers.",
-		forWhat: "The customer portal; handlers scope every query to that customer and its sites.",
+		admits: m.wiki_gate_customers_admits,
+		forWhat: m.wiki_gate_customers_for,
 		check: "requireCustomer",
 		reaches: ["customer"],
 	},
 	{
 		name: "forAnyRole",
-		admits: "Any member of the organization, field engineers and customers' contacts too.",
-		forWhat: "What every shell needs, such as the app shell's tenant.",
+		admits: m.wiki_gate_any_role_admits,
+		forWhat: m.wiki_gate_any_role_for,
 		check: "requireTenant",
 		reaches: members,
 	},
 	{
 		name: "forUsers",
-		admits: "Anyone signed in, with or without an organization.",
-		forWhat: "Functions that touch no tenant data.",
+		admits: m.wiki_gate_users_admits,
+		forWhat: m.wiki_gate_users_for,
 		check: "requireUser",
 		reaches: [...members, "bare"],
 	},
 	{
 		name: "forDevelopers",
-		admits: "A signed-in user whose email is in DEVELOPER_EMAILS, across tenants.",
-		forWhat: "The bug reports' pages. A 404 for everyone else.",
+		admits: m.wiki_gate_developers_admits,
+		forWhat: m.wiki_gate_developers_for,
 		check: "requireDeveloper",
 		reaches: [],
 	},
 	{
 		name: "forAnyone",
-		admits: "Everyone, signed in or not.",
-		forWhat: "What is public on purpose: signing in, the theme, an invitation's link.",
+		admits: m.wiki_gate_anyone_admits,
+		forWhat: m.wiki_gate_anyone_for,
 		check: null,
 		reaches: everyone,
 	},

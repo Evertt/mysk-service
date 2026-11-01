@@ -22,7 +22,7 @@
 				{label}
 				<code class="font-mono text-xs font-normal text-muted-foreground">{name}</code>
 				{#if name === DEFAULT_THEME}
-					<Badge variant="neutral">Default</Badge>
+					<Badge variant="neutral">{m.wiki_themes_default()}</Badge>
 				{/if}
 			</h3>
 			<div class="grid gap-3 @2xl:grid-cols-2">

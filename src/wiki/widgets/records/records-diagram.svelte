@@ -10,14 +10,14 @@
 
 	const id = $props.id();
 
-	/** A record, drawn as a box: where its top left is, and its name. */
+	/** A record, drawn as a box: where its top left is, and its name (the app's own labels). */
 	const boxes = [
-		{ name: "Customer", x: 150, y: 10, accent: true },
-		{ name: "Site", x: 10, y: 100 },
-		{ name: "Order", x: 290, y: 100 },
-		{ name: "Unit", x: 150, y: 190 },
-		{ name: "Location", x: 10, y: 280 },
-		{ name: "Engineer", x: 290, y: 280 },
+		{ name: m.orders_column_customer, x: 150, y: 10, accent: true },
+		{ name: m.equipment_column_site, x: 10, y: 100 },
+		{ name: m.orders_column_order, x: 290, y: 100 },
+		{ name: m.equipment_column_unit, x: 150, y: 190 },
+		{ name: m.equipment_column_location, x: 10, y: 280 },
+		{ name: m.engineers_column_engineer, x: 290, y: 280 },
 	];
 
 	const width = 100;
@@ -25,35 +25,38 @@
 
 	/** An arrow from an owner to what belongs to it, as a path, with its label and where it sits. */
 	const arrows = [
-		{ d: "M150 28 H60 V100", label: "sites", x: 105, y: 21, anchor: "middle" },
-		{ d: "M250 28 H340 V100", label: "orders", x: 295, y: 21, anchor: "middle" },
-		{ d: "M200 46 V190", label: "units", x: 207, y: 120, anchor: "start" },
-		{ d: "M60 136 V280", label: "locations", x: 67, y: 215, anchor: "start" },
-		{ d: "M110 118 H130 V208 H150", label: "at a site", x: 124, y: 250, anchor: "end" },
+		{ d: "M150 28 H60 V100", label: m.wiki_records_sites, x: 105, y: 21, anchor: "middle" },
+		{ d: "M250 28 H340 V100", label: m.wiki_records_orders, x: 295, y: 21, anchor: "middle" },
+		{ d: "M200 46 V190", label: m.wiki_records_units, x: 207, y: 120, anchor: "start" },
+		{ d: "M60 136 V280", label: m.wiki_records_locations, x: 67, y: 215, anchor: "start" },
+		{
+			d: "M110 118 H130 V208 H150",
+			label: m.wiki_records_at_a_site,
+			x: 68,
+			y: 250,
+			anchor: "start",
+		},
 		{
 			d: "M110 298 H200 V226",
-			label: "optional",
+			label: m.wiki_records_optional,
 			x: 155,
 			y: 291,
 			anchor: "middle",
 			optional: true,
 		},
-		{ d: "M250 208 H270 V118 H290", label: "about", x: 266, y: 168, anchor: "end" },
+		{ d: "M250 208 H270 V118 H290", label: m.wiki_records_about, x: 266, y: 168, anchor: "end" },
 		{
 			d: "M340 280 V136",
-			label: "assigned",
+			label: m.wiki_records_assigned,
 			x: 333,
-			y: 215,
+			y: 245,
 			anchor: "end",
 			optional: true,
 		},
 	];
 </script>
 
-<Diagram
-	viewBox="0 0 400 330"
-	label="Records: a customer has sites, units and orders; a site has locations and units; a unit may be at a location; orders are about units; an engineer is assigned to orders."
->
+<Diagram viewBox="0 0 400 330" label={m.wiki_records_diagram()}>
 	<defs>
 		<marker
 			id="{id}-head"
@@ -78,11 +81,11 @@
 			marker-end="url(#{id}-head)"
 		/>
 		<text x={arrow.x} y={arrow.y} text-anchor={arrow.anchor} fill="var(--muted-foreground)">
-			{arrow.label}
+			{arrow.label()}
 		</text>
 	{/each}
 
-	{#each boxes as box (box.name)}
+	{#each boxes as box (box.x + "-" + box.y)}
 		<rect
 			x={box.x}
 			y={box.y}
@@ -100,7 +103,7 @@
 			font-weight="600"
 			fill="var(--foreground)"
 		>
-			{box.name}
+			{box.name()}
 		</text>
 	{/each}
 </Diagram>
