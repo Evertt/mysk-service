@@ -268,10 +268,11 @@ A hand-rolled `setTimeout` debounce or observer is refused (`src/tests/unit/rune
 - **Its Dutch twin** is `<page>.nl.md` beside it, the same page in Dutch (docs/plans/wiki-dutch.md).
   Its front-matter is only `title` and `summary`; the rest is the page's. It is built like its
   page: the same components in the same order with the same `path`, `doc`, `section`, `line`,
-  `symbol` and `as`, the same imports, as many `##` headings and links to the same wiki pages
-  (`twins.spec.ts`, which also fails on a page without its twin). Write it per
+  `symbol` and `as`, the same imports, as many `##` headings, links to the same wiki pages and the
+  same inline code and code blocks, and its prose is a translation, not the page copied
+  (`twins.spec.ts`). Write it per
   `docs/agents/i18n.md`, "Dutch". A page without its twin shows in English with a note, which is
-  how a new page appears until its twin is written.
+  how it appears while you write it, locally: CI's twins spec fails a page without its twin.
 - **Short strings** (the shell, the parts, the search, the widgets) are Paraglide messages:
   reuse the app's own first (`label()` for enum values, the manifests' module names, `common_*`),
   and add what's new to `messages/{en,nl}/wiki.json` (`wiki_*`). Code in a message goes between

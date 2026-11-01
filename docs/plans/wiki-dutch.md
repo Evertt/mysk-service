@@ -22,7 +22,7 @@ app's languages, instead of English only. Built: every page has its twin.
   wiki's own English role names.
 - **English is the fallback** for a page without its twin (while one is being written): its
   content is marked `lang="en"`. A guard keeps that from shipping.
-- **Deleting Dutch** is deleting the `.nl.md` files and the `nl/wiki.json` messages.
+- **Deleting Dutch** is possible, and stays small: see "Deleting Dutch" below.
 
 ## Guards
 
@@ -36,8 +36,49 @@ app's languages, instead of English only. Built: every page has its twin.
     It started with an allow-list of the pages whose twins weren't written yet; with every twin
     written, the list is gone. It also fails on a twin with no prose, and checks a `DocsPointer`'s
     `section`.
+  - A twin is a translation: more than half of its prose lines (code, tags, link targets and
+    addresses left out) can't also stand in the English page, so a page copied to `.nl.md` fails.
+  - A twin keeps its page's code: the same inline code spans and the same code blocks, as
+    multisets (a Dutch sentence may order them differently), as `messages.spec.ts` does for the
+    messages. A module's or a flag's id the page doesn't set in code font is plain text in the
+    twin.
 - The link guard (`links.spec.ts`) and the line-drift check already read every `.md`, twins too.
 - `messages.spec.ts` keeps `wiki.json` complete in both languages.
+
+## Deleting Dutch
+
+The twins and the short strings come out separately, and some of the Dutch stays because it is the
+app's, not the wiki's.
+
+1. **The twins.** Delete the `.nl.md` files, `src/tests/unit/wiki/twins.spec.ts` (it refuses a
+   page without its twin) and the Dutch tests: `dutch.svelte.spec.ts`, the Dutch case in
+   `parts.svelte.spec.ts`, the twin and `nl` cases in `pages.spec.ts` and `search.spec.ts`,
+   `src/tests/unit/routes/(wiki)/wiki/page.svelte.spec.ts` and the Dutch tests in
+   `src/tests/e2e/wiki.test.ts` (`inDutch`). The registry's twin side (`twinMeta`, `fileOf`,
+   `text.nl`) then has nothing to read; remove it with its tests, or leave it unused.
+2. **The not-translated note.** Without twins, a Dutch visitor reads every page in English, so the
+   note (`untranslated` in the route's `+page.ts`, the callout in its `+page.svelte`, and
+   `wiki_not_translated`) would sit on every page: remove it. Keep `lang="en"` on the article, as
+   the pages are English and the app around them is Dutch.
+3. **The short strings.** `messages/nl/wiki.json` can't just be deleted. Paraglide's file list in
+   `project.inlang/settings.json` names a section once for all languages (`{locale}`), and
+   `src/tests/unit/lib/i18n/messages.spec.ts` wants every registered file in every language, so
+   a missing `nl/wiki.json` fails that spec and leaves the sidebar, search and widget texts without
+   a Dutch version. To end Dutch there, replace the values in `nl/wiki.json` with the English
+   ones (the specs pass as they are); to remove the wiki's messages altogether, unregister
+   `wiki.json` from `settings.json`, delete both files, and take `src/tests/unit/wiki/messages.spec.ts`
+   with them.
+
+What remains in Dutch for a Dutch visitor: the words the wiki reuses from the app, not its own:
+order statuses and other enum values (`label()`), the modules' names and descriptions, the demo
+roles, `common_*`, and the app shell around the wiki. A wiki that is English only is therefore
+English with those words in Dutch, unless the app's `nl` goes too.
+
+Moving `wiki.json` (say to `src/wiki/messages/{locale}/wiki.json`) takes: its entry in
+`project.inlang/settings.json`; the path regex in `src/tests/unit/lib/i18n/messages.spec.ts`,
+which accepts only `messages/` at the root and `src/modules/<id>/messages/`, and the settings
+check beside it; and the path in `src/tests/unit/wiki/messages.spec.ts`
+(`../../../../messages/${locale}/wiki.json`).
 
 ## Dutch copy
 

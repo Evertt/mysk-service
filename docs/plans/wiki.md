@@ -26,9 +26,9 @@ wherever a concept is clearer seen or tried than read.
   wiki code reads the database or a tenant, or calls a remote function of its own. (Not
   prerendered: a prerendered page can't show the visitor's theme without a flash, see "Decisions
   after the spike".)
-- **English only.** Pages are prose, not Paraglide messages; the wiki is exempt from the Paraglide
-  rule, with the reason in the guard's allow-list. Dutch was out of scope then; it came later, a
-  Dutch twin per page and the short strings as messages: see [wiki-dutch.md](wiki-dutch.md).
+- **English only, at first.** Pages are prose, not Paraglide messages. Dutch was out of scope
+  then; it came later, a Dutch twin per page and the short strings as messages: see
+  [wiki-dutch.md](wiki-dutch.md).
 - **Widgets import the real data, never a copy.** The lifecycle diagram reads `orderTransitions`,
   the module map the manifests, the theme gallery `src/lib/themes`. When the code changes, the
   wiki changes with it. Real components are embedded only where they're pure (badges, the table
