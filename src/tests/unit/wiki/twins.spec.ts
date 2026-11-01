@@ -35,23 +35,9 @@ import {
  * take its page off the list (a listed page with a twin fails).
  */
 const notYetTranslated = [
-	"across/activity-log",
-	"across/bug-reporter",
-	"across/dashboard",
-	"across/lists",
-	"across/live-updates",
-	"across/notifications",
-	"across/offline",
-	"across/themes",
 	"domains/customers",
 	"domains/engineers",
 	"domains/equipment",
-	"internals/cloudflare",
-	"internals/extension-points",
-	"internals/gates",
-	"internals/permissions",
-	"internals/tenancy",
-	"internals/tests-and-guards",
 	"orders/awaiting-acceptance",
 	"orders/lifecycle",
 	"orders/order-types",
