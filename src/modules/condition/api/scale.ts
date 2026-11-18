@@ -7,8 +7,7 @@
 import { REJECTED_POINT_GRADE } from "../model.ts";
 import { defectScore } from "../nen2767.ts";
 
-export { scoreColours, scoreLabel, scoreText } from "../display.ts";
-export { type ConditionScore, isConditionScore } from "../nen2767.ts";
+export { scoreText } from "../display.ts";
 
 /**
  * The score a checklist's points give a unit or component when the office fills it in (its rejected

@@ -41,7 +41,7 @@ const photos = () =>
  * A defect the office records: what's wrong, the element it's on (empty for the unit itself), its
  * grade and photos. Its score isn't sent: the server works it out.
  */
-export const defectSchema = v.object({
+const defectSchema = v.object({
 	componentId: v.optional(optionalId(), ""),
 	description: v.pipe(
 		text(m.condition_defect_description_required),

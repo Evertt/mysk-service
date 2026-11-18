@@ -168,7 +168,7 @@ export const elementsOf = (equipmentId: number) =>
 		.orderBy(asc(component.position), asc(component.id));
 
 /** A defect the office records, with the photos taken of it. */
-export interface OfficeDefect extends DefectGrade {
+interface OfficeDefect extends DefectGrade {
 	componentId: number | null;
 	description: string;
 	photos: readonly File[];

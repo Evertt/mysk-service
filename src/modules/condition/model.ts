@@ -39,9 +39,6 @@ export const needsAttention = ["critical", "attention"] as const satisfies UnitS
 export const conditionSources = ["checklist", "office"] as const;
 export type ConditionSource = (typeof conditionSources)[number];
 
-/** A condition score's range: NEN 2767's scale. */
-export const scoreLimits = { min: BEST_SCORE, max: WORST_SCORE } as const;
-
 /** The most an advice may have. */
 export const ADVICE_MAX = 500;
 
