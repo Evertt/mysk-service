@@ -11,6 +11,7 @@ export { default as OrderTypesCard } from "./type-settings/order-types-card.svel
 export { default as CostItem } from "./ui/cost-item.svelte";
 export { default as NotesList } from "./ui/notes-list.svelte";
 export { default as OrderLink } from "./ui/order-link.svelte";
+export { default as OrderPhotos } from "./ui/order-photos.svelte";
 export { default as OrderTags } from "./ui/order-tags.svelte";
 export { default as SignOff } from "./ui/sign-off.svelte";
 export { default as TypeLabel } from "./ui/type-label.svelte";

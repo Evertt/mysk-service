@@ -136,6 +136,15 @@ export const reportUrgencies = [
 	"urgent",
 ] as const satisfies readonly OrderPriority[];
 
+/**
+ * What kind of fault a customer reports in the portal ("Wat is er aan de hand?"), kept with the
+ * report (`order_request.fault`) for the planner who reads it. Optional: `other` is for a fault the
+ * chips don't name, none for a report that skipped them.
+ * @labels reportFault
+ */
+export const reportFaults = ["door_wont_close", "damage", "noise", "other"] as const;
+export type ReportFault = (typeof reportFaults)[number];
+
 /** @labels orderPriority */
 export const orderPriorities = ["low", "normal", "high", "urgent"] as const;
 export type OrderPriority = (typeof orderPriorities)[number];

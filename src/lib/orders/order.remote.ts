@@ -30,6 +30,7 @@ import { orderCommitted, tagOrders } from "./server/hooks.ts";
 import { beginOrderChange } from "./server/lifecycle.ts";
 import { orderByNumber } from "./server/lookup.ts";
 import { removeOrder } from "./server/order-changes.ts";
+import { photosOf } from "./server/photos.ts";
 import { STANDARD_HOURLY_RATE, priceOrders } from "./server/pricing.ts";
 import { tenantOrderTypes } from "./server/types.ts";
 import { onAnyUnit, setOrderUnits, unitIdsOf } from "./server/units.ts";
@@ -58,7 +59,7 @@ export const getOrder = forMembers.query.batch(v.string(), async (numbers) => {
 		hourlyRate: one.engineer?.hourlyRate,
 	}));
 	const decider = alias(user, "decider");
-	const [prices, tags, requests] = await Promise.all([
+	const [prices, tags, requests, photos] = await Promise.all([
 		priceOrders(facts, { items: true }),
 		tagOrders(facts),
 		// Reported in the customer portal: by whom, and what a planner decided.
@@ -70,6 +71,7 @@ export const getOrder = forMembers.query.batch(v.string(), async (numbers) => {
 						decidedAt: orderRequest.decidedAt,
 						decidedBy: decider.name,
 						rejectionReason: orderRequest.rejectionReason,
+						fault: orderRequest.fault,
 					})
 					.from(orderRequest)
 					.leftJoin(decider, eq(orderRequest.decidedBy, decider.id))
@@ -83,10 +85,16 @@ export const getOrder = forMembers.query.batch(v.string(), async (numbers) => {
 						),
 					)
 			: [],
+		photosOf(found.map((one) => one.id)),
 	]);
 	const notFound = (number: string) => m.orders_not_found({ number });
 	const find = byKey(found, (one) => one.number, notFound);
-	const requestOf = new Map(requests.map(({ orderId, ...request }) => [orderId, request]));
+	const requestOf = new Map(
+		requests.map(({ orderId, ...request }) => [
+			orderId,
+			{ ...request, photos: photos.get(orderId) ?? [] },
+		]),
+	);
 
 	return (number: string) => {
 		const one = find(number);
@@ -102,7 +110,10 @@ export const getOrder = forMembers.query.batch(v.string(), async (numbers) => {
 			totals: { ...prices[i], laborRate: one.engineer?.hourlyRate ?? STANDARD_HOURLY_RATE },
 			/** From the tenant's modules, e.g. a response time about to be missed. */
 			tags: tags[i],
-			/** If a customer reported it in the portal: who, and the planner's decision. */
+			/**
+			 * If a customer reported it in the portal: who, the kind of fault and their photos, and the
+			 * planner's decision.
+			 */
 			request: requestOf.get(one.id) ?? null,
 		};
 	};

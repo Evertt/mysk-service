@@ -24,7 +24,9 @@
 
 	import { clientStatus, clientStatusDisplay } from "../../client-status.ts";
 	import { getPortalOrder } from "../../client.remote.ts";
+	import { portalPriority } from "../../urgency.ts";
 	import type { PageProps } from "./$types";
+	import ReportCard from "./report-card.svelte";
 
 	let { params }: PageProps = $props();
 
@@ -98,10 +100,7 @@
 				{:else}
 					<DetailItem label={m.client_detail_created()} value={formatDate(order.createdAt)} />
 				{/if}
-				<DetailItem
-					label={m.client_detail_priority()}
-					value={label("orderPriority", order.priority)}
-				/>
+				<DetailItem label={m.client_detail_priority()} value={portalPriority(order.priority)} />
 				{#if order.decidedAt && status !== "rejected"}
 					<DetailItem label={m.client_detail_accepted()} value={formatDate(order.decidedAt)} />
 				{/if}
@@ -135,6 +134,8 @@
 				</Card.Content>
 			</Card.Root>
 		{/if}
+
+		<ReportCard {order} />
 
 		<ExtensionSlot point={orderParts} props={{ number: order.number }} />
 

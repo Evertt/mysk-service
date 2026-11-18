@@ -1,19 +1,22 @@
 <!--
-	Report a breakdown ("Storing melden"): the unit (by its site), what's wrong and how urgent it is.
-	A unit's QR code leads here with the unit filled in (`?unit=<serial>`), a location's with its
-	units to choose from (`?location=<id>`); one the contact doesn't see is a 404. The order it
-	makes awaits a planner's acceptance. (No photos: the app has no file storage yet.)
+	Report a breakdown ("Storing melden"): the unit (by its site), what kind of fault it is ("Wat is
+	er aan de hand?", optional), what's wrong, photos of it (optional, shrunk before they're sent)
+	and how urgent it is, the top urgency in the portal's words ("Stilstand"). A unit's QR code
+	leads here with the unit filled in (`?unit=<serial>`), a location's with its units to choose from
+	(`?location=<id>`); one the contact doesn't see is a 404. The order it makes awaits a planner's
+	acceptance.
 -->
 <script lang="ts">
 	import { page } from "$app/state";
 	import SendIcon from "@lucide/svelte/icons/send";
 
+	import FilterChips from "#lib/components/filter-chips.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
 	import { label } from "#lib/i18n/index.ts";
-	import { reportUrgencies } from "#lib/models.ts";
+	import { type ReportFault, reportFaults, reportUrgencies } from "#lib/models.ts";
 	import { cn } from "#lib/utils.ts";
 
 	import {
@@ -22,6 +25,8 @@
 		getPortalUnit,
 		reportBreakdown,
 	} from "../client.remote.ts";
+	import { portalPriority } from "../urgency.ts";
+	import PhotoPicker from "./photo-picker.svelte";
 
 	const serial = $derived(page.url.searchParams.get("unit"));
 	const locationParam = $derived(page.url.searchParams.get("location"));
@@ -62,6 +67,9 @@
 	};
 
 	const fields = $derived(reportBreakdown.fields);
+
+	/** The kind of fault chosen with the chips, if any. */
+	let fault = $state<ReportFault | null>(null);
 </script>
 
 <svelte:head>
@@ -113,12 +121,32 @@
 				/>
 			{/if}
 
+			<Field.Field data-invalid={fields.fault.issues()?.length ? true : undefined}>
+				<p class="text-sm font-medium" aria-hidden="true">{m.client_report_fault()}</p>
+				<FilterChips
+					label={m.client_report_fault()}
+					options={reportFaults.map((each) => ({
+						value: each,
+						label: label("reportFault", each),
+					}))}
+					value={fault}
+					onchange={(chosen) => (fault = chosen)}
+					data-report-faults
+				/>
+				{#if fault}
+					<input {...fields.fault.as("hidden", fault)} />
+				{/if}
+				<Field.FieldError errors={fields.fault.issues()} />
+			</Field.Field>
+
 			<TextField
 				field={fields.description}
 				label={m.client_report_what()}
 				description={m.client_report_what_description()}
 				multiline
 			/>
+
+			<PhotoPicker field={fields.photos} />
 
 			<fieldset class="flex flex-col gap-2">
 				<legend class="mb-1 text-sm font-medium">{m.client_report_urgency()}</legend>
@@ -136,7 +164,7 @@
 							class="mt-1 accent-primary"
 						/>
 						<span class="flex flex-col">
-							<span class="text-sm font-medium">{label("orderPriority", urgency)}</span>
+							<span class="text-sm font-medium">{portalPriority(urgency)}</span>
 							<span class="text-xs text-muted-foreground">{urgencyDescription[urgency]()}</span>
 						</span>
 					</label>

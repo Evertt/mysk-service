@@ -11,7 +11,8 @@ import {
 	folderStore,
 	objectKey,
 } from "#lib/server/bug-reports/storage.ts";
-import type { Bucket, DurableRequest } from "#lib/server/db/durable.ts";
+import type { DurableRequest } from "#lib/server/db/durable.ts";
+import { memoryBucket } from "#unit/lib/server/files/memory-bucket.ts";
 
 const folder = mkdtempSync(join(tmpdir(), "bug-reports-spec-"));
 afterAll(() => rmSync(folder, { recursive: true, force: true }));
@@ -23,19 +24,6 @@ settings.folder = join(folder, "default");
 afterEach(() => {
 	globalThis.durableRequests = undefined;
 });
-
-/** An R2 bucket in memory: its objects, and the bucket. */
-function memoryBucket() {
-	const objects = new Map<string, { value: Uint8Array; options?: object }>();
-	const bucket: Bucket = {
-		put: async (key, value, options) => void objects.set(key, { value, options }),
-		get: async (key) => {
-			const found = objects.get(key);
-			return found ? { arrayBuffer: async () => found.value.slice().buffer } : null;
-		},
-	};
-	return { objects, bucket };
-}
 
 test("keys a recording by the year and month it was made, in UTC", () => {
 	expect(objectKey("abc", Temporal.Instant.from("2026-10-19T09:30:00Z"))).toBe(
@@ -58,9 +46,9 @@ test("keeps recordings in a folder, by their keys as paths", async () => {
 test("never reads or writes outside its folder", async () => {
 	const store = folderStore(folder);
 	await expect(store.put("../outside.json.gz", new Uint8Array([1]))).rejects.toThrow(
-		"Not a bug report's key",
+		"Not a key of the store",
 	);
-	await expect(store.get("../../etc/passwd")).rejects.toThrow("Not a bug report's key");
+	await expect(store.get("../../etc/passwd")).rejects.toThrow("Not a key of the store");
 });
 
 test("keeps recordings in an R2 bucket, as gzip", async () => {

@@ -38,11 +38,12 @@ import {
 	invitation,
 	member,
 	order,
+	orderPhoto,
 	portalContact,
 	savedView,
 } from "#lib/server/db/schema.ts";
 
-import { type AccessRule, rows, tenantWide } from "./rules.ts";
+import { type AccessRule, partOf, rows, tenantWide } from "./rules.ts";
 
 /**
  * A location's rule: it's at a site the audience reads (`sites`, a condition on `customerSite`,
@@ -97,6 +98,8 @@ export const coreRules = {
 		},
 		{ change: { office: true, engineer: () => engineerOrders() } },
 	),
+	// Whoever reads the order sees its photos: the office, its engineer, the customer's contact.
+	order_photo: partOf("order", orderPhoto, orderPhoto.orderId),
 	module: tenantWide({ office: true }, { change: "manager" }),
 	simulation: tenantWide({ office: true }, { change: "manager" }),
 	member: rows(member, member.id, { office: "manager" }),

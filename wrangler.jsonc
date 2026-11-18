@@ -14,9 +14,12 @@
 	"rules": [{ "type": "Text", "globs": ["**/*.sql"], "fallthrough": true }],
 	"durable_objects": { "bindings": [{ "name": "APP_DATABASE", "class_name": "AppDatabase" }] },
 	"migrations": [{ "tag": "v1", "new_sqlite_classes": ["AppDatabase"] }],
-	// The recordings of bug reports (`src/lib/server/bug-reports/storage.ts`); made once with
-	// `wrangler r2 bucket create fieldworks-bug-reports`.
-	"r2_buckets": [{ "binding": "BUG_REPORTS", "bucket_name": "fieldworks-bug-reports" }],
+	// The recordings of bug reports (`src/lib/server/bug-reports/storage.ts`) and the orders' photos
+	// (`src/lib/server/files/photos.ts`); made once with `wrangler r2 bucket create <name>`.
+	"r2_buckets": [
+		{ "binding": "BUG_REPORTS", "bucket_name": "fieldworks-bug-reports" },
+		{ "binding": "PHOTOS", "bucket_name": "fieldworks-photos" },
+	],
 	"vars": {
 		"ORIGIN": "https://fieldworks.devign.workers.dev",
 		"MAIL_FROM": "Fieldworks <noreply@devign.nl>",
@@ -41,8 +44,11 @@
 			"name": "fieldworks-staging",
 			"durable_objects": { "bindings": [{ "name": "APP_DATABASE", "class_name": "AppDatabase" }] },
 			"migrations": [{ "tag": "v1", "new_sqlite_classes": ["AppDatabase"] }],
-			// `wrangler r2 bucket create fieldworks-staging-bug-reports`.
-			"r2_buckets": [{ "binding": "BUG_REPORTS", "bucket_name": "fieldworks-staging-bug-reports" }],
+			// `wrangler r2 bucket create fieldworks-staging-bug-reports` (and `…-staging-photos`).
+			"r2_buckets": [
+				{ "binding": "BUG_REPORTS", "bucket_name": "fieldworks-staging-bug-reports" },
+				{ "binding": "PHOTOS", "bucket_name": "fieldworks-staging-photos" },
+			],
 			// `DEMO_SIGN_IN`: the login page's one-click demo sign-in (README "Demo login"), passwordless,
 			// so here only, never in the top-level vars above (production). `TIMING_LOGS`: a timing line
 			// per request (`src/lib/server/logs/timing.ts`), here only, so production's log volume stays known.

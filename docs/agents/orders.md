@@ -52,7 +52,12 @@ of `order.status` of its own. Not transitions: creating an order (`createOrders(
 
 An order a customer's contact reports in the customer portal (a breakdown) is made by
 `requestOrder(tx, draft)` (`src/lib/orders/server/acceptance.ts`): through `createOrders()`, with the
-status `awaiting_acceptance` and an `order_request` (who reported it). Until a planner decides, it's
+status `awaiting_acceptance` and an `order_request` (who reported it, and the kind of `fault` they
+chose, `reportFaults`, optional). The portal's form calls `reportOrder()`, which puts the contact's
+photos (`#lib/orders/photos.ts` for the limits) in the photo store first, outside the transaction,
+then makes the order and records them (`order_photo`, `src/lib/orders/server/photos.ts`); a photo
+is served at `/photos/<id>` to whoever may read its order (`servePhoto()`, the access registry's
+`order_photo`, a part of `order`), never at a public URL. Until a planner decides, it's
 no open work (`openOrderStatuses` doesn't have it; `pendingOrderStatuses` is the customer's view of
 what's still to be done): it's off the planning board and its backlog, holds no stock (materials'
 `holdsStock()`), gets no checklists, can't be given a status by hand (`statusChoices()` is empty),

@@ -15,8 +15,9 @@ covers: []
 </script>
 
 A customer who sees a unit break down doesn't phone the office: they open the customer portal and
-**report a breakdown**, on the unit (or by scanning its QR code), with a description and an
-urgency (normal, high or urgent). That makes an order, but not yet work. It is **awaiting
+**report a breakdown**, on the unit (or by scanning its QR code), with what's going on (door won't
+close, damage, noise or other: optional), a description, up to five photos and an urgency (normal,
+high or standstill; the office calls the last one urgent). That makes an order, but not yet work. It is **awaiting
 acceptance** until a planner decides.
 
 ## What the customer sees
@@ -28,7 +29,8 @@ with the engineer's first name, or **rejected, with the reason the planner wrote
 
 - A badge on **Orders** in the menu, and a card on the dashboard, count the reports waiting. The
   card opens the orders list filtered to them. The bell has a notification for each new one.
-- On the order's page, a card says who reported it and when. It has two buttons:
+- On the order's page, a card says who reported it and when, the kind of fault the customer chose
+  and the photos they added (a click opens one in full). It has two buttons:
   - **Accept.** The order becomes a quote. Or fill in an engineer, a day and a time and it is
     scheduled at once, as if it were planned in the same step.
   - **Reject.** A reason is required. The order is cancelled and the customer reads the reason.
@@ -54,10 +56,19 @@ An order awaiting acceptance is deliberately kept out of everything that counts 
 <HowItWorks />
 
 **Creating it.** The portal's `reportBreakdown` form
-checks that the unit is one the contact sees, then calls `requestOrder(tx, draft)` in a
-transaction. That is `createOrders()` (checked, numbered, logged as created, by the contact) with
+checks that the unit is one the contact sees, then calls `reportOrder()`. That puts the photos in
+the photo store first (`storeOrderPhotos()`: at most five, JPEG, PNG or WebP by their bytes, each up
+to 2 MB; the browser shrinks them to 1600 pixels first), outside the transaction, as on Cloudflare a
+transaction holds every other request. Then it calls `requestOrder(tx, draft)` in a transaction. That is `createOrders()` (checked, numbered, logged as created, by the contact) with
 the status `awaiting_acceptance`, plus an `order_request` row that keeps who reported it
-(`reporterName`) and, later, who decided, when and why.
+(`reporterName`) and the kind of fault (`fault`) and, later, who decided, when and why. Each photo
+gets an `order_photo` row, logged as created on the order. Should the transaction fail, it takes the
+photos away again.
+
+**Showing the photos.** A photo is never at a public URL: `/photos/<id>` serves it only to whoever
+may read the order (`servePhoto()` asks the access rules: `order_photo` is a part of `order`), and
+is a 404 otherwise, also for a tampered id. On Cloudflare they're in the `PHOTOS` R2 bucket,
+elsewhere in a folder (`PHOTOS_DIR`).
 
 **Not open work.** `openOrderStatuses` doesn't have `awaiting_acceptance`; `pendingOrderStatuses`,
 the customer's view of what is still to be done, does. The materials module's `holdsStock()` and
@@ -76,10 +87,13 @@ They are `acceptReportedOrder` and `rejectReportedOrder`, gated for any office m
 
 **The count.** `awaitingAcceptance(organizationId)` counts the orders for the menu's badge.
 
-- <SourceLink path="src/lib/orders/server/acceptance.ts" line={22}><code>requestOrder()</code></SourceLink>
-- <SourceLink path="src/routes/(customer)/portal/client.remote.ts" line={186}><code>reportBreakdown</code></SourceLink>
+- <SourceLink path="src/lib/orders/server/acceptance.ts" line={25}><code>requestOrder()</code></SourceLink>
+- <SourceLink path="src/routes/(customer)/portal/client.remote.ts" line={197}><code>reportBreakdown</code></SourceLink>
 - <SourceLink path="src/lib/orders/detail/acceptance.remote.ts" line={35}><code>acceptReportedOrder</code></SourceLink>
   and <SourceLink path="src/lib/orders/detail/acceptance.remote.ts" line={61}><code>rejectReportedOrder</code></SourceLink>
 - <SourceLink path="src/lib/server/db/schema/orders.ts" line={169} symbol="orderRequest"><code>order_request</code></SourceLink>
+- <SourceLink path="src/lib/orders/server/acceptance.ts" line={55}><code>reportOrder()</code></SourceLink>
+  and <SourceLink path="src/lib/orders/server/photos.ts" line={167}><code>servePhoto()</code></SourceLink>
+- <SourceLink path="src/lib/server/db/schema/orders.ts" line={201} symbol="orderPhoto"><code>order_photo</code></SourceLink>
 
 <DocsPointer doc="docs/agents/orders.md" section="Orders awaiting acceptance" />

@@ -121,6 +121,8 @@ export async function startServer(
 				BUG_REPORT_EMAIL: bugReportEmail,
 				DEVELOPER_EMAILS: developerEmail,
 				BUG_REPORTS_DIR: bugReportsFolder(outbox),
+				// The photos of customers' reports, beside the outbox rather than in the checkout.
+				PHOTOS_DIR: `${outbox}-photos`,
 				// The login page's one-click demo sign-in (`src/routes/demo.remote.ts`).
 				DEMO_SIGN_IN: "true",
 				...env,

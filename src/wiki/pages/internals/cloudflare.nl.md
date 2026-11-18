@@ -59,7 +59,7 @@ request naar het enige Durable Object (een object van Cloudflare met eigen opsla
 nooit, want die levert Cloudflare zelf al. Het object migreert zijn SQLite-database als het start
 (`blockConcurrencyWhile`), en beantwoordt daarna elk request door SvelteKit in zichzelf te draaien,
 met zijn opslag doorgegeven in een `AsyncLocalStorage` (`durableRequests`). `db` vindt hem daar,
-dus de code van de app is op Node en op Cloudflare dezelfde. Zie <SourceLink path="cloudflare/entry.ts" line={49}>AppDatabase</SourceLink> en <SourceLink path="src/lib/server/db/durable.ts" line={53}>drizzleDurable</SourceLink>.
+dus de code van de app is op Node en op Cloudflare dezelfde. Zie <SourceLink path="cloudflare/entry.ts" line={49}>AppDatabase</SourceLink> en <SourceLink path="src/lib/server/db/durable.ts" line={56}>drizzleDurable</SourceLink>.
 
 Wat daaruit volgt:
 

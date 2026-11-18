@@ -171,7 +171,6 @@ describe("refusals", () => {
 			"src/modules/parts-shop/suggestions/suggested-parts.remote.ts",
 			"src/modules/schedule/schedule.remote.ts",
 			"src/routes/(app)/settings/settings.remote.ts",
-			"src/routes/(customer)/portal/client.remote.ts",
 			"src/routes/(field)/my/portal.remote.ts",
 		];
 		const holding = appFiles.filter(

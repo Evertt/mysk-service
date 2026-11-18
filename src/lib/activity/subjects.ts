@@ -270,6 +270,11 @@ export const coreSubjectTypes = {
 			laborHours: { format: hours },
 		},
 	},
+	/**
+	 * A photo of an order (`order_photo`), which a customer's contact added to their report, by its
+	 * place among the order's photos (`#1`); logged with its order as its parent, on whose page it is.
+	 */
+	order_photo: { noun: m.activity_subject_order_photo, onParentPage: true },
 	/** An optional module (`#lib/modules/manifests.ts`), by its id; shown by its name. */
 	module: {
 		noun: m.activity_subject_module,

@@ -46,3 +46,6 @@ project.inlang/cache/
 
 # Bug reports' recordings, off Cloudflare (`BUG_REPORTS_DIR`)
 /.bug-reports/
+
+# Photos of orders, off Cloudflare (`PHOTOS_DIR`)
+/.photos/

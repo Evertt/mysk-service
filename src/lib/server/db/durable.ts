@@ -32,6 +32,7 @@ export interface DurableStorage {
 export interface Bucket {
 	put(key: string, value: Uint8Array, options?: object): Promise<unknown>;
 	get(key: string): Promise<{ arrayBuffer(): Promise<ArrayBuffer> } | null>;
+	delete(key: string): Promise<unknown>;
 }
 
 /**
@@ -42,6 +43,8 @@ export interface DurableRequest {
 	storage: DurableStorage;
 	/** The recordings of bug reports (`BUG_REPORTS` in `wrangler.jsonc`, `bugReportStore()`). */
 	bugReports: Bucket;
+	/** The orders' photos (`PHOTOS` in `wrangler.jsonc`, `photoStore()`). */
+	photos: Bucket;
 }
 
 declare global {
