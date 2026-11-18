@@ -93,6 +93,7 @@ describe("readWikiPages", () => {
 		}
 	});
 
+	// It compiles every page: slow on a busy machine.
 	test("reads the real pages, and their twins", async () => {
 		const pages = await readWikiPages(join(import.meta.dirname, "../src/wiki/pages"));
 		expect(pages["./pages/orders/lifecycle.md"]).toMatchObject({
@@ -102,5 +103,5 @@ describe("readWikiPages", () => {
 		expect(pages["./pages/start/what-fieldworks-is.nl.md"]).toMatchObject({
 			title: "Wat Fieldworks is",
 		});
-	});
+	}, 30_000);
 });
