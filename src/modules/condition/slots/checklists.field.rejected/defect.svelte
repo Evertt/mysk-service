@@ -19,13 +19,15 @@
 	import { extentLabel } from "../../display.ts";
 	import { conditionLabels } from "../../labels.ts";
 	import {
-		type DefectExtent,
-		defectExtents,
 		type DefectIntensity,
 		defectIntensities,
 		defectScore,
 		type DefectSeverity,
 		defectSeverities,
+		extentClass,
+		extentClasses,
+		extentLimits,
+		extentPresets,
 	} from "../../nen2767.ts";
 	import { MAX_DEFECT_PHOTOS } from "../../photos.ts";
 	import {
@@ -48,9 +50,18 @@
 	let intensity = $derived<DefectIntensity | null>(data.defect?.intensity ?? null);
 	let photos = $state<File[]>([]);
 
+	/** The extent, once it's a whole percentage from 1 to 100. */
+	const percent = $derived(
+		extent !== null &&
+			Number.isInteger(extent) &&
+			extent >= extentLimits.min &&
+			extent <= extentLimits.max
+			? extent
+			: null,
+	);
 	const score = $derived(
-		severity && extent && intensity
-			? defectScore({ severity, extent: extent as DefectExtent, intensity })
+		severity && percent !== null && intensity
+			? defectScore({ severity, extent: percent, intensity })
 			: null,
 	);
 	const saved = $derived(
@@ -98,11 +109,31 @@
 		<FilterChips
 			label={m.condition_defect_extent()}
 			showLabel
-			options={defectExtents.map((value) => ({ value: String(value), label: extentLabel(value) }))}
-			value={extent === null ? null : String(extent)}
+			options={extentClasses.map((value) => ({
+				value: String(extentPresets[value]),
+				label: extentLabel(value),
+			}))}
+			value={percent === null ? null : String(extentPresets[extentClass(percent)])}
 			onchange={(value) => (extent = value === null ? null : Number(value))}
 			data-defect-extent
 		/>
+		<div class="flex items-center gap-2">
+			<Label for="{id}-extent" class="text-sm">{m.condition_extent_percent_label()}</Label>
+			<Input
+				id="{id}-extent"
+				type="number"
+				inputmode="numeric"
+				min={extentLimits.min}
+				max={extentLimits.max}
+				step={1}
+				class="h-10 w-24"
+				bind:value={extent}
+				data-extent-percent
+			/>
+			{#if percent !== null}
+				<span class="text-sm text-muted-foreground">{extentLabel(extentClass(percent))}</span>
+			{/if}
+		</div>
 		<FilterChips
 			label={m.condition_defect_intensity()}
 			showLabel

@@ -56,7 +56,9 @@ describe("a unit's card", () => {
 		const defect = dialog().locator('[data-defect="0"]');
 		await defect.getByLabel("Defect", { exact: true }).fill("Onderste torsieveer gebroken");
 		await defect.getByLabel("Severity").selectOption("severe");
-		await defect.getByLabel("Extent").selectOption("4");
+		// Typed in percent, its class beside it.
+		await defect.getByLabel("Extent", { exact: true }).fill("85");
+		await defect.locator("[data-extent-class]").getByText("≥70%").waitFor();
 		await defect.getByLabel("Intensity").selectOption("advanced");
 		await dialog().locator('[data-live-score="5"]').waitFor();
 		await defect

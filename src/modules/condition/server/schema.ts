@@ -84,7 +84,10 @@ export const unitCondition = tenantTable(
 		equipmentId: integer("equipment_id").notNull(),
 		/** The component of the unit it's the condition of; none for the unit as a whole. */
 		componentId: integer("component_id"),
-		/** On NEN 2767's scale, 1–6: the worst of its defects (`recordScore()`), derived on the server. */
+		/**
+		 * On NEN 2767's scale, 1–6: its worst element's, each by NEN 2767-1's method over its defects
+		 * (`recordScore()`), derived on the server.
+		 */
 		score: integer("score").notNull(),
 		/**
 		 * The percentage it had before conditions were scored on NEN 2767, for one converted then
@@ -127,8 +130,9 @@ export const unitConditionRelations = relations(unitCondition, ({ one }) => ({
 
 /**
  * A defect ("gebrek") a condition found: what it is, the element it's on (the unit itself, or one
- * of its components), its severity, extent and intensity, and the score NEN 2767's tables give it
- * (`defectScore()`, derived on the server). A checklist's comes from a rejected point, which it
+ * of its components), its severity, extent (in percent) and intensity, and the score NEN 2767's
+ * tables give it alone (`defectScore()`, derived on the server; its condition's is its element's
+ * defects' together, `recordScore()`). A checklist's comes from a rejected point, which it
  * names by the point's id without a key (the module only enhances checklists). Removing the
  * condition, or the component it's on, removes it.
  */
@@ -141,7 +145,7 @@ export const conditionDefect = tenantTable(
 		/** What's wrong, e.g. "Veerbreuk onderste veer". */
 		description: text("description").notNull(),
 		severity: text("severity", { enum: defectSeverities }).notNull(),
-		/** NEN's extent class, 1 (below 2%) to 5 (70% or more). */
+		/** How much of the element it covers, in whole percents, 1–100 (its class: `extentClass()`). */
 		extent: integer("extent").notNull(),
 		intensity: text("intensity", { enum: defectIntensities }).notNull(),
 		/** Its score, 1–6, from NEN 2767's tables. */
@@ -156,7 +160,7 @@ export const conditionDefect = tenantTable(
 		index("condition_defect_component").on(table.organizationId, table.componentId),
 		tenantRef(table, table.conditionId, unitCondition, { onDelete: "cascade" }),
 		tenantRef(table, table.componentId, component, { onDelete: "cascade" }),
-		check("condition_defect_extent", sql`${table.extent} between 1 and 5`),
+		check("condition_defect_extent", sql`${table.extent} between 1 and 100`),
 		check("condition_defect_score", sql`${table.score} between 1 and 6`),
 	],
 	{ referenced: true },
@@ -175,6 +179,7 @@ export const conditionPointDefect = tenantTable(
 		/** The unit whose checklist it is: who may see it goes by it. */
 		equipmentId: integer("equipment_id").notNull(),
 		severity: text("severity", { enum: defectSeverities }).notNull(),
+		/** In whole percents of the element, 1–100. */
 		extent: integer("extent").notNull(),
 		intensity: text("intensity", { enum: defectIntensities }).notNull(),
 		updatedAt: moment("updated_at").notNull(),
@@ -183,7 +188,7 @@ export const conditionPointDefect = tenantTable(
 		uniqueIndex("condition_point_defect_point").on(table.organizationId, table.checklistPointId),
 		index("condition_point_defect_equipment").on(table.organizationId, table.equipmentId),
 		tenantRef(table, table.equipmentId, equipment, { onDelete: "cascade" }),
-		check("condition_point_defect_extent", sql`${table.extent} between 1 and 5`),
+		check("condition_point_defect_extent", sql`${table.extent} between 1 and 100`),
 	],
 	{ referenced: true },
 );

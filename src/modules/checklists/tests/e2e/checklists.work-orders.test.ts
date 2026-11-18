@@ -11,6 +11,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { fitsWidth, onPhone, organizations, rows, useApp, users, value } from "#e2e/app.ts";
+import { pointsScore, scoreText } from "#modules/condition/api/extensions.ts";
 
 import { assetLocators, assetStates, resultsOf, thisYear } from "./helpers.ts";
 
@@ -189,10 +190,10 @@ describe("an asset", () => {
 		expect(await card.locator("[data-other-points]").innerText()).toMatch(
 			new RegExp(`^${all.length - own.length} other points? of this unit (is|are) hidden$`),
 		);
-		// On NEN 2767's scale: 1 without a rejected point, 3 with one (the office's grade).
-		const counted = own.some((point) => point.result === "ok" || point.result === "nok");
-		const rejected = own.some((point) => point.result === "nok");
-		const score = !counted ? "No score" : rejected ? "3 · Fair" : "1 · Excellent";
+		// On NEN 2767's scale, as the condition module works it out: its rejected points with the
+		// office's grade, added up.
+		const scored = pointsScore(own);
+		const score = scored === null ? "No score" : scoreText(scored);
 		expect(await card.locator("[data-component-score]").innerText()).toContain(score);
 		// Its own history: its scores.
 		const scores = Number(

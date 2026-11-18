@@ -1,6 +1,7 @@
 /**
- * Recording a unit's condition: its defects, scored on NEN 2767's scale (the worst defect wins,
- * `recordScore()`, worked out here and kept on the record). From its checklist when an engineer
+ * Recording a unit's condition: its defects, scored on NEN 2767's scale (each element's defects by
+ * the norm's method, the worst element's score the record's: `recordScore()`, worked out here and
+ * kept on the record). From its checklist when an engineer
  * completes it in the portal (`checklists.completed`: its rejected points are the defects, with the
  * grade and photos the engineer gave each, `point-defects.ts`), with the engineer's advice added to
  * it after; or by a member in the office (on the unit's page), as a correction. Each is a new record
@@ -357,7 +358,7 @@ export async function recordChecklistConditions({ tx, checklist, points }: Check
 			...(draft
 				? {
 						severity: draft.severity,
-						extent: draft.extent as DefectGrade["extent"],
+						extent: draft.extent,
 						intensity: draft.intensity,
 					}
 				: REJECTED_POINT_GRADE),
@@ -532,7 +533,6 @@ export async function defectsOf(
 	for (const { conditionId, componentId, componentNumber, componentName, ...defect } of found) {
 		const recorded: RecordedDefect = {
 			...defect,
-			extent: defect.extent as DefectGrade["extent"],
 			component:
 				componentId === null
 					? null

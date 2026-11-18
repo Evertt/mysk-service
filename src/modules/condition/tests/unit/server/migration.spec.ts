@@ -2,7 +2,7 @@
  * The move to NEN 2767 (`0037_condition-nen2767`, the Durable Object's `0029_condition-nen2767`):
  * conditions get a score of 1–6 by their percentage's band and keep the percentage, the table's
  * sequence stays, and the tenants' thresholds map the same way, on sample rows in a database made by
- * the migrations before it.
+ * the migrations before it; and the move of defects' extents to percentages, below.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -130,5 +130,123 @@ test("the Durable Object's 0029_condition-nen2767 does the same with its foreign
 		.filter(Boolean);
 	await client.batch(statements, "write");
 	expect(await after(client)).toEqual(expected);
+	client.close();
+});
+
+/**
+ * Before extents were percentages (`0039_condition-defect-extent-percent`, the Durable Object's
+ * `0031`): a unit with a component, a condition whose defects are on both (the unit's in classes
+ * like the norm's own example), another with one defect, the newest defect deleted, a rejected
+ * point's draft, and photos of a defect and of the draft. Their stored scores are made up.
+ */
+const beforePercent = `
+	insert into organization (id, name, slug, created_at) values ('a', 'A', 'a', 1);
+	insert into customer (id, organization_id, code, name, contact_name, email, phone, city, country, segment)
+	values (1, 'a', 'C-1', 'Riedel', 'Ann', 'ann@riedel.test', '1', 'Ede', 'NL', 'enterprise');
+	insert into customer_site (id, organization_id, customer_id, name, city, country)
+	values (1, 'a', 1, 'Ede', 'Ede', 'NL');
+	insert into equipment_category (id, organization_id, name, specialty, position)
+	values (1, 'a', 'Sectionaaldeuren', null, 0);
+	insert into equipment (id, organization_id, serial_number, name, model, manufacturer, category_id, status, customer_id, site_id, installed_at, warranty_until)
+	values (10, 'a', 'SN-10', 'Deur 10', 'M', 'Make', 1, 'operational', 1, 1, '2020-01-01', '2030-01-01');
+	insert into component (id, organization_id, equipment_id, number, name, position)
+	values (1, 'a', 10, 'OC-0001', 'Torsieveerpakket', 0);
+	insert into unit_condition (id, organization_id, equipment_id, score, source, recorded_at)
+	values (1, 'a', 10, 6, 'office', 100), (2, 'a', 10, 6, 'office', 200);
+	insert into condition_defect (id, organization_id, condition_id, component_id, description, severity, extent, intensity, score, position)
+	values (1, 'a', 1, null, 'Rot', 'severe', 3, 'final', 6, 0),
+		(2, 'a', 1, null, 'Scheur', 'serious', 2, 'advanced', 6, 1),
+		(3, 'a', 1, null, 'Verf', 'slight', 2, 'final', 6, 2),
+		(4, 'a', 1, null, 'Vuil', 'slight', 3, 'initial', 6, 3),
+		(5, 'a', 1, 1, 'Veer', 'serious', 4, 'final', 6, 4),
+		(6, 'a', 2, null, 'Deuk', 'slight', 4, 'advanced', 6, 0),
+		(7, 'a', 2, null, 'Weg', 'slight', 1, 'initial', 6, 1);
+	delete from condition_defect where id = 7;
+	insert into condition_point_defect (id, organization_id, checklist_point_id, equipment_id, severity, extent, intensity, updated_at)
+	values (1, 'a', 900, 10, 'serious', 5, 'advanced', 0);
+	insert into condition_defect_photo (id, organization_id, equipment_id, defect_id, point_defect_id, object_key, content_type, size, position)
+	values (1, 'a', 10, 1, null, 'a/conditions/1.jpg', 'image/jpeg', 10, 0),
+		(2, 'a', 10, null, 1, 'a/conditions/2.jpg', 'image/jpeg', 10, 0);
+`;
+
+/** What became of them: the extents, the scores, the photos, and the id a new defect gets. */
+async function afterPercent(client: ReturnType<typeof createClient>) {
+	const all = async (sql: string) => (await client.execute(sql)).rows.map((row) => ({ ...row }));
+	const before = {
+		conditions: await all("select id, score from unit_condition order by id"),
+	};
+	await client.execute(
+		"insert into condition_defect (organization_id, condition_id, description, severity, extent, intensity, score, position) values ('a', 2, 'Nieuw', 'slight', 100, 'initial', 2, 2)",
+	);
+	return {
+		defects: await all("select id, extent, score from condition_defect order by id"),
+		...before,
+		drafts: await all("select id, extent from condition_point_defect"),
+		photos: await all(
+			"select id, defect_id, point_defect_id from condition_defect_photo order by id",
+		),
+		keys: await all("pragma foreign_key_check"),
+	};
+}
+
+const percentMade = {
+	defects: [
+		// Each class its typical value, each defect scored alone by the norm's tables.
+		{ id: 1, extent: 20, score: 4 },
+		{ id: 2, extent: 5, score: 1 },
+		{ id: 3, extent: 5, score: 1 },
+		{ id: 4, extent: 20, score: 1 },
+		{ id: 5, extent: 50, score: 4 },
+		{ id: 6, extent: 50, score: 2 },
+		// After the deleted one's id: the sequence is kept.
+		{ id: 8, extent: 100, score: 2 },
+	],
+	conditions: [
+		// The unit itself: category 5 at 20% (30 points), category 3 at 5 + 5 = 10% (2), category 1
+		// at 20% (0.6): 32.6, so 5; the spring, on its own, 4; the worst, 5.
+		{ id: 1, score: 5 },
+		{ id: 2, score: 2 },
+	],
+	drafts: [{ id: 1, extent: 85 }],
+	photos: [
+		{ id: 1, defect_id: 1, point_defect_id: null },
+		{ id: 2, defect_id: null, point_defect_id: 1 },
+	],
+	keys: [],
+};
+
+test("0039_condition-defect-extent-percent makes the extents percentages and scores them again", async () => {
+	const stream = streamBefore(
+		migrationsFolder,
+		"0039_condition-defect-extent-percent",
+		"before-percent",
+	);
+	const client = createClient({ url: `file:${join(folder, "percent.db")}` });
+	await migrate(drizzle(client), { migrationsFolder: stream });
+	await client.executeMultiple(beforePercent);
+	await migrate(drizzle(client), { migrationsFolder });
+	expect(await afterPercent(client)).toEqual(percentMade);
+	client.close();
+});
+
+test("the Durable Object's 0031_condition-defect-extent-percent does the same with its foreign keys on", async () => {
+	const stream = streamBefore(
+		durableFolder,
+		"0031_condition-defect-extent-percent",
+		"before-percent-durable",
+	);
+	const client = createClient({ url: `file:${join(folder, "percent-durable.db")}` });
+	await migrate(drizzle(client), { migrationsFolder: stream });
+	await client.executeMultiple(beforePercent);
+	expect((await client.execute("pragma foreign_keys")).rows[0].foreign_keys).toBe(1);
+	const statements = readFileSync(
+		join(durableFolder, "0031_condition-defect-extent-percent.sql"),
+		"utf8",
+	)
+		.split("--> statement-breakpoint")
+		.map((statement) => statement.trim())
+		.filter(Boolean);
+	await client.batch(statements, "write");
+	expect(await afterPercent(client)).toEqual(percentMade);
 	client.close();
 });

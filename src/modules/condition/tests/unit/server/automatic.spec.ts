@@ -113,7 +113,7 @@ describe("the daily run, with automatic planning on", () => {
 					{
 						description: "Aandrijving defect",
 						severity: "severe",
-						extent: "5",
+						extent: "85",
 						intensity: "final",
 					},
 				],

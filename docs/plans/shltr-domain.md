@@ -203,10 +203,18 @@ doesn't touch `conditie` or `volgende_onderhoud`; nothing sends Kritiek to the p
 **In Fieldworks: the NEN 2767 condition scale** [decided]. The mockup's `conditie`% is replaced by NEN 2767's
 scale: 1 Uitstekend "Nieuwbouwkwaliteit, geen gebreken", 2 Goed, 3 Redelijk, 4 Matig, 5 Slecht, 6 Zeer slecht
 "Technisch rijp voor vervanging" (`src/modules/condition/nen2767.ts`). A condition record holds defects
-("gebreken"), each with its element (the unit or a component), ernst (gering, serieus, ernstig), omvang (NEN's
-classes <2%, 2–10%, 10–30%, 30–70%, ≥70%), intensiteit (begin, gevorderd, eind) and photos; NEN 2767-1's tables
-score each defect, and the worst defect wins (none: 1). A unit's score is the worst of its own latest record and
-its components'. A completed checklist's rejected points are its defects (the engineer grades each in the
+("gebreken"), each with its element (the unit or a component), ernst (gering, serieus, ernstig), omvang (a
+percentage of the element, 1–100; NEN's classes <2%, 2–<10%, 10–<30%, 30–<70%, ≥70%, whose chips set 1, 5, 20, 50
+and 85%), intensiteit (begin, gevorderd, eind) and photos. An element is scored by NEN 2767-1's method: ernst ×
+intensiteit gives each defect a category (1 gering begin; 2 gering gevorderd, serieus begin; 3 gering eind,
+serieus gevorderd, ernstig begin; 4 serieus eind, ernstig gevorderd; 5 ernstig eind); a category's extents add up
+(at most 100%) to a class; its points by that class (category 1: 0.1, 0.2, 0.6, 1.2, 2; 2: 0.2, 0.6, 1.2, 2, 10;
+3: 0.6, 1.2, 2, 10, 30; 4: 1.2, 2, 10, 30, 70; 5: 2, 10, 30, 70, 100) add up, and the total gives the score (≤1.2
+→ 1, ≤2 → 2, ≤10 → 3, ≤30 → 4, ≤70 → 5, else 6). One defect alone so scores as the norm's tables (sources: the
+NEN 2767-1:2017 explanations of laan35.nl and PIT Beheer). A record's score is its worst element's (none: 1); a
+unit's is the worst of its own latest record and its components' (weighting components by the norm would need
+their values, which we don't have). A rejected checklist point without a grade counts as serious, advanced,
+20% (2). A completed checklist's rejected points are its defects (the engineer grades each in the
 portal). The thresholds are "Kritiek vanaf" 5 and "Aandacht vanaf" 4 by default; the colours are 1–3 green and
 teal, 4 amber, 5 orange, 6 red. Records from before were converted by band (≥90 → 1, 80–89 → 2, 70–79 → 3,
 40–69 → 4, 20–39 → 5, <20 → 6), keeping the percentage as `legacy_percent`, and a tenant's thresholds the same
