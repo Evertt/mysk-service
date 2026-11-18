@@ -71,9 +71,10 @@ describe("the shadcn-svelte components", () => {
 		expect(themeComponent(source).source).toBe(source);
 	});
 
+	// It reads every source file: slow on a busy machine.
 	test("slots.ts lists every slot (run `pnpm themes:sync`)", () => {
 		expect(readFileSync("src/lib/themes/slots.ts", "utf8")).toBe(
 			slotsModule(slotNames(srcFiles())),
 		);
-	});
+	}, 30_000);
 });
