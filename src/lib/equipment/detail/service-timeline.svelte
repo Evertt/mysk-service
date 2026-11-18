@@ -2,7 +2,7 @@
 	@component
 	Everything that happened to a unit, newest first: its installation, every order on it with who
 	did what, what it took and what it cost (with what the tenant's modules take off, e.g. the work a
-	service contract includes), and the end of its warranty, which may be ahead.
+	service contract includes) and its photos, and the end of its warranty, which may be ahead.
 -->
 <script lang="ts">
 	import PackageCheckIcon from "@lucide/svelte/icons/package-check";
@@ -13,7 +13,7 @@
 	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { EngineerLink } from "#lib/engineers/components.ts";
 	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
-	import { CostItem, OrderLink } from "#lib/orders/components.ts";
+	import { CostItem, OrderLink, PhotoThumbs } from "#lib/orders/components.ts";
 	import { orderTypeDisplay, orderStatusDisplay } from "#lib/orders/index.ts";
 
 	import { getServiceHistory } from "./service-history.remote.ts";
@@ -91,6 +91,7 @@
 								</span>
 							</div>
 							<p class="text-sm text-muted-foreground">{order.description}</p>
+							<PhotoThumbs photos={order.photos} />
 							{#if order.units > 1}
 								<p class="text-xs text-muted-foreground" data-cost="share">
 									{m.equipment_history_shared({

@@ -1,7 +1,8 @@
 <!--
 	@component
 	One of the customer's orders in the portal's lists: a link to it, with what it's about, its
-	units and where it stands; a rejected report shows why. A card of its own, or, in an
+	units and where it stands; a rejected report shows why, and how many photos it has where the list
+	knows (a unit's service history). A card of its own, or, in an
 	`order-list.svelte` that's wide enough, a row of its table: number, what, status and date in
 	columns.
 -->
@@ -13,6 +14,7 @@
 	import { unitTitle } from "#lib/equipment/index.ts";
 	import { formatDate, formatNumber, label } from "#lib/i18n/index.ts";
 	import type { OrderPriority, OrderStatus, OrderType } from "#lib/models.ts";
+	import { PhotoCount } from "#lib/orders/components.ts";
 
 	import { clientStatus, clientStatusDisplay } from "./client-status.ts";
 
@@ -32,6 +34,7 @@
 			/** Who reported it in the portal, if it was reported there. */
 			reportedBy: string | null;
 			units: { name: string | null; manufacturer: string; model: string }[];
+			photos?: readonly unknown[];
 		};
 	} = $props();
 
@@ -75,7 +78,12 @@
 	<span class="order-status">
 		<EnumBadge display={clientStatusDisplay} value={status} data-client-status={status} />
 	</span>
-	<span class="order-when text-xs text-muted-foreground">{when}</span>
+	<span
+		class="order-when flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground"
+	>
+		{when}
+		<PhotoCount count={order.photos?.length ?? 0} />
+	</span>
 	<ChevronRightIcon class="order-chevron size-5 shrink-0 self-center text-muted-foreground" />
 </a>
 

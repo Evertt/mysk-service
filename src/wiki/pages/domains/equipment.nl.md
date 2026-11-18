@@ -32,7 +32,9 @@ De pagina van een apparaat vertelt zijn verhaal: een tijdlijn met de installatie
 eraan en het einde van de garantie (dat nog kan komen), en cijfers die het samenvatten: hoeveel
 opdrachten, hoeveel daarvan open, wat het werk kostte, en hoe lang er tussen reparaties zit. Een
 opdracht voor meerdere apparaten, zoals een jaarlijkse inspectie van vijftien deuren, telt bij elk
-voor een vijftiende.
+voor een vijftiende. Elke opdracht toont daar zijn foto's, als kleine miniaturen; het
+monteursportaal en het klantportaal tonen een aantal per opdracht bij de opdrachten van een
+apparaat (zie [Foto's bij een opdracht](/wiki/orders/photos)).
 
 ## QR-codes
 
@@ -97,6 +99,6 @@ alleen het adres van de vestiging. De scopes (`officeUnits()`, `engineerUnits()`
 - <SourceLink path="src/lib/equipment/server/qr.ts" line={63}><code>resolveQrCode()</code></SourceLink> en <SourceLink path="src/lib/equipment/server/qr.ts" line={84}><code>qrDestination()</code></SourceLink>
 - <SourceLink path="src/routes/q/[token]/+server.ts" line={17} symbol="GET">de route <code>/q/[token]</code></SourceLink>
 - <SourceLink path="src/lib/equipment/labels/labels.remote.ts" line={18}><code>getLabelSheet</code></SourceLink>
-- <SourceLink path="src/lib/equipment/detail/service-history.ts" line={67}><code>buildTimeline()</code></SourceLink>
+- <SourceLink path="src/lib/equipment/detail/service-history.ts" line={69}><code>buildTimeline()</code></SourceLink>
 
 <DocsPointer doc="docs/agents/orders.md" section="Units and locations" />

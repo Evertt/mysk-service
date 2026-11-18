@@ -34,6 +34,8 @@ export interface HistoryOrder {
 	 * materials used) and adjustments (e.g. contract coverage). In cents. The whole order's.
 	 */
 	cost: { costs: OrderCost[]; labor: number; adjustments: PriceAdjustment[]; total: number };
+	/** Its photos, by which `/photos/<id>` serves them. */
+	photos: { id: number }[];
 }
 
 /**

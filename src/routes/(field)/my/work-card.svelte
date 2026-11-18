@@ -1,6 +1,7 @@
 <!--
 	@component
-	One of the engineer's orders in their lists: a large link to the order, with when, where and what.
+	One of the engineer's orders in their lists: a large link to the order, with when, where and what,
+	and how many photos it has where the list knows (a unit's orders).
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
@@ -10,6 +11,7 @@
 	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { formatDate } from "#lib/i18n/index.ts";
 	import type { OrderPriority, OrderStatus } from "#lib/models.ts";
+	import { PhotoCount } from "#lib/orders/components.ts";
 	import { orderPriorityDisplay, orderStatusDisplay } from "#lib/orders/index.ts";
 
 	import { plannedTime } from "./work.ts";
@@ -24,6 +26,7 @@
 			priority: OrderPriority;
 			description: string;
 			customer: { name: string; city: string };
+			photos?: readonly unknown[];
 		};
 		/** What to show as its time, e.g. the planned time or the completion date. */
 		when: { date: Temporal.Instant | null; show: "time" | "date" };
@@ -57,6 +60,7 @@
 		<div class="flex flex-wrap gap-2">
 			<EnumBadge display={orderStatusDisplay} value={order.status} />
 			<EnumBadge display={orderPriorityDisplay} value={order.priority} />
+			<PhotoCount count={order.photos?.length ?? 0} />
 		</div>
 	</div>
 	<ChevronRightIcon class="size-5 shrink-0 text-muted-foreground" />

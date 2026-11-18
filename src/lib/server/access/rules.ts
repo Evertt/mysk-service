@@ -158,23 +158,30 @@ export type NarrowedBy = { [A in Audience]?: (viewer: Of<A>) => SQL | Promise<SQ
  * `table` is its parent's id, and its rules are its parent's, through `exists`, `narrowedBy` an
  * audience's own condition on the part. A parent the tenant has no rule for (its module is off)
  * leaves the part unreadable.
+ *
+ * `changedBy` gives an audience a change of its own: the parts of the parents it _reads_ that meet
+ * its condition (whoever added an order's photo deletes it, though they don't change the order).
+ * An audience without one changes the parts of the parents it changes, as it reads them.
  */
 export function partOf(
 	parentType: string,
 	table: SQLiteTable & { organizationId: SQLiteColumn; id: SQLiteColumn },
 	parentColumn: SQLiteColumn,
 	narrowedBy: NarrowedBy = {},
+	changedBy: NarrowedBy = {},
 ): AccessRule {
 	const through =
 		(which: "read" | "change") =>
 		async (viewer: Viewer, rules: Rules): Promise<Condition | undefined> => {
 			const parent = rules(parentType);
 			if (!parent?.row) return undefined;
-			const where = await parent[which](viewer, rules);
+			type Narrowing = ((viewer: Viewer) => SQL | Promise<SQL>) | undefined;
+			const own = which === "change" ? (changedBy[viewer.audience] as Narrowing) : undefined;
+			const where = await parent[own ? "read" : which](viewer, rules);
 			if (!where) return undefined;
-			const narrow = await (
-				narrowedBy[viewer.audience] as ((viewer: Viewer) => SQL | Promise<SQL>) | undefined
-			)?.(viewer);
+			const narrowing = await (narrowedBy[viewer.audience] as Narrowing)?.(viewer);
+			const owning = await own?.(viewer);
+			const narrow = narrowing && owning ? and(narrowing, owning) : (narrowing ?? owning);
 			if (where === "all") return narrow ? and(inTenant(table), narrow)! : "all";
 			const { table: parentTable, idColumn } = parent.row;
 			return and(

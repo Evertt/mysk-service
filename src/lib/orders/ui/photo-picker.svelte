@@ -1,25 +1,41 @@
 <!--
 	@component
-	The report form's photos: a button that opens the camera or the photo library, the chosen photos
-	as thumbnails, each with a button that takes it off again, at most `MAX_PHOTOS`. Each is shrunk
-	before it's added (`shrinkPhoto()`), so the form sends small JPEGs; the server checks them again.
-	The photos are the form field's value, which the file input sends.
+	A form's photos of an order (the portal's breakdown report, a photos card's form): a button that
+	opens the camera or the photo library, the chosen photos as thumbnails, each with a button that
+	takes it off again, at most `MAX_PHOTOS`. Each is shrunk before it's added (`shrinkPhoto()`), so
+	the form sends small JPEGs; the server checks them again. The photos are the form field's value,
+	which the file input sends. Its form needs `enctype="multipart/form-data"`.
+
+	Without JavaScript (or until the page has loaded it) it's the browser's own file input, whose
+	photos go as they are: the server takes them up to `MAX_PHOTO_BYTES` each.
 -->
 <script lang="ts">
 	import type { RemoteFormField } from "$app/server";
 	import ImagePlusIcon from "@lucide/svelte/icons/image-plus";
 	import XIcon from "@lucide/svelte/icons/x";
-	import { onDestroy } from "svelte";
+	import { onDestroy, onMount } from "svelte";
 
 	import { formatNumber } from "#lib/i18n/index.ts";
-	import { MAX_PHOTOS } from "#lib/orders/index.ts";
 
+	import { MAX_PHOTOS } from "../photos.ts";
 	import { shrinkPhoto } from "./shrink.ts";
 
-	let { field }: { field: RemoteFormField<File[]> } = $props();
+	let {
+		field,
+		label = m.orders_photos(),
+		description,
+	}: {
+		field: RemoteFormField<File[]>;
+		label?: string;
+		description?: string;
+	} = $props();
 
 	const id = $props.id();
 	let input = $state<HTMLInputElement>();
+
+	/** Whether the page runs its script: the button and the thumbnails then take the input's place. */
+	let enhanced = $state(false);
+	onMount(() => (enhanced = true));
 
 	/** The chosen photos, shrunk, each with its thumbnail's object URL. */
 	let photos = $state.raw<{ file: File; url: string }[]>([]);
@@ -43,7 +59,7 @@
 		problem = null;
 		const room = MAX_PHOTOS - photos.length;
 		if (picked.length > room) {
-			problem = m.client_report_photos_too_many({ max: formatNumber(MAX_PHOTOS) });
+			problem = m.orders_photos_too_many({ max: formatNumber(MAX_PHOTOS) });
 		}
 		shrinking = true;
 		const added: { file: File; url: string }[] = [];
@@ -52,7 +68,7 @@
 				const shrunk = await shrinkPhoto(file);
 				added.push({ file: shrunk, url: URL.createObjectURL(shrunk) });
 			} catch {
-				problem = m.client_report_photo_unreadable();
+				problem = m.orders_photo_unreadable();
 			}
 		}
 		shrinking = false;
@@ -65,20 +81,27 @@
 		keep(photos.filter((_, i) => i !== index));
 	}
 
+	/** Takes every photo off, e.g. once the form has sent them. */
+	export function clear() {
+		for (const photo of photos) URL.revokeObjectURL(photo.url);
+		problem = null;
+		keep([]);
+	}
+
 	onDestroy(() => {
 		for (const photo of photos) URL.revokeObjectURL(photo.url);
 	});
 </script>
 
 <Field.Field data-invalid={issues.length ? true : undefined} data-photo-picker>
-	<Field.FieldLabel for={id}>{m.client_report_photos()}</Field.FieldLabel>
+	<Field.FieldLabel for={id}>{label}</Field.FieldLabel>
 	<input
 		{...field.as("file multiple")}
 		{id}
 		bind:this={input}
 		accept="image/*"
-		class="sr-only"
-		tabindex="-1"
+		class={enhanced ? "sr-only" : "text-sm"}
+		tabindex={enhanced ? -1 : undefined}
 		onchange={add}
 	/>
 	{#if photos.length}
@@ -95,7 +118,7 @@
 						variant="secondary"
 						size="icon-sm"
 						class="absolute top-1 right-1 rounded-full"
-						aria-label={m.client_report_photo_remove({ number: formatNumber(index + 1) })}
+						aria-label={m.orders_photo_remove({ number: formatNumber(index + 1) })}
 						onclick={() => remove(index)}
 					>
 						<XIcon />
@@ -104,19 +127,21 @@
 			{/each}
 		</ul>
 	{/if}
-	<div>
-		<Button
-			type="button"
-			variant="outline"
-			disabled={full || shrinking}
-			onclick={() => input?.click()}
-		>
-			<ImagePlusIcon data-icon="inline-start" />
-			{m.client_report_photos_add()}
-		</Button>
-	</div>
-	<Field.FieldDescription>
-		{m.client_report_photos_description({ max: formatNumber(MAX_PHOTOS) })}
-	</Field.FieldDescription>
+	{#if enhanced}
+		<div>
+			<Button
+				type="button"
+				variant="outline"
+				disabled={full || shrinking}
+				onclick={() => input?.click()}
+			>
+				<ImagePlusIcon data-icon="inline-start" />
+				{m.orders_photos_add()}
+			</Button>
+		</div>
+	{/if}
+	{#if description}
+		<Field.FieldDescription>{description}</Field.FieldDescription>
+	{/if}
 	<Field.FieldError errors={issues} />
 </Field.Field>

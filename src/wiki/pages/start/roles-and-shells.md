@@ -45,7 +45,7 @@ and the recent ones. An order opens to what the engineer needs on site: the job,
 site and its access notes, the customer's contact with call and email buttons.
 
 On a scheduled order the engineer taps **On my way** when they set out, which the customer reads
-in their portal and is told of; then they start the job (or start it at once), log the hours, adds notes, and completes it: the customer
+in their portal and is told of; then they start the job (or start it at once), log the hours, adds notes and photos, and completes it: the customer
 signs on the screen, and so does the engineer. Scanning a unit's or a place's QR code opens it in
 this portal, with the engineer's open orders for it.
 
@@ -70,7 +70,8 @@ breakdown with the location's units to choose from.
 Reporting a breakdown asks what's going on (door won't close, damage, noise or other), what's
 wrong, how urgent it is (the top urgency reads "standstill" here, where the office says "urgent")
 and takes up to five photos, which the phone shrinks before sending. The order's page shows them
-again, to the contact and to the office.
+again, to the contact and to the office, with those the engineer or the office add later (see
+[Photos of an order](/wiki/orders/photos)).
 
 A contact sees only their own customer's records, and, if the office invited them for some sites
 only, only those sites'. They don't see the engineers' notes; of an engineer they see the first

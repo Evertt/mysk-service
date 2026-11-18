@@ -9,6 +9,7 @@
 		EngineerCard,
 		EquipmentHistoryCard,
 		OrderLinesCard,
+		OrderPhotosCard,
 		OrderTags,
 		ScheduleCard,
 		TypeLabel,
@@ -17,6 +18,7 @@
 	} from "#lib/orders/components.ts";
 	import { points } from "#lib/orders/extensions.ts";
 	import {
+		mayAddPhotos,
 		mayDeleteOrder,
 		mayEditOrder,
 		orderPriorityDisplay,
@@ -65,6 +67,12 @@
 		{/if}
 		<OrderLinesCard {order} totals={data.totals} />
 		<UnitsCard {order} />
+		<OrderPhotosCard
+			orderId={order.id}
+			photos={data.photos}
+			canAdd={mayAddPhotos("office", order.status)}
+			description={m.orders_photos_description()}
+		/>
 		{#if order.units.length}
 			<EquipmentHistoryCard units={order.units} history={await getOrderHistory(order.number)} />
 		{/if}

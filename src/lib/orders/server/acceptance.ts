@@ -16,7 +16,7 @@ import { db, type Transaction } from "#lib/server/db/index.ts";
 import { order, orderRequest } from "#lib/server/db/schema.ts";
 
 import { createOrders, type OrderDraft } from "./creation.ts";
-import { addOrderPhotos, discardOrderPhotos, storeOrderPhotos } from "./photos.ts";
+import { addOrderPhotos, withStoredPhotos } from "./photos.ts";
 
 /**
  * Creates an order a customer's contact reports in the portal, in `tx`, through `createOrders()`
@@ -51,22 +51,18 @@ type Report = Parameters<typeof requestOrder>[1] & { photos?: readonly File[] };
 
 /**
  * Makes the order of a breakdown a customer's contact reports in the portal (`requestOrder()`),
- * with their photos: the photos are put in the store first (`storeOrderPhotos()`: checked, else a
+ * with their photos: the photos are put in the store first (`withStoredPhotos()`: checked, else a
  * `Refused` on `photos` and no order), outside the transaction, which then makes the order and
- * records them; should it fail, the stored photos are taken away again.
+ * records them; should it fail, the stored photos are deleted again.
  */
-export async function reportOrder({ photos: files = [], ...report }: Report) {
-	const photos = await storeOrderPhotos(files);
-	try {
-		return await db.transaction(async (tx) => {
+export function reportOrder({ photos: files = [], ...report }: Report) {
+	return withStoredPhotos(files, (photos) =>
+		db.transaction(async (tx) => {
 			const created = await requestOrder(tx, report);
 			await addOrderPhotos(tx, created, photos);
 			return created;
-		});
-	} catch (thrown) {
-		await discardOrderPhotos(photos);
-		throw thrown;
-	}
+		}),
+	);
 }
 
 /**

@@ -16,3 +16,7 @@ export { default as OrderTags } from "./ui/order-tags.svelte";
 export { default as SignOff } from "./ui/sign-off.svelte";
 export { default as TypeLabel } from "./ui/type-label.svelte";
 export { default as WorkUnits } from "./ui/work-units.svelte";
+export { default as OrderPhotosCard } from "./ui/order-photos-card.svelte";
+export { default as PhotoCount } from "./ui/photo-count.svelte";
+export { default as PhotoPicker } from "./ui/photo-picker.svelte";
+export { default as PhotoThumbs } from "./ui/photo-thumbs.svelte";

@@ -7,12 +7,19 @@
  * (`./photos.ts`) are kept in one each.
  *
  * Never write to a store inside a database transaction: on Cloudflare a transaction holds every
- * other request until it's done. Store the file first, then record its row.
+ * other request until it's done. Store the file first, then record its row; delete a file once the
+ * transaction that let go of its row has committed.
  */
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { dirname, resolve, sep } from "node:path";
+import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { dirname, join, relative, resolve, sep } from "node:path";
 
 import type { Bucket, DurableRequest } from "#lib/server/db/durable.ts";
+
+/** A file in a store: its key, and when it was stored (last written). */
+interface StoredFile {
+	key: string;
+	storedAt: Temporal.Instant;
+}
 
 /** A store of files, by key. */
 export interface FileStore {
@@ -21,6 +28,8 @@ export interface FileStore {
 	get(key: string): Promise<Uint8Array<ArrayBuffer> | null>;
 	/** Removes the file under `key`, if there is one. */
 	delete(key: string): Promise<void>;
+	/** The files whose keys start with `prefix`, each with when it was stored, in no order. */
+	list(prefix: string): Promise<StoredFile[]>;
 }
 
 /** A store in an R2 bucket, each file with its content type. */
@@ -35,6 +44,22 @@ export function bucketStore(bucket: Bucket): FileStore {
 		},
 		async delete(key) {
 			await bucket.delete(key);
+		},
+		async list(prefix) {
+			const found: StoredFile[] = [];
+			let cursor: string | undefined;
+			// A page at a time (R2 answers 1,000 at most), until the last.
+			do {
+				const page = await bucket.list({ prefix, cursor });
+				for (const object of page.objects) {
+					found.push({
+						key: object.key,
+						storedAt: Temporal.Instant.fromEpochMilliseconds(object.uploaded.getTime()),
+					});
+				}
+				cursor = page.truncated ? page.cursor : undefined;
+			} while (cursor);
+			return found;
 		},
 	};
 }
@@ -64,6 +89,32 @@ export function folderStore(folder: string): FileStore {
 		},
 		async delete(key) {
 			await rm(pathOf(key), { force: true });
+		},
+		async list(prefix) {
+			// From the deepest folder the prefix names (`org/orders/` reads `<folder>/org/orders`), so
+			// listing a tenant's files reads no one else's.
+			const slash = prefix.lastIndexOf("/");
+			const start = slash > 0 ? pathOf(prefix.slice(0, slash)) : root;
+			let names: string[];
+			try {
+				names = await readdir(start, { recursive: true });
+			} catch (error) {
+				if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+				throw error;
+			}
+			const found: StoredFile[] = [];
+			for (const name of names) {
+				const path = join(start, name);
+				const key = relative(root, path).split(sep).join("/");
+				if (!key.startsWith(prefix)) continue;
+				const stats = await stat(path);
+				if (!stats.isFile()) continue;
+				found.push({
+					key,
+					storedAt: Temporal.Instant.fromEpochMilliseconds(Math.floor(stats.mtimeMs)),
+				});
+			}
+			return found;
 		},
 	};
 }

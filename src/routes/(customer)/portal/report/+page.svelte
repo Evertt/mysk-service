@@ -15,8 +15,10 @@
 	import SubmitButton from "#lib/components/form/submit-button.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
 	import { unitLine, unitTitle } from "#lib/equipment/index.ts";
-	import { label } from "#lib/i18n/index.ts";
+	import { formatNumber, label } from "#lib/i18n/index.ts";
 	import { type ReportFault, reportFaults, reportUrgencies } from "#lib/models.ts";
+	import { PhotoPicker } from "#lib/orders/components.ts";
+	import { MAX_PHOTOS } from "#lib/orders/index.ts";
 	import { cn } from "#lib/utils.ts";
 
 	import {
@@ -26,7 +28,6 @@
 		reportBreakdown,
 	} from "../client.remote.ts";
 	import { portalPriority } from "../urgency.ts";
-	import PhotoPicker from "./photo-picker.svelte";
 
 	const serial = $derived(page.url.searchParams.get("unit"));
 	const locationParam = $derived(page.url.searchParams.get("location"));
@@ -99,7 +100,7 @@
 	{/if}
 
 	{#if sitesWithUnits.length}
-		<form {...reportBreakdown} class="flex flex-col gap-6" novalidate>
+		<form {...reportBreakdown} enctype="multipart/form-data" class="flex flex-col gap-6" novalidate>
 			{#if scanned}
 				<input {...fields.unitId.as("hidden", String(scanned.id))} />
 			{:else}
@@ -146,7 +147,10 @@
 				multiline
 			/>
 
-			<PhotoPicker field={fields.photos} />
+			<PhotoPicker
+				field={fields.photos}
+				description={m.client_report_photos_description({ max: formatNumber(MAX_PHOTOS) })}
+			/>
 
 			<fieldset class="flex flex-col gap-2">
 				<legend class="mb-1 text-sm font-medium">{m.client_report_urgency()}</legend>

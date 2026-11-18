@@ -1,9 +1,9 @@
 /**
- * Shrinks a photo in the browser before the report form sends it: its longest side to
+ * Shrinks a photo in the browser before a form sends it (`photo-picker.svelte`): its longest side to
  * `PHOTO_LONGEST_SIDE` (never larger than it was), as a JPEG, so a phone's photo of several MB is a
  * few hundred KB. Turned as the camera held it (its EXIF orientation), since the JPEG keeps none.
  */
-import { PHOTO_LONGEST_SIDE } from "#lib/orders/index.ts";
+import { PHOTO_LONGEST_SIDE } from "../photos.ts";
 
 /** How much a shrunk photo's JPEG keeps: enough to read a type plate. */
 const QUALITY = 0.82;

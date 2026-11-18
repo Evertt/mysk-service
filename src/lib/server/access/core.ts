@@ -12,10 +12,13 @@
  *   those whose pages show them, and changed by managers.
  * - `member`, `invitation`, `portal_contact` and `integration_token` are for managers.
  * - A saved view is its owner's, or shared with the office (managers change those).
+ * - An order's photo is seen by whoever reads the order, and deleted by the office, or by whoever
+ *   added it (its engineer, the customer's contact) while the order is still to be done.
  */
 import { and, eq, or, type SQL, sql } from "drizzle-orm";
 
 import type { coreSubjectTypes } from "#lib/activity/subjects.ts";
+import { pendingOrderStatuses } from "#lib/models.ts";
 import {
 	currentUser,
 	customerEquipment,
@@ -27,6 +30,7 @@ import {
 	idInTenant,
 	inTenant,
 } from "#lib/server/auth/index.ts";
+import { inList } from "#lib/server/db/parameters.ts";
 import {
 	customer,
 	customerSite,
@@ -53,6 +57,19 @@ const locationsAt = (sites: SQL) =>
 	and(
 		inTenant(equipmentLocation),
 		sql`${equipmentLocation.siteId} in (select ${customerSite.id} from ${customerSite} where ${sites})`,
+	)!;
+
+/**
+ * A photo the signed-in user added, of an order still to be done (awaiting acceptance, quoted,
+ * planned or under way): not once it's completed, invoiced or cancelled.
+ */
+const ownWhilePending = () =>
+	and(
+		eq(orderPhoto.userId, currentUser().id),
+		sql`${orderPhoto.orderId} in (select ${order.id} from ${order} where ${and(
+			inTenant(order),
+			inList(order.status, pendingOrderStatuses),
+		)})`,
 	)!;
 
 /** A saved view the signed-in user may read: their own, or one shared with the office. */
@@ -98,8 +115,16 @@ export const coreRules = {
 		},
 		{ change: { office: true, engineer: () => engineerOrders() } },
 	),
-	// Whoever reads the order sees its photos: the office, its engineer, the customer's contact.
-	order_photo: partOf("order", orderPhoto, orderPhoto.orderId),
+	// Whoever reads the order sees its photos: the office, its engineer, the customer's contact. The
+	// office deletes any of an order (it changes them all); the others, of an order they read, the
+	// ones they added while it's still to be done.
+	order_photo: partOf(
+		"order",
+		orderPhoto,
+		orderPhoto.orderId,
+		{},
+		{ engineer: ownWhilePending, customer: ownWhilePending },
+	),
 	module: tenantWide({ office: true }, { change: "manager" }),
 	simulation: tenantWide({ office: true }, { change: "manager" }),
 	member: rows(member, member.id, { office: "manager" }),

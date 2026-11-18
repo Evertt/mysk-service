@@ -200,7 +200,8 @@ export const getPortalUnit = forCustomers.query(v.string(), async (serialNumber)
 		m.client_unit_not_found({ serial: serialNumber }),
 	);
 	const orders = await ordersWhere(access, onUnit(unit.id), 50);
-	return { unit, orders };
+	const photos = await photosOf(orders.map((one) => one.id));
+	return { unit, orders: orders.map((one) => ({ ...one, photos: photos.get(one.id) ?? [] })) };
 });
 
 /** One of the customer's locations the contact sees (or a 404), its site and its units. */
