@@ -14,13 +14,6 @@ import { and, asc } from "drizzle-orm";
 
 import { orderSubject } from "#lib/activity/index.ts";
 import { formatNumber, numberFormatter } from "#lib/i18n/format.ts";
-import {
-	isPhotoType,
-	MAX_PHOTO_BYTES,
-	MAX_PHOTOS,
-	type PhotoType,
-	photoTypes,
-} from "#lib/orders/photos.ts";
 import { readOrNotFound, visibleOrNone } from "#lib/server/access/index.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
 import { currentTenant, idInTenant, requireTenant } from "#lib/server/auth/index.ts";
@@ -30,6 +23,8 @@ import { orderPhoto } from "#lib/server/db/schema.ts";
 import { photoKey, photoStore } from "#lib/server/files/photos.ts";
 import { orNotFound } from "#lib/server/records.ts";
 import { Refused } from "#lib/server/refused.ts";
+
+import { isPhotoType, MAX_PHOTO_BYTES, MAX_PHOTOS, type PhotoType, photoTypes } from "../photos.ts";
 
 /** A photo put in the store, not yet recorded on an order. */
 export interface StoredPhoto {

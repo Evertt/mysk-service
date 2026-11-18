@@ -12,7 +12,7 @@
 	import { onDestroy } from "svelte";
 
 	import { formatNumber } from "#lib/i18n/index.ts";
-	import { MAX_PHOTOS } from "#lib/orders/photos.ts";
+	import { MAX_PHOTOS } from "#lib/orders/index.ts";
 
 	import { shrinkPhoto } from "./shrink.ts";
 

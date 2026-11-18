@@ -3,7 +3,7 @@
  * `PHOTO_LONGEST_SIDE` (never larger than it was), as a JPEG, so a phone's photo of several MB is a
  * few hundred KB. Turned as the camera held it (its EXIF orientation), since the JPEG keeps none.
  */
-import { PHOTO_LONGEST_SIDE } from "#lib/orders/photos.ts";
+import { PHOTO_LONGEST_SIDE } from "#lib/orders/index.ts";
 
 /** How much a shrunk photo's JPEG keeps: enough to read a type plate. */
 const QUALITY = 0.82;
