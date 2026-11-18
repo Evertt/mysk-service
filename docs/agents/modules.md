@@ -49,6 +49,13 @@ true })`, whose contributors answer at once, without awaiting: for an owner that
   `saveUnitParts()`) once the new units are in and before the ones it loses go, so a module's rows
   about an order's unit (a checklist, which refers to `order_unit`) can follow, or refuse a unit's
   removal (a `Refused`, about the form's units unless its problem says otherwise).
+- **Stored files of a module** (keys under `<tenant>/<module's folder>/`, in a core store): a
+  collector declared with `alsoOff: true` asks the modules the tenant has off too, as such a vote
+  does. A unit's removal asks `equipment.removing` (`src/lib/equipment/extensions.ts`, a `fail`
+  collector, its input the deletion's `tx`) in its transaction before the delete, and each module
+  answers what lets go of its files once it has committed; the daily run asks `jobs.fileSweeps`
+  (`src/lib/jobs/extensions.ts`, a `skip` collector) for each module's `sweepFiles()` of its prefix.
+  Condition's defect photos (`server/photos.ts`) are the example.
 - **Daily jobs** (`jobs.daily`, a `skip` collector in `src/lib/jobs/extensions.ts`): what a
   module does by itself once a day. `runDaily()` (`src/lib/server/jobs/daily.ts`) asks each
   organization's modules that are on, one organization after another, inside one request to

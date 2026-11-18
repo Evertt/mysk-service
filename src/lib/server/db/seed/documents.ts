@@ -4,8 +4,9 @@
  * door, an inspection certificate and a drawing on Connect's units. Their files are small PDFs made
  * here, of one page that says what they are, put in the local file store (`PHOTOS_DIR`, `.photos` by
  * default) under keys that are the same each time the seed runs, so seeding again overwrites them.
- * On Cloudflare the store is an R2 bucket the seed doesn't reach: there the documents are listed,
- * and their files are a 404 until they're uploaded again.
+ * On Cloudflare the store is an R2 bucket the seed doesn't reach: the export of the seeded database
+ * carries the folder's files along, and the import puts them in the bucket (`cloudflare/import.ts`,
+ * as CI fills staging).
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";

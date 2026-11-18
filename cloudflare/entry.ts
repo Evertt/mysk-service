@@ -11,8 +11,9 @@
  *   The R2 buckets go along, the bug reports' (`bugReportStore()`) and the orders' photos'
  *   (`photoStore()`): the adapter's worker passes the app no `platform`.
  * - `POST /_ops/import` (with `Authorization: Bearer <OPS_TOKEN>`) replaces the database's data
- *   with an export of a libsql one (`cloudflare/export-database.ts`): to move from Turso, or to
- *   start with the demo data.
+ *   with an export of a libsql one, and puts its file store's files in the `PHOTOS` bucket
+ *   (`cloudflare/export-database.ts`, `cloudflare/import.ts`): to move from Turso, or to start
+ *   with the demo data, its documents and photos too.
  * - The Cron Triggers (`triggers.crons` in `wrangler.jsonc`): the daily one starts the daily jobs,
  *   the one every 15 minutes ticks the demo's simulations (an open page's simulation bar ticks in
  *   between). `scheduled()` has the object answer `POST /_ops/daily` or `POST /_ops/tick` with the
@@ -30,18 +31,13 @@ import { migrate } from "drizzle-orm/durable-sqlite/migrator";
 import kit from "#kit-worker";
 
 import type { DurableRequest } from "../src/lib/server/db/durable.ts";
+import { answerImport, type ExportedTable } from "./import.ts";
 import migrations from "./migrations/migrations.js";
 
 globalThis.durableRequests ??= new AsyncLocalStorage<DurableRequest>();
 
 /** The Worker's bindings (`wrangler.jsonc`), as `wrangler types` writes them. */
 type Env = Cloudflare.Env;
-
-/** A table of an export: its columns, and its rows' values in that order. */
-interface ExportedTable {
-	columns: string[];
-	rows: SqlStorageValue[][];
-}
 
 /** The tables an import may fill: the schema's, by name. */
 const tableName = /^[a-z_]+$/;
@@ -133,14 +129,6 @@ export class AppDatabase extends DurableObject<Env> {
 	}
 }
 
-/** Whether `request` carries the ops token (compared in constant time). */
-function authorized(request: Request, token: string | undefined) {
-	if (!token) return false;
-	const given = new TextEncoder().encode(request.headers.get("authorization") ?? "");
-	const wanted = new TextEncoder().encode(`Bearer ${token}`);
-	return given.byteLength === wanted.byteLength && crypto.subtle.timingSafeEqual(given, wanted);
-}
-
 /** The Cron Trigger that ticks the simulations (`wrangler.jsonc`); any other runs the daily jobs. */
 const tickCron = "*/15 * * * *";
 
@@ -153,16 +141,11 @@ export default {
 		const app = appDatabase(env);
 
 		if (new URL(request.url).pathname === "/_ops/import") {
-			if (request.method !== "POST") return new Response(null, { status: 405 });
-			if (!authorized(request, env.OPS_TOKEN)) return new Response(null, { status: 403 });
-			try {
-				return Response.json(await app.import(await request.json()));
-			} catch (error) {
-				// Its reason in the answer, for whoever imports (CI prints it), not Cloudflare's bare 1101.
-				return new Response(error instanceof Error ? error.message : String(error), {
-					status: 500,
-				});
-			}
+			return answerImport(request, {
+				token: env.OPS_TOKEN,
+				photos: env.PHOTOS,
+				importTables: (tables) => app.import(tables),
+			});
 		}
 		return app.fetch(request);
 	},

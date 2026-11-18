@@ -148,15 +148,15 @@ const ask = async <In, Out>(answer: (input: In) => Out | Promise<Out>, input: In
 
 /**
  * Every answer of the modules that are on (by default the current tenant's) to `point` about
- * `input`, asked in parallel, in registry order. See the point's `onError` for a module that
- * throws.
+ * `input`, asked in parallel, in registry order; with the point's `alsoOff`, every module's that
+ * contributes to it. See the point's `onError` for a module that throws.
  */
 export async function collect<In, Out>(
 	point: CollectorPoint<In, Out>,
 	input: In,
 	enabled: readonly string[] = requireTenant().modules,
 ): Promise<Out[]> {
-	const contributions = contributionsTo<(input: In) => Promise<Out>>(point, enabled);
+	const contributions = contributionsTo<(input: In) => Promise<Out>>(point, enabled, point.alsoOff);
 	const asked = contributions.map(({ answer }) => ask(answer, input));
 	if (point.onError === "fail") return Promise.all(asked);
 	const settled = await Promise.allSettled(asked);

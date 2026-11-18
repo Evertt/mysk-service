@@ -52,6 +52,8 @@ export interface CollectorPoint<In, Out> extends Typed<{ input: In; output: Out 
 	readonly id: string;
 	readonly kind: "collector";
 	readonly onError: OnError;
+	/** Whether the modules the tenant has switched off are asked too (see `defineCollector()`). */
+	readonly alsoOff?: true;
 }
 
 /**
@@ -92,7 +94,9 @@ export interface SaveHookPoint<In, Problem> extends Typed<{ input: In; problem: 
 
 /**
  * Declares a collector: contributors answer with `Out` about `In`. With `now: true`, they answer
- * at once (an `ImmediateCollectorPoint`, asked with `collectNow()`).
+ * at once (an `ImmediateCollectorPoint`, asked with `collectNow()`). With `alsoOff: true` the
+ * modules the tenant has switched off are asked too: for what concerns the records a module that's
+ * off still keeps, such as the stored files a unit's removal takes with it (`equipment.removing`).
  */
 export function defineCollector<In, Out>(
 	id: string,
@@ -100,13 +104,13 @@ export function defineCollector<In, Out>(
 ): ImmediateCollectorPoint<In, Out>;
 export function defineCollector<In, Out>(
 	id: string,
-	options: { onError: OnError },
+	options: { onError: OnError; alsoOff?: true },
 ): CollectorPoint<In, Out>;
 export function defineCollector<In, Out>(
 	id: string,
-	{ onError, now }: { onError: OnError; now?: true },
+	{ onError, now, alsoOff }: { onError: OnError; now?: true; alsoOff?: true },
 ): CollectorPoint<In, Out> {
-	if (!now) return { id, kind: "collector", onError };
+	if (!now) return { id, kind: "collector", onError, ...(alsoOff && { alsoOff }) };
 	const point: ImmediateCollectorPoint<In, Out> = { id, kind: "collector", onError, now };
 	return point;
 }

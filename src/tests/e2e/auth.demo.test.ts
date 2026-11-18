@@ -5,7 +5,7 @@
  */
 import { afterAll, beforeAll, describe, expect, test } from "vite-plus/test";
 
-import { demoOrganizations } from "#lib/server/db/demo.ts";
+import { demoOrganizations, HEAD_OFFICE } from "#lib/server/db/demo.ts";
 
 import { baseURL, rows, useApp } from "./app.ts";
 import { startServer } from "./global-setup.ts";
@@ -58,6 +58,7 @@ describe("with DEMO_SIGN_IN", () => {
 			"Planner",
 			"Engineer",
 			"Customer",
+			"Head office",
 		]);
 		expect(await page.getByText("The SHLTR demo").isVisible()).toBe(true);
 		const planner = page.getByRole("button", { name: "Planner", exact: true });
@@ -120,6 +121,21 @@ describe("with DEMO_SIGN_IN", () => {
 		expect(account).toContain("Marieke Verhoeven");
 		expect(account).toContain(shltr.name);
 		expect((await sessions("facilitair@riedel.example")).latest).toBe(shltr.id);
+
+		await signOutOfPortal(app.page);
+		await app.go("/portal");
+		expect(app.path()).toBe("/login");
+	});
+
+	test("Head office signs in as Distributiecentrum Zutphen's head office, with its three sites", async () => {
+		const { page } = app;
+		await app.go("/login");
+		await page.getByRole("button", { name: "Head office", exact: true }).click();
+		await page.waitForURL((url) => url.pathname === "/portal");
+		await app.go("/portal/sites");
+		await page.locator("[data-site-card]").first().waitFor();
+		expect(await page.locator("[data-site-card]").count()).toBe(3);
+		expect((await sessions(HEAD_OFFICE.email)).latest).toBe(shltr.id);
 
 		await signOutOfPortal(app.page);
 		await app.go("/portal");

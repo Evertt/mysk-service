@@ -1,6 +1,6 @@
 <!--
 	@component
-	The SHLTR demo's three roles side by side: for each, the shell it lands in (`roles.ts`, whose
+	The SHLTR demo's four roles side by side: for each, the shell it lands in (`roles.ts`, whose
 	`home` is read from `shells`), where that starts and what the role can and can't do there, and a
 	button to try it as that role (`TryIt`, only where the demo's sign-in is on). Needs no props.
 -->
@@ -15,7 +15,7 @@
 </script>
 
 <div class="not-prose @container my-6" data-testid="role-switcher">
-	<div class="grid gap-3 @3xl:grid-cols-3">
+	<div class="grid gap-3 @xl:grid-cols-2">
 		{#each roleCards as card (card.role)}
 			<section
 				class="flex min-w-0 flex-col gap-3 rounded-xl border bg-card p-4 text-card-foreground"

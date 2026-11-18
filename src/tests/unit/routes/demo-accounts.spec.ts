@@ -13,6 +13,7 @@ describe("demoAccount", () => {
 			["planner", "jan@shltr.example", "/"],
 			["engineer", "lev@shltr.example", "/my"],
 			["customer", "facilitair@riedel.example", "/portal"],
+			["headOffice", "hoofdkantoor@distributiecentrumzutphen.example", "/portal"],
 		]);
 		expect(demoOrganizationId).toBe(demoOrganizations.shltr.id);
 	});
@@ -49,6 +50,8 @@ describe("demoAccount", () => {
 		expect(demoAccount("engineer")!.hasRole(["engineer", "admin"])).toBe(false);
 		expect(demoAccount("customer")!.hasRole(["member"])).toBe(false);
 		expect(demoAccount("customer")!.hasRole(["customer", "owner"])).toBe(false);
+		expect(demoAccount("headOffice")!.hasRole(["customer"])).toBe(true);
+		expect(demoAccount("headOffice")!.hasRole(["member"])).toBe(false);
 	});
 
 	test("knows the role of each demo account, and of no one else", () => {

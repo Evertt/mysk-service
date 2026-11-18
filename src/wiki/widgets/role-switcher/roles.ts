@@ -1,5 +1,5 @@
 /**
- * What `<RoleSwitcher>` shows: the SHLTR demo's three roles (`demoRoles`, as the login page's
+ * What `<RoleSwitcher>` shows: the SHLTR demo's four roles (`demoRoles`, as the login page's
  * buttons have them), the shell each lands in, where that shell starts (`shells[shell].home`, read
  * from the app, so it can't drift), and in plain words what the role can and can't do there. The
  * words are written from the shell's pages (`src/routes/(app)`, `(field)/my`,
@@ -74,5 +74,15 @@ export const roleCards: readonly RoleCard[] = [
 			() => m.wiki_roles_customer_can_4({ module: m.checklists_module_name() }),
 		],
 		[m.wiki_roles_customer_cannot_1],
+	),
+	card(
+		"headOffice",
+		"customer",
+		[
+			m.wiki_roles_head_office_can_1,
+			m.wiki_roles_head_office_can_2,
+			m.wiki_roles_head_office_can_3,
+		],
+		[m.wiki_roles_head_office_cannot_1],
 	),
 ];

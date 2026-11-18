@@ -64,7 +64,7 @@ de verbinding op een andere manier gevonden worden: een generator.
 modulemappen en schrijft de registers die de kern wel importeert: de manifesten, de hooks, de
 bijdragen aan de slots, de formulierdelen en de lijstkolommen (`*.gen.ts`, door git genegeerd). Een
 module draagt bij door een bestand te zetten in een map met de naam van het punt:
-`slots/orders.detail.side/…`, `columns/equipment.list.columns.ts`, `form-parts/orders.form.ts`. Zie <SourceLink path="src/lib/extensions/define.ts" line={167}>defineSlot</SourceLink> voor hoe een punt
+`slots/orders.detail.side/…`, `columns/equipment.list.columns.ts`, `form-parts/orders.form.ts`. Zie <SourceLink path="src/lib/extensions/define.ts" line={171}>defineSlot</SourceLink> voor hoe een punt
 wordt gedeclareerd.
 
 **Punten worden gedeclareerd door hun eigenaar.** De kern declareert zijn punten in

@@ -121,7 +121,12 @@ single-defect tables against it, and the norm's own example (a window frame at 3
 A condition's score, and each defect's alone, is worked out on the server and kept on the record, so
 the lists' SQL only takes the worst of the latest ones. Photos of defects are in the photo store, served at
 `/condition/photos/<id>` to whoever may read the unit's conditions (the access registry's
-`conditionPhoto`).
+`conditionPhoto`). Deleting a unit or a component takes its defects' photos with it, and their files
+are deleted from the store once the deletion has committed (a file another defect still shows
+stays). A unit's deletion is the core's, which asks the modules what to let go of
+(`equipment.removing`); whatever a deletion misses the daily run sweeps, the files under
+`<tenant>/conditions/` that no photo points to after a day (`jobs.fileSweeps`). Both ask the module
+also where it is switched off, since its records stay.
 
 In the other direction condition plugs into the modules it enhances, in `server/index.ts`. With
 checklists on, its `checklists.field.rejected` slot asks for a rejected point's defect, and

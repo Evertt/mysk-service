@@ -59,7 +59,7 @@ request naar het enige Durable Object (een object van Cloudflare met eigen opsla
 nooit, want die levert Cloudflare zelf al. Het object migreert zijn SQLite-database als het start
 (`blockConcurrencyWhile`), en beantwoordt daarna elk request door SvelteKit in zichzelf te draaien,
 met zijn opslag doorgegeven in een `AsyncLocalStorage` (`durableRequests`). `db` vindt hem daar,
-dus de code van de app is op Node en op Cloudflare dezelfde. Zie <SourceLink path="cloudflare/entry.ts" line={49}>AppDatabase</SourceLink> en <SourceLink path="src/lib/server/db/durable.ts" line={62}>drizzleDurable</SourceLink>.
+dus de code van de app is op Node en op Cloudflare dezelfde. Zie <SourceLink path="cloudflare/entry.ts" line={45}>AppDatabase</SourceLink> en <SourceLink path="src/lib/server/db/durable.ts" line={62}>drizzleDurable</SourceLink>.
 
 Wat daaruit volgt:
 
@@ -93,7 +93,10 @@ daarvan naar een map (`PHOTOS_DIR`).
 
 **Gegevens binnenhalen.** Een nieuw object begint leeg. `POST /_ops/import` (met de `OPS_TOKEN`)
 vervangt de gegevens van elke tabel door die in een export van een libsql-database, om te beginnen
-met de demogegevens of om over te stappen van Turso.
+met de demogegevens of om over te stappen van Turso. Krijgt de export ook de fotomap mee, dan neemt
+hij de bestanden daarin mee, en zet de import ze onder dezelfde sleutels in de bucket `PHOTOS`,
+vóór de rijen die ernaar wijzen: zo krijgt staging de documenten en foto's van de demo, die de seed
+lokaal maakt. Zie <SourceLink path="cloudflare/import.ts">import.ts</SourceLink>.
 
 **Deployen.** `pnpm deploy:cloudflare` bouwt met `ADAPTER=cloudflare` en zet de app neer. CI zet
 `main` op productie en `develop` op staging zodra de checks en tests slagen. Secrets

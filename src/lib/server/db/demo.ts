@@ -16,6 +16,15 @@ export const demoOrganizations = {
 	shltr: { id: "org-shltr", name: "SHLTR" },
 } as const;
 
+/**
+ * The head office of one of SHLTR's customers with several sites (Distributiecentrum Zutphen, made
+ * up by the seed): its contact's account, who sees all of them (`seed/head-office.ts`).
+ */
+export const HEAD_OFFICE = {
+	customer: "Distributiecentrum Zutphen",
+	email: "hoofdkantoor@distributiecentrumzutphen.example",
+} as const;
+
 /** A demo account: its memberships, and what it's linked to there (an engineer, a customer). */
 interface DemoUser {
 	name: string;
@@ -137,5 +146,14 @@ export const demoUsers: DemoUser[] = [
 		email: "inkoop@pakhuis7.example",
 		memberships: [{ organizationId: "org-shltr", role: "customer" }],
 		customerIn: { organizationId: "org-shltr", customer: "Pakhuis 7" },
+	},
+	{
+		// Distributiecentrum Zutphen's head office, for all three of its sites: the sites overview's
+		// story (a fault at one, an engineer on the way to another, the third fine) is
+		// `seed/head-office.ts`'s, made last.
+		name: "Ilse Brouwer",
+		email: HEAD_OFFICE.email,
+		memberships: [{ organizationId: "org-shltr", role: "customer" }],
+		customerIn: { organizationId: "org-shltr", customer: HEAD_OFFICE.customer },
 	},
 ];

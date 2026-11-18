@@ -48,7 +48,11 @@ site's page links to the site's [maintenance report](/wiki/domains/site-report).
 Both pages stay live: a fault reported in the portal, an order planned, a unit's condition recorded
 or an energy alert raised shows on the card without a reload.
 
-<TryIt as="customer" /> <TryIt as="planner" />
+In the demo, Ilse Brouwer is the head office of Distributiecentrum Zutphen, which has three sites:
+at Zutphen a fault she reported waits to be accepted, an engineer is on the way to Deventer, and
+Culemborg is all fine.
+
+<TryIt as="headOffice" /> <TryIt as="planner" />
 
 <HowItWorks />
 

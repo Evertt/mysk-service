@@ -20,3 +20,21 @@ export type DailyReport = Record<string, number>;
  * from being done; each job makes its changes in transactions of its own.
  */
 export const daily = defineCollector<DailyRun, DailyReport>("jobs.daily", { onError: "skip" });
+
+/** What a sweep of stored files is told: the moment the run started. */
+export interface SweepRun {
+	now: Temporal.Instant;
+}
+
+/**
+ * The modules' sweeps of the files they keep in a store, beside the core's in the daily run
+ * (`runDaily()`): each deletes the tenant's files under its own prefix that no row of its points to
+ * and that were stored more than a day before `now` (`sweepFiles()`, `#lib/server/files/stored.ts`),
+ * and answers its count for the report (`{ "condition.photos_swept": 2 }`). Asked of the modules the
+ * tenant has switched off too: they keep their rows, and so their files, and a deletion that took a
+ * unit's rows may have left the files behind. One that throws is logged and left out.
+ */
+export const fileSweeps = defineCollector<SweepRun, DailyReport>("jobs.fileSweeps", {
+	onError: "skip",
+	alsoOff: true,
+});

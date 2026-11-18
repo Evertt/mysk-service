@@ -127,7 +127,13 @@ punten, dus 5). De score van een conditie, en die van elk gebrek apart, wordt op
 berekend en bij het record bewaard, zodat de SQL van de lijsten alleen de slechtste van de laatste
 neemt. Foto's van gebreken
 staan in de fotoopslag en worden geserveerd op `/condition/photos/<id>` aan wie de condities van het
-apparaat mag lezen (`conditionPhoto` in het toegangsregister).
+apparaat mag lezen (`conditionPhoto` in het toegangsregister). Wie een apparaat of onderdeel
+verwijdert, verwijdert de foto's van zijn gebreken mee, en hun bestanden gaan uit de opslag zodra de
+verwijdering is vastgelegd (een bestand dat een ander gebrek nog toont blijft staan). Het
+verwijderen van een apparaat is van de kern, die de modules vraagt wat er mee moet
+(`equipment.removing`); wat een verwijdering mist ruimt de dagelijkse run op, de bestanden onder
+`<tenant>/conditions/` waar na een dag geen foto meer naar wijst (`jobs.fileSweeps`). Beide vragen
+het ook aan de module waar die uit staat, want zijn records blijven.
 
 In de andere richting haakt Onderdelenbeheer in op de modules die het verrijkt, in
 `server/index.ts`. Met Werkbonnen aan vraagt het slot `checklists.field.rejected` om het gebrek van

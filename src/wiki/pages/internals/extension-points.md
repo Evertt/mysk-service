@@ -67,7 +67,7 @@ way: a generator.
 module folders and writes the registries that core does import: the manifests, the hooks, the
 slots' contributions, the form parts and the list columns (`*.gen.ts`, gitignored). A module
 contributes by putting a file in a folder named for the point: `slots/orders.detail.side/…`,
-`columns/equipment.list.columns.ts`, `form-parts/orders.form.ts`. See <SourceLink path="src/lib/extensions/define.ts" line={167}>defineSlot</SourceLink> for how a point is
+`columns/equipment.list.columns.ts`, `form-parts/orders.form.ts`. See <SourceLink path="src/lib/extensions/define.ts" line={171}>defineSlot</SourceLink> for how a point is
 declared.
 
 **Points are declared by their owner.** Core declares its points in `src/lib/<domain>/extensions.ts`

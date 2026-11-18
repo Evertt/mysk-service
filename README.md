@@ -46,21 +46,22 @@ npm run dev -- --open
 ## Demo login
 
 Everything except the login page needs a signed-in user. `pnpm run db:seed` creates three demo
-organizations (tenants) and ten demo users, all with the password `fieldworks-demo` (set in
+organizations (tenants) and eleven demo users, all with the password `fieldworks-demo` (set in
 `DEMO_PASSWORD` in `src/lib/server/db/demo.ts`):
 
-| Name              | Email                         | Organizations                                   |
-| ----------------- | ----------------------------- | ----------------------------------------------- |
-| Anouk de Vries    | `admin@fieldworks.example`    | owner of Fieldworks Noord and Fieldworks Zuid   |
-| Pieter Jansen     | `planner@fieldworks.example`  | member of Fieldworks Noord                      |
-| Erik Visser       | `engineer@fieldworks.example` | engineer in Fieldworks Noord                    |
-| Marloes Hendriks  | `owner@shltr.example`         | owner of SHLTR                                  |
-| Jan Weggemans     | `jan@shltr.example`           | member (planner) of SHLTR                       |
-| Lev Hoekstra      | `lev@shltr.example`           | engineer in SHLTR                               |
-| Marieke Verhoeven | `facilitair@riedel.example`   | customer contact of Riedel B.V. (SHLTR)         |
-| Rob Weggemans     | `rob@weggemans.example`       | customer contact of Weggemans Logistiek (SHLTR) |
-| Bram de Wit       | `klant@fieldworks.example`    | customer contact of Noord's first customer      |
-| Sanne Bakker      | `inkoop@pakhuis7.example`     | customer contact of Pakhuis 7 (SHLTR)           |
+| Name              | Email                                            | Organizations                                                      |
+| ----------------- | ------------------------------------------------ | ------------------------------------------------------------------ |
+| Anouk de Vries    | `admin@fieldworks.example`                       | owner of Fieldworks Noord and Fieldworks Zuid                      |
+| Pieter Jansen     | `planner@fieldworks.example`                     | member of Fieldworks Noord                                         |
+| Erik Visser       | `engineer@fieldworks.example`                    | engineer in Fieldworks Noord                                       |
+| Marloes Hendriks  | `owner@shltr.example`                            | owner of SHLTR                                                     |
+| Jan Weggemans     | `jan@shltr.example`                              | member (planner) of SHLTR                                          |
+| Lev Hoekstra      | `lev@shltr.example`                              | engineer in SHLTR                                                  |
+| Marieke Verhoeven | `facilitair@riedel.example`                      | customer contact of Riedel B.V. (SHLTR)                            |
+| Rob Weggemans     | `rob@weggemans.example`                          | customer contact of Weggemans Logistiek (SHLTR)                    |
+| Bram de Wit       | `klant@fieldworks.example`                       | customer contact of Noord's first customer                         |
+| Sanne Bakker      | `inkoop@pakhuis7.example`                        | customer contact of Pakhuis 7 (SHLTR)                              |
+| Ilse Brouwer      | `hoofdkantoor@distributiecentrumzutphen.example` | head office of Distributiecentrum Zutphen, all three sites (SHLTR) |
 
 The demo data is a Dutch field-service company's, so its names, descriptions and notes are in
 Dutch whatever language you use the app in (stored text stays in the language it was written in).
@@ -91,7 +92,11 @@ reported breakdown awaits acceptance ("Nieuw (te accepteren)") until someone in 
 it (as a quote, or planned at once) or rejects it, from the order's page; the sidebar's Orders
 badge and the dashboard count them. Owners and admins invite and revoke contacts under **Portal
 access** on the customer's page. Marieke and Rob have reported breakdowns that await acceptance
-(and Marieke one that was accepted and one that was rejected); Bram has none yet.
+(and Marieke one that was accepted and one that was rejected); Bram has none yet. Ilse is
+Distributiecentrum Zutphen's head office and sees its three sites, so its sites overview
+(`/portal/sites`) has something to show: a fault she reported at Zutphen awaits acceptance, an
+engineer is on the way to Deventer, and Culemborg is all fine (`src/lib/server/db/seed/head-office.ts`,
+made after the rest so the other demo data stays as it was).
 
 SHLTR is the client's business (see `docs/plans/shltr-domain.md`): it installs, services and
 inspects doors, docks, stairs and airco. Its demo organization has every module, its own equipment
@@ -107,10 +112,11 @@ its first engineer, like Erik in Noord. The data is in `src/lib/server/db/seed/s
 These are local demo accounts; don't seed them into a real deployment.
 
 **One-click demo sign-in.** With `DEMO_SIGN_IN=true`, the login page shows "Log in as:" under its
-form, with three buttons that sign in to the SHLTR demo at once, without typing: **Planner** as
+form, with four buttons that sign in to the SHLTR demo at once, without typing: **Planner** as
 Jan (SHLTR's planner, a member who manages nothing, to the office dashboard), **Engineer** as Lev
-(to the engineer portal) and **Customer** as Marieke (Riedel's contact, a partner with a wallet, to
-the customer portal). None is an owner or admin: anyone who opens staging can use them, and
+(to the engineer portal), **Customer** as Marieke (Riedel's contact, a partner with a wallet, to
+the customer portal) and **Head office** as Ilse (Distributiecentrum Zutphen's, with its three
+sites, to the customer portal). None is an owner or admin: anyone who opens staging can use them, and
 shouldn't be able to change SHLTR's members, invitations or settings (Marloes, its owner, signs in
 with her password). They sign in through better-auth with the demo password, like the form, so the
 session and its organization (SHLTR) are the same as after typing it. The browser sends only the
@@ -118,7 +124,7 @@ role's name; the server maps it to its fixed account and refuses one that isn't 
 SHLTR or hasn't the role (`src/routes/demo.remote.ts`, `demo-accounts.server.ts`). Once in, the
 user menus (the office's, the engineer portal's header menu, and a button in the customer portal's
 header) have **View as** with the same
-three roles, the current one checked, to switch without signing out: it signs in as the role
+four roles, the current one checked, to switch without signing out: it signs in as the role
 chosen and then ends the old session (its row deleted), in one request, to that role's home; if the
 sign-in fails (a demo password was changed), it answers 404 and the old session stays. It's there
 only for sessions in SHLTR, so other tenants' users never see it, and the server refuses it (404) to
@@ -289,12 +295,16 @@ simulations"); `scheduled()` tells them apart by `controller.cron`, and has the 
 A new object starts empty. Its data comes from a libsql database, through
 `POST /_ops/import`, which replaces the data of every table in the export: to start, make the
 first organization (or the demo data) in a local file and import that; to move from Turso, export
-Turso's.
+Turso's. Name the file store's folder after the database (`PHOTOS_DIR`, `.photos` by default) and
+the export carries its files too (the orders' photos, the units' documents, the defects' photos),
+which the import puts in the `PHOTOS` bucket under the same keys; files already there stay, and the
+daily sweep deletes those no row points to. CI imports the demo data into staging so, with the
+documents and photos the seed stores (`cloudflare/import.ts`).
 
 ```sh
 DATABASE_URL=file:start.db pnpm db:migrate
 DATABASE_URL=file:start.db pnpm run org:create -- --org "Acme Service" --slug acme --owner-email ada@acme.example --owner-name "Ada Lovelace"
-node cloudflare/export-database.ts file:start.db > export.json
+node cloudflare/export-database.ts file:start.db .photos > export.json   # .photos: its files too, if any
 curl -X POST https://<worker>/_ops/import -H "Authorization: Bearer $OPS_TOKEN" --data-binary @export.json
 ```
 

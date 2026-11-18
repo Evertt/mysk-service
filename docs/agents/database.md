@@ -99,6 +99,11 @@ every request inside one Durable Object, `AppDatabase`, whose SQLite is the app'
   until they're done (as `drizzleQueued` does on libsql): keep outside I/O (mail, `fetch`) out of
   them, or the whole app waits for it. Nested transactions are part of the outer one (no
   savepoints).
+- Data comes in through `POST /_ops/import` (`cloudflare/import.ts`, with the `OPS_TOKEN`): an
+  export of a libsql database (`cloudflare/export-database.ts`), and with a folder named the files
+  of its file store, which go to the `PHOTOS` bucket under the same keys before the rows replace
+  the tables'. A seed's file (a demo document, a photo) is stored in `PHOTOS_DIR` under a key that
+  is the same each run, so the export carries it to staging; serving never makes one up.
 - `pnpm check` type-checks `cloudflare/` against the Workers runtime
   (`cloudflare/worker-configuration.d.ts`; rerun `pnpm types:cloudflare` after changing
   `wrangler.jsonc`).

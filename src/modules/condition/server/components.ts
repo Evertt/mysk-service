@@ -26,6 +26,7 @@ import type { PointArticle, UnitPoint } from "#modules/checklists/api/extensions
 import { componentLabel } from "../activity.ts";
 import { type Article, articleCheckpoints, articles, checkpoints } from "../api/extensions.ts";
 import { componentNumber, COMPONENTS_MAX } from "../model.ts";
+import { componentPhotoFiles } from "./photos.ts";
 import { component, componentCheckpoint } from "./schema.ts";
 
 /** Components are numbered per tenant, `OC-0001`. */
@@ -239,10 +240,14 @@ export function changeComponent(id: number, input: ComponentInput) {
 	});
 }
 
-/** Removes the tenant's component `id`, with its points and conditions. */
-export function removeComponent(id: number) {
-	return db.transaction(async (tx) => {
+/**
+ * Removes the tenant's component `id`, with its points and conditions; then the files of their
+ * defects' photos, once that has committed.
+ */
+export async function removeComponent(id: number) {
+	const { serialNumber, release } = await db.transaction(async (tx) => {
 		const found = await componentOf(tx, id);
+		const release = await componentPhotoFiles(tx, id);
 		await deleteAndLog(component, {
 			tx,
 			subject: {
@@ -256,8 +261,10 @@ export function removeComponent(id: number) {
 			},
 			parent: equipmentSubject(found.unit),
 		});
-		return { serialNumber: found.unit.serialNumber };
+		return { serialNumber: found.unit.serialNumber, release };
 	});
+	await release();
+	return { serialNumber };
 }
 
 /**

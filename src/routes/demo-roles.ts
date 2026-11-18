@@ -5,7 +5,7 @@
  * the sign-in is passwordless, so whoever opens staging would manage SHLTR (its members, their
  * invitations, its settings).
  */
-export const demoRoles = ["planner", "engineer", "customer"] as const;
+export const demoRoles = ["planner", "engineer", "customer", "headOffice"] as const;
 export type DemoRole = (typeof demoRoles)[number];
 
 /** Each role's label, as the message function (read where it's shown). */
@@ -13,4 +13,5 @@ export const demoRoleLabels: Record<DemoRole, () => string> = {
 	planner: m.auth_demo_planner,
 	engineer: m.auth_demo_engineer,
 	customer: m.auth_demo_customer,
+	headOffice: m.auth_demo_head_office,
 };

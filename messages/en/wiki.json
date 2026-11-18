@@ -121,6 +121,10 @@
 	"wiki_roles_customer_can_3": "See their units and locations, with each unit's service history.",
 	"wiki_roles_customer_can_4": "Read the work done on a finished order: the sign-off, and the work order if the {module} module is on.",
 	"wiki_roles_customer_cannot_1": "See any other customer's records.",
+	"wiki_roles_head_office_can_1": "Follow all of the customer's sites in one overview, worst first: open faults, engineers on the way, what needs attention.",
+	"wiki_roles_head_office_can_2": "Open a site's units and open work, and print its maintenance report.",
+	"wiki_roles_head_office_can_3": "Report a breakdown at any of the sites, and follow every site's orders.",
+	"wiki_roles_head_office_cannot_1": "See another customer's sites, or change what the office plans.",
 
 	"wiki_modules_of": "{on} of {total}",
 	"wiki_modules_on": "modules on",

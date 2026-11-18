@@ -132,13 +132,14 @@ jobs:
           echo "OPS_TOKEN=$OPS_TOKEN" >> "$GITHUB_ENV"
           printf '%s' "$OPS_TOKEN" | vp exec wrangler secret put OPS_TOKEN --env staging
       # The demo data (README "Demo login"), seeded as locally and imported into staging's
-      # Durable Object, replacing what was there.
+      # Durable Object, replacing what was there; the files the seed stored (`.photos`: the units'
+      # demo documents, the story's photos) go to staging's PHOTOS bucket with it.
       - name: Load the demo data
         run: |
           cp .env.example .env
           sed -i -e "s|^BETTER_AUTH_SECRET=.*|BETTER_AUTH_SECRET=\"$(openssl rand -base64 32)\"|" .env
           vp run db:reset
-          node cloudflare/export-database.ts file:local.db > export.json
+          node cloudflare/export-database.ts file:local.db .photos > export.json
           # Right after a deploy the object may still run the last version for a while (which
           # refuses the new schema's tables): try for up to two minutes.
           for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
