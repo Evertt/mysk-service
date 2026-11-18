@@ -224,8 +224,20 @@ describe("in North", () => {
 		expect(
 			await page.getByRole("link", { name: `View all ${orders} orders` }).getAttribute("href"),
 		).toBe(`/orders?customer=${code}`);
-		expect(await page.locator('a[href^="mailto:"]').count()).toBe(1);
-		expect(await page.locator('a[href^="tel:"]').count()).toBe(1);
+		// The customer's own phone and email, and those of each site's contact (the sites card): which
+		// customer is the busiest depends on what other files on the worker ordered before this one.
+		const [links] = await rows<{ mail: number; tel: number }>(
+			`select (c.email is not null and c.email <> '')
+				 + (select count(*) from customer_site s where s.customer_id = c.id
+				    and s.contact_email is not null and s.contact_email <> '') as mail,
+			        (c.phone is not null and c.phone <> '')
+				 + (select count(*) from customer_site s where s.customer_id = c.id
+				    and s.contact_phone is not null and s.contact_phone <> '') as tel
+			 from customer c where c.id = ?`,
+			[id],
+		);
+		expect(await page.locator('main a[href^="mailto:"]').count()).toBe(links.mail);
+		expect(await page.locator('main a[href^="tel:"]').count()).toBe(links.tel);
 	});
 
 	test("going back closes the delete dialog, and going forward opens it again", async () => {
