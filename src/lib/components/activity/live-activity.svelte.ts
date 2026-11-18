@@ -7,6 +7,8 @@
  */
 import { onMount } from "svelte";
 
+import type { TenantChange } from "#lib/activity/index.ts";
+
 import { onAnyChange } from "./change-feed.svelte.ts";
 
 /** How long a change waits for the rest of its burst before the page looks again (ms). */
@@ -14,12 +16,22 @@ const defaultDelay = 400;
 
 /**
  * Calls `refresh` after changes the tab's feed tells, of the record types in `types` if given
- * (a page that shows records through several queries: its list, its bell). Call it while a
- * component initializes.
+ * (a page that shows records through several queries: its list, its bell), but those `skip`
+ * answers yes for: e.g. a page's own record, whose deletion would refresh it into a 404 while
+ * the page that deleted it goes elsewhere (`refreshOnRecordChange()` follows it instead). Call it
+ * while a component initializes.
  */
 export function refreshOnActivity(
 	refresh: () => Promise<unknown>,
-	{ delay = defaultDelay, types }: { delay?: number; types?: readonly string[] } = {},
+	{
+		delay = defaultDelay,
+		types,
+		skip,
+	}: {
+		delay?: number;
+		types?: readonly string[];
+		skip?: (change: TenantChange) => boolean;
+	} = {},
 ) {
 	/** A change came in that no refresh has answered yet. */
 	let outdated = false;
@@ -50,7 +62,7 @@ export function refreshOnActivity(
 	}
 
 	onAnyChange((change) => {
-		if (!types || types.includes(change.type)) schedule();
+		if ((!types || types.includes(change.type)) && !skip?.(change)) schedule();
 	});
 
 	onMount(() => {
