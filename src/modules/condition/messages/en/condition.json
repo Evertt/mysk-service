@@ -220,5 +220,23 @@
 	"condition_extent_range": "A whole percentage from 1 to 100.",
 	"condition_extent_percent": "% of the element",
 	"condition_extent_percent_label": "Extent (%)",
-	"condition_extent_presets": "Extent classes"
+	"condition_extent_presets": "Extent classes",
+	"condition_timeline_measured": "Condition measured: {score}",
+	"condition_timeline_measured_defects": "Condition measured: {score}, {defects}",
+	"condition_count_defects": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} defect",
+				"countPlural=*": "{countText} defects"
+			}
+		}
+	],
+	"condition_timeline_status": "{status}, was {was}",
+	"condition_timeline_figure": "Condition (NEN 2767)"
 }

@@ -3,16 +3,16 @@
 	bar names it and where it is; then a card of what it is and where, its status and the badges the tenant's modules add
 	(`client.unit.badges`, e.g. its condition), and their facts in a grid (`client.unit.facts`, e.g.
 	its inspection status and last maintenance); then "report a breakdown" of it, the page's main
-	button; then links to more about it (its service history, its manuals and documents with how
-	many there are, a page each); then the modules' cards (`client.unit`, e.g. its completed
-	inspections).
+	button; then links to more about it (its manuals and documents with how many there are, a page
+	each); then what's happening with it ("Wat gebeurt er": today's figures and its timeline, which
+	took the place of a service history page of its own, so whoever scanned the door sees it without
+	another tap); then the modules' cards (`client.unit`, e.g. its completed inspections).
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import BookOpenIcon from "@lucide/svelte/icons/book-open";
 	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
-	import HistoryIcon from "@lucide/svelte/icons/history";
 	import SirenIcon from "@lucide/svelte/icons/siren";
 
 	import AppBar from "#lib/client/app-bar.svelte";
@@ -20,6 +20,7 @@
 	import { refreshOnRecordChange } from "#lib/components/activity/change-feed.svelte.ts";
 	import { refreshOnActivity } from "#lib/components/activity/live-activity.svelte.ts";
 	import EnumBadge from "#lib/components/enum-badge.svelte";
+	import { UnitTimeline } from "#lib/equipment/components.ts";
 	import { unitLine, unitTitle, equipmentStatusDisplay } from "#lib/equipment/index.ts";
 	import { getUnitDocuments } from "#lib/equipment/remotes.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
@@ -37,7 +38,7 @@
 	/** A scanned QR code led here (`qrDestination()`): a report made from the page says so. */
 	const scannedHere = $derived(page.url.searchParams.get("via") === "qr");
 
-	// Live: the unit and its place (its history is its own page's).
+	// Live: the unit and its place (the timeline follows its own).
 	refreshOnRecordChange(
 		() => ({ type: "equipment", id: unit.id }),
 		() => {
@@ -98,24 +99,6 @@
 			>
 				<li>
 					<a
-						href={resolve("/(customer)/portal/equipment/[serial]/history", {
-							serial: unit.serialNumber,
-						})}
-						class="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent"
-						data-unit-link="history"
-					>
-						<HistoryIcon class="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-						<span class="flex min-w-0 flex-1 flex-col">
-							<span class="text-sm font-medium">{m.client_unit_history_link()}</span>
-							<span class="truncate text-xs text-muted-foreground">
-								{m.client_unit_history_description()}
-							</span>
-						</span>
-						<ChevronRightIcon class="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-					</a>
-				</li>
-				<li>
-					<a
 						href={resolve("/(customer)/portal/equipment/[serial]/documents", {
 							serial: unit.serialNumber,
 						})}
@@ -138,6 +121,11 @@
 			</ul>
 		</Card.Root>
 	</nav>
+
+	<!-- What's happening with it: today's figures and its timeline, in reach without another tap. -->
+	<div id="timeline" class="scroll-mt-20">
+		<UnitTimeline serial={unit.serialNumber} shell="customer" />
+	</div>
 
 	<ExtensionSlot point={unitParts} props={parts} class="flex flex-col gap-5" />
 </div>

@@ -1,14 +1,13 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import {
-	buildTimeline,
 	daysBetween,
 	type HistoryOrder,
 	orderDate,
 	serviceStats,
 	unitShare,
 } from "#lib/equipment/detail/service-history.ts";
-import { at, day } from "#unit/temporal-support.ts";
+import { at } from "#unit/temporal-support.ts";
 
 let nextId = 1;
 
@@ -28,13 +27,11 @@ function order(fields: Partial<HistoryOrder> = {}): HistoryOrder {
 		engineer: null,
 		units: 1,
 		cost: { costs: [], labor: 0, adjustments: [], total: 10_000 },
-		photos: [],
 		...fields,
 	};
 }
 
 const now = at("2026-10-07 14:30");
-const unit = { installedAt: day("2024-03-01"), warrantyUntil: day("2027-03-01") };
 
 describe("orderDate", () => {
 	test("is the completion, else the schedule, else the creation", () => {
@@ -44,60 +41,6 @@ describe("orderDate", () => {
 		expect(orderDate({ createdAt, scheduledFor, completedAt })).toBe(completedAt);
 		expect(orderDate({ createdAt, scheduledFor, completedAt: null })).toBe(scheduledFor);
 		expect(orderDate({ createdAt, scheduledFor: null, completedAt: null })).toBe(createdAt);
-	});
-});
-
-describe("buildTimeline", () => {
-	test("puts the installation, the orders and the warranty's end newest first", () => {
-		const repair = order({ type: "repair", completedAt: at("2025-06-03 00:00") });
-		const quote = order({ status: "quote", createdAt: at("2026-09-30 00:00") });
-		const visit = order({ scheduledFor: at("2026-10-20 00:00") });
-
-		const events = buildTimeline(unit, [quote, repair, visit], now);
-		expect(
-			events.map((event) => (event.kind === "order" ? event.order.number : event.kind)),
-		).toEqual(["warranty", visit.number, quote.number, repair.number, "installation"]);
-		expect(events.map((event) => event.date)).toEqual([
-			unit.warrantyUntil,
-			day("2026-10-20"),
-			day("2026-09-30"),
-			day("2025-06-03"),
-			unit.installedAt,
-		]);
-	});
-
-	test("marks a warranty that still covers work as upcoming, including on its last day", () => {
-		const until = day("2026-10-07");
-		const upcoming = (when: Temporal.Instant | Temporal.PlainDate) =>
-			buildTimeline({ ...unit, warrantyUntil: until }, [], when).find(
-				(event) => event.kind === "warranty",
-			);
-		expect(upcoming(now)).toEqual({ kind: "warranty", date: until, upcoming: true });
-		expect(upcoming(day("2026-10-08"))).toMatchObject({ upcoming: false });
-	});
-
-	test("on the same day, shows the warranty's end above orders and the installation below", () => {
-		const moment = at("2025-01-01 00:00");
-		const first = order({ completedAt: moment });
-		const second = order({ completedAt: moment });
-		const events = buildTimeline(
-			{ installedAt: day("2025-01-01"), warrantyUntil: day("2025-01-01") },
-			[first, second],
-			now,
-		);
-		expect(events.map((event) => (event.kind === "order" ? event.order.id : event.kind))).toEqual([
-			"warranty",
-			second.id,
-			first.id,
-			"installation",
-		]);
-	});
-
-	test("a unit without orders has just its installation and warranty", () => {
-		expect(buildTimeline(unit, [], now).map((event) => event.kind)).toEqual([
-			"warranty",
-			"installation",
-		]);
 	});
 });
 

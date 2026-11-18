@@ -11,14 +11,10 @@ import { join } from "node:path";
 
 import { afterAll, beforeAll, describe, expect, test, vi } from "vite-plus/test";
 
-import { getServiceHistory } from "#lib/equipment/detail/service-history.remote.ts";
+import { getPortalUnitTimeline, getUnitTimeline } from "#lib/equipment/timeline/timeline.remote.ts";
 import { getOrder } from "#lib/orders/order.remote.ts";
 import { addPhotos, deletePhoto } from "#lib/orders/photos.remote.ts";
-import {
-	getPortalOrder,
-	getPortalUnitHistory,
-	reportBreakdown,
-} from "#routes/(customer)/portal/client.remote.ts";
+import { getPortalOrder, reportBreakdown } from "#routes/(customer)/portal/client.remote.ts";
 import { getMyUnit } from "#routes/(field)/my/places.remote.ts";
 import { getMyOrder } from "#routes/(field)/my/portal.remote.ts";
 import type { Actor } from "#unit/lib/server/harness/actors.ts";
@@ -165,17 +161,24 @@ describe("adding photos later", () => {
 		]);
 	});
 
-	test("the unit's service history shows them per order, in each shell", async () => {
-		const ids = (await photosOfOrder()).map((photo) => photo.id);
-		const history = await as(shltr.member, () => data(getServiceHistory, order.serial));
-		const event = history.events.find(
-			(one) => one.kind === "order" && one.order.number === order.number,
-		);
-		expect(event?.kind === "order" && event.order.photos.map((photo) => photo.id)).toEqual(ids);
+	test("the unit's timeline shows them with the order, in each shell", async () => {
+		const ids = (await photosOfOrder()).map((photo) => photo.id).sort();
+		/** The photos the timeline shows with the order. */
+		const shown = (entries: { order?: string | null; photos?: { id: number }[] }[]) =>
+			[
+				...new Set(
+					entries
+						.filter((entry) => entry.order === order.number)
+						.flatMap((entry) => entry.photos ?? [])
+						.map((photo) => photo.id),
+				),
+			].sort();
+		const office = await as(shltr.member, () => data(getUnitTimeline, { serial: order.serial }));
+		expect(shown(office.entries)).toEqual(ids);
 		const field = await as(lev, () => data(getMyUnit, order.serial));
 		expect(field.orders.find((one) => one.id === order.id)?.photos).toHaveLength(ids.length);
-		const portal = await as(riedel, () => data(getPortalUnitHistory, order.serial));
-		expect(portal.find((one) => one.id === order.id)?.photos).toHaveLength(ids.length);
+		const portal = await as(riedel, () => data(getPortalUnitTimeline, { serial: order.serial }));
+		expect(shown(portal.entries)).toEqual(ids);
 	});
 
 	test("no one else adds any, also by a tampered id", async () => {

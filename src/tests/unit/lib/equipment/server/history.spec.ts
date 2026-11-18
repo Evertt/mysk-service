@@ -7,6 +7,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { getServiceHistory } from "#lib/equipment/detail/service-history.remote.ts";
+import { getUnitTimeline } from "#lib/equipment/timeline/timeline.remote.ts";
 import { getOrder, updateOrder } from "#lib/orders/order.remote.ts";
 import { as, data, north, organizationId, rows, submit } from "#unit/lib/server/harness/index.ts";
 
@@ -29,8 +30,7 @@ describe("a unit's service history", () => {
 			[northId],
 		);
 		await as(north.member, async () => {
-			const { events } = await data(getServiceHistory, covering.serial);
-			const orders = events.flatMap((event) => (event.kind === "order" ? [event.order] : []));
+			const { orders } = await data(getServiceHistory, covering.serial);
 			expect(orders.length).toBeGreaterThan(0);
 			expect(orders.some((order) => order.cost.adjustments.some((a) => a.amount < 0))).toBe(true);
 			for (const order of orders) {
@@ -54,13 +54,20 @@ describe("a unit's service history", () => {
 		);
 		expect(completed.status).toBe(303);
 
-		const { events, stats } = await as(north.member, () => data(getServiceHistory, open.serial));
+		const { orders, stats } = await as(north.member, () => data(getServiceHistory, open.serial));
 		const today = Temporal.Now.plainDateISO("Europe/Amsterdam");
-		const entry = events.find(
-			(event) => event.kind === "order" && event.order.number === open.number,
+		const entry = orders.find((order) => order.number === open.number);
+		expect(entry).toMatchObject({ status: "completed" });
+		expect(
+			entry?.completedAt?.toZonedDateTimeISO("Europe/Amsterdam").toPlainDate().equals(today),
+		).toBe(true);
+		// And its timeline tells it.
+		const { entries } = await as(north.member, () =>
+			data(getUnitTimeline, { serial: open.serial }),
 		);
-		expect(entry).toMatchObject({ kind: "order", order: { status: "completed" } });
-		expect(entry?.date.equals(today)).toBe(true);
+		expect(entries.find((one) => one.order === open.number)).toMatchObject({
+			kind: "order.completed",
+		});
 		expect(
 			stats.lastService?.toZonedDateTimeISO("Europe/Amsterdam").toPlainDate().equals(today),
 		).toBe(true);

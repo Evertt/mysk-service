@@ -8,7 +8,7 @@
 		DocumentsCard,
 		QrCard,
 		ServiceStats,
-		ServiceTimeline,
+		UnitTimeline,
 		SpecificationsCard,
 		WarrantyBadge,
 	} from "#lib/equipment/components.ts";
@@ -53,7 +53,11 @@
 	{/snippet}
 
 	{#snippet main()}
-		<ServiceTimeline serial={unit.serialNumber} />
+		<Card.Root>
+			<Card.Content>
+				<UnitTimeline serial={unit.serialNumber} shell="office" />
+			</Card.Content>
+		</Card.Root>
 	{/snippet}
 
 	{#snippet side()}

@@ -11,13 +11,13 @@ import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { getCurrentUser } from "#lib/auth/session.remote.ts";
 import { resolveQrCode } from "#lib/equipment/server/qr.ts";
+import { getPortalUnitTimeline } from "#lib/equipment/timeline/timeline.remote.ts";
 import { db } from "#lib/server/db/index.ts";
 import { member, portalContact, portalContactSite } from "#lib/server/db/schema.ts";
 import {
 	getPortalLocation,
 	getPortalOrder,
 	getPortalUnit,
-	getPortalUnitHistory,
 	reportBreakdown,
 } from "#routes/(customer)/portal/client.remote.ts";
 import {
@@ -94,7 +94,7 @@ describe("another customer's records", () => {
 			});
 			expect(await call(getPortalOrder, southern)).toMatchObject({ status: 404 });
 			expect(await call(getPortalUnit, other.serial_number)).toMatchObject({ status: 404 });
-			expect(await call(getPortalUnitHistory, other.serial_number)).toMatchObject({
+			expect(await call(getPortalUnitTimeline, { serial: other.serial_number })).toMatchObject({
 				status: 404,
 			});
 			// Ids as the page's URL has them.
@@ -211,7 +211,7 @@ describe("a contact in two organizations", () => {
 });
 
 describe("a unit in the portal", () => {
-	test("is what it is and where, and its history is its orders, newest first", async () => {
+	test("is what it is and where, and its timeline tells of its orders", async () => {
 		// Riedel's unit with the most orders.
 		const [busiest] = await rows<{ id: number; serial_number: string }>(
 			`select e.id, e.serial_number from equipment e join customer c on c.id = e.customer_id
@@ -231,8 +231,10 @@ describe("a unit in the portal", () => {
 			const unit = await data(getPortalUnit, busiest.serial_number);
 			expect(unit).toMatchObject({ id: busiest.id, serialNumber: busiest.serial_number });
 			expect(unit).not.toHaveProperty("orders");
-			const history = await data(getPortalUnitHistory, busiest.serial_number);
-			expect(history.map((order) => order.number)).toEqual(numbers);
+			const { entries } = await data(getPortalUnitTimeline, { serial: busiest.serial_number });
+			const told = new Set(entries.flatMap((entry) => (entry.order ? [entry.order] : [])));
+			expect(told.size).toBeGreaterThan(0);
+			for (const number of told) expect(numbers).toContain(number);
 		});
 	});
 });

@@ -41,6 +41,7 @@ import { generateShltrTenant, shltrSignoffs } from "./shltr/index.ts";
 import { generateSites } from "./sites.ts";
 import { toDay, toMoment, toMomentOrNull } from "./temporal.ts";
 import { generateTenant, type TenantSize, type TenantSteps } from "./tenant.ts";
+import { seedUnitStory } from "./unit-story.ts";
 import { createDemoUsers } from "./users.ts";
 
 const { customer, engineer, equipment, order } = schema;
@@ -402,6 +403,8 @@ await db.transaction(async (tx) => {
 });
 
 await db.transaction(createDemoUsers);
+// SHLTR's D-07's day, as its timeline tells it, with its photos' files.
+demoFiles.push(...(await db.transaction((tx) => seedUnitStory(tx, demoOrganizations.shltr.id))));
 await storeDemoFiles(demoFiles);
 
 console.log(

@@ -1,11 +1,12 @@
 <!--
 	A unit in the engineer portal, where its QR code leads an engineer (`/q/<token>`): what it is,
-	where, their open orders on it, and its manuals and documents to open on the spot.
+	where, their open orders on it, its manuals and documents to open on the spot, and what happened
+	to it (its timeline, with today's figures).
 -->
 <script lang="ts">
 	import { refreshOnRecordChange } from "#lib/components/activity/change-feed.svelte.ts";
 	import EnumBadge from "#lib/components/enum-badge.svelte";
-	import { DocumentList } from "#lib/equipment/components.ts";
+	import { DocumentList, UnitTimeline } from "#lib/equipment/components.ts";
 	import { unitLine, unitTitle, equipmentStatusDisplay } from "#lib/equipment/index.ts";
 	import { getUnitDocuments } from "#lib/equipment/remotes.ts";
 
@@ -56,5 +57,11 @@
 		{:else}
 			<p class="text-sm text-muted-foreground">{m.portal_unit_documents_none()}</p>
 		{/if}
+	</Card.Content>
+</Card.Root>
+
+<Card.Root class="rounded-xl" data-unit-timeline-card>
+	<Card.Content>
+		<UnitTimeline serial={unit.serialNumber} shell="engineer" />
 	</Card.Content>
 </Card.Root>

@@ -323,5 +323,22 @@
 	"checklists_score_source_checklist": "Checklist op {order}",
 	"checklists_score_source_office": "Vastgelegd op kantoor",
 	"checklists_score_source_unknown": "Checklist",
-	"checklists_assets_component_of": "Onderdeel van {unit}"
+	"checklists_assets_component_of": "Onderdeel van {unit}",
+	"checklists_timeline_inspection": "Keuring afgerond: {name}",
+	"checklists_timeline_maintenance": "Onderhoudschecklist afgerond: {name}",
+	"checklists_timeline_approved": "Alle punten goedgekeurd",
+	"checklists_timeline_rejected": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} punt afgekeurd",
+				"countPlural=*": "{countText} punten afgekeurd"
+			}
+		}
+	]
 }
