@@ -2,7 +2,7 @@
 	@component
 	A site's chips: its figures that ask to be seen while they aren't zero (`chipsOf()`), the worst
 	first, each a badge in its tone with its label and value; or, without any, `empty` if given. Each
-	chip has its figure's id as `data-chip`, for tests.
+	chip has its figure's id as `data-figure`, for tests.
 -->
 <script lang="ts">
 	import type { Snippet } from "svelte";
@@ -19,7 +19,7 @@
 	<ul class="flex flex-wrap gap-1.5">
 		{#each chips as chip (chip.id)}
 			<li>
-				<Badge variant={chip.chip} class="h-auto py-1 whitespace-normal" data-chip={chip.id}>
+				<Badge variant={chip.chip} class="h-auto py-1 whitespace-normal" data-figure={chip.id}>
 					<span class="font-semibold tabular-nums">{figureValue(chip)}</span>
 					{chip.label}
 				</Badge>
