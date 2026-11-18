@@ -109,7 +109,11 @@ from `#lib/orders/components.ts`; a unit's timeline shows an order's as thumbnai
   one). A file is what its bytes say (`fileSignatures`, `sniffType()` in `files/types.ts`); keys are
   `files/keys.ts`'s, each kind under its own prefix (`<tenant>/orders/`, `<tenant>/equipment/`), so
   one kind's sweep never lists another's. A record whose deletion lets go of files is a
-  `defineRemoval()` with `afterwards` (the unit's documents: `documentFilesOf()`).
+  `defineRemoval()` with `afterwards` (the unit's documents: `documentFilesOf()`). A module's files
+  on a core record its keys cascade from: the record's removal asks the module in its transaction
+  (`equipment.removing`, a unit's: condition's defect photos, `unitPhotoFiles()`), and the module
+  adds its prefix's sweep to the daily run (`jobs.fileSweeps`, `sweepConditionPhotos()`); both
+  points ask the modules that are off too.
 
 ## The work record
 

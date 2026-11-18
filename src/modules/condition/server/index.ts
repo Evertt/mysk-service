@@ -9,12 +9,14 @@
  * finds them by (`checklists.components`, `checklists.componentScores`,
  * `checklists.componentSearch`, `checklist-components.ts`). Its records' access rules are `access.ts`'s
  * (`access.rules`). A unit's timeline shows its conditions measured and its figures its NEN 2767
- * score (`equipment.timeline`, `equipment.figures`, `timeline.ts`).
+ * score (`equipment.timeline`, `equipment.figures`, `timeline.ts`). Its defect photos' stored files
+ * go when their unit is deleted (`equipment.removing`) and in the daily sweep (`jobs.fileSweeps`),
+ * both `photos.ts`.
  */
 import { accessRules } from "#lib/access/extensions.ts";
 import { siteSummary } from "#lib/customers/extensions.ts";
-import { figures, timeline } from "#lib/equipment/extensions.ts";
-import { daily } from "#lib/jobs/extensions.ts";
+import { figures, removingUnit, timeline } from "#lib/equipment/extensions.ts";
+import { daily, fileSweeps } from "#lib/jobs/extensions.ts";
 import { contribute, defineServerModule } from "#lib/server/extensions.ts";
 import {
 	checklistCompleted,
@@ -33,6 +35,7 @@ import {
 } from "./checklist-components.ts";
 import { componentArticles } from "./components.ts";
 import { recordChecklistConditions } from "./conditions.ts";
+import { sweepConditionPhotos, unitPhotoFiles } from "./photos.ts";
 import { conditionSiteSummary } from "./site-summary.ts";
 import { conditionFigures, conditionTimeline } from "./timeline.ts";
 
@@ -47,4 +50,6 @@ export default defineServerModule("condition", [
 	contribute(componentSearch, componentSearchText),
 	contribute(timeline, conditionTimeline),
 	contribute(figures, conditionFigures),
+	contribute(removingUnit, unitPhotoFiles),
+	contribute(fileSweeps, sweepConditionPhotos),
 ]);

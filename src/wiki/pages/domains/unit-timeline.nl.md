@@ -90,7 +90,7 @@ meldformulier.
 accepteert die om 11:05 en plant een monteur in, die hem om 14:30 afrondt met twee foto's. Die dag is
 vandaag zodra 14:30 voorbij is, anders gisteren.
 
-- <SourceLink path="src/lib/equipment/extensions.ts" line={50}><code>timeline</code></SourceLink> en <SourceLink path="src/lib/equipment/extensions.ts" line={66}><code>figures</code></SourceLink>
+- <SourceLink path="src/lib/equipment/extensions.ts" line={51}><code>timeline</code></SourceLink> en <SourceLink path="src/lib/equipment/extensions.ts" line={67}><code>figures</code></SourceLink>
 - <SourceLink path="src/lib/equipment/timeline/timeline.ts" line={121}><code>pageOf()</code></SourceLink>
 - <SourceLink path="src/lib/equipment/server/timeline.ts" line={80}><code>coreEntries()</code></SourceLink> en <SourceLink path="src/lib/equipment/server/timeline.ts" line={441}><code>unitTimeline()</code></SourceLink>
 - <SourceLink path="src/modules/energy/server/timeline.ts" line={67}><code>openingEntries()</code></SourceLink>

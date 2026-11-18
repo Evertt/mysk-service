@@ -8,9 +8,10 @@
  * - On Cloudflare: the Worker's Cron Trigger (`wrangler.jsonc`) has the Durable Object answer that
  *   same request (`scheduled()` in `cloudflare/entry.ts`), with the `OPS_TOKEN`.
  *
- * Besides the modules' jobs, the core's own: the stored files no record points to any more are
+ * Besides the modules' jobs, the sweeps: the stored files no record points to any more are
  * deleted, the orders' photos' (`sweepOrderPhotos()`) and the units' documents'
- * (`sweepUnitDocuments()`), each a `sweepFiles()` of its own prefix.
+ * (`sweepUnitDocuments()`), and the modules' (`jobs.fileSweeps`, e.g. condition's defect photos,
+ * also of a module the organization has off), each a `sweepFiles()` of its own prefix.
  *
  * Running it more than once a day does no harm: each job does nothing twice (maintenance, for
  * one, skips a plan whose last order is still open).
@@ -21,7 +22,7 @@ import { OPS_TOKEN } from "$app/env/private";
 
 import { currentDay } from "#lib/dates.ts";
 import { sweepUnitDocuments } from "#lib/equipment/server/index.ts";
-import { daily, type DailyReport } from "#lib/jobs/extensions.ts";
+import { daily, type DailyReport, fileSweeps } from "#lib/jobs/extensions.ts";
 import { sweepOrderPhotos } from "#lib/orders/server/index.ts";
 import { asSystem, tenantOf } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -53,6 +54,7 @@ export async function runDaily(today = currentDay()): Promise<DailyResult[]> {
 		const reports = await asSystem(tenant, async () => [
 			...(await collect(daily, { today }, tenant.modules)),
 			await coreJobs(),
+			...(await collect(fileSweeps, { now: Temporal.Now.instant() }, tenant.modules)),
 		]);
 		results.push({
 			organization: { id, slug: tenant.slug },

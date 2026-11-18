@@ -88,7 +88,7 @@ minutes at 08:12, Riedel's contact reports a fault through the QR code at 10:40,
 accepts it and plans an engineer at 11:05, who completes it at 14:30 with two photos. That day is
 today once 14:30 is past, else yesterday.
 
-- <SourceLink path="src/lib/equipment/extensions.ts" line={50}><code>timeline</code></SourceLink> and <SourceLink path="src/lib/equipment/extensions.ts" line={66}><code>figures</code></SourceLink>
+- <SourceLink path="src/lib/equipment/extensions.ts" line={51}><code>timeline</code></SourceLink> and <SourceLink path="src/lib/equipment/extensions.ts" line={67}><code>figures</code></SourceLink>
 - <SourceLink path="src/lib/equipment/timeline/timeline.ts" line={121}><code>pageOf()</code></SourceLink>
 - <SourceLink path="src/lib/equipment/server/timeline.ts" line={80}><code>coreEntries()</code></SourceLink> and <SourceLink path="src/lib/equipment/server/timeline.ts" line={441}><code>unitTimeline()</code></SourceLink>
 - <SourceLink path="src/modules/energy/server/timeline.ts" line={67}><code>openingEntries()</code></SourceLink>

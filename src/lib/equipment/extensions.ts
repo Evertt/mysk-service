@@ -3,8 +3,9 @@
  * `#lib/extensions/define.ts`). Isomorphic, so the timeline's types are also the pages'.
  */
 import { defineCollector, defineRecordPoints, slotProps } from "#lib/extensions/define.ts";
-// Only the type: this file is isomorphic.
+// Only the types: this file is isomorphic.
 import type { MemberViewer } from "#lib/server/access/viewer.ts";
+import type { Transaction } from "#lib/server/db/index.ts";
 
 import type { TimelineAnswer, TimelineCursor, TimelineFigure } from "./timeline/timeline.ts";
 
@@ -66,3 +67,22 @@ export interface FiguresQuery {
 export const figures = defineCollector<FiguresQuery, TimelineFigure[]>("equipment.figures", {
 	onError: "skip",
 });
+
+/** Core is about to delete one of the tenant's units, in `tx`. */
+export interface UnitRemoval {
+	/** The transaction core deletes the unit in: a module reads what it has of the unit in it. */
+	tx: Transaction;
+	unitId: number;
+}
+
+/**
+ * What a module lets go of when one of the tenant's units is deleted (`UnitRemoval`): its rows
+ * about the unit go with it (the keys cascade), and it answers, in the deletion's transaction
+ * before the delete, what lets go of what they held outside the database (e.g. condition's defect
+ * photos' stored files), which core runs once that has committed (`removeEquipment()`). The modules
+ * the tenant has switched off are asked too, since their rows go just the same.
+ */
+export const removingUnit = defineCollector<UnitRemoval, () => Promise<void>>(
+	"equipment.removing",
+	{ onError: "fail", alsoOff: true },
+);

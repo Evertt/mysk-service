@@ -156,6 +156,25 @@ test("a vote with alsoOff asks the modules that are off too, telling each whethe
 	}
 });
 
+test("a collector with alsoOff asks the modules that are off too", async () => {
+	const releasing = defineCollector<number, string>("test.releasing", {
+		onError: "fail",
+		alsoOff: true,
+	});
+	const before = registry.modules;
+	registry.modules = [
+		fake("a", [contribute(releasing, async (n) => `a:${n}`)]),
+		fake("b", [contribute(releasing, async (n) => `b:${n}`)]),
+	];
+	try {
+		expect(await collect(releasing, 1, ["b"])).toEqual(["a:1", "b:1"]);
+		expect(await collect(releasing, 1, [])).toEqual(["a:1", "b:1"]);
+		expect(await collect(point, 1, [])).toEqual([]);
+	} finally {
+		registry.modules = before;
+	}
+});
+
 test("save lets the modules that are on save their part, one after another", async () => {
 	const input = { saved: [] as string[], refuse: [] as string[] };
 	expect(await save(saving, input, ["c", "b", "a"])).toEqual([]);
