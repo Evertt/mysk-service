@@ -35,7 +35,7 @@ import {
 
 const [northId, southId] = [organizationId("north"), organizationId("south")];
 const takenEmail = "Another engineer already uses this email address";
-const openStatuses = `('quote', 'scheduled', 'in_progress')`;
+const openStatuses = `('quote', 'scheduled', 'on_the_way', 'in_progress')`;
 
 /** An engineer as stored, to check that a refused request changed nothing. */
 const snapshot = (id: number) => rows(`select * from engineer where id = ?`, [id]);
@@ -286,7 +286,7 @@ describe("getEngineer, the engineer's page's and hover card's batch query", () =
 		const [busiest] = await rows<{ id: number; open: number }>(
 			`select engineer_id as id, count(*) as open from "order"
 			 where organization_id = ? and engineer_id is not null
-			 and status in ('quote', 'scheduled', 'in_progress')
+			 and status in ('quote', 'scheduled', 'on_the_way', 'in_progress')
 			 group by engineer_id order by open desc limit 1`,
 			[organizationId("north")],
 		);

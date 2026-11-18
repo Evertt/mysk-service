@@ -81,7 +81,7 @@ describe("North's customers", () => {
 		const expected = await rows<{ code: string; units: number; open: number }>(
 			`select c.code, (select count(*) from equipment e where e.customer_id = c.id) as units,
 			 (select count(*) from "order" o where o.customer_id = c.id
-			  and o.status in ('quote', 'scheduled', 'in_progress')) as open
+			  and o.status in ('quote', 'scheduled', 'on_the_way', 'in_progress')) as open
 			 from customer c where c.organization_id = ? order by c.name`,
 			[northId],
 		);
@@ -265,7 +265,7 @@ describe("getCustomer, the customer's page's and hover card's batch query", () =
 	test("it counts the customer's orders, open ones and when the last was made", async () => {
 		const [busiest] = await rows<{ code: string; orders: number; open: number; last: number }>(
 			`select c.code, count(*) as orders,
-			 sum(o.status in ('quote', 'scheduled', 'in_progress')) as open, max(o.created_at) as last
+			 sum(o.status in ('quote', 'scheduled', 'on_the_way', 'in_progress')) as open, max(o.created_at) as last
 			 from customer c join "order" o on o.customer_id = c.id
 			 where c.organization_id = ? group by c.id order by orders desc limit 1`,
 			[organizationId("north")],

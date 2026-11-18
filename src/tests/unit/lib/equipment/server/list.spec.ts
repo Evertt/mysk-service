@@ -76,7 +76,7 @@ const count = async (where: string, args: (number | string)[] = [], organization
 
 /** A unit's open orders, in SQL. */
 const openOrders = `(select count(*) from "order" o join order_unit ou on ou.order_id = o.id
-	where ou.equipment_id = e.id and o.status in ('quote', 'scheduled', 'in_progress'))`;
+	where ou.equipment_id = e.id and o.status in ('quote', 'scheduled', 'on_the_way', 'in_progress'))`;
 
 /** Today, as the database has days: `yyyy-mm-dd`, in the seed's (and the visitors') time zone. */
 const today = () => Temporal.Now.plainDateISO("Europe/Amsterdam");
