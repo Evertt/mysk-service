@@ -4,7 +4,7 @@ import { type OrderPriority, type OrderStatus, type OrderType } from "#lib/model
 import { formatCode } from "#lib/numbering.ts";
 
 import { type FieldworksCategory, specialtyOf } from "./categories.ts";
-import { addDays, DAY, now } from "./clock.ts";
+import { addDays, DAY, MINUTE, now } from "./clock.ts";
 import type { generateCustomers } from "./customers.ts";
 import type { generateEngineers } from "./engineers.ts";
 import type { generateEquipment } from "./equipment.ts";
@@ -249,4 +249,48 @@ export function generateOrders(
 		}));
 
 	return orders;
+}
+
+/** An order as `departToday` reads and changes it: SHLTR's as much as the Fieldworks tenants'. */
+interface Departable {
+	status: OrderStatus;
+	engineerId: number | null;
+	scheduledFor: Date | null;
+	equipmentIds: readonly number[];
+}
+
+/**
+ * Sends the engineers of a tenant's next two scheduled jobs on their way: the jobs are due within
+ * the hour, and their engineers set out a quarter and half an hour ago (`on_the_way`), so the
+ * planning, the office's bell and the customer portal have an engineer on the way to show. Not the
+ * jobs of engineers with the demo engineer's specialty (`skipSpecialty`): those are the ones the
+ * demo engineer may be given (`demoEngineerWork`). Nor an order of several units: that's planned
+ * work the seed fixed, which stays planned. Returns each order it changed, with when its engineer
+ * set out, for the log.
+ */
+export function departToday<O extends Departable>(
+	orders: O[],
+	engineers: readonly { id: number; specialty: string; active: boolean }[],
+	skipSpecialty: string,
+): { order: O; departedAt: Date }[] {
+	const going = new Set(
+		engineers.filter((e) => e.active && e.specialty !== skipSpecialty).map((e) => e.id),
+	);
+	const next = orders
+		.filter(
+			(o) =>
+				o.status === "scheduled" &&
+				o.engineerId !== null &&
+				going.has(o.engineerId) &&
+				o.equipmentIds.length < 2,
+		)
+		.toSorted((a, b) => a.scheduledFor!.getTime() - b.scheduledFor!.getTime())
+		// One job per engineer: they're on their way to one place at a time.
+		.filter((o, i, all) => all.findIndex((other) => other.engineerId === o.engineerId) === i)
+		.slice(0, 2);
+	return next.map((order, i) => {
+		order.status = "on_the_way";
+		order.scheduledFor = new Date(now.getTime() + (i + 1) * 20 * MINUTE);
+		return { order, departedAt: new Date(now.getTime() - (i + 1) * 15 * MINUTE) };
+	});
 }
