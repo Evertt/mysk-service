@@ -21,6 +21,7 @@ import { and, eq, or } from "drizzle-orm";
 
 import type { UnitRemoval } from "#lib/equipment/extensions.ts";
 import { formatNumber, numberFormatter } from "#lib/i18n/format.ts";
+import type { DailyReport } from "#lib/jobs/extensions.ts";
 import { readOrNotFound } from "#lib/server/access/index.ts";
 import {
 	currentTenant,
@@ -198,7 +199,7 @@ export const componentPhotoFiles = (tx: Transaction, componentId: number) =>
 export async function sweepConditionPhotos(
 	{ now }: { now: Temporal.Instant },
 	store: FileStore = photoStore(),
-) {
+): Promise<DailyReport> {
 	const swept = await sweepFiles(
 		{ store, prefix: conditionPhotoPrefix, referenced: referencedPhotoKeys },
 		now,

@@ -75,7 +75,7 @@ async function spareUnit() {
 }
 
 /** The stored keys of the photos of the defects `where` picks (on `p`, the photo). */
-const photoKeys = async (where: string, values: unknown[]) =>
+const photoKeys = async (where: string, values: (string | number)[]) =>
 	(
 		await rows<{ object_key: string }>(
 			`select distinct object_key from condition_defect_photo p where ${where}`,
