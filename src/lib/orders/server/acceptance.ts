@@ -9,26 +9,61 @@
  */
 import { and, count, eq } from "drizzle-orm";
 
+import type { ReportFault } from "#lib/models.ts";
 import { currentTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { order, orderRequest } from "#lib/server/db/schema.ts";
 
 import { createOrders, type OrderDraft } from "./creation.ts";
+import { addOrderPhotos, discardOrderPhotos, storeOrderPhotos } from "./photos.ts";
 
 /**
  * Creates an order a customer's contact reports in the portal, in `tx`, through `createOrders()`
- * (checked, numbered and logged as created, by them), awaiting acceptance, with who reported it.
+ * (checked, numbered and logged as created, by them), awaiting acceptance, with who reported it and
+ * the kind of fault they chose, if any.
  */
 export async function requestOrder(
 	tx: Transaction,
-	draft: Omit<OrderDraft, "status" | "engineerId" | "scheduledFor" | "completedAt" | "laborHours">,
+	{
+		fault = null,
+		...draft
+	}: Omit<OrderDraft, "status" | "engineerId" | "scheduledFor" | "completedAt" | "laborHours"> & {
+		fault?: ReportFault | null;
+	},
 ) {
 	const { organizationId, user } = currentTenant();
 	const [created] = await createOrders(tx, [{ ...draft, status: "awaiting_acceptance" }]);
-	await tx
-		.insert(orderRequest)
-		.values({ orderId: created.id, organizationId, userId: user.id, reporterName: user.name });
+	await tx.insert(orderRequest).values({
+		orderId: created.id,
+		organizationId,
+		userId: user.id,
+		reporterName: user.name,
+		fault,
+	});
 	return created;
+}
+
+/** A breakdown as a customer's contact reports it: its order's fields, and their photos. */
+type Report = Parameters<typeof requestOrder>[1] & { photos?: readonly File[] };
+
+/**
+ * Makes the order of a breakdown a customer's contact reports in the portal (`requestOrder()`),
+ * with their photos: the photos are put in the store first (`storeOrderPhotos()`: checked, else a
+ * `Refused` on `photos` and no order), outside the transaction, which then makes the order and
+ * records them; should it fail, the stored photos are taken away again.
+ */
+export async function reportOrder({ photos: files = [], ...report }: Report) {
+	const photos = await storeOrderPhotos(files);
+	try {
+		return await db.transaction(async (tx) => {
+			const created = await requestOrder(tx, report);
+			await addOrderPhotos(tx, created, photos);
+			return created;
+		});
+	} catch (thrown) {
+		await discardOrderPhotos(photos);
+		throw thrown;
+	}
 }
 
 /**

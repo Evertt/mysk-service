@@ -19,13 +19,19 @@ import {
 	seenBy,
 } from "#lib/equipment/server/index.ts";
 import { formatNumber } from "#lib/i18n/index.ts";
-import { doneOrderStatuses, pendingOrderStatuses, reportUrgencies } from "#lib/models.ts";
+import {
+	doneOrderStatuses,
+	pendingOrderStatuses,
+	reportFaults,
+	reportUrgencies,
+} from "#lib/models.ts";
 import {
 	customerWork,
 	listedUnitsOf,
 	onUnit,
+	photosOf,
 	readWorkRecord,
-	requestOrder,
+	reportOrder,
 } from "#lib/orders/server/index.ts";
 import { id, text } from "#lib/schema.ts";
 import { visibleOrNone } from "#lib/server/access/index.ts";
@@ -54,6 +60,8 @@ const orderColumns = {
 	reportedBy: orderRequest.reporterName,
 	decidedAt: orderRequest.decidedAt,
 	rejectionReason: orderRequest.rejectionReason,
+	/** The kind of fault they chose when they reported it, if any. */
+	fault: orderRequest.fault,
 };
 
 /** Orders as the portal shows them, with their request if the customer reported them. */
@@ -114,7 +122,7 @@ export const getPortalOrders = forCustomers.query(async () => {
  * One of the customer's orders the contact sees, by its number, or a 404: what it's about and
  * where it stands, who reported it and what the planner decided, and of its work record (see
  * `readWorkRecord()`) its units at the contact's sites, the engineer's first name and once it's
- * done its work order's sign-off.
+ * done its work order's sign-off; and the photos they added to their report.
  */
 export const getPortalOrder = forCustomers.query(v.string(), async (number) => {
 	const scope = await customerWork(await currentCustomer(), number);
@@ -124,7 +132,8 @@ export const getPortalOrder = forCustomers.query(v.string(), async (number) => {
 	]);
 	if (!found || !record) error(404, m.client_order_not_found({ number }));
 	const { engineer, units, signoff } = record;
-	return { order: { ...found, engineer, units }, signoff };
+	const photos = (await photosOf([found.id])).get(found.id) ?? [];
+	return { order: { ...found, engineer, units, photos }, signoff };
 });
 
 // --- Equipment and locations ---------------------------------------------------------------
@@ -180,14 +189,18 @@ const MAX_DESCRIPTION = 2000;
 
 /**
  * Reports a breakdown of one of the customer's units the contact sees: a `breakdown` order with
- * the urgency as its priority, awaiting acceptance by a planner (`requestOrder()`), logged as
- * created by them. Then to its page in the portal.
+ * the urgency as its priority and the kind of fault they chose, if any, awaiting acceptance by a
+ * planner, with their photos (at most `MAX_PHOTOS`, shrunk by the form; `reportOrder()` checks
+ * them again and stores them before the order's transaction), logged as created by them. Then to
+ * its page in the portal.
  */
 export const reportBreakdown = forCustomers.form(
 	v.object({
 		unitId: id(m.client_report_unit_required),
 		description: text(m.client_report_description_required),
 		urgency: v.picklist(reportUrgencies, m.client_report_urgency_required),
+		fault: v.optional(v.picklist(reportFaults)),
+		photos: v.optional(v.array(v.file()), []),
 	}),
 	async (input, issue) => {
 		const access = await currentCustomer();
@@ -202,15 +215,15 @@ export const reportBreakdown = forCustomers.form(
 		if (!unit) {
 			invalid(issue.unitId(m.client_report_unit_unknown()));
 		}
-		const created = await db.transaction((tx) =>
-			requestOrder(tx, {
-				customerId: access.customer.id,
-				units: [unit.id],
-				type: "breakdown",
-				priority: input.urgency,
-				description: input.description,
-			}),
-		);
+		const created = await reportOrder({
+			customerId: access.customer.id,
+			units: [unit.id],
+			type: "breakdown",
+			priority: input.urgency,
+			description: input.description,
+			fault: input.fault,
+			photos: input.photos,
+		});
 		void getPortalHome().refresh();
 		void getPortalOrders().refresh();
 		redirect(303, `/portal/orders/${encodeURIComponent(created.number)}?reported`);

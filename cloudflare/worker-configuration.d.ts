@@ -3,6 +3,7 @@
 // Runtime types generated with workerd@1.20261012.1 2026-10-01 nodejs_compat
 interface __BaseEnv_Env {
 	BUG_REPORTS: R2Bucket;
+	PHOTOS: R2Bucket;
 	ASSETS: Fetcher;
 	MAIL_FROM: "Fieldworks (staging) <noreply@devign.nl>" | "Fieldworks <noreply@devign.nl>";
 	DEMO_SIGN_IN?: "true";
@@ -19,6 +20,7 @@ declare namespace Cloudflare {
 	}
 	interface StagingEnv {
 		BUG_REPORTS: R2Bucket;
+		PHOTOS: R2Bucket;
 		ASSETS: Fetcher;
 		MAIL_FROM: "Fieldworks (staging) <noreply@devign.nl>";
 		DEMO_SIGN_IN: "true";

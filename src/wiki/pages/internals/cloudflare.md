@@ -60,7 +60,7 @@ request to the app's single Durable Object, `AppDatabase`. Static files never re
 Cloudflare serves them first. The object migrates its SQLite database when it starts
 (`blockConcurrencyWhile`), then answers each request by running SvelteKit inside itself, with its
 storage handed along in an `AsyncLocalStorage` (`durableRequests`). `db` finds it there, so the app's
-code is the same on Node and on Cloudflare. See <SourceLink path="cloudflare/entry.ts" line={49}>AppDatabase</SourceLink> and <SourceLink path="src/lib/server/db/durable.ts" line={53}>drizzleDurable</SourceLink>.
+code is the same on Node and on Cloudflare. See <SourceLink path="cloudflare/entry.ts" line={49}>AppDatabase</SourceLink> and <SourceLink path="src/lib/server/db/durable.ts" line={56}>drizzleDurable</SourceLink>.
 
 What follows from that:
 

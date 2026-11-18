@@ -8,7 +8,7 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-import { orderPriorities, orderStatuses, orderTypes } from "#lib/models.ts";
+import { orderPriorities, orderStatuses, orderTypes, reportFaults } from "#lib/models.ts";
 
 import { user } from "../auth.schema.ts";
 import { createdAt, moment, tenantRef, tenantTable } from "../columns.ts";
@@ -178,6 +178,8 @@ export const orderRequest = tenantTable(
 		decidedBy: text("decided_by").references(() => user.id, { onDelete: "set null" }),
 		/** Why it was rejected, for the customer; none when it was accepted. */
 		rejectionReason: text("rejection_reason"),
+		/** What kind of fault the customer chose ("Wat is er aan de hand?"); none if they chose none. */
+		fault: text("fault", { enum: reportFaults }),
 	},
 	(table) => [
 		index("order_request_organization_order").on(table.organizationId, table.orderId),
@@ -186,4 +188,33 @@ export const orderRequest = tenantTable(
 		tenantRef(table, table.orderId, order, { onDelete: "cascade" }),
 	],
 	{ key: "own" },
+);
+
+/**
+ * A photo of an order, as the customer's contact took it when reporting a breakdown in the portal
+ * (shrunk in their browser first). The image is in the photo store (`photoStore()`: an R2 bucket on
+ * Cloudflare, else a folder) under `objectKey`, which starts with the tenant's id; this row says
+ * whose it is. It's read through its order (`order_photo` in the access registry: whoever may read
+ * the order may see it), served by `/photos/<id>`, never at a public URL. Deleting the order
+ * deletes the rows; the files stay in the store.
+ */
+export const orderPhoto = tenantTable(
+	"order_photo",
+	{
+		orderId: integer("order_id").notNull(),
+		/** Where it comes among the order's photos, from 0. */
+		position: integer("position").notNull(),
+		objectKey: text("object_key").notNull(),
+		contentType: text("content_type").notNull(),
+		/** In bytes. */
+		size: integer("size").notNull(),
+		/** Who added it; empty once their account is deleted. */
+		userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+		createdAt: createdAt(),
+	},
+	(table) => [
+		index("order_photo_organization_order").on(table.organizationId, table.orderId, table.position),
+		index("order_photo_user").on(table.userId),
+		tenantRef(table, table.orderId, order, { onDelete: "cascade" }),
+	],
 );

@@ -67,6 +67,7 @@
 	"activity_subject_engineer": "engineer",
 	"activity_subject_equipment": "equipment",
 	"activity_subject_order": "order",
+	"activity_subject_order_photo": "photo",
 	"activity_subject_module": "module",
 	"activity_subject_simulation": "simulation",
 	"activity_subject_member": "member",

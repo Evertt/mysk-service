@@ -198,6 +198,7 @@ Environment variables (see `.env.example` and `src/env.ts`). On Cloudflare `wran
 | `BUG_REPORT_EMAIL`    | no            | Gets a mail for each bug report (the headers' record button); otherwise it's logged          |
 | `DEVELOPER_EMAILS`    | no            | Comma-separated: the accounts that may open the bug reports at `/ops/bug-reports`            |
 | `BUG_REPORTS_DIR`     | no            | Where bug reports' recordings go (`.bug-reports`); on Cloudflare the `BUG_REPORTS` R2 bucket |
+| `PHOTOS_DIR`          | no            | Where the photos of customers' reports go (`.photos`); on Cloudflare the `PHOTOS` R2 bucket  |
 
 ### The first organization
 

@@ -63,6 +63,11 @@ grote knop Storing melden met het apparaat al ingevuld, en dan een link naar de 
 Wie de code van een locatie scant, komt bij Storing melden, met de apparaten op die locatie om uit
 te kiezen.
 
+Bij een storing melden vraagt het portaal wat er aan de hand is (deur sluit niet, schade, geluid of
+anders), wat er mis is en hoe dringend het is (de hoogste urgentie heet hier "stilstand", waar het
+kantoor "spoed" zegt), en het neemt tot vijf foto's mee, die de telefoon eerst verkleint. De pagina
+van de opdracht toont ze weer, aan het klantcontact en aan het kantoor.
+
 Een klantcontact ziet alleen de gegevens van zijn eigen klant, en als het kantoor hem voor slechts
 een paar vestigingen heeft uitgenodigd, alleen die van die vestigingen. De notities van de monteurs
 ziet hij niet; van een monteur ziet hij de voornaam. De rol is `customer`; een eigenaar of
@@ -111,7 +116,7 @@ klantcontact.
 - <SourceLink path="src/lib/auth/shells.ts" line={28}><code>shells</code> en <code>shellOf()</code></SourceLink>
 - <SourceLink path="src/lib/auth/roles.ts">de rollen</SourceLink>, met <code>isFieldEngineer()</code> en
   <code>isCustomerContact()</code>
-- <SourceLink path="src/hooks.server.ts" line={145}><code>handleGuard</code></SourceLink>
+- <SourceLink path="src/hooks.server.ts" line={148}><code>handleGuard</code></SourceLink>
 - <SourceLink path="src/wiki/widgets/role-switcher/roles.ts">de kaarten hierboven</SourceLink>
 
 <DocsPointer doc="docs/agents/tenancy.md" section="Tenancy" />

@@ -1,6 +1,7 @@
 <!--
 	@component
-	An order a customer reported in the customer portal, on its page: who reported it and when, and
+	An order a customer reported in the customer portal, on its page: who reported it and when, the
+	kind of fault they chose and the photos they added, and
 	while it awaits acceptance the planner's choice: accept it (as a quote, or planned at once with
 	an engineer, a day and a time) or reject it with a reason, which the customer reads. Once
 	decided, what was decided, by whom.
@@ -13,9 +14,10 @@
 	import FormDialog from "#lib/components/form/form-dialog.svelte";
 	import SelectField from "#lib/components/form/select-field.svelte";
 	import TextField from "#lib/components/form/text-field.svelte";
-	import { formatDate, formatDateTime } from "#lib/i18n/index.ts";
-	import { isAwaitingAcceptance, type OrderStatus } from "#lib/models.ts";
+	import { formatDate, formatDateTime, label } from "#lib/i18n/index.ts";
+	import { isAwaitingAcceptance, type OrderStatus, type ReportFault } from "#lib/models.ts";
 
+	import OrderPhotos from "../ui/order-photos.svelte";
 	import {
 		acceptReportedOrder,
 		getAcceptanceOptions,
@@ -32,6 +34,8 @@
 			decidedAt: Temporal.Instant | null;
 			decidedBy: string | null;
 			rejectionReason: string | null;
+			fault: ReportFault | null;
+			photos: readonly { id: number }[];
 		};
 	} = $props();
 
@@ -59,7 +63,19 @@
 			})}
 		</Card.Description>
 	</Card.Header>
-	<Card.Content>
+	<Card.Content class="flex flex-col gap-4">
+		{#if request.fault}
+			<p class="text-sm" data-report-fault={request.fault}>
+				<span class="text-muted-foreground">{m.orders_acceptance_fault()}:</span>
+				{label("reportFault", request.fault)}
+			</p>
+		{/if}
+		{#if request.photos.length}
+			<div class="flex flex-col gap-2">
+				<p class="text-sm text-muted-foreground">{m.orders_acceptance_photos()}</p>
+				<OrderPhotos photos={request.photos} />
+			</div>
+		{/if}
 		{#if awaiting}
 			<div class="flex flex-wrap gap-2">
 				<Button onclick={() => (accepting = true)}>
@@ -72,15 +88,17 @@
 				</Button>
 			</div>
 		{:else if request.rejectionReason !== null}
-			<p class="text-sm" data-decision="rejected">
-				{m.orders_acceptance_rejected({
-					name: request.decidedBy ?? "—",
-					date: request.decidedAt ? formatDate(request.decidedAt) : "—",
-				})}
-			</p>
-			<p class="mt-1 text-sm whitespace-pre-line text-muted-foreground">
-				{request.rejectionReason}
-			</p>
+			<div>
+				<p class="text-sm" data-decision="rejected">
+					{m.orders_acceptance_rejected({
+						name: request.decidedBy ?? "—",
+						date: request.decidedAt ? formatDate(request.decidedAt) : "—",
+					})}
+				</p>
+				<p class="mt-1 text-sm whitespace-pre-line text-muted-foreground">
+					{request.rejectionReason}
+				</p>
+			</div>
 		{:else if request.decidedAt}
 			<p class="text-sm" data-decision="accepted">
 				{m.orders_acceptance_accepted({

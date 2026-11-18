@@ -11,8 +11,9 @@ summary: Hoe een storing die een klant meldt, wacht tot een planner hem acceptee
 </script>
 
 Een klant die een apparaat ziet uitvallen, belt niet naar kantoor: hij opent het klantportaal en
-kiest **Storing melden**, bij het apparaat (of door de QR-code te scannen), met een beschrijving en
-een urgentie (normaal, hoog of spoed). Daarmee ontstaat een opdracht, maar nog geen werk. De opdracht
+kiest **Storing melden**, bij het apparaat (of door de QR-code te scannen), met wat er aan de hand is
+(deur sluit niet, schade, geluid of anders: niet verplicht), een beschrijving, tot vijf foto's en een
+urgentie (normaal, hoog of stilstand; op kantoor heet die laatste spoed). Daarmee ontstaat een opdracht, maar nog geen werk. De opdracht
 heeft de status **Nieuw (te accepteren)** tot een planner beslist.
 
 ## Wat de klant ziet
@@ -26,8 +27,8 @@ schreef**.
 - Een badge bij **Opdrachten** in het menu en een kaart op het dashboard tellen de meldingen die
   wachten. De kaart opent de opdrachtenlijst, gefilterd op die meldingen. De bel geeft een melding
   voor elke nieuwe.
-- Op de pagina van de opdracht zegt een kaart wie hem meldde en wanneer. De kaart heeft twee
-  knoppen:
+- Op de pagina van de opdracht zegt een kaart wie hem meldde en wanneer, wat voor storing de klant
+  koos en welke foto's hij meestuurde (een klik opent een foto groot). De kaart heeft twee knoppen:
   - **Accepteren.** De opdracht krijgt de status Nieuw. Of vul een monteur, een dag en een tijd in,
     dan is hij meteen ingepland, alsof hij in dezelfde stap werd ingepland.
   - **Afwijzen.** Een reden is verplicht. De opdracht wordt geannuleerd en de klant leest de reden.
@@ -53,10 +54,20 @@ Een te accepteren opdracht blijft bewust buiten alles wat werk telt of plant:
 <HowItWorks />
 
 **Het aanmaken.** Het formulier `reportBreakdown` van het portaal controleert of het apparaat er een
-is dat het klantcontact ziet, en roept dan `requestOrder(tx, draft)` aan in een transactie. Dat is
+is dat het klantcontact ziet, en roept dan `reportOrder()` aan. Die zet eerst de foto's in de
+foto-opslag (`storeOrderPhotos()`: hoogstens vijf, JPEG, PNG of WebP naar hun bytes, elk tot 2 MB; de
+browser verkleint ze eerst tot 1600 pixels), buiten de transactie, want op Cloudflare houdt een
+transactie elk ander verzoek op. Daarna roept hij in een transactie `requestOrder(tx, draft)` aan. Dat is
 `createOrders()` (gecontroleerd, genummerd, gelogd als aangemaakt, door het klantcontact) met de
 status `awaiting_acceptance`, plus een rij in `order_request` die bijhoudt wie hem meldde
-(`reporterName`) en, later, wie besliste, wanneer en waarom.
+(`reporterName`) en het soort storing (`fault`) en, later, wie besliste, wanneer en waarom. Elke
+foto krijgt een rij in `order_photo`, gelogd als aangemaakt bij de opdracht. Mislukt de transactie,
+dan haalt hij de foto's weer weg.
+
+**De foto's tonen.** Een foto staat nooit op een openbare URL: `/photos/<id>` geeft hem alleen aan
+wie de opdracht mag lezen (`servePhoto()` vraagt het aan de toegangsregels: `order_photo` is een
+deel van `order`), en anders een 404, ook bij een ander id. Op Cloudflare staan ze in de R2-bucket
+`PHOTOS`, elders in een map (`PHOTOS_DIR`).
 
 **Geen open werk.** `openOrderStatuses` bevat `awaiting_acceptance` niet; `pendingOrderStatuses`,
 de klantweergave van wat nog gedaan moet worden, wel. `holdsStock()` van de materialenmodule en
@@ -76,10 +87,13 @@ al beslist is, wordt geweigerd.
 
 **De telling.** `awaitingAcceptance(organizationId)` telt de opdrachten voor de badge in het menu.
 
-- <SourceLink path="src/lib/orders/server/acceptance.ts" line={22}><code>requestOrder()</code></SourceLink>
-- <SourceLink path="src/routes/(customer)/portal/client.remote.ts" line={186}><code>reportBreakdown</code></SourceLink>
+- <SourceLink path="src/lib/orders/server/acceptance.ts" line={25}><code>requestOrder()</code></SourceLink>
+- <SourceLink path="src/routes/(customer)/portal/client.remote.ts" line={197}><code>reportBreakdown</code></SourceLink>
 - <SourceLink path="src/lib/orders/detail/acceptance.remote.ts" line={35}><code>acceptReportedOrder</code></SourceLink>
   en <SourceLink path="src/lib/orders/detail/acceptance.remote.ts" line={61}><code>rejectReportedOrder</code></SourceLink>
 - <SourceLink path="src/lib/server/db/schema/orders.ts" line={169} symbol="orderRequest"><code>order_request</code></SourceLink>
+- <SourceLink path="src/lib/orders/server/acceptance.ts" line={55}><code>reportOrder()</code></SourceLink>
+  en <SourceLink path="src/lib/orders/server/photos.ts" line={167}><code>servePhoto()</code></SourceLink>
+- <SourceLink path="src/lib/server/db/schema/orders.ts" line={201} symbol="orderPhoto"><code>order_photo</code></SourceLink>
 
 <DocsPointer doc="docs/agents/orders.md" section="Orders awaiting acceptance" />

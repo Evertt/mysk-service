@@ -5,6 +5,7 @@ export * from "./lifecycle.ts";
 export * from "./lookup.ts";
 export { orderCommitted } from "./hooks.ts";
 export * from "./order-changes.ts";
+export * from "./photos.ts";
 export * from "./pricing.ts";
 export * from "./types.ts";
 export * from "./units.ts";

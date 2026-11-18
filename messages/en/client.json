@@ -78,6 +78,18 @@
 	"client_urgency_high_description": "It hinders the work: soon, please.",
 	"client_urgency_urgent_description": "It's at a standstill or unsafe.",
 	"client_report_submit": "Report breakdown",
+	"client_report_fault": "What's going on?",
+	"client_report_photos": "Photos",
+	"client_report_photos_description": "Up to {max} photos of the fault help the engineer bring the right parts.",
+	"client_report_photos_add": "Add photos",
+	"client_report_photo_remove": "Remove photo {number}",
+	"client_report_photos_too_many": "Add at most {max} photos.",
+	"client_report_photo_not_image": "Only photos can be added (JPEG, PNG or WebP).",
+	"client_report_photo_too_large": "A photo can be at most {size}.",
+	"client_report_photo_unreadable": "One of the photos couldn't be read. Try another one.",
+	"client_urgency_standstill": "Standstill",
+	"client_detail_fault": "Fault",
+	"client_report_card_title": "Your report",
 	"client_detail_created": "Created",
 	"client_created_on": "Created {date}"
 }

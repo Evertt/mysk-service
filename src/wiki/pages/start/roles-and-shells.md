@@ -63,6 +63,11 @@ inspection status and the day of its last maintenance), then a big Report a brea
 the unit filled in, then a link to its service history. Scanning a location's code opens Report a
 breakdown with the location's units to choose from.
 
+Reporting a breakdown asks what's going on (door won't close, damage, noise or other), what's
+wrong, how urgent it is (the top urgency reads "standstill" here, where the office says "urgent")
+and takes up to five photos, which the phone shrinks before sending. The order's page shows them
+again, to the contact and to the office.
+
 A contact sees only their own customer's records, and, if the office invited them for some sites
 only, only those sites'. They don't see the engineers' notes; of an engineer they see the first
 name. The role is `customer`; an owner or admin invites a contact from the customer's page,
@@ -106,7 +111,7 @@ customer's contact.
 - <SourceLink path="src/lib/auth/shells.ts" line={28}><code>shells</code> and <code>shellOf()</code></SourceLink>
 - <SourceLink path="src/lib/auth/roles.ts">the roles</SourceLink>, with <code>isFieldEngineer()</code> and
   <code>isCustomerContact()</code>
-- <SourceLink path="src/hooks.server.ts" line={145}><code>handleGuard</code></SourceLink>
+- <SourceLink path="src/hooks.server.ts" line={148}><code>handleGuard</code></SourceLink>
 - <SourceLink path="src/wiki/widgets/role-switcher/roles.ts">the cards above</SourceLink>
 
 <DocsPointer doc="docs/agents/tenancy.md" section="Tenancy" />
