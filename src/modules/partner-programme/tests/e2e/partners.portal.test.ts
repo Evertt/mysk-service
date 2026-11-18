@@ -54,11 +54,14 @@ describe("a partner's contact", () => {
 		await page.waitForURL((url) => url.pathname === "/partner-programme/portal");
 		const bonus = page.locator("[data-client-bonus]");
 		await bonus.waitFor();
-		// The programme's banner, in the organization's name.
+		// The programme's banner, in the organization's name, under the app bar's title (the one h1).
 		const banner = page.locator("[data-page-banner]");
-		expect(await banner.getByRole("heading", { level: 1 }).innerText()).toBe(
+		expect(await banner.getByRole("heading", { level: 2 }).innerText()).toBe(
 			"Growing together. More in return.",
 		);
+		expect(await page.getByRole("heading", { level: 1 }).allInnerTexts()).toEqual([
+			"Partner bonus",
+		]);
 		expect(await banner.innerText()).toContain(`${shltr.name} · Partner programme`.toUpperCase());
 		// The wallet's dark panel: its figures are the wallet's.
 		const panel = page.getByRole("region", { name: "Wallet" });

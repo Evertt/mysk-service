@@ -38,7 +38,7 @@
 	}}
 />
 
-<SiteReport {report}>
+<SiteReport {report} heading="h2">
 	{#snippet orderLink(order)}
 		<a
 			href={resolve("/(customer)/portal/orders/[number]", { number: order.number })}

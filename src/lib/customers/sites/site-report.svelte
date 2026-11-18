@@ -27,6 +27,7 @@
 	let {
 		report,
 		orderLink,
+		heading = "h1",
 	}: {
 		report: {
 			organization: string;
@@ -62,6 +63,8 @@
 			}[];
 		};
 		orderLink: Snippet<[{ number: string }]>;
+		/** The sheet's title's element: an `h2` under a page's own `h1` (the portal's app bar). */
+		heading?: "h1" | "h2";
 	} = $props();
 
 	const sections = $derived(sectionsOf(report.figures));
@@ -99,7 +102,9 @@
 			<p class="text-xs tracking-wide text-muted-foreground uppercase">
 				{report.organization} · {report.site.customer.name}
 			</p>
-			<h1 class="text-2xl font-semibold">{m.customers_report_title()} · {report.site.name}</h1>
+			<svelte:element this={heading} class="text-2xl font-semibold">
+				{m.customers_report_title()} · {report.site.name}
+			</svelte:element>
 			<p class="text-sm text-muted-foreground">{siteAddressLine(report.site)}</p>
 			<p class="text-sm" data-report-period>
 				{m.customers_report_period({

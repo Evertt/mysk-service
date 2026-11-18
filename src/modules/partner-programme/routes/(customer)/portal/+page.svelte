@@ -45,6 +45,7 @@
 	</Empty.Root>
 {:else}
 	<PageBanner
+		heading="h2"
 		eyebrow={m.partners_client_hero_eyebrow({ organization: data.organization })}
 		title={m.partners_client_hero_title()}
 		description={m.partners_client_hero_intro({ organization: data.organization })}

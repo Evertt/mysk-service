@@ -41,5 +41,5 @@
 </AppBar>
 
 <PrintSheet class="rounded-xl p-4">
-	<WorkOrder {data} />
+	<WorkOrder {data} heading="h2" />
 </PrintSheet>
