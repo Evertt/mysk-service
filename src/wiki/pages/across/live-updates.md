@@ -59,7 +59,7 @@ stream is the fix, and a guard spec (`live-by-subject.spec.ts`) keeps it that wa
 4. **The layout hands them to the page.** `provideChangeFeed()` in each shell's layout. A component
    follows its record with `refreshOnRecordChange(() => ({ type, id }), () => getX(key).refresh())`,
    and a list or bell that isn't keyed by one id with `refreshOnActivity(refresh, { types })`. See <SourceLink path="src/lib/components/activity/change-feed.svelte.ts" line={26}>provideChangeFeed</SourceLink>
-   and <SourceLink path="src/lib/components/activity/live-activity.svelte.ts" line={20}>refreshOnActivity</SourceLink>.
+   and <SourceLink path="src/lib/components/activity/live-activity.svelte.ts" line={24}>refreshOnActivity</SourceLink>.
 5. **Catching up.** A page that was loaded before the stream started, or while it reconnected, asks
    `getRecordChangedAt` when its record last changed. An unreadable record answers 0 and not an
    error, so asking tells nothing about whether an id exists.

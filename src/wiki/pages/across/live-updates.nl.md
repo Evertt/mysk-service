@@ -58,7 +58,7 @@ waardoor een query per record lekte; de ene gedeelde stream is de oplossing, en 
 4. **De layout geeft ze aan de pagina.** `provideChangeFeed()` in de layout van elke shell. Een
    component volgt zijn record met `refreshOnRecordChange(() => ({ type, id }), () => getX(key).refresh())`,
    en een lijst of bel die niet aan één id hangt met `refreshOnActivity(refresh, { types })`. Zie <SourceLink path="src/lib/components/activity/change-feed.svelte.ts" line={26}>provideChangeFeed</SourceLink>
-   en <SourceLink path="src/lib/components/activity/live-activity.svelte.ts" line={20}>refreshOnActivity</SourceLink>.
+   en <SourceLink path="src/lib/components/activity/live-activity.svelte.ts" line={24}>refreshOnActivity</SourceLink>.
 5. **Bijlezen.** Een pagina die geladen werd voordat de stream begon, of terwijl hij opnieuw
    verbinding maakte, vraagt met `getRecordChangedAt` wanneer zijn record het laatst veranderde.
    Een record dat je niet mag lezen, antwoordt 0 en geen fout, dus de vraag verraadt niets over of
