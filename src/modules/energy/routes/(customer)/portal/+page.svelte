@@ -16,11 +16,11 @@
 	import AppBar from "#lib/client/app-bar.svelte";
 	import SegmentedNav from "#lib/components/segmented-nav.svelte";
 	import { formatCents, formatNumber, formatTime } from "#lib/i18n/index.ts";
+	import ClientComparison from "#modules/energy/client/client-comparison.svelte";
 	import { getClientEnergy } from "#modules/energy/client/client-energy.remote.ts";
 	import { formatCo2, formatKw, formatKwh, formatMinutes } from "#modules/energy/display.ts";
 	import { energyLabels } from "#modules/energy/labels.ts";
 	import { costCents, type Period, periods } from "#modules/energy/model.ts";
-	import ComparisonTable from "#modules/energy/overview/comparison-table.svelte";
 	import ConsumptionChart from "#modules/energy/overview/consumption-chart.svelte";
 	import KpiTile from "#modules/energy/overview/kpi-tile.svelte";
 	import {
@@ -133,7 +133,7 @@
 				change={kpis.change}
 			/>
 
-			<ComparisonTable zones={entry.zones} previousComplete={entry.previousComplete} />
+			<ClientComparison zones={entry.zones} previousComplete={entry.previousComplete} />
 
 			{#if entry.doors.length}
 				<Card.Root class="rounded-xl">

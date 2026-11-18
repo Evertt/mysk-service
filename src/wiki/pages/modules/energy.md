@@ -36,7 +36,9 @@ be made into an order with one click, which is how monitoring turns into work fo
   about a door, otherwise a **survey** at the site's customer.
 - **A report** page per site, to print or hand to the customer.
 - **The customer's own view.** Customers see their sites' power and consumption, against the
-  previous period, and what the doors let out, read-only, on a page in the customer portal.
+  previous period, and what the doors let out, read-only, on a page in the customer portal. On the
+  phone the zones' comparison is a row per zone (this period, the previous one and the change)
+  instead of the office's table.
 
 ### Where it shows up
 

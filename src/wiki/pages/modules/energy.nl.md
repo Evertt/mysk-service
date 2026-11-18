@@ -35,7 +35,8 @@ alert maak je met één klik een opdracht, en zo wordt monitoring werk voor een 
 - **Een rapport** per locatie, om af te drukken of aan de klant te geven.
 - **Het eigen overzicht van de klant.** Klanten zien het vermogen en verbruik van hun locaties,
   tegenover de vorige periode, en wat de deuren laten weglekken, alleen lezen, op een pagina in het
-  klantportaal.
+  klantportaal. Op de telefoon is de vergelijking van de zones een regel per zone (deze periode, de
+  vorige en het verschil) in plaats van de tabel van het kantoor.
 
 ### Waar je het ziet
 
