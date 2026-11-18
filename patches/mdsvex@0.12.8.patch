@@ -1,0 +1,14 @@
+diff --git a/dist/main-Bo3idoP1.js b/dist/main-Bo3idoP1.js
+index a8be625b23ce6e78e047bff3186a9e370ff553bd..ba278ff5b19b8918b4e06c310fefeb80e69cb0ca 100644
+--- a/dist/main-Bo3idoP1.js
++++ b/dist/main-Bo3idoP1.js
+@@ -24383,7 +24383,8 @@ async function load_language_metadata() {
+ }
+ 
+ async function load_language(lang) {
+-	if (!langs[lang]) return;
++	// A language Prism already has (its core has javascript) needs no import, which would fail.
++	if (!langs[lang] || Prism.languages[lang]) return;
+ 
+ 	await Promise.all(
+ 		Array.from(langs[lang].deps).map(async (name) => await load_language(name))
