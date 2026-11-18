@@ -12,7 +12,6 @@ import { id, recordId } from "#lib/schema.ts";
 import { db } from "#lib/server/db/index.ts";
 
 import { advice, pointDefectSchema, pointPhotoSchema } from "../form/condition-schema.ts";
-import type { DefectExtent } from "../nen2767.ts";
 import { forEngineers } from "../remote-functions.ts";
 import {
 	adviseFieldCondition,
@@ -90,11 +89,7 @@ export const getFieldPointDefect = forEngineers.query(
 export const saveFieldPointDefectForm = forEngineers.form(
 	pointDefectSchema,
 	async ({ number, equipmentId, pointId, photos, ...grade }) => {
-		await saveFieldPointDefect(
-			{ number, equipmentId, pointId },
-			{ ...grade, extent: grade.extent as DefectExtent },
-			photos,
-		);
+		await saveFieldPointDefect({ number, equipmentId, pointId }, grade, photos);
 		void getFieldPointDefect({ number, equipmentId, pointId }).refresh();
 	},
 );

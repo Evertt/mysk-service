@@ -10,6 +10,7 @@
 	import PlusIcon from "@lucide/svelte/icons/plus";
 	import Trash2Icon from "@lucide/svelte/icons/trash-2";
 
+	import FilterChips from "#lib/components/filter-chips.svelte";
 	import FormDialog from "#lib/components/form/form-dialog.svelte";
 	import { lineItems, withoutValue } from "#lib/components/form/line-items.svelte.ts";
 	import TextField from "#lib/components/form/text-field.svelte";
@@ -18,16 +19,17 @@
 	import { recordCondition } from "../condition.remote.ts";
 	import { extentLabel, scoreText } from "../display.ts";
 	import { conditionLabels } from "../labels.ts";
-	import { DEFECT_TEXT_MAX, DEFECTS_MAX } from "../model.ts";
+	import { DEFECT_TEXT_MAX, DEFECTS_MAX, recordScore } from "../model.ts";
 	import {
-		type DefectExtent,
 		type DefectIntensity,
-		defectExtents,
 		defectIntensities,
 		defectScore,
 		type DefectSeverity,
 		defectSeverities,
-		worstScore,
+		extentClass,
+		extentClasses,
+		extentLimits,
+		extentPresets,
 	} from "../nen2767.ts";
 	import DefectPhotosPicker from "../ui/defect-photos-picker.svelte";
 	import ScoreBadge from "../ui/score-badge.svelte";
@@ -60,7 +62,8 @@
 		componentId: string;
 		description: string;
 		severity: DefectSeverity | "";
-		extent: string;
+		/** In percent; a number once typed in, the chips' text. */
+		extent: string | number | null;
 		intensity: DefectIntensity | "";
 		photos: File[];
 	}
@@ -74,17 +77,34 @@
 	});
 	const rows = lineItems<Row>(() => []);
 
-	/** A row's score, once its grade is complete. */
-	const scoreOf = (row: Row) =>
-		row.severity && row.extent && row.intensity
-			? defectScore({
-					severity: row.severity,
-					extent: Number(row.extent) as DefectExtent,
-					intensity: row.intensity,
-				})
+	/** A row's extent in percent, once it's one (1–100). */
+	const percentOf = (row: Row) => {
+		const percent = Number(row.extent);
+		return row.extent !== "" &&
+			row.extent !== null &&
+			Number.isInteger(percent) &&
+			percent >= extentLimits.min &&
+			percent <= extentLimits.max
+			? percent
 			: null;
-	/** The score the defects give it so far: the worst. */
-	const score = $derived(worstScore(rows.rows.flatMap((row) => scoreOf(row) ?? [])));
+	};
+	/** A row's defect, once its grade is complete, on its element. */
+	const defectOf = (row: Row) => {
+		const extent = percentOf(row);
+		return row.severity && row.intensity && extent !== null
+			? {
+					severity: row.severity,
+					intensity: row.intensity,
+					extent,
+					componentId: component?.id ?? (row.componentId ? Number(row.componentId) : null),
+				}
+			: null;
+	};
+	/**
+	 * The score the defects give it so far: each element's by NEN 2767-1's method, the worst
+	 * element's (the server works it out again).
+	 */
+	const score = $derived(recordScore(rows.rows.flatMap((row) => defectOf(row) ?? [])));
 	const elements = $derived(component ? [] : components);
 	const fields = $derived(form.fields.defects);
 </script>
@@ -122,7 +142,8 @@
 			<ol class="flex flex-col gap-3">
 				{#each rows.rows as row, index (row.key)}
 					{@const field = fields[index]}
-					{@const own = scoreOf(row)}
+					{@const own = defectOf(row)}
+					{@const percent = percentOf(row)}
 					<li class="flex flex-col gap-3 rounded-lg border p-3" data-defect={index}>
 						<div class="flex items-start gap-2">
 							<Field.Field
@@ -195,23 +216,41 @@
 								</NativeSelect.Root>
 								<Field.FieldError errors={field.severity.issues()} />
 							</Field.Field>
-							<Field.Field data-invalid={field.extent.issues() ? true : undefined}>
+							<Field.Field
+								class="sm:col-span-2"
+								data-invalid={field.extent.issues() ? true : undefined}
+							>
 								<Field.FieldLabel for="defect-{index}-extent">
 									{m.condition_defect_extent()}
 								</Field.FieldLabel>
-								<NativeSelect.Root
-									id="defect-{index}-extent"
-									class="w-full"
-									{...withoutValue(field.extent.as("select"))}
-									bind:value={row.extent}
-								>
-									<NativeSelect.Option value="">{m.condition_choose()}</NativeSelect.Option>
-									{#each defectExtents as extent (extent)}
-										<NativeSelect.Option value={String(extent)}>
-											{formatNumber(extent)} · {extentLabel(extent)}
-										</NativeSelect.Option>
-									{/each}
-								</NativeSelect.Root>
+								<div class="flex flex-wrap items-center gap-2">
+									<Input
+										id="defect-{index}-extent"
+										{...withoutValue(field.extent.as("text"))}
+										type="number"
+										inputmode="numeric"
+										min={extentLimits.min}
+										max={extentLimits.max}
+										step={1}
+										class="w-24"
+										bind:value={row.extent}
+									/>
+									<span class="text-sm text-muted-foreground" data-extent-class>
+										{percent === null
+											? m.condition_extent_percent()
+											: `% · ${extentLabel(extentClass(percent))}`}
+									</span>
+								</div>
+								<FilterChips
+									label={m.condition_extent_presets()}
+									options={extentClasses.map((value) => ({
+										value: String(extentPresets[value]),
+										label: extentLabel(value),
+									}))}
+									value={percent === null ? null : String(extentPresets[extentClass(percent)])}
+									onchange={(value) => value !== null && (row.extent = value)}
+									data-extent-presets
+								/>
 								<Field.FieldError errors={field.extent.issues()} />
 							</Field.Field>
 							<Field.Field data-invalid={field.intensity.issues() ? true : undefined}>
@@ -236,8 +275,11 @@
 						</div>
 						<div class="flex flex-wrap items-end justify-between gap-3">
 							<DefectPhotosPicker field={field.photos} bind:photos={row.photos} />
-							<span class="text-xs text-muted-foreground" data-defect-score={own}>
-								{own === null ? m.condition_defect_incomplete() : scoreText(own)}
+							<span
+								class="text-xs text-muted-foreground"
+								data-defect-score={own === null ? null : defectScore(own)}
+							>
+								{own === null ? m.condition_defect_incomplete() : scoreText(defectScore(own))}
 							</span>
 						</div>
 					</li>

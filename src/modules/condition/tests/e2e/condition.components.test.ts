@@ -100,7 +100,9 @@ describe("a unit's components", () => {
 		expect(await defect.getByLabel("Element").count()).toBe(0);
 		await defect.getByLabel("Defect", { exact: true }).fill("Draadbreuk bij de trommel");
 		await defect.getByLabel("Severity").selectOption("severe");
-		await defect.getByLabel("Extent").selectOption("4");
+		// A class's chip sets its typical percentage.
+		await defect.locator("[data-extent-presets]").getByRole("button", { name: "≥70%" }).click();
+		expect(await defect.getByLabel("Extent", { exact: true }).inputValue()).toBe("85");
 		await defect.getByLabel("Intensity").selectOption("advanced");
 		await dialog().getByLabel("Advice").fill("Kabelset vervangen (SD-002).");
 		await dialog().getByRole("button", { name: "Save condition" }).click();

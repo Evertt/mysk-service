@@ -107,36 +107,40 @@ test("thresholds are scores from 2 to 6, attention below critical", () => {
 	expect(validThresholds({ critical: 4.5, attention: 3 })).toBe(false);
 });
 
-describe("defects and scores (worst defect wins)", () => {
-	const spring = { severity: "severe", extent: 3, intensity: "advanced" } as const; // 4
-	const seal = { severity: "slight", extent: 2, intensity: "initial" } as const; // 1
-	const cable = { severity: "serious", extent: 5, intensity: "final" } as const; // 6
+describe("defects and scores (the norm's method per element, the worst element)", () => {
+	// Severe, advanced, 30–70%: category 4, 30 points, so 4.
+	const spring = { severity: "severe", extent: 50, intensity: "advanced" } as const;
+	// Slight, initial, 2–10%: category 1, 0.2 points, so 1.
+	const seal = { severity: "slight", extent: 5, intensity: "initial" } as const;
+	// Serious, final, 10–30%: category 4 too, 10 points, so 3.
+	const cable = { severity: "serious", extent: 25, intensity: "final" } as const;
+	const on = (componentId: number | null, ...defects: { severity: string }[]) =>
+		defects.map((defect) => ({ ...(defect as typeof spring), componentId }));
 
-	test("a condition without defects scores 1, with them its worst defect's", () => {
+	test("a condition without defects scores 1, with them its worst element's", () => {
 		expect(recordScore([])).toBe(1);
-		expect(recordScore([seal])).toBe(1);
-		expect(recordScore([seal, spring])).toBe(4);
-		expect(recordScore([spring, cable, seal])).toBe(6);
+		expect(recordScore(on(null, seal))).toBe(1);
+		expect(recordScore([...on(null, seal), ...on(1, spring)])).toBe(4);
+		expect(recordScore([...on(null, cable), ...on(1, seal)])).toBe(3);
 	});
 
-	test("an element's score is its worst defect's, or 1 without defects", () => {
-		const defects = [
-			{ ...spring, componentId: 1 },
-			{ ...seal, componentId: null },
-			{ ...cable, componentId: 2 },
-			{ ...seal, componentId: 1 },
-		];
-		expect(elementScore(defects, 1)).toBe(4);
-		expect(elementScore(defects, 2)).toBe(6);
+	test("an element's defects of one category add their extents up, so it can score worse than each", () => {
+		// The spring and the cable on one component: category 4 at 75%, 70 points, so 5.
+		const defects = [...on(1, spring, cable), ...on(null, seal), ...on(2, cable)];
+		expect(elementScore(defects, 1)).toBe(5);
+		expect(elementScore(defects, 2)).toBe(3);
 		expect(elementScore(defects, null)).toBe(1);
 		expect(elementScore(defects, 3)).toBe(1);
 		expect(elementScores(defects)).toEqual(
 			new Map([
-				[1, 4],
+				[1, 5],
 				[null, 1],
-				[2, 6],
+				[2, 3],
 			]),
 		);
+		// Apart, on two elements, each scores alone, and the worst is 4.
+		expect(recordScore([...on(1, spring), ...on(2, cable)])).toBe(4);
+		expect(recordScore(defects)).toBe(5);
 	});
 
 	test("a unit's current score is the worst of its own and its components' latest", () => {
