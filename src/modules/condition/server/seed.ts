@@ -1,5 +1,5 @@
 /**
- * The demo tenants' unit conditions, on NEN 2767's scale from their defects (the worst wins). SHLTR's
+ * The demo tenants' unit conditions, on NEN 2767's scale from their defects (NEN 2767-1's method). SHLTR's
  * are the Connect page's (`docs/plans/shltr-domain.md` §2.3): Riedel's dock 07 door with a broken
  * torsion spring at 5 (Slecht), D-11's cable set and L-03's hydraulics at 4 (Matig), Pakhuis 7's
  * AC-02 with its filters at 5, D-09 at 3 (Redelijk) like the mockup's slide 6, and a few more that
@@ -54,24 +54,29 @@ interface SeedDefect extends DefectGrade {
 	on?: string;
 }
 
-/** Shorthands for the grades the demo's defects have, with the score NEN 2767 gives each. */
+/**
+ * Shorthands for the grades the demo's defects have, with the score NEN 2767 gives each alone (one
+ * defect per element at 3 or worse: a second one in the element would add its points).
+ */
 const grade = {
-	/** 1: slight, initial, 10–30%. */
-	trace: { severity: "slight", intensity: "initial", extent: 3 },
-	/** 2: slight, advanced, 10–30%. */
-	slight: { severity: "slight", intensity: "advanced", extent: 3 },
-	/** 2: serious, initial, 10–30%. */
-	starting: { severity: "serious", intensity: "initial", extent: 3 },
-	/** 3: serious, advanced, 10–30%. */
-	fair: { severity: "serious", intensity: "advanced", extent: 3 },
-	/** 4: serious, advanced, 30–70%. */
-	moderate: { severity: "serious", intensity: "advanced", extent: 4 },
-	/** 4: serious, final, 10–30%. */
-	moderateFinal: { severity: "serious", intensity: "final", extent: 3 },
-	/** 5: severe, advanced, 30–70%. */
-	poor: { severity: "severe", intensity: "advanced", extent: 4 },
-	/** 5: severe, final, 10–30%. */
-	poorFinal: { severity: "severe", intensity: "final", extent: 3 },
+	/** 1: slight, initial, 20% (category 1, 0.6 points). */
+	trace: { severity: "slight", intensity: "initial", extent: 20 },
+	/** 2: slight, advanced, 50% (category 2, 2 points). */
+	slight: { severity: "slight", intensity: "advanced", extent: 50 },
+	/** 2: serious, initial, 50% (category 2, 2 points). */
+	starting: { severity: "serious", intensity: "initial", extent: 50 },
+	/** 2: serious, advanced, 20% (category 3, 2 points). */
+	local: { severity: "serious", intensity: "advanced", extent: 20 },
+	/** 3: serious, advanced, 50% (category 3, 10 points). */
+	fair: { severity: "serious", intensity: "advanced", extent: 50 },
+	/** 4: serious, advanced, 85% (category 3, 30 points). */
+	moderate: { severity: "serious", intensity: "advanced", extent: 85 },
+	/** 4: serious, final, 50% (category 4, 30 points). */
+	moderateFinal: { severity: "serious", intensity: "final", extent: 50 },
+	/** 5: severe, advanced, 85% (category 4, 70 points). */
+	poor: { severity: "severe", intensity: "advanced", extent: 85 },
+	/** 5: severe, final, 50% (category 5, 70 points). */
+	poorFinal: { severity: "severe", intensity: "final", extent: 50 },
 } satisfies Record<string, DefectGrade>;
 
 /** A unit the mockup names, with how its condition went: oldest first, the last one now. */
@@ -133,10 +138,7 @@ const shltrConditions: FixedCondition[] = [
 			{ daysAgo: 180, defects: [{ text: "Filters vervuild", ...grade.fair }] },
 			{
 				daysAgo: 4,
-				defects: [
-					{ text: "Filters sterk vervuild", ...grade.poor },
-					{ text: "Condensafvoer verstopt", ...grade.moderate },
-				],
+				defects: [{ text: "Filters sterk vervuild, condensafvoer verstopt", ...grade.poor }],
 			},
 		],
 		advice:
@@ -174,8 +176,9 @@ const shltrConditions: FixedCondition[] = [
 			{
 				daysAgo: 35,
 				defects: [
-					{ text: "Fotocel wijkt af, deur keert soms onnodig", ...grade.fair },
-					{ text: "Lichte roestvorming onderste paneel", ...grade.slight },
+					// Category 3 at 20% (2 points) and category 1 at 20% (0.6): 2.6, so 3.
+					{ text: "Fotocel wijkt af, deur keert soms onnodig", ...grade.local },
+					{ text: "Lichte roestvorming onderste paneel", ...grade.trace },
 				],
 			},
 		],
@@ -392,13 +395,14 @@ function madeUpDefects(random: Faker, state: "critical" | "worn" | "healthy"): S
 
 /**
  * The grade of a rejected point of a seeded checklist, as an engineer could have given it: mostly
- * serious and advanced over 2–30% (2 or 3), now and then severe (4).
+ * serious and advanced over 5 or 20% of the element (1 or 2 alone), now and then severe (3 alone);
+ * an element's rejected points add up by the norm's method.
  */
 function rejectedGrade(random: Faker): DefectGrade {
 	const roll = random.number.float({ min: 0, max: 1 });
-	if (roll < 0.6) return { severity: "serious", intensity: "advanced", extent: 2 };
-	if (roll < 0.9) return grade.fair;
-	return { severity: "severe", intensity: "advanced", extent: 3 };
+	if (roll < 0.6) return { severity: "serious", intensity: "advanced", extent: 5 };
+	if (roll < 0.9) return grade.local;
+	return { severity: "severe", intensity: "advanced", extent: 20 };
 }
 
 /** How many of North's units get conditions: the first critical, the next needing attention. */

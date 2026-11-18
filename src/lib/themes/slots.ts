@@ -127,7 +127,6 @@ export type GeneratedSlot =
 	| "popover-header"
 	| "popover-title"
 	| "popover-trigger"
-	| "portal-header"
 	| "select-content"
 	| "select-group"
 	| "select-group-heading"

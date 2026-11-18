@@ -209,14 +209,14 @@ describe("a member recording a unit's condition, in North", () => {
 						componentId: "",
 						description: "Bodemrubber verweerd",
 						severity: "slight",
-						extent: "3",
+						extent: "20",
 						intensity: "advanced",
 					},
 					{
 						componentId: "",
 						description: " Onderste torsieveer gebroken ",
 						severity: "severe",
-						extent: "4",
+						extent: "50",
 						intensity: "advanced",
 					},
 				],
@@ -229,7 +229,8 @@ describe("a member recording a unit's condition, in North", () => {
 			id: expect.any(Number),
 			organization_id: northId,
 			component_id: null,
-			// The worst: severe, advanced, 30–70% is 5.
+			// Alone 1 and 4; on one element, category 2 at 20% (1.2 points) and category 4 at 50% (30):
+			// 31.2, so 5.
 			score: 5,
 			legacy_percent: null,
 			advice: "Veerpakket vervangen (SD-001).",
@@ -243,9 +244,9 @@ describe("a member recording a unit's condition, in North", () => {
 				component_id: null,
 				description: "Bodemrubber verweerd",
 				severity: "slight",
-				extent: 3,
+				extent: 20,
 				intensity: "advanced",
-				score: 2,
+				score: 1,
 				checklist_point_id: null,
 				photos: 0,
 			},
@@ -253,9 +254,9 @@ describe("a member recording a unit's condition, in North", () => {
 				component_id: null,
 				description: "Onderste torsieveer gebroken",
 				severity: "severe",
-				extent: 4,
+				extent: 50,
 				intensity: "advanced",
-				score: 5,
+				score: 4,
 				checklist_point_id: null,
 				photos: 0,
 			},
@@ -283,8 +284,8 @@ describe("a member recording a unit's condition, in North", () => {
 				source: "office",
 				order: null,
 				defects: [
-					{ description: "Bodemrubber verweerd", score: 2, component: null, photos: [] },
-					{ description: "Onderste torsieveer gebroken", score: 5 },
+					{ description: "Bodemrubber verweerd", score: 1, component: null, photos: [] },
+					{ description: "Onderste torsieveer gebroken", score: 4 },
 				],
 			},
 		]);
@@ -302,7 +303,7 @@ describe("a member recording a unit's condition, in North", () => {
 			submit(recordCondition, {
 				serialNumber: unit.serial_number,
 				defects: [
-					{ componentId: "", description: "", severity: "", extent: "9", intensity: "end" },
+					{ componentId: "", description: "", severity: "", extent: "0", intensity: "end" },
 				],
 			}),
 		);
@@ -328,7 +329,7 @@ describe("a member recording a unit's condition, in North", () => {
 					{
 						description: "Kapot",
 						severity: "severe",
-						extent: "5",
+						extent: "85",
 						intensity: "final",
 						score: "1",
 					},
@@ -352,7 +353,7 @@ describe("a member recording a unit's condition, in North", () => {
 		const defect = {
 			description: "Gemanipuleerd",
 			severity: "serious",
-			extent: "3",
+			extent: "20",
 			intensity: "advanced",
 		};
 		const before = await conditionCount();
@@ -411,7 +412,7 @@ describe("a member recording a unit's condition with components, in SHLTR", () =
 						componentId: String(springs),
 						description: "Veerbreuk",
 						severity: "severe",
-						extent: "3",
+						extent: "20",
 						intensity: "final",
 						photos: [jpeg(), jpeg("tweede.jpg")],
 					},
@@ -419,7 +420,7 @@ describe("a member recording a unit's condition with components, in SHLTR", () =
 						componentId: "",
 						description: "Paneel gedeukt",
 						severity: "slight",
-						extent: "2",
+						extent: "5",
 						intensity: "initial",
 					},
 				],
@@ -430,8 +431,8 @@ describe("a member recording a unit's condition with components, in SHLTR", () =
 		const made = (await conditionsOf(door.id, true)).filter((each) => each.id > since);
 		expect(made.map((each) => [each.component_id, each.score]).toSorted(byElement)).toEqual(
 			[
-				[null, 5],
-				[springs, 5],
+				[null, 4],
+				[springs, 4],
 			].toSorted(byElement),
 		);
 		const whole = made.find((each) => each.component_id === null)!;
@@ -439,12 +440,12 @@ describe("a member recording a unit's condition with components, in SHLTR", () =
 		expect(
 			(await defectsOf(whole.id)).map((each) => [each.component_id, each.score, each.photos]),
 		).toEqual([
-			[springs, 5, 2],
+			[springs, 4, 2],
 			[null, 1, 0],
 		]);
 		expect(
 			(await defectsOf(own.id)).map((each) => [each.component_id, each.score, each.photos]),
-		).toEqual([[springs, 5, 2]]);
+		).toEqual([[springs, 4, 2]]);
 		// The same two files, kept once.
 		expect(storedFiles(shltrId)).toHaveLength(2);
 		// The cables have none of their own now.
@@ -454,7 +455,7 @@ describe("a member recording a unit's condition with components, in SHLTR", () =
 			),
 		).toBe(false);
 		const shown = await as(shltr.member, () => data(getUnitCondition, door.serial_number));
-		expect(shown.score).toBe(5);
+		expect(shown.score).toBe(4);
 		expect(shown.components.map((part) => part.number)).toEqual(
 			expect.arrayContaining(["OC-1041", "OC-1042"]),
 		);
@@ -476,14 +477,14 @@ describe("a member recording a unit's condition with components, in SHLTR", () =
 						componentId: "",
 						description: "Draadbreuk",
 						severity: "serious",
-						extent: "4",
+						extent: "50",
 						intensity: "advanced",
 					},
 				],
 			}),
 		);
 		const made = (await conditionsOf(door.id, true)).filter((each) => each.id > since);
-		expect(made.map((each) => [each.component_id, each.score])).toEqual([[cables, 4]]);
+		expect(made.map((each) => [each.component_id, each.score])).toEqual([[cables, 3]]);
 		expect((await defectsOf(made[0].id)).map((each) => each.component_id)).toEqual([cables]);
 	});
 
@@ -559,7 +560,7 @@ describe("a completed checklist", () => {
 		const [draft] = await rows<{ id: number }>(
 			`insert into condition_point_defect
 				(organization_id, checklist_point_id, equipment_id, severity, extent, intensity, updated_at)
-			 values (?, 990002, ?, 'severe', 4, 'final', 0) returning id`,
+			 values (?, 990002, ?, 'severe', 50, 'final', 0) returning id`,
 			[shltrId, door.id],
 		);
 		const [stale] = await rows<{ id: number }>(
@@ -594,16 +595,16 @@ describe("a completed checklist", () => {
 			user_id: await userOf(lev),
 		};
 		const recorded = (await conditionsOf(door.id, true)).filter((each) => each.id > since);
-		// The unit: the spring's defect (severe, final, 30–70%: 6) and the hand-made point's
-		// (serious, advanced, 10–30% without a grade: 3); the springs: their own; the cables none
-		// (N/A).
+		// The unit: the spring's defect, on the springs (severe, final, 50%: 5) and the hand-made
+		// point's, on the unit (serious, advanced, 20% without a grade: 2), the worst element 5; the
+		// springs: their own; the cables none (N/A).
 		expect(
 			recorded
 				.map(({ id: _id, ...each }) => each)
 				.toSorted((a, b) => (a.component_id ?? 0) - (b.component_id ?? 0)),
 		).toEqual([
-			{ ...by, component_id: null, score: 6 },
-			{ ...by, component_id: springs, score: 6 },
+			{ ...by, component_id: null, score: 5 },
+			{ ...by, component_id: springs, score: 5 },
 		]);
 		const whole = recorded.find((each) => each.component_id === null)!;
 		expect(await defectsOf(whole.id)).toEqual([
@@ -611,9 +612,9 @@ describe("a completed checklist", () => {
 				component_id: springs,
 				description: `Punt 990002: Veer gebroken`,
 				severity: "severe",
-				extent: 4,
+				extent: 50,
 				intensity: "final",
-				score: 6,
+				score: 5,
 				checklist_point_id: 990002,
 				photos: 1,
 			},
@@ -621,9 +622,9 @@ describe("a completed checklist", () => {
 				component_id: null,
 				description: "Punt 990005: Paneel gedeukt",
 				severity: "serious",
-				extent: 3,
+				extent: 20,
 				intensity: "advanced",
-				score: 3,
+				score: 2,
 				checklist_point_id: 990005,
 				photos: 0,
 			},
@@ -631,7 +632,7 @@ describe("a completed checklist", () => {
 		const own = recorded.find((each) => each.component_id === springs)!;
 		expect(
 			(await defectsOf(own.id)).map((each) => [each.component_id, each.score, each.photos]),
-		).toEqual([[springs, 6, 1]]);
+		).toEqual([[springs, 5, 1]]);
 		// The drafts are gone, and the photo of the one that became no defect.
 		expect(
 			await value(
@@ -704,7 +705,7 @@ describe("the engineer, in the portal", () => {
 				equipmentId: String(job.equipment_id),
 				pointId: String(job.point),
 				severity: "serious",
-				extent: "3",
+				extent: "20",
 				intensity: "advanced",
 				...fields,
 			}),
@@ -750,15 +751,15 @@ describe("the engineer, in the portal", () => {
 		let shown = await as(lev, () => data(getFieldPointDefect, pointOnJob()));
 		expect(shown).toMatchObject({
 			canChange: true,
-			defect: { severity: "serious", extent: 3, intensity: "advanced" },
+			defect: { severity: "serious", extent: 20, intensity: "advanced" },
 			photos: [{ id: expect.any(Number) }],
 		});
 		expect((await photo(lev, String(shown.photos[0].id))).status).toBe(200);
 		expect(
-			await giveDefect({ severity: "severe", extent: "4", intensity: "final", photos: [jpeg()] }),
+			await giveDefect({ severity: "severe", extent: "50", intensity: "final", photos: [jpeg()] }),
 		).toMatchObject({ status: 200 });
 		shown = await as(lev, () => data(getFieldPointDefect, pointOnJob()));
-		expect(shown.defect).toEqual({ severity: "severe", extent: 4, intensity: "final" });
+		expect(shown.defect).toEqual({ severity: "severe", extent: 50, intensity: "final" });
 		expect(shown.photos).toHaveLength(2);
 		const [first] = shown.photos;
 		expect(
@@ -845,14 +846,14 @@ describe("the engineer, in the portal", () => {
 			),
 		);
 		const shown = await as(lev, () => data(getFieldCondition, unitOnJob()));
-		expect(shown).toMatchObject({ recorded: { score: 6, advice: null }, canChange: true });
+		expect(shown).toMatchObject({ recorded: { score: 5, advice: null }, canChange: true });
 		expect(shown.recorded!.defects).toMatchObject([
 			{
 				description: expect.stringContaining("Veer gebroken"),
 				severity: "severe",
-				extent: 4,
+				extent: 50,
 				intensity: "final",
-				score: 6,
+				score: 5,
 				photos: [{ id: expect.any(Number) }],
 			},
 		]);
@@ -872,7 +873,7 @@ describe("the engineer, in the portal", () => {
 		const [recorded] = await conditionsOf(job.equipment_id);
 		expect(recorded).toMatchObject({
 			id: shown.recorded!.id,
-			score: 6,
+			score: 5,
 			advice: "Kabelset vervangen (SD-002).",
 			source: "checklist",
 			order_id: job.id,

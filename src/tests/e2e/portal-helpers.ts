@@ -13,17 +13,33 @@ export async function openFieldMenu(page: Page) {
 	return menu;
 }
 
+/** Whether the page is the customer portal's (both portals are in the phone frame). */
+export const inCustomerPortal = async (page: Page) =>
+	(await page.locator("[data-customer-portal]").count()) > 0;
+
+/** Opens the customer portal's More tab (the modules' pages, View as, signing out). */
+export async function openMoreTab(page: Page) {
+	if (new URL(page.url()).pathname !== "/portal/more") {
+		await page
+			.getByRole("navigation", { name: "Customer portal" })
+			.getByRole("link", { name: "More" })
+			.click();
+		await page.waitForURL((url) => url.pathname === "/portal/more");
+	}
+	await page.locator("[data-more-account]").waitFor();
+}
+
 /**
  * Signs out of a portal, back to the login page: of the engineer portal from its header menu, of
- * the customer portal with its header's button.
+ * the customer portal from its More tab.
  */
 export async function signOutOfPortal(page: Page) {
-	// The phone frame's wrappers are there on any screen (`display: contents` on a phone's).
-	if ((await page.locator("[data-phone-frame]").count()) > 0) {
+	if (await inCustomerPortal(page)) {
+		await openMoreTab(page);
+		await page.getByRole("button", { name: "Sign out" }).click();
+	} else {
 		const menu = await openFieldMenu(page);
 		await menu.getByRole("menuitem", { name: "Sign out" }).click();
-	} else {
-		await page.getByRole("button", { name: "Sign out" }).click();
 	}
 	await page.waitForURL((url) => url.pathname === "/login");
 }

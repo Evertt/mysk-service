@@ -68,8 +68,8 @@
 		class="navigation-progress fixed inset-x-0 top-0 z-100"
 	/>
 	{@render children()}
-	<!-- The engineer portal shows its own, in its phone (see its layout). -->
-	{#if !page.route.id?.startsWith("/(field)/")}
+	<!-- The portals show their own, in their phone (`phone-frame.svelte`). -->
+	{#if !page.route.id?.startsWith("/(field)/") && !page.route.id?.startsWith("/(customer)/")}
 		<AppToaster />
 	{/if}
 </ThemeProvider>

@@ -11,7 +11,7 @@
 	import { formatDate, formatNumber } from "#lib/i18n/index.ts";
 	import { OrderLink } from "#lib/orders/components.ts";
 
-	import { extentLabel } from "../display.ts";
+	import { extentText } from "../display.ts";
 	import { conditionLabels } from "../labels.ts";
 	import type { ConditionSource, RecordedDefect, Thresholds } from "../model.ts";
 	import { BEST_SCORE, WORST_SCORE } from "../nen2767.ts";
@@ -99,7 +99,7 @@
 									<ScoreBadge score={defect.score} compact />
 								</div>
 								<span class="text-xs text-muted-foreground">
-									{conditionLabels.label("defectSeverity", defect.severity)} · {extentLabel(
+									{conditionLabels.label("defectSeverity", defect.severity)} · {extentText(
 										defect.extent,
 									)} · {conditionLabels.label("defectIntensity", defect.intensity)}
 								</span>

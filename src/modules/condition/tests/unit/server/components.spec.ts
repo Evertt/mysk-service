@@ -246,7 +246,7 @@ describe("a unit's components, in SHLTR's office", () => {
 					{
 						description: "Draadbreuk bij de trommel",
 						severity: "severe",
-						extent: "4",
+						extent: "85",
 						intensity: "advanced",
 					},
 				],

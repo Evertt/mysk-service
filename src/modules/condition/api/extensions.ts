@@ -10,7 +10,7 @@ import { defineCollector, defineListColumns } from "#lib/extensions/define.ts";
 import type { db, Transaction } from "#lib/server/db/index.ts";
 
 import { REJECTED_POINT_GRADE } from "../model.ts";
-import { defectScore } from "../nen2767.ts";
+import { elementScoreOf } from "../nen2767.ts";
 
 /**
  * A score with its name, as the condition module shows it ("3 · Redelijk"): for the checklists
@@ -20,13 +20,15 @@ export { scoreText } from "../display.ts";
 
 /**
  * The score a checklist's points give a unit or component when the office fills it in (its rejected
- * points without a grade of their own, `REJECTED_POINT_GRADE`): 1 without a rejected point, that
- * grade's score with one, none while no point counts (all not applicable or unanswered). For the
+ * points without a grade of their own, `REJECTED_POINT_GRADE`, added up by NEN 2767-1's method):
+ * 1 without a rejected point, none while no point counts (all not applicable or unanswered). For the
  * checklists module's work orders page, as the office fills a checklist in. Isomorphic.
  */
 export function pointsScore(results: readonly { result: string | null }[]): number | null {
 	if (!results.some((each) => each.result === "ok" || each.result === "nok")) return null;
-	return results.some((each) => each.result === "nok") ? defectScore(REJECTED_POINT_GRADE) : 1;
+	return elementScoreOf(
+		results.filter((each) => each.result === "nok").map(() => REJECTED_POINT_GRADE),
+	);
 }
 
 /** Which point of a checklist the signed-in engineer is filling in, asked about in `tx`. */

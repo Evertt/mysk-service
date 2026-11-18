@@ -113,11 +113,12 @@ describe("with DEMO_SIGN_IN", () => {
 		await app.go("/login");
 		await page.getByRole("button", { name: "Customer", exact: true }).click();
 		await page.waitForURL((url) => url.pathname === "/portal");
-		await app.go("/portal");
-		const header = await page.locator("header").first().innerText();
-		expect(header).toContain("Riedel B.V.");
-		expect(header).toContain("Marieke Verhoeven");
-		expect(header).toContain(shltr.name);
+		// Who's signed in, for which customer, at whose portal: on its More tab.
+		await app.go("/portal/more");
+		const account = await page.locator("[data-more-account]").innerText();
+		expect(account).toContain("Riedel B.V.");
+		expect(account).toContain("Marieke Verhoeven");
+		expect(account).toContain(shltr.name);
 		expect((await sessions("facilitair@riedel.example")).latest).toBe(shltr.id);
 
 		await signOutOfPortal(app.page);

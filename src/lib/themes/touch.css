@@ -1,0 +1,189 @@
+/*
+ * The portals' touch sizes: the engineer portal and the customer portal are phone apps, used with a
+ * thumb, so in them (`data-touch`, which `phone-frame.svelte` puts on their root) the kit's
+ * controls get tap targets of at least 44 × 44 px, fields 16px text (iOS zooms into a smaller one),
+ * chips 48px, and labels over fields are small capitals, as a phone app's sections are. The office
+ * has no `data-touch` and keeps its denser sizes.
+ *
+ * Keyed by the components' `data-slot` (and `data-filter-chips`, `data-segmented-nav`), like a
+ * theme's classes (`#lib/themes/<name>.ts`), in the theme's own variables, so it fits every theme.
+ * Unlayered, so it wins over the components' utilities; it only sets minimums, sizes of text and
+ * the fields' look, so a page's own `class` still decides the rest.
+ */
+
+[data-touch] {
+	/* How far bars keep from a phone's notch and home indicator (`viewport-fit=cover`); the desk's
+	   phone sets its own (`phone-frame.svelte`). */
+	--safe-area-top: env(safe-area-inset-top, 0px);
+	--safe-area-bottom: env(safe-area-inset-bottom, 0px);
+	--touch-target: 2.75rem;
+	--touch-radius: calc(var(--radius) * 1.4);
+	-webkit-tap-highlight-color: transparent;
+}
+
+/* Buttons, icon buttons and links styled as one. */
+[data-touch] [data-slot="button"] {
+	min-height: var(--touch-target);
+	min-width: var(--touch-target);
+	font-size: 0.9375rem;
+}
+
+/* Fields: white, rounded, a hairline border, 48px high, 16px text. */
+[data-touch]
+	:is(
+		[data-slot="input"],
+		[data-slot="native-select"],
+		[data-slot="select-trigger"],
+		[data-slot="input-group"],
+		[data-slot="textarea"]
+	) {
+	min-height: 3rem;
+	border-color: var(--border);
+	border-radius: var(--touch-radius);
+	background-color: var(--card);
+	font-size: 1rem;
+	box-shadow: none;
+}
+[data-touch] :is([data-slot="input"], [data-slot="native-select"], [data-slot="select-trigger"]) {
+	padding-inline: 0.875rem;
+}
+[data-touch] [data-slot="native-select"] {
+	padding-inline-end: 2.5rem;
+}
+[data-touch] [data-slot="native-select-icon"] {
+	right: 0.875rem;
+}
+[data-touch] [data-slot="textarea"] {
+	min-height: 6.5rem;
+	padding: 0.75rem 0.875rem;
+}
+[data-touch] [data-slot="input-group-control"] {
+	font-size: 1rem;
+}
+[data-touch] :is([data-slot="input"], [data-slot="textarea"]):focus-visible,
+[data-touch] [data-slot="input-group"]:focus-within {
+	border-color: var(--ring);
+}
+
+/* A field's label over it is its section's label: small capitals. */
+[data-touch] [data-slot="field"]:not([data-orientation="horizontal"]) > [data-slot="field-label"],
+[data-touch] [data-slot="field-legend"] {
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--muted-foreground);
+}
+
+/* Checkboxes, radios and switches: a larger box, and the row they're in as tall as a tap. */
+[data-touch] [data-slot="checkbox"],
+[data-touch] input:is([type="checkbox"], [type="radio"]) {
+	width: 1.25rem;
+	height: 1.25rem;
+}
+[data-touch] [data-slot="field"][data-orientation="horizontal"],
+[data-touch] label:has(> input:is([type="checkbox"], [type="radio"])) {
+	min-height: var(--touch-target);
+}
+[data-touch] :is([data-slot="checkbox"], [data-slot="switch"]) {
+	position: relative;
+}
+[data-touch] :is([data-slot="checkbox"], [data-slot="switch"])::after {
+	content: "";
+	position: absolute;
+	inset: -0.75rem;
+}
+
+/* Menu, select and command items. */
+[data-touch]
+	:is(
+		[data-slot="dropdown-menu-item"],
+		[data-slot="dropdown-menu-sub-trigger"],
+		[data-slot="dropdown-menu-radio-item"],
+		[data-slot="dropdown-menu-checkbox-item"],
+		[data-slot="select-item"],
+		[data-slot="command-item"]
+	) {
+	min-height: var(--touch-target);
+	font-size: 0.9375rem;
+}
+
+/* Chips (`FilterChips`): 48px, roomy; the chosen one tinted, bordered and bold. */
+[data-touch] [data-filter-chips] {
+	gap: 0.5rem;
+}
+[data-touch] [data-filter-chips] > :is(a, button) {
+	min-height: 3rem;
+	padding-inline: 1.125rem;
+	border-color: var(--border);
+	border-radius: 9999px;
+	background-color: var(--card);
+	color: var(--foreground);
+	font-size: 0.9375rem;
+	font-weight: 500;
+}
+[data-touch] [data-filter-chips] > :is([aria-pressed="true"], [aria-current="page"]) {
+	border-color: var(--primary);
+	background-color: color-mix(in oklab, var(--primary) 12%, var(--card));
+	color: var(--primary);
+	font-weight: 700;
+}
+
+/* A page's views (`SegmentedNav`). */
+[data-touch] [data-segmented-nav] > a {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 2.5rem;
+	padding-inline: 1rem;
+	font-size: 0.9375rem;
+}
+[data-touch] [data-segmented-nav] {
+	border-radius: var(--touch-radius);
+}
+
+/* A unit's row (`UnitRow`): as tall as a tap, its line readable. */
+[data-touch] [data-unit-row] {
+	min-height: 3.5rem;
+	font-size: 0.9375rem;
+}
+[data-touch] [data-unit-line] {
+	font-size: 0.8125rem;
+	line-height: 1.125rem;
+}
+
+/* A unit's documents (`DocumentList`): rows as tall as a tap on a white card, their text readable. */
+[data-touch] [data-documents] ul {
+	border-radius: var(--touch-radius);
+	background-color: var(--card);
+}
+[data-touch] [data-document] > a {
+	min-height: 3.5rem;
+}
+[data-touch] [data-document-title] {
+	font-size: 0.9375rem;
+}
+[data-touch] [data-document-meta] {
+	font-size: 0.8125rem;
+	line-height: 1.125rem;
+}
+
+/* A section's label in a portal's page: small capitals over its list or card. (Plain classes rather
+   than utilities, since they must win over the rules above, which win over every utility.) */
+.section-label {
+	font-size: 0.75rem;
+	line-height: 1rem;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--muted-foreground);
+}
+
+/* A screen's main action, at its foot: full width, tall and rounded. */
+[data-touch] .primary-action {
+	width: 100%;
+	min-height: 3.25rem;
+	border-radius: calc(var(--radius) * 1.4);
+	font-size: 1rem;
+	font-weight: 600;
+}

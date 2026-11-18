@@ -47,6 +47,7 @@
 	this={href ? "a" : "div"}
 	{href}
 	data-unit={unit.serialNumber}
+	data-unit-row
 	class={[
 		"flex items-center gap-3 py-3 text-sm",
 		href && "-mx-2 rounded-md px-2 transition-colors hover:bg-accent",
@@ -65,7 +66,9 @@
 				{unitTitle(unit)}
 			{/if}
 		</span>
-		<span class="truncate text-xs text-muted-foreground">{unitLine(unit, extras)}</span>
+		<span class="truncate text-xs text-muted-foreground" data-unit-line
+			>{unitLine(unit, extras)}</span
+		>
 		{@render children?.()}
 	</div>
 	<EnumBadge display={equipmentStatusDisplay} value={unit.status} />

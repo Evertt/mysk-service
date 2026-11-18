@@ -23,7 +23,7 @@ import {
 } from "./app.ts";
 import { startServer } from "./global-setup.ts";
 import { lane } from "./lane.ts";
-import { openFieldMenu, signOutOfPortal } from "./portal-helpers.ts";
+import { inCustomerPortal, openFieldMenu, openMoreTab, signOutOfPortal } from "./portal-helpers.ts";
 
 const app = useApp({ user: users.shltrPlanner });
 
@@ -38,13 +38,14 @@ const roles = {
 type Role = keyof typeof roles;
 
 /**
- * Where the switch is: in the office's user menu, or in a portal's header: the engineer portal's
- * menu, or the customer portal's own button.
+ * Where the switch is: in the office's user menu, or in a portal: the engineer portal's header
+ * menu, or the customer portal's More tab.
  */
 type Side = "office" | "portal";
 
-/** Whether the page is the engineer portal's (its phone frame's wrappers are there on any screen). */
-const inField = async (page: Page) => (await page.locator("[data-phone-frame]").count()) > 0;
+/** Whether the page is the engineer portal's (both portals are in the phone frame). */
+const inField = async (page: Page) =>
+	(await page.locator("[data-phone-frame]").count()) > 0 && !(await inCustomerPortal(page));
 
 /** The view-as form's action (`?/remote=<id>`), the same on every server of the build. */
 let action: string;
@@ -72,15 +73,18 @@ async function openMenu(side: Side): Promise<Locator> {
 	const { page } = app;
 	if (side === "office") await page.locator('[data-slot="sidebar-footer"] button').first().click();
 	else if (await inField(page)) return openFieldMenu(page);
-	else await page.getByRole("button", { name: /^View as/ }).click();
+	else {
+		await openMoreTab(page);
+		await page.getByRole("button", { name: /^View as/ }).click();
+	}
 	const menu = page.getByRole("menu");
 	await menu.waitFor();
 	return menu;
 }
 
 /**
- * Checks that a portal's page has a way to sign out and no switch: in the engineer portal's menu,
- * or as the customer portal's header buttons.
+ * Checks that a portal has a way to sign out and no switch: in the engineer portal's menu, or on the
+ * customer portal's More tab.
  */
 async function expectNoViewAs(page: Page) {
 	if (await inField(page)) {
@@ -91,6 +95,7 @@ async function expectNoViewAs(page: Page) {
 		await page.keyboard.press("Escape");
 		await menu.waitFor({ state: "detached" });
 	} else {
+		await openMoreTab(page);
 		expect(await page.getByRole("button", { name: "Sign out" }).isVisible()).toBe(true);
 		expect(await page.getByRole("button", { name: /^View as/ }).count()).toBe(0);
 	}
@@ -106,12 +111,18 @@ async function items(menu: Locator) {
 	return { names: names.map((name) => name.trim()), checked: checked.map((name) => name?.trim()) };
 }
 
-/** Who the page shows signed in: the sidebar's footer in the office, the header in a portal. */
+/**
+ * Who the page shows signed in: the sidebar's footer in the office, the header in the engineer
+ * portal, the More tab in the customer portal.
+ */
 async function shownUser(role: Role) {
 	const { page } = app;
-	return role === "Planner"
-		? page.locator('[data-slot="sidebar-footer"]').innerText()
-		: page.locator("header").first().innerText();
+	if (role === "Planner") return page.locator('[data-slot="sidebar-footer"]').innerText();
+	if (role === "Customer") {
+		await openMoreTab(page);
+		return page.locator("[data-more-account]").innerText();
+	}
+	return page.locator("header").first().innerText();
 }
 
 /**
@@ -229,7 +240,7 @@ describe("with DEMO_SIGN_IN, in SHLTR", () => {
 		expect(inner!.x + inner!.width).toBeLessThanOrEqual(outer!.x + outer!.width + 1);
 		expect(inner!.y + inner!.height).toBeLessThanOrEqual(outer!.y + outer!.height + 1);
 		await switchTo("portal", "Engineer", "Customer", menu);
-		expect(await page.locator("header").first().innerText()).toContain("Riedel B.V.");
+		expect(await page.locator("[data-more-account]").innerText()).toContain("Riedel B.V.");
 	});
 
 	test("from the customer portal to the office, as Jan", async () => {

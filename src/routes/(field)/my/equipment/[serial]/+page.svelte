@@ -46,7 +46,7 @@
 
 <PlaceCard site={unit.site} location={unit.location} />
 
-<Card.Root data-unit-documents>
+<Card.Root class="rounded-xl" data-unit-documents>
 	<Card.Header>
 		<Card.Title>{m.portal_unit_documents()}</Card.Title>
 	</Card.Header>

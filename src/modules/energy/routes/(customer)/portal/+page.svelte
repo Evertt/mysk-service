@@ -1,9 +1,10 @@
 <!--
 	The customer's own sites' energy in the customer portal, read-only: per site today's (or this
 	month's) consumption, cost, peak and CO₂ against the previous period, the zones compared and
-	what the doors let out.
+	what the doors let out, one under the other, as the portal's other pages: a phone app's.
 -->
 <script lang="ts">
+	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import type { RouteParams } from "$app/types";
 	import DoorOpenIcon from "@lucide/svelte/icons/door-open";
@@ -12,6 +13,7 @@
 	import TrendingUpIcon from "@lucide/svelte/icons/trending-up";
 	import ZapIcon from "@lucide/svelte/icons/zap";
 
+	import AppBar from "#lib/client/app-bar.svelte";
 	import SegmentedNav from "#lib/components/segmented-nav.svelte";
 	import { formatCents, formatNumber, formatTime } from "#lib/i18n/index.ts";
 	import { getClientEnergy } from "#modules/energy/client/client-energy.remote.ts";
@@ -48,17 +50,15 @@
 	);
 </script>
 
-<svelte:head>
-	<title>{m.energy_portal_label()}</title>
-</svelte:head>
+<AppBar
+	title={m.energy_portal_title()}
+	back={{ href: resolve("/(customer)/portal/more"), label: m.client_tab_more() }}
+/>
 
-<div class="flex flex-col gap-6" data-client-energy>
-	<div class="flex flex-col gap-1">
-		<h1 class="text-2xl font-semibold">{m.energy_portal_title()}</h1>
-		<p class="text-sm text-muted-foreground">{m.energy_portal_description()}</p>
-	</div>
+<div class="flex flex-col gap-5" data-client-energy>
+	<p class="px-1 text-[0.9375rem] text-muted-foreground">{m.energy_portal_description()}</p>
 
-	<SegmentedNav label={m.energy_period_label()} items={periodItems} class="self-start" />
+	<SegmentedNav label={m.energy_period_label()} items={periodItems} class="flex *:flex-1" />
 
 	{#each data.sites as entry (entry.site.id)}
 		{@const kpis = kpisOf(entry.zones, entry.doors, entry.site, entry.previousComplete)}
@@ -75,8 +75,8 @@
 			aria-label={entry.site.name}
 			data-client-site={entry.site.id}
 		>
-			<h2 class="text-lg font-semibold">{entry.site.name}</h2>
-			<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+			<h2 class="px-1 text-[1.0625rem] font-semibold">{entry.site.name}</h2>
+			<div class="grid grid-cols-2 gap-3">
 				<KpiTile
 					kpi="live"
 					icon={ZapIcon}
@@ -136,57 +136,60 @@
 			<ComparisonTable zones={entry.zones} previousComplete={entry.previousComplete} />
 
 			{#if entry.doors.length}
-				<Card.Root>
+				<Card.Root class="rounded-xl">
 					<Card.Header>
 						<Card.Title>{m.energy_doors_title()}</Card.Title>
 					</Card.Header>
 					<Card.Content>
-						<div class="overflow-x-auto">
-							<Table.Root data-client-doors>
-								<Table.Header>
-									<Table.Row>
-										<Table.Head>{m.energy_column_door()}</Table.Head>
-										<Table.Head>{m.energy_column_status()}</Table.Head>
-										<Table.Head class="text-right">{m.energy_door_loss_today()}</Table.Head>
-										<Table.Head class="text-right">{m.energy_door_cost_today()}</Table.Head>
-									</Table.Row>
-								</Table.Header>
-								<Table.Body>
-									{#each entry.doors as door (door.id)}
-										<Table.Row data-client-door={door.code}>
-											<Table.Cell>
-												<span class="font-mono text-xs text-muted-foreground">{door.code}</span>
-												{door.name}
-											</Table.Cell>
-											<Table.Cell>
-												{#if door.openedAt}
-													<Badge variant={door.overdue ? "danger" : "warning"}>
-														{door.overdue ? m.energy_door_overdue() : m.energy_door_open()}
-													</Badge>
-													<span class="text-xs text-muted-foreground">
-														{formatMinutes(door.minutesOpen)}
-													</span>
-												{:else}
-													<Badge variant="success">{m.energy_door_closed()}</Badge>
-												{/if}
-											</Table.Cell>
-											<Table.Cell class="text-right tabular-nums">
-												{formatKwh(door.lossKwhToday)}
-											</Table.Cell>
-											<Table.Cell class="text-right tabular-nums">
-												{formatCents(costCents(door.lossKwhToday, entry.site.tariff))}
-											</Table.Cell>
-										</Table.Row>
-									{/each}
-								</Table.Body>
-							</Table.Root>
-						</div>
+						<ul class="flex flex-col divide-y" data-client-doors>
+							{#each entry.doors as door (door.id)}
+								<li
+									class="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
+									data-client-door={door.code}
+								>
+									<span class="flex min-w-0 flex-col gap-1">
+										<span class="truncate text-[0.9375rem] font-medium">
+											<span class="font-mono text-[0.8125rem] text-muted-foreground">
+												{door.code}
+											</span>
+											{door.name}
+										</span>
+										<span class="flex flex-wrap items-center gap-2">
+											{#if door.openedAt}
+												<Badge variant={door.overdue ? "danger" : "warning"}>
+													{door.overdue ? m.energy_door_overdue() : m.energy_door_open()}
+												</Badge>
+												<span class="text-[0.8125rem] text-muted-foreground">
+													{formatMinutes(door.minutesOpen)}
+												</span>
+											{:else}
+												<Badge variant="success">{m.energy_door_closed()}</Badge>
+											{/if}
+										</span>
+									</span>
+									<span class="flex shrink-0 flex-col items-end gap-0.5 tabular-nums">
+										<span
+											class="text-[0.9375rem] font-medium"
+											aria-label={m.energy_door_loss_today()}
+										>
+											{formatKwh(door.lossKwhToday)}
+										</span>
+										<span
+											class="text-[0.8125rem] text-muted-foreground"
+											aria-label={m.energy_door_cost_today()}
+										>
+											{formatCents(costCents(door.lossKwhToday, entry.site.tariff))}
+										</span>
+									</span>
+								</li>
+							{/each}
+						</ul>
 					</Card.Content>
 				</Card.Root>
 			{/if}
 		</section>
 	{:else}
-		<p class="text-sm text-muted-foreground" data-client-energy-empty>
+		<p class="px-1 text-[0.9375rem] text-muted-foreground" data-client-energy-empty>
 			{m.energy_portal_none()}
 		</p>
 	{/each}

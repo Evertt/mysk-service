@@ -58,6 +58,12 @@ De code werkt alleen voor wie erbij hoort: wie niet is ingelogd, gaat naar de in
 terug naar dezelfde code; iemand van een ander bedrijf, of een klant die het apparaat van een andere
 klant scant, krijgt "niet gevonden", alsof de code niet bestaat.
 
+**Scannen in de portalen.** De camera-app van een telefoon leest de code, en de portalen zelf ook:
+de tab Scannen van het klantportaal en de scanknop in de kop van het monteursportaal openen de
+camera op het hele scherm. Ze openen alleen de codes van deze app; van een andere code zeggen ze dat
+die niet van ons is, en ze gaan nooit naar een andere site. Zonder camera, of als de camera
+geweigerd is, kun je het serienummer typen dat onder de code staat, en dan opent dat apparaat.
+
 **De labels afdrukken.** Op de vestiging van een klant drukt het labelvel de QR-labels van de
 locaties en apparaten af: A4 met 3 × 8 labels van 70 × 37 mm, elk met een code, de naam, het
 serienummer en waar het staat. Eén apparaat of één locatie kun je ook los afdrukken.

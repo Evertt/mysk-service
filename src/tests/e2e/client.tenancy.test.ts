@@ -58,12 +58,12 @@ describe("another customer's records are a 404 for a customer's contact", () => 
 			.locator("option:not([value=''])")
 			.evaluateAll((options) => options.map((option) => (option as HTMLOptionElement).value));
 		await select.selectOption(own);
-		await app.page.getByLabel("What's wrong?").fill("Niet van ons");
+		await app.page.getByLabel("Description").fill("Niet van ons");
 		// The chosen option names the other customer's unit instead.
 		await select.evaluate((element, id) => {
 			(element as HTMLSelectElement).selectedOptions[0].value = String(id);
 		}, other.id);
-		const result = await app.submit(app.page.getByRole("button", { name: "Report breakdown" }));
+		const result = await app.submit(app.page.getByRole("button", { name: "Send report" }));
 		expect(result).toContain("Choose one of your units.");
 		expect(await orderCount()).toBe(before);
 	});

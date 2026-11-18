@@ -66,7 +66,8 @@ describe("Lev's inspection or maintenance order", () => {
 		const remark = point(rejected.text).getByRole("textbox");
 		await remark.fill("Draadbreuk zichtbaar bij trommel — kabelset meenemen.");
 		await remark.blur();
-		// Its defect: severe, 30–70%, final stage is 6 (Zeer slecht), with a photo.
+		// Its defect: severe, final stage, 30–70% (the chip's 50%) is 5 (Slecht); typed in as 85%,
+		// 6 (Zeer slecht); with a photo.
 		const defect = point(rejected.text).locator("[data-point-defect]");
 		await defect.waitFor();
 		await defect.locator("[data-defect-severity]").getByRole("button", { name: "Severe" }).click();
@@ -75,6 +76,8 @@ describe("Lev's inspection or maintenance order", () => {
 			.locator("[data-defect-intensity]")
 			.getByRole("button", { name: "Final stage" })
 			.click();
+		await defect.locator('[data-condition="5"]').waitFor();
+		await defect.locator("[data-extent-percent]").fill("85");
 		await defect.locator('[data-condition="6"]').waitFor();
 		await defect
 			.locator('input[type="file"]:not([name])')

@@ -22,7 +22,7 @@
 		<span class="flex flex-col items-start gap-1">
 			<EnumBadge display={inspectionStatusDisplay} value={data.status} />
 			{#if data.validUntil}
-				<span class="text-xs text-muted-foreground tabular-nums">
+				<span class="text-[0.8125rem] text-muted-foreground tabular-nums">
 					{data.status === "expired"
 						? m.checklists_expired_on({ date: formatDate(data.validUntil) })
 						: m.checklists_valid_until({ date: formatDate(data.validUntil) })}

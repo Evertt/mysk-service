@@ -339,5 +339,20 @@
 	"common_ingest_json": "De inhoud moet JSON zijn (application/json)",
 	"common_ingest_too_large": "De batch is groter dan {size}",
 	"common_ingest_invalid": "De batch heeft niet het formaat van de feed",
-	"common_ingest_unknown_codes": "De batch noemt codes die er niet zijn"
+	"common_ingest_unknown_codes": "De batch noemt codes die er niet zijn",
+	"common_scan_tab": "Scannen",
+	"common_scan_title": "QR-code scannen",
+	"common_scan_close": "Scanner sluiten",
+	"common_scan_hint": "Richt de camera op de QR-code op een apparaat of locatie.",
+	"common_scan_starting": "De camera start…",
+	"common_scan_foreign": "Deze code is niet van ons. Scan de code op een apparaat of locatie.",
+	"common_scan_denied_title": "Geen toegang tot de camera",
+	"common_scan_denied": "Sta de camera voor deze site toe in de instellingen van je browser, of typ de code hieronder.",
+	"common_scan_unavailable_title": "Geen camera om mee te scannen",
+	"common_scan_unavailable": "Typ in plaats daarvan het serienummer onder de QR-code.",
+	"common_scan_retry": "Camera opnieuw proberen",
+	"common_scan_type": "Code typen",
+	"common_scan_code_label": "Serienummer of code",
+	"common_scan_code_placeholder": "Onder de QR-code",
+	"common_scan_open": "Openen"
 }

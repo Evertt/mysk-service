@@ -1,12 +1,13 @@
 <!--
-	The customer's orders in the portal, newest first: those still to be done (also not accepted
-	yet), the done ones, or all of them (`?show=`); cards on a phone, a table on a wide screen.
+	The customer's orders in the portal, the Orders tab, newest first: those still to be done (also
+	not accepted yet), the done ones, or all of them (`?show=`), as a list of rows.
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
 	import ClipboardListIcon from "@lucide/svelte/icons/clipboard-list";
 
+	import AppBar from "#lib/client/app-bar.svelte";
 	import { refreshOnActivity } from "#lib/components/activity/live-activity.svelte.ts";
 	import FilterChips from "#lib/components/filter-chips.svelte";
 	import { isDoneOrder, type OrderStatus, pendingOrderStatuses } from "#lib/models.ts";
@@ -51,18 +52,19 @@
 	const shown = $derived(orders.filter((order) => tabs[tab].keep(order.status)));
 </script>
 
-<svelte:head>
-	<title>{m.client_nav_orders()} · {m.client_title()}</title>
-</svelte:head>
+<AppBar title={m.client_nav_orders()} />
 
-<h1 class="text-2xl font-semibold tracking-tight">{m.client_nav_orders()}</h1>
-
-<FilterChips label={m.client_orders_show()} options={chips} value={tab} />
+<FilterChips
+	label={m.client_orders_show()}
+	options={chips}
+	value={tab}
+	class="-mx-4 [scrollbar-width:none] flex-nowrap overflow-x-auto px-4 *:shrink-0"
+/>
 
 {#if shown.length}
 	<OrderList orders={shown} />
 {:else}
-	<Empty.Root class="border">
+	<Empty.Root class="rounded-xl border bg-card">
 		<Empty.Header>
 			<Empty.Media variant="icon"><ClipboardListIcon /></Empty.Media>
 			<Empty.Title>{m.client_no_orders()}</Empty.Title>

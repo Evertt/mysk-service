@@ -8,7 +8,7 @@ import type { Page } from "playwright";
 import { describe, expect, test } from "vite-plus/test";
 
 import { fitsWidth, onPhone, organizations, useApp, users, value } from "#e2e/app.ts";
-import { signedInPage } from "#e2e/portal-helpers.ts";
+import { openMoreTab, signedInPage } from "#e2e/portal-helpers.ts";
 import { formatCents } from "#lib/i18n/index.ts";
 
 import {
@@ -57,7 +57,11 @@ describe("a partner's contact in the shop", () => {
 	test("browses the catalogue by category and search, with stock and checklist points", async () => {
 		const { page } = app;
 		await app.go("/portal");
-		await page.getByRole("navigation").getByRole("link", { name: "Parts shop" }).click();
+		await openMoreTab(page);
+		await page
+			.getByRole("navigation", { name: "Services" })
+			.getByRole("link", { name: "Parts shop" })
+			.click();
 		await page.waitForURL((url) => url.pathname === "/parts-shop/portal");
 		await card("SD-001").waitFor();
 		expect(await page.locator("[data-product]").count()).toBe(14);

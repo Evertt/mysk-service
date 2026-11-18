@@ -169,7 +169,7 @@
 				<Card.Title>{m.partners_client_terms_title()}</Card.Title>
 			</Card.Header>
 			<Card.Content>
-				<dl class="grid gap-4 text-sm lg:grid-cols-2 lg:gap-x-8">
+				<dl class="grid gap-4 text-sm">
 					{#each conditions as [title, text] (title)}
 						<div class="flex flex-col gap-1">
 							<dt class="font-medium">{title}</dt>

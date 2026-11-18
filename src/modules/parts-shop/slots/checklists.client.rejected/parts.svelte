@@ -29,7 +29,7 @@
 </script>
 
 {#if data.parts.length}
-	<Card.Root data-client-suggested-parts>
+	<Card.Root class="rounded-xl" data-client-suggested-parts>
 		<Card.Header>
 			<Card.Title>{m.shop_suggested_title()}</Card.Title>
 			<Card.Description>{m.shop_client_suggested_description()}</Card.Description>
@@ -47,7 +47,7 @@
 					<div class="flex items-start justify-between gap-2">
 						<div class="flex min-w-0 flex-col">
 							<span class="font-medium">{part.name}</span>
-							<span class="text-xs text-muted-foreground">
+							<span class="text-[0.8125rem] text-muted-foreground">
 								{part.sku} · {m.shop_price_excl_vat({ price: formatCents(part.price) })}
 							</span>
 						</div>
@@ -57,15 +57,14 @@
 							data-stock={part.availability}
 						/>
 					</div>
-					<ul class="flex flex-col gap-0.5 text-xs text-muted-foreground">
+					<ul class="flex flex-col gap-0.5 text-[0.8125rem] text-muted-foreground">
 						{#each points as point, i (i)}
 							<li>{point.unit}: {point.text}</li>
 						{/each}
 					</ul>
 					{#if data.credit > 0 && part.orderable && part.availability !== "on_request"}
 						<Button
-							size="sm"
-							class="self-start"
+							class="w-full"
 							href="{resolve('/(customer)/(modules)/parts-shop/portal')}?add={part.id}"
 							data-order-in-shop
 						>

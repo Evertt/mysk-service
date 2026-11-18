@@ -1,8 +1,8 @@
 <!--
 	@component
-	A form's photos of an order (the portal's breakdown report, a photos card's form): a button that
-	opens the camera or the photo library, the chosen photos as thumbnails, each with a button that
-	takes it off again, at most `MAX_PHOTOS`. Each is shrunk before it's added (`shrinkPhoto()`), so
+	A form's photos of an order (the portal's breakdown report, a photos card's form): the chosen
+	photos as square tiles, each with a button that takes it off again, and a dashed "+" tile after
+	them that opens the camera or the photo library, at most `MAX_PHOTOS`. Each is shrunk before it's added (`shrinkPhoto()`), so
 	the form sends small JPEGs; the server checks them again. The photos are the form field's value,
 	which the file input sends. Its form needs `enctype="multipart/form-data"`.
 
@@ -11,7 +11,7 @@
 -->
 <script lang="ts">
 	import type { RemoteFormField } from "$app/server";
-	import ImagePlusIcon from "@lucide/svelte/icons/image-plus";
+	import PlusIcon from "@lucide/svelte/icons/plus";
 	import XIcon from "@lucide/svelte/icons/x";
 	import { onDestroy, onMount } from "svelte";
 
@@ -104,41 +104,46 @@
 		tabindex={enhanced ? -1 : undefined}
 		onchange={add}
 	/>
-	{#if photos.length}
-		<ul class="grid grid-cols-3 gap-2 sm:grid-cols-5">
+	{#if photos.length || enhanced}
+		<!-- Square tiles: the photos, then a dashed one to add more. -->
+		<ul class="flex flex-wrap gap-2.5">
 			{#each photos as photo, index (photo.url)}
-				<li class="relative">
+				<li class="relative size-18">
 					<img
 						src={photo.url}
 						alt={m.orders_photo_alt({ number: formatNumber(index + 1) })}
-						class="aspect-square w-full rounded-md border object-cover"
+						class="size-full rounded-xl border object-cover"
 					/>
-					<Button
+					<!-- Small on the tile, its tap area larger (`after:`). -->
+					<button
 						type="button"
-						variant="secondary"
-						size="icon-sm"
-						class="absolute top-1 right-1 rounded-full"
+						class="absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full bg-foreground text-background shadow-sm ring-2 ring-background outline-none after:absolute after:-inset-2.5 focus-visible:ring-ring"
 						aria-label={m.orders_photo_remove({ number: formatNumber(index + 1) })}
 						onclick={() => remove(index)}
 					>
-						<XIcon />
-					</Button>
+						<XIcon class="size-3.5" />
+					</button>
 				</li>
 			{/each}
+			{#if enhanced && !full}
+				<li>
+					<button
+						type="button"
+						class="flex size-18 items-center justify-center rounded-xl border-2 border-dashed border-input bg-card text-muted-foreground transition-colors outline-none hover:border-primary hover:text-primary focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-50"
+						disabled={shrinking}
+						aria-label={m.orders_photos_add()}
+						onclick={() => input?.click()}
+						data-photo-add
+					>
+						{#if shrinking}
+							<Spinner class="size-5" />
+						{:else}
+							<PlusIcon class="size-6" />
+						{/if}
+					</button>
+				</li>
+			{/if}
 		</ul>
-	{/if}
-	{#if enhanced}
-		<div>
-			<Button
-				type="button"
-				variant="outline"
-				disabled={full || shrinking}
-				onclick={() => input?.click()}
-			>
-				<ImagePlusIcon data-icon="inline-start" />
-				{m.orders_photos_add()}
-			</Button>
-		</div>
 	{/if}
 	{#if description}
 		<Field.FieldDescription>{description}</Field.FieldDescription>

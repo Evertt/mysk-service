@@ -11,7 +11,7 @@ test("a condition is its defects, each graded on NEN 2767's scales, with optiona
 		componentId: "",
 		description: " Veerbreuk ",
 		severity: "severe",
-		extent: "4",
+		extent: "50",
 		intensity: "advanced",
 	};
 	expect(parse({}).output).toEqual({
@@ -28,7 +28,7 @@ test("a condition is its defects, each graded on NEN 2767's scales, with optiona
 				componentId: null,
 				description: "Veerbreuk",
 				severity: "severe",
-				extent: 4,
+				extent: 50,
 				intensity: "advanced",
 				photos: [],
 			},
@@ -47,7 +47,7 @@ test("a condition is its defects, each graded on NEN 2767's scales, with optiona
 		{ severity: "" },
 		{ severity: "fatal" },
 		{ extent: "0" },
-		{ extent: "6" },
+		{ extent: "101" },
 		{ extent: "2.5" },
 		{ intensity: "end" },
 		{ componentId: "0" },

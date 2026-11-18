@@ -22,7 +22,7 @@
 </script>
 
 {#if completed.length}
-	<Card.Root data-client-inspection>
+	<Card.Root class="rounded-xl" data-client-inspection>
 		<Card.Header>
 			<Card.Title>{m.checklists_unit_title()}</Card.Title>
 		</Card.Header>
@@ -34,7 +34,7 @@
 							href={resolve("/(customer)/portal/orders/[number]", {
 								number: checklist.order.number,
 							})}
-							class="flex items-center justify-between gap-2 px-3 py-2 text-sm hover:bg-muted/50"
+							class="flex min-h-14 items-center justify-between gap-2 px-3 py-2.5 text-[0.9375rem] hover:bg-muted/50"
 							data-history={checklist.order.number}
 						>
 							<span class="flex min-w-0 flex-col">
@@ -44,7 +44,8 @@
 										· {formatDate(checklist.date)}
 									</span>
 								</span>
-								<span class="truncate text-xs text-muted-foreground">{checklist.name}</span>
+								<span class="truncate text-[0.8125rem] text-muted-foreground">{checklist.name}</span
+								>
 							</span>
 							<OutcomeBadge {checklist} />
 						</a>

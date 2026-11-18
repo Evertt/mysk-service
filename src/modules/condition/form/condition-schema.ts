@@ -4,7 +4,7 @@ import { formatNumber } from "#lib/i18n/format.ts";
 import { hiddenInt, id, optionalId, recordId, text } from "#lib/schema.ts";
 
 import { ADVICE_MAX, DEFECT_TEXT_MAX, DEFECTS_MAX } from "../model.ts";
-import { defectIntensities, defectSeverities } from "../nen2767.ts";
+import { defectIntensities, defectSeverities, extentLimits } from "../nen2767.ts";
 import { MAX_DEFECT_PHOTOS } from "../photos.ts";
 
 /** The advice that goes with it; none when empty. */
@@ -18,10 +18,13 @@ export const advice = () =>
 		"",
 	);
 
-/** A defect's grade, as its selects and chips send it: its severity, extent class and intensity. */
+/**
+ * A defect's grade, as its fields send it: its severity, its extent in whole percents of the
+ * element (1–100, typed or set by a class's chip) and its intensity.
+ */
 const grade = {
 	severity: v.picklist(defectSeverities, m.validation_choose_one),
-	extent: hiddenInt({ min: 1, max: 5, message: m.validation_choose_one }),
+	extent: hiddenInt({ ...extentLimits, message: m.condition_extent_range }),
 	intensity: v.picklist(defectIntensities, m.validation_choose_one),
 };
 

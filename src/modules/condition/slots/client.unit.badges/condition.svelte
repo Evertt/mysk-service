@@ -25,7 +25,7 @@
 </script>
 
 <span class="inline-flex items-center gap-1.5" data-client-condition={data.status}>
-	<span class="text-xs text-muted-foreground">{m.condition_client_unit_badge()}</span>
+	<span class="text-[0.8125rem] text-muted-foreground">{m.condition_client_unit_badge()}</span>
 	<ScoreBadge score={data.score} />
 	<StatusBadge status={data.status} concern={data.concern} />
 </span>
