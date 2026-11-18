@@ -1,6 +1,7 @@
 /**
- * A unit's condition, for its card on the unit's page: its latest condition as a whole, its history
- * and its status (with its components'), and recording a new one in the office.
+ * A unit's condition, for its card on the unit's page: its latest condition as a whole with its
+ * defects, its history, its current score and status (with its components'), and recording a new
+ * one in the office.
  */
 import * as v from "valibot";
 
@@ -9,12 +10,16 @@ import { unitBySerial } from "#lib/equipment/server/index.ts";
 import { equipment } from "#lib/server/db/schema.ts";
 
 import { conditionSchema } from "./form/condition-schema.ts";
+import type { DefectExtent } from "./nen2767.ts";
 import { form, query } from "./remote-functions.ts";
-import { conditionsOf, recordOfficeCondition } from "./server/conditions.ts";
+import { conditionsOf, elementsOf, recordOfficeCondition } from "./server/conditions.ts";
 import { thresholdsOf } from "./server/settings.ts";
 import { conditionSql } from "./server/status-sql.ts";
 
-/** A unit's condition (by serial number): its history, newest first, and its status now. */
+/**
+ * A unit's condition (by serial number): its history, newest first, with each condition's defects,
+ * its current score (the worst of its own and its components' latest) and its status now.
+ */
 export const getUnitCondition = query(v.string(), async (serialNumber) => {
 	const unit = conditionSql();
 	const found = await unitBySerial(serialNumber, {
@@ -23,23 +28,39 @@ export const getUnitCondition = query(v.string(), async (serialNumber) => {
 		name: equipment.name,
 		manufacturer: equipment.manufacturer,
 		model: equipment.model,
+		score: unit.score,
 		status: unit.status,
 		concern: unit.concern,
 	});
-	const [history, thresholds] = await Promise.all([conditionsOf(found.id), thresholdsOf()]);
+	const [history, components, thresholds] = await Promise.all([
+		conditionsOf(found.id),
+		elementsOf(found.id),
+		thresholdsOf(),
+	]);
 	return {
 		unit: { id: found.id, serialNumber: found.serialNumber, title: unitTitle(found) },
+		score: found.score,
 		status: found.status,
 		concern: found.concern,
 		history,
+		components,
 		thresholds,
 	};
 });
 
 /**
- * Records a unit's condition in the office, or one of its components' (`componentId`), logged on
- * the unit, which its cards watch (`refreshOnRecordChange()`).
+ * Records a unit's condition in the office, or one of its components' (`componentId`): its
+ * defects with their photos (the score the server works out from them) and advice, logged on the
+ * unit, which its cards watch (`refreshOnRecordChange()`).
  */
 export const recordCondition = form(conditionSchema, ({ serialNumber, componentId, ...input }) =>
-	recordOfficeCondition(serialNumber, input, componentId ?? null),
+	recordOfficeCondition(serialNumber, {
+		componentId: componentId ?? null,
+		advice: input.advice,
+		defects: input.defects.map((defect) => ({
+			...defect,
+			componentId: defect.componentId ?? null,
+			extent: defect.extent as DefectExtent,
+		})),
+	}),
 );

@@ -3,7 +3,9 @@ import { resolve } from "$app/paths";
 
 // Only types from `#lib/activity/subjects.ts`: it imports the modules, and so this file, in turn.
 import type { Sentence, SubjectType } from "#lib/activity/index.ts";
-import { formatNumber, formatOnOff } from "#lib/i18n/index.ts";
+import { formatOnOff } from "#lib/i18n/index.ts";
+
+import { scoreText } from "./display.ts";
 
 /** Recording a unit's condition, as a sentence. */
 export const conditionActions = {
@@ -12,20 +14,20 @@ export const conditionActions = {
 
 /**
  * A condition's label in the log: its unit's serial number, its component's number (of a
- * component's condition) and the score.
+ * component's condition) and its score on NEN 2767's scale, e.g. `SD-001 · OC-0001 · 4/6`.
  */
 export const conditionLabel = (record: {
 	serialNumber: string;
 	component?: string;
 	score: number;
-}) => [record.serialNumber, record.component, `${record.score}%`].filter(Boolean).join(" · ");
+}) => [record.serialNumber, record.component, `${record.score}/6`].filter(Boolean).join(" · ");
 
 /** A component's label in the log: its unit's serial number, its number and its name. */
 export const componentLabel = (record: { serialNumber: string; number: string; name: string }) =>
 	`${record.serialNumber} · ${record.number} · ${record.name}`;
 
-/** A score in percent. */
-const percent = (value: unknown) => `${formatNumber(Number(value))}%`;
+/** A score on the scale, with its name: "4 · Matig". */
+const score = (value: unknown) => scoreText(Number(value));
 
 export const conditionSubjects = {
 	/** A unit's condition, logged with its unit as its parent; it's on the unit's page. */
@@ -33,7 +35,7 @@ export const conditionSubjects = {
 		noun: m.condition_activity_subject,
 		onParentPage: true,
 		fields: {
-			score: { label: m.condition_field_score, format: percent },
+			score: { label: m.condition_field_score, format: score },
 			advice: { label: m.condition_field_advice },
 		},
 	},
@@ -48,13 +50,18 @@ export const conditionSubjects = {
 			position: { label: m.condition_field_position },
 		},
 	},
+	/**
+	 * A photo of a defect, of a unit's condition or of a rejected checklist point: its access rule
+	 * is its unit's (`server/access.ts`); recording the condition logs it.
+	 */
+	conditionPhoto: { noun: m.condition_activity_subject_photo, onParentPage: true },
 	/** The organization's condition settings; they have no label, so they read as their noun. */
 	condition_settings: {
 		noun: m.condition_activity_subject_settings,
 		href: () => resolve("/(app)/(modules)/condition/settings"),
 		fields: {
-			criticalBelow: { label: m.condition_critical_below, format: percent },
-			attentionBelow: { label: m.condition_attention_below, format: percent },
+			criticalFrom: { label: m.condition_critical_from, format: score },
+			attentionFrom: { label: m.condition_attention_from, format: score },
 			autoPlan: { label: m.condition_auto_plan, format: formatOnOff },
 		},
 	},
