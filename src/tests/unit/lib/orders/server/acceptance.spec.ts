@@ -15,7 +15,10 @@ const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
 const logged = vi.fn();
 const parts = vi.fn(async (_change: unknown) => {});
 
-vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals }) }));
+vi.mock("$app/server", async (importOriginal) => ({
+	...(await importOriginal<object>()),
+	getRequestEvent: () => ({ locals }),
+}));
 // The work record's scopes ask the registry, which this service doesn't.
 vi.mock("#lib/server/access/index.ts", () => ({}));
 vi.mock("#lib/server/activity/index.ts", () => ({
