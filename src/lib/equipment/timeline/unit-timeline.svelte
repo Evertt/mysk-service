@@ -32,7 +32,7 @@
 	import { refreshOnActivity } from "#lib/components/activity/live-activity.svelte.ts";
 	import StatTile from "#lib/components/stat-tile.svelte";
 	import { dayOf } from "#lib/dates.ts";
-	import { formatLongDay, formatNumber, formatTime } from "#lib/i18n/index.ts";
+	import { formatDate, formatLongDay, formatNumber, formatTime } from "#lib/i18n/index.ts";
 	import { OrderLink } from "#lib/orders/components.ts";
 
 	import {
@@ -134,7 +134,10 @@
 			? m.equipment_timeline_today()
 			: day.equals(first.today.subtract({ days: 1 }))
 				? m.equipment_timeline_yesterday()
-				: formatLongDay(day);
+				: day.year === first.today.year
+					? formatLongDay(day)
+					: // Another year's day says its year.
+						formatDate(day);
 
 	const orderHref = (number: string) =>
 		shell === "engineer"

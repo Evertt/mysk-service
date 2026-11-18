@@ -145,7 +145,7 @@ describe("the site's page", () => {
 			await page
 				.locator("[data-door]")
 				.evaluateAll((cards) => cards.map((card) => (card as HTMLElement).dataset.door)),
-		).toEqual(["D-05", "D-06", "D-KO1", "D-VR1"]);
+		).toEqual(["D-05", "D-06", "D-07", "D-KO1", "D-VR1"]);
 		expect(await page.locator("[data-comparison] [data-zone-row]").count()).toBe(8);
 		for (const advice of ["peak", "comparison", "night"]) {
 			expect(await page.locator(`[data-advice="${advice}"]`).textContent()).toMatch(/\w/);
@@ -190,7 +190,7 @@ describe("the site's page", () => {
 					.locator("[data-door]")
 					.evaluateAll((cards) => cards.map((card) => (card as HTMLElement).dataset.door)),
 			)
-			.toEqual(["D-05", "D-06"]);
+			.toEqual(["D-05", "D-06", "D-07"]);
 		expect(
 			await page.locator("[data-comparison] [data-zone-row]").getAttribute("data-zone-row"),
 		).toBe("Z-DOCK");
@@ -232,7 +232,7 @@ describe("a zone's page", () => {
 		const consumer = page.locator('[data-consumer="Dock-lift & deuren"]');
 		// Linked to Riedel's leveller.
 		expect(await consumer.getByRole("link").textContent()).toBe("Leveller L-03");
-		expect(await page.locator("[data-door]").count()).toBe(2);
+		expect(await page.locator("[data-door]").count()).toBe(3);
 		await page.locator("[data-energy-chart]").waitFor();
 
 		await app.go(`/energy/${siteId}/zones/Z-R62`);
@@ -257,7 +257,7 @@ describe("the report", () => {
 		);
 		expect(await page.locator("[data-report-summary] tbody tr").count()).toBe(6);
 		expect(await page.locator("[data-report-zones] tbody tr").count()).toBe(8);
-		expect(await page.locator("[data-report-doors] tbody tr").count()).toBe(4);
+		expect(await page.locator("[data-report-doors] tbody tr").count()).toBe(5);
 
 		// A range of its own.
 		await page.getByLabel("From", { exact: true }).fill("2026-10-01");
