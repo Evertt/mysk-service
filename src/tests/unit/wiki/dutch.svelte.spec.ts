@@ -179,6 +179,7 @@ describe("the widgets, in Dutch", () => {
 		await render(RoleSwitcher);
 		await expect.element(page.getByRole("heading", { name: "Monteur" })).toBeVisible();
 		await expect.element(page.getByRole("heading", { name: "Klant" })).toBeVisible();
+		await expect.element(page.getByRole("heading", { name: "Hoofdkantoor" })).toBeVisible();
 		await expect.element(page.getByText(/^Het monteursportaal begint op/)).toBeVisible();
 		await expect.element(page.getByText(/De gegevens van andere klanten zien\./)).toBeVisible();
 		// The module is named as the app names it.

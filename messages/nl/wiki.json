@@ -121,6 +121,10 @@
 	"wiki_roles_customer_can_3": "Hun apparaten en locaties zien, met de servicegeschiedenis van elk apparaat.",
 	"wiki_roles_customer_can_4": "Lezen wat er is gedaan bij een afgeronde opdracht: de aftekening en, als de module {module} aan staat, de werkbon.",
 	"wiki_roles_customer_cannot_1": "De gegevens van andere klanten zien.",
+	"wiki_roles_head_office_can_1": "Alle vestigingen van de klant in één overzicht volgen, de slechtste eerst: open storingen, monteurs onderweg, wat aandacht nodig heeft.",
+	"wiki_roles_head_office_can_2": "De apparaten en het openstaande werk van een vestiging bekijken, en het onderhoudsrapport ervan afdrukken.",
+	"wiki_roles_head_office_can_3": "Op elke vestiging een storing melden, en de opdrachten van alle vestigingen volgen.",
+	"wiki_roles_head_office_cannot_1": "De vestigingen van andere klanten zien, of wijzigen wat kantoor inplant.",
 
 	"wiki_modules_of": "{on} van {total}",
 	"wiki_modules_on": "modules aan",

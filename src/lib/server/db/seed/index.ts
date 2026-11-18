@@ -33,6 +33,7 @@ import * as schema from "../schema.ts";
 import { seedCategories, shltrCategories } from "./categories.ts";
 import { addDays, now } from "./clock.ts";
 import { generateDemoDocuments, storeDemoFiles } from "./documents.ts";
+import { seedHeadOffice } from "./head-office.ts";
 import { IdSpace } from "./ids.ts";
 import { generateLocations, seedQrToken } from "./locations.ts";
 import { runOrder, type SeedLogEntry, type SeedTenant, seedCollectors } from "./module-seed.ts";
@@ -405,6 +406,8 @@ await db.transaction(async (tx) => {
 await db.transaction(createDemoUsers);
 // SHLTR's D-07's day, as its timeline tells it, with its photos' files.
 demoFiles.push(...(await db.transaction((tx) => seedUnitStory(tx, demoOrganizations.shltr.id))));
+// Distributiecentrum Zutphen's head office, whose sites overview has a story to tell.
+await db.transaction((tx) => seedHeadOffice(tx, demoOrganizations.shltr.id));
 await storeDemoFiles(demoFiles);
 
 console.log(

@@ -96,6 +96,8 @@ export const users = {
 	northCustomer: demoUsers[8].email,
 	/** Pakhuis 7's contact, in SHLTR's customer portal: its last bonus year waits for its choice. */
 	pakhuis: demoUsers[9].email,
+	/** Distributiecentrum Zutphen's head office, in SHLTR's customer portal: all three of its sites. */
+	headOffice: demoUsers[10].email,
 };
 
 /** The demo users' names, as the app shows them (e.g. in the activity log). */

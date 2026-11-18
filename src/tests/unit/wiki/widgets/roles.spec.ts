@@ -9,6 +9,7 @@ const demoMemberRoles = {
 	planner: ["member"],
 	engineer: ["engineer"],
 	customer: ["customer"],
+	headOffice: ["customer"],
 } as const;
 
 describe("the role switcher's cards", () => {

@@ -17,7 +17,8 @@ komende weken ingepland, en alle optionele modules staan aan. De namen en notiti
 Nederlands, zoals bij een Nederlands bedrijf, in welke taal je de app ook gebruikt.
 
 Waar de demo aan staat (op staging, en op de eigen computer van een ontwikkelaar), heeft de
-inlogpagina onder het formulier drie knoppen, **Inloggen als**: Planner, Monteur en Klant. Eén klik
+inlogpagina onder het formulier vier knoppen, **Inloggen als**: Planner, Monteur, Klant en
+Hoofdkantoor. Eén klik
 en je bent ingelogd; je typt niets. De knoppen **Probeer het als …** op deze pagina doen hetzelfde: elke
 knop logt je in met zijn rol en opent de startpagina van die rol. Ze verschijnen alleen waar de
 demo aan staat en je nog niet in de demo bent ingelogd. Ben je dat wel, dan wissel je met
@@ -69,14 +70,27 @@ Je komt binnen in het klantportaal, als Marieke Verhoeven, die bij Riedel B.V. w
 Je ziet alleen de gegevens van Riedel. De opdrachten en apparaten van de andere klanten staan er
 niet bij, en je komt er ook niet bij door het adres te veranderen.
 
+## Als hoofdkantoor
+
+Je komt binnen in het klantportaal, als Ilse Brouwer, het hoofdkantoor van Distributiecentrum
+Zutphen, dat drie vestigingen heeft.
+
+<TryIt as="headOffice" />
+
+1. Open **Alle vestigingen**: Zutphen staat bovenaan en heeft aandacht nodig, met een storing die
+   je meldde en die wacht op acceptatie; naar Deventer is een monteur onderweg; in Culemborg is
+   alles in orde.
+2. Open een vestiging: de apparaten en het openstaande werk, en het onderhoudsrapport.
+3. Wissel naar de planner en accepteer de storing: de kaart van Zutphen verandert zonder herladen.
+
 ## Wisselen zonder uit te loggen
 
-Ben je eenmaal binnen, dan heeft het gebruikersmenu **Bekijk als**, met dezelfde drie rollen en de
+Ben je eenmaal binnen, dan heeft het gebruikersmenu **Bekijk als**, met dezelfde vier rollen en de
 huidige aangevinkt. Kies een andere en je wordt ingelogd als die rol en naar de startpagina ervan
 gestuurd. Zo zie je het snelst één wijziging van twee kanten: meld een storing als klant, accepteer
 hem als planner, en zie de opdracht van de klant veranderen.
 
-Geen van de drie is eigenaar of beheerder. Iedereen kan de demo openen, dus geen van hen kan de
+Geen van de vier is eigenaar of beheerder. Iedereen kan de demo openen, dus geen van hen kan de
 leden, uitnodigingen of instellingen van SHLTR wijzigen.
 
 <HowItWorks />
@@ -103,7 +117,7 @@ als hij het niet kan vragen.
 
 - <SourceLink path="src/routes/demo.remote.ts" line={23}><code>demoSignInEnabled</code>, inloggen en Bekijk als</SourceLink>
 - <SourceLink path="src/routes/demo-accounts.server.ts">welk account elke rol is</SourceLink>
-- <SourceLink path="src/routes/demo-roles.ts">de drie rollen</SourceLink>
+- <SourceLink path="src/routes/demo-roles.ts">de vier rollen</SourceLink>
 - <SourceLink path="src/wiki/parts/try-it.svelte">de knop</SourceLink>
 
 <DocsPointer doc="README.md" section="Demo login" />

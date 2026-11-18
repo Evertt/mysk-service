@@ -5,7 +5,7 @@
  */
 import { isManager, type ShellName, shellOf, shells } from "#lib/auth/index.ts";
 import { isOneOf } from "#lib/one-of.ts";
-import { demoOrganizations } from "#lib/server/db/demo.ts";
+import { demoOrganizations, HEAD_OFFICE } from "#lib/server/db/demo.ts";
 
 import { type DemoRole, demoRoles } from "./demo-roles.ts";
 
@@ -44,6 +44,9 @@ const demoAccounts: Record<DemoRole, DemoAccount> = {
 	engineer: inShell("lev@shltr.example", "engineer"),
 	// Marieke Verhoeven, Riedel's facilities contact (a partner with a wallet).
 	customer: inShell("facilitair@riedel.example", "customer"),
+	// Ilse Brouwer, Distributiecentrum Zutphen's head office: a contact who sees all three of its
+	// sites, for the sites overview.
+	headOffice: inShell(HEAD_OFFICE.email, "customer"),
 };
 
 /** The account a demo button signs in as, or `undefined` for anything that isn't a demo role. */

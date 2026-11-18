@@ -34,6 +34,7 @@ const roles = {
 	Planner: { path: "/", email: users.shltrPlanner, name: "Jan Weggemans" },
 	Engineer: { path: "/my", email: users.shltrEngineer, name: "Lev Hoekstra" },
 	Customer: { path: "/portal", email: users.riedel, name: "Marieke Verhoeven" },
+	"Head office": { path: "/portal", email: users.headOffice, name: "Ilse Brouwer" },
 };
 type Role = keyof typeof roles;
 
@@ -118,7 +119,7 @@ async function items(menu: Locator) {
 async function shownUser(role: Role) {
 	const { page } = app;
 	if (role === "Planner") return page.locator('[data-slot="sidebar-footer"]').innerText();
-	if (role === "Customer") {
+	if (role === "Customer" || role === "Head office") {
 		await openMoreTab(page);
 		return page.locator("[data-more-account]").innerText();
 	}
@@ -135,7 +136,7 @@ async function switchTo(side: Side, from: Role, to: Role, menu?: Locator) {
 	expect(before.row?.email).toBe(roles[from].email);
 	menu ??= await openMenu(side);
 	expect(await items(menu)).toEqual({
-		names: ["Planner", "Engineer", "Customer"],
+		names: ["Planner", "Engineer", "Customer", "Head office"],
 		checked: [from],
 	});
 	await Promise.all([
@@ -203,7 +204,7 @@ describe("with DEMO_SIGN_IN, in SHLTR", () => {
 		const { page } = app;
 		const menu = await openMenu("office");
 		expect(await items(menu)).toEqual({
-			names: ["Planner", "Engineer", "Customer"],
+			names: ["Planner", "Engineer", "Customer", "Head office"],
 			checked: ["Planner"],
 		});
 		const texts = await menu.innerText();
@@ -398,7 +399,10 @@ describe("other tenants' users", () => {
 		await app.signIn(users.weggemans);
 		expect(app.path()).toBe("/portal");
 		const menu = await openMenu("portal");
-		expect(await items(menu)).toEqual({ names: ["Planner", "Engineer", "Customer"], checked: [] });
+		expect(await items(menu)).toEqual({
+			names: ["Planner", "Engineer", "Customer", "Head office"],
+			checked: [],
+		});
 		await page.keyboard.press("Escape");
 		await signOut("portal");
 	});
@@ -407,7 +411,10 @@ describe("other tenants' users", () => {
 		const { page } = app;
 		await app.signIn(users.shltrOwner);
 		const menu = await openMenu("office");
-		expect(await items(menu)).toEqual({ names: ["Planner", "Engineer", "Customer"], checked: [] });
+		expect(await items(menu)).toEqual({
+			names: ["Planner", "Engineer", "Customer", "Head office"],
+			checked: [],
+		});
 		await page.keyboard.press("Escape");
 		await menu.waitFor({ state: "detached" });
 		await signOut("office");

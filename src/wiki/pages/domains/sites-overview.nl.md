@@ -47,7 +47,11 @@ apparaten. Elke kaart en elke vestigingspagina linkt naar de
 Beide pagina's blijven live: een storing gemeld in het portaal, een ingeplande opdracht, een
 vastgelegde conditie of een energie-alert verschijnt op de kaart zonder herladen.
 
-<TryIt as="customer" /> <TryIt as="planner" />
+In de demo is Ilse Brouwer het hoofdkantoor van Distributiecentrum Zutphen, dat drie vestigingen
+heeft: in Zutphen wacht een storing die zij meldde op acceptatie, naar Deventer is een monteur
+onderweg, en in Culemborg is alles in orde.
+
+<TryIt as="headOffice" /> <TryIt as="planner" />
 
 <HowItWorks />
 

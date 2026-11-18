@@ -20,8 +20,8 @@ stairs and air conditioning. It has customers with sites and units, a year of or
 weeks planned, and every optional module switched on. Its names and notes are in Dutch, as a Dutch
 company's would be, whichever language you use the app in.
 
-Where the demo is switched on (staging, and a developer's own machine), the login page has three
-buttons under its form, **Log in as**: Planner, Engineer and Customer. One click signs you in; you
+Where the demo is switched on (staging, and a developer's own machine), the login page has four
+buttons under its form, **Log in as**: Planner, Engineer, Customer and Head office. One click signs you in; you
 don't type anything. The **Try it** buttons on this page do the same: each signs you in as its
 role and opens that role's home. They appear only where the demo is on and you aren't signed in
 to it yet. Once you are, switch with **View as** (below).
@@ -68,14 +68,26 @@ You land in the customer portal as Marieke Verhoeven, who works for Riedel B.V.
 You see only Riedel's records. The other customers' orders and units aren't there, and can't be
 reached by changing the address.
 
+## As a head office
+
+You land in the customer portal as Ilse Brouwer, the head office of Distributiecentrum Zutphen,
+which has three sites.
+
+<TryIt as="headOffice" />
+
+1. Open **All sites**: Zutphen comes first, needing attention, with a fault you reported waiting to
+   be accepted; an engineer is on the way to Deventer; Culemborg is all fine.
+2. Open a site: its units and open work, and its maintenance report.
+3. Switch to the planner and accept the fault: the Zutphen card changes without a reload.
+
 ## Switching without signing out
 
-Once you're in, the user menu has **View as** with the same three roles, the current one checked.
+Once you're in, the user menu has **View as** with the same four roles, the current one checked.
 Pick another and you are signed in as that role and sent to its home. It's the quickest way to
 watch one change from both sides: report a breakdown as the customer, accept it as the planner,
 and see the customer's order change.
 
-None of the three is an owner or admin. Anyone can open the demo, so none of them can change SHLTR's
+None of the four is an owner or admin. Anyone can open the demo, so none of them can change SHLTR's
 members, invitations or settings.
 
 <HowItWorks />
@@ -100,7 +112,7 @@ when it can't ask.
 
 - <SourceLink path="src/routes/demo.remote.ts" line={23}><code>demoSignInEnabled</code>, sign-in and View as</SourceLink>
 - <SourceLink path="src/routes/demo-accounts.server.ts">which account each role is</SourceLink>
-- <SourceLink path="src/routes/demo-roles.ts">the three roles</SourceLink>
+- <SourceLink path="src/routes/demo-roles.ts">the four roles</SourceLink>
 - <SourceLink path="src/wiki/parts/try-it.svelte">the button</SourceLink>
 
 <DocsPointer doc="README.md" section="Demo login" />
