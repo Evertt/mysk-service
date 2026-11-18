@@ -58,7 +58,6 @@
 
 	{#snippet side()}
 		<SpecificationsCard {unit} />
-		<DocumentsCard serial={unit.serialNumber} />
 		<CustomerCard customer={unit.customer} title={m.equipment_owner()} />
 		<SiteCard site={unit.site} title={m.equipment_detail_site()} />
 		<QrCard
@@ -68,5 +67,6 @@
 				site: String(unit.site.id),
 			})}?unit={encodeURIComponent(unit.serialNumber)}"
 		/>
+		<DocumentsCard serial={unit.serialNumber} />
 	{/snippet}
 </RecordPage>
