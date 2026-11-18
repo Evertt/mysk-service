@@ -3,7 +3,7 @@
 	The condition module's card on the customer portal's home (`client.home`,
 	`#lib/client/extensions.ts`): the customer's units that are critical or need attention, worst
 	first, each with its advice, linking to the unit, and its components with their condition and
-	advice; in two columns where there's room. Nothing while none does.
+	advice, as rows of a phone app's list. Nothing while none does.
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
@@ -21,29 +21,26 @@
 
 {#if data.units.length}
 	<section
-		class="@container flex flex-col gap-3"
+		class="flex flex-col gap-2"
 		aria-label={m.condition_client_title()}
 		data-client-attention
 	>
-		<h2 class="text-sm font-medium text-muted-foreground">
+		<h2 class="section-label px-1">
 			{m.condition_client_title()}
 			<span class="tabular-nums">· {formatNumber(data.total)}</span>
 		</h2>
-		<!-- In two columns where there's room (a desk's screen). -->
-		<Card.Root class="overflow-hidden py-0">
-			<ul
-				class="flex flex-col divide-y @4xl:-mb-px @4xl:block @4xl:columns-2 @4xl:gap-0 @4xl:divide-y-0 @4xl:[column-rule:1px_solid_var(--border)]"
-			>
+		<Card.Root class="overflow-hidden rounded-xl py-0">
+			<ul class="flex flex-col divide-y">
 				{#each data.units as unit (unit.id)}
-					<li class="flex flex-col @4xl:break-inside-avoid @4xl:border-b">
+					<li class="flex flex-col">
 						<a
 							href={resolve("/(customer)/portal/equipment/[serial]", { serial: unit.serialNumber })}
-							class="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-accent"
+							class="flex min-h-14 items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-accent"
 							data-unit={unit.serialNumber}
 						>
 							<span class="flex min-w-0 flex-col">
-								<span class="truncate text-sm font-medium">{unitTitle(unit)}</span>
-								<span class="truncate text-xs text-muted-foreground">
+								<span class="truncate text-[0.9375rem] font-medium">{unitTitle(unit)}</span>
+								<span class="truncate text-[0.8125rem] text-muted-foreground">
 									{[unit.site, unit.advice].filter(Boolean).join(" · ")}
 								</span>
 							</span>
@@ -58,14 +55,14 @@
 								{#each unit.components as part (part.id)}
 									<li class="flex flex-col gap-1 border-l-2 pl-3" data-component={part.number}>
 										<div class="flex flex-wrap items-center justify-between gap-2">
-											<span class="text-sm">{part.name}</span>
+											<span class="text-[0.9375rem]">{part.name}</span>
 											<ConditionBar
 												score={part.score}
 												band={part.band === "none" ? null : (part.band as ScoreBand)}
 											/>
 										</div>
 										{#if part.advice}
-											<span class="text-xs text-muted-foreground">{part.advice}</span>
+											<span class="text-[0.8125rem] text-muted-foreground">{part.advice}</span>
 										{/if}
 									</li>
 								{/each}

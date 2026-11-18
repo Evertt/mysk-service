@@ -1,6 +1,6 @@
 <!--
-	One of the customer's units in the portal, read-only, phone first: what scanning its QR code
-	opens. A card of what it is and where, its status and the badges the tenant's modules add
+	One of the customer's units in the portal, read-only: what scanning its QR code opens. The app
+	bar names it and where it is; then a card of what it is and where, its status and the badges the tenant's modules add
 	(`client.unit.badges`, e.g. its condition), and their facts in a grid (`client.unit.facts`, e.g.
 	its inspection status and last maintenance); then "report a breakdown" of it, the page's main
 	button; then links to more about it (its service history, a page of its own); then the modules'
@@ -12,6 +12,7 @@
 	import HistoryIcon from "@lucide/svelte/icons/history";
 	import SirenIcon from "@lucide/svelte/icons/siren";
 
+	import AppBar from "#lib/client/app-bar.svelte";
 	import { unitBadges, unitFacts, unit as unitParts } from "#lib/client/extensions.ts";
 	import { refreshOnRecordChange } from "#lib/components/activity/change-feed.svelte.ts";
 	import { refreshOnActivity } from "#lib/components/activity/live-activity.svelte.ts";
@@ -37,16 +38,17 @@
 	});
 </script>
 
-<svelte:head>
-	<title>{unitTitle(unit)} · {m.client_title()}</title>
-</svelte:head>
+<AppBar
+	title={unitTitle(unit)}
+	subtitle={[unit.location, unit.site.name].filter(Boolean).join(" · ")}
+	back={{ href: resolve("/(customer)/portal/equipment"), label: m.client_tab_equipment() }}
+/>
 
-<div class="mx-auto flex w-full max-w-2xl flex-col gap-4" data-client-unit={unit.serialNumber}>
-	<Card.Root>
+<div class="flex flex-col gap-5" data-client-unit={unit.serialNumber}>
+	<Card.Root class="rounded-xl">
 		<Card.Content class="flex flex-col gap-4">
 			<header class="flex flex-col gap-1">
-				<h1 class="text-xl font-semibold tracking-tight wrap-break-word">{unitTitle(unit)}</h1>
-				<p class="text-sm text-muted-foreground">
+				<p class="text-[0.9375rem]">
 					{unitLine(unit, {
 						category: unit.category,
 						site: unit.site.name,
@@ -68,8 +70,7 @@
 	</Card.Root>
 
 	<Button
-		size="lg"
-		class="w-full"
+		class="primary-action"
 		href={`${resolve("/(customer)/portal/report")}?unit=${encodeURIComponent(unit.serialNumber)}`}
 	>
 		<SirenIcon data-icon="inline-start" />
@@ -78,8 +79,11 @@
 
 	<!-- Links to more about the unit, a page each: room for its manuals and documents. -->
 	<nav aria-label={m.client_unit_more()}>
-		<Card.Root class="py-0">
-			<ul class="flex flex-col divide-y">
+		<!-- Its rows as tall as a tap, their text readable: set here, so each row stays plain. -->
+		<Card.Root class="rounded-xl py-0">
+			<ul
+				class="flex flex-col divide-y [&_a]:min-h-14 [&_a]:py-3.5 [&_a_.text-sm]:text-[0.9375rem] [&_a_.text-xs]:text-[0.8125rem] [&_a_svg]:size-5"
+			>
 				<li>
 					<a
 						href={resolve("/(customer)/portal/equipment/[serial]/history", {
@@ -102,5 +106,5 @@
 		</Card.Root>
 	</nav>
 
-	<ExtensionSlot point={unitParts} props={parts} class="flex flex-col gap-4" />
+	<ExtensionSlot point={unitParts} props={parts} class="flex flex-col gap-5" />
 </div>

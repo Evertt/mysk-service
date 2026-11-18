@@ -1,8 +1,9 @@
 <!--
 	The parts shop in the customer portal ("Onderdelen Shop"): the catalogue by category, searched by
 	name or article number, each product with its price excluding VAT, its stock and the checklist
-	points it fixes; a banner when some run low; the cart and its checkout with Parts Credit, beside
-	the catalogue on a wide screen. A link from a checklist's rejected point (`?add=<product>`) puts
+	points it fixes; a banner when some run low; the cart and its checkout with Parts Credit under
+	the catalogue, with a bar at the foot that leads to it while there's something in it. Its orders
+	are behind the app bar's button. A link from a checklist's rejected point (`?add=<product>`) puts
 	that product in the cart.
 -->
 <script lang="ts">
@@ -10,12 +11,14 @@
 	import { page } from "$app/state";
 	import type { RouteParams } from "$app/types";
 	import ArrowRightIcon from "@lucide/svelte/icons/arrow-right";
+	import ReceiptTextIcon from "@lucide/svelte/icons/receipt-text";
 	import SearchIcon from "@lucide/svelte/icons/search";
 	import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
 	import WalletCardsIcon from "@lucide/svelte/icons/wallet-cards";
 	import { IsMounted, PersistedState } from "runed";
 	import { onMount } from "svelte";
 
+	import AppBar from "#lib/client/app-bar.svelte";
 	import Callout from "#lib/components/callout.svelte";
 	import FilterChips from "#lib/components/filter-chips.svelte";
 	import { formatCents, formatDate, formatNumber } from "#lib/i18n/index.ts";
@@ -96,19 +99,23 @@
 	const count = $derived(lines.reduce((sum, line) => sum + line.quantity, 0));
 </script>
 
-<svelte:head>
-	<title>{m.shop_portal_title()}</title>
-</svelte:head>
+<AppBar
+	title={m.shop_portal_title()}
+	back={{ href: resolve("/(customer)/portal/more"), label: m.client_tab_more() }}
+>
+	{#snippet actions()}
+		<Button
+			variant="ghost"
+			size="icon"
+			href={resolve("/(customer)/(modules)/parts-shop/portal/orders")}
+			aria-label={m.shop_client_orders_title()}
+		>
+			<ReceiptTextIcon class="size-5" />
+		</Button>
+	{/snippet}
+</AppBar>
 
-<div class="flex flex-wrap items-start justify-between gap-3">
-	<div class="flex flex-col gap-1">
-		<h1 class="text-2xl font-semibold tracking-tight">{m.shop_portal_title()}</h1>
-		<p class="text-sm text-muted-foreground">{m.shop_portal_description()}</p>
-	</div>
-	<Button variant="outline" href={resolve("/(customer)/(modules)/parts-shop/portal/orders")}>
-		{m.shop_client_orders_title()}
-	</Button>
-</div>
+<p class="px-1 text-[0.9375rem] text-muted-foreground">{m.shop_portal_description()}</p>
 
 <!-- The partner's wallet, as the SHLTR mockup heads its shop: what's available, until when, and the
 	way to the programme. -->
@@ -139,11 +146,8 @@
 	</Callout>
 {/if}
 
-<!-- On a wide screen the cart is beside the catalogue, and stays in view while scrolling it. -->
-<div
-	class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_24rem]"
->
-	<div class="@container flex min-w-0 flex-col gap-6">
+<div class="flex flex-col gap-6">
+	<div class="flex min-w-0 flex-col gap-6">
 		<div class="flex flex-col gap-3">
 			<InputGroup.Root>
 				<InputGroup.Addon><SearchIcon /></InputGroup.Addon>
@@ -155,6 +159,7 @@
 				/>
 			</InputGroup.Root>
 			<FilterChips
+				class="-mx-4 [scrollbar-width:none] flex-nowrap overflow-x-auto px-4 *:shrink-0"
 				label={m.shop_field_category()}
 				options={shop.categories.map((each) => ({ value: String(each.id), label: each.name }))}
 				value={category === null ? null : String(category)}
@@ -169,10 +174,10 @@
 				aria-label={each.name}
 				data-catalogue-category={each.name}
 			>
-				<h2 class="text-sm font-medium text-muted-foreground">
+				<h2 class="section-label px-1">
 					{each.name} <span class="tabular-nums">· {formatNumber(each.products.length)}</span>
 				</h2>
-				<div class="grid gap-3 @xl:grid-cols-2 @5xl:grid-cols-3">
+				<div class="flex flex-col gap-3">
 					{#each each.products as product (product.id)}
 						<ProductCard
 							{product}
@@ -183,7 +188,7 @@
 				</div>
 			</section>
 		{:else}
-			<Empty.Root class="border" data-catalogue-empty>
+			<Empty.Root class="rounded-xl border bg-card" data-catalogue-empty>
 				<Empty.Header>
 					<Empty.Title>{m.shop_catalogue_empty()}</Empty.Title>
 					<Empty.Description>{m.shop_catalogue_empty_description()}</Empty.Description>
@@ -192,7 +197,7 @@
 		{/each}
 	</div>
 
-	<div class="lg:sticky lg:top-20 lg:max-h-[calc(100svh-6rem)] lg:overflow-y-auto">
+	<div>
 		<Checkout
 			{lines}
 			available={shop.available}
@@ -206,7 +211,7 @@
 {#if count}
 	<a
 		href="#checkout"
-		class="sticky bottom-4 z-10 flex items-center justify-between gap-3 self-stretch rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground shadow-lg sm:hidden"
+		class="sticky bottom-[calc(var(--tab-bar-height)+0.75rem)] z-10 flex min-h-13 items-center justify-between gap-3 self-stretch rounded-xl bg-primary px-5 py-3 text-base font-semibold text-primary-foreground shadow-lg"
 		data-cart-bar
 	>
 		<span>{m.shop_cart_count({ count })}</span>

@@ -44,7 +44,7 @@
 </script>
 
 {#if data.checklists.length}
-	<Card.Root data-client-checklists>
+	<Card.Root class="rounded-xl" data-client-checklists>
 		<Card.Header>
 			<Card.Title>{m.checklists_order_title()}</Card.Title>
 			<Card.Description>{m.checklists_client_order_description()}</Card.Description>
@@ -72,7 +72,7 @@
 					<div class="flex items-start justify-between gap-2">
 						<div class="flex min-w-0 flex-col">
 							<span class="truncate font-medium">{unitTitle(checklist.unit)}</span>
-							<span class="text-xs text-muted-foreground">
+							<span class="text-[0.8125rem] text-muted-foreground">
 								{checklist.name}{checklist.norm ? ` · ${checklist.norm}` : ""} · {checklistLabels.label(
 									"checklistKind",
 									checklist.kind,
@@ -82,7 +82,7 @@
 						<OutcomeBadge {checklist} />
 					</div>
 					{#if checklist.completedAt}
-						<p class="text-xs text-muted-foreground tabular-nums">
+						<p class="text-[0.8125rem] text-muted-foreground tabular-nums">
 							{m.checklists_completed_by({
 								name: completerName(checklist) ?? m.checklists_someone(),
 								date: formatDateTime(checklist.completedAt),

@@ -1,16 +1,23 @@
 <!--
 	@component
-	Shows the engineer portal in a phone on a desk's screen: a device with its bezel, dynamic island,
-	side buttons and status bar, centred on a quiet background, its screen a phone's (390 × 844,
-	scaled down to fit a shorter window) with the portal scrolling inside it, and a caption under
-	it. A wide window with a mouse gets it, by CSS alone (`(min-width: 1024px) and (pointer: fine)`),
+	The frame of the two portals, which are phone apps (the engineer portal and the customer portal).
+	On a desk's screen it shows the portal in a phone: a device with its bezel, dynamic island, side
+	buttons and status bar, centred on a quiet background, its screen a phone's (390 × 844, scaled
+	down to fit a shorter window) with the portal scrolling inside it, and a caption under it. A wide
+	window with a mouse gets it, by CSS alone (`screen and (min-width: 1024px) and (pointer: fine)`),
 	so it's right from the first paint and follows a resize. Elsewhere (a phone, a tablet, a narrow
-	window) the wrappers drop out (`display: contents`) and the portal is the page.
+	window, paper) the wrappers drop out (`display: contents`) and the portal is the page.
 
 	What would be fixed to the window stays in the phone: its screen is the containing block of
 	fixed descendants (`contain: layout`), the bits-ui overlays (menus, dialogs, sheets) are put in
 	it rather than in `<body>` (`BitsConfig`), and so are the notifications (the root layout leaves
 	them out here).
+
+	It also makes the portal an app on any screen: its root has `data-touch`, which gives the kit's
+	controls their tap sizes (`#lib/themes/touch.css`); the page runs under a phone's notch and home
+	indicator (`viewport-fit=cover`); and `--safe-area-top` and `--safe-area-bottom` say how far the
+	portal's bars keep their content from them: the phone's insets, or in the desk's phone those of
+	its status bar and home indicator, which the bars run under as on a phone.
 -->
 <script lang="ts">
 	import BatteryFullIcon from "@lucide/svelte/icons/battery-full";
@@ -23,9 +30,19 @@
 	import { Clock } from "#lib/hooks/clock.svelte.ts";
 	import { formatTime } from "#lib/i18n/index.ts";
 
-	import AppToaster from "../app-toaster.svelte";
+	import AppToaster from "./app-toaster.svelte";
 
-	let { children }: { children: Snippet } = $props();
+	let {
+		caption,
+		statusOn = "background",
+		children,
+	}: {
+		/** Under the phone on a desk's screen: whose portal it is, and how they see it. */
+		caption: string;
+		/** What the status bar's clock and icons are on: the page, or a bar in the primary colour. */
+		statusOn?: "background" | "primary";
+		children: Snippet;
+	} = $props();
 
 	/** Where the overlays go: the phone's screen, once it's there (until then `<body>`). */
 	let overlays = $state<HTMLElement>();
@@ -39,7 +56,12 @@
 	const clock = $derived(formatTime(ticks.now));
 </script>
 
-<div class="phone-stage" data-phone-stage>
+<svelte:head>
+	<!-- The page runs under the notch and the home indicator; the bars keep clear of them. -->
+	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+</svelte:head>
+
+<div class="phone-stage" data-phone-stage data-touch data-status-on={statusOn}>
 	<div class="phone" data-phone-frame>
 		<span class="phone-button phone-button-action" aria-hidden="true"></span>
 		<span class="phone-button phone-button-volume-up" aria-hidden="true"></span>
@@ -65,7 +87,7 @@
 			<span class="phone-home-indicator" aria-hidden="true"></span>
 		</div>
 	</div>
-	<p class="phone-caption">{m.portal_frame_caption()}</p>
+	<p class="phone-caption">{caption}</p>
 </div>
 
 <style>
@@ -84,7 +106,7 @@
 		display: none;
 	}
 
-	@media (min-width: 1024px) and (pointer: fine) {
+	@media screen and (min-width: 1024px) and (pointer: fine) {
 		.phone-stage {
 			/* The phone's size with its bezel, and how far it's scaled down to fit the window's height
 			   with room for the caption (`tan(atan2(a, b))` is a / b as a number). */
@@ -168,9 +190,13 @@
 			transform: translateZ(0);
 		}
 
+		/* Over the portal's top, as a phone's: the portal's bars run under it. */
 		.phone-status {
-			position: relative;
+			position: absolute;
+			inset: 0 0 auto;
+			z-index: 60;
 			display: flex;
+			pointer-events: none;
 			flex-shrink: 0;
 			align-items: center;
 			justify-content: space-between;
@@ -178,6 +204,10 @@
 			padding: 6px 30px 0 44px;
 			font-size: 0.9375rem;
 			font-weight: 600;
+			color: var(--foreground);
+		}
+		[data-status-on="primary"] .phone-status {
+			color: var(--primary-foreground);
 		}
 		.phone-island {
 			position: absolute;
@@ -196,6 +226,9 @@
 		}
 
 		.phone-scroll {
+			/* How far the portal's bars keep from the status bar and the home indicator. */
+			--safe-area-top: 54px;
+			--safe-area-bottom: 22px;
 			display: block;
 			flex: 1;
 			min-height: 0;
@@ -220,6 +253,7 @@
 			background: var(--foreground);
 			opacity: 0.35;
 			pointer-events: none;
+			z-index: 60;
 		}
 
 		.phone-caption {
@@ -230,7 +264,7 @@
 		}
 	}
 
-	@media (min-width: 1024px) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+	@media screen and (min-width: 1024px) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
 		.phone {
 			transition: scale 200ms ease-out;
 		}
