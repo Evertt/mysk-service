@@ -36,7 +36,7 @@ export const plannedStatus = (status: OrderStatus, engineerId: number | null): O
 
 /** Why an engineer can't do what they asked with one of their orders in its status. */
 export const fieldRefusal = (status: OrderStatus) =>
-	status === "scheduled"
+	status === "scheduled" || status === "on_the_way"
 		? m.portal_start_first()
 		: m.portal_cant_change({ status: label("orderStatus", status).toLowerCase() });
 
@@ -123,10 +123,19 @@ export const orderTransitions = {
 		to: ["completed"],
 		action: "updated",
 	},
-	/** The engineer starts a scheduled job. */
-	start: {
+	/** The engineer sets out for a scheduled job: the customer reads that they're on the way. */
+	depart: {
 		by: "engineer",
 		from: ["scheduled"],
+		to: ["on_the_way"],
+		action: "departed",
+		refusal: ({ status }) => fieldRefusal(status),
+		completedAt: "untouched",
+	},
+	/** The engineer starts a scheduled job, on the way to it or not. */
+	start: {
+		by: "engineer",
+		from: ["scheduled", "on_the_way"],
 		to: ["in_progress"],
 		action: "work_started",
 		refusal: ({ status }) => fieldRefusal(status),
@@ -173,7 +182,9 @@ export const statusChoices = (status: OrderStatus): readonly OrderStatus[] =>
  */
 export function fieldActions(status: OrderStatus) {
 	return {
-		/** Start the job: a scheduled order is then in progress. */
+		/** Tell the customer they're on the way: a scheduled order is then on the way. */
+		depart: can("depart", status),
+		/** Start the job: a scheduled order (or one on the way) is then in progress. */
 		start: can("start", status),
 		/** Log hours and materials, and complete it with the customer's sign-off. */
 		work: can("complete", status),

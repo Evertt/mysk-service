@@ -65,6 +65,7 @@ describe("changing an order's status in the list, in North", () => {
 		expect(await options.allInnerTexts()).toEqual([
 			"Quote",
 			"Scheduled",
+			"On the way",
 			"In progress",
 			"Completed",
 			"Cancelled",
@@ -86,7 +87,8 @@ describe("changing an order's status in the list, in North", () => {
 		await trigger.focus();
 		await page.keyboard.press("Enter");
 		await page.getByRole("option", { name: "Scheduled" }).waitFor();
-		// From the current status to the next.
+		// From the current status two on, past on the way.
+		await page.keyboard.press("ArrowDown");
 		await page.keyboard.press("ArrowDown");
 		await page.keyboard.press("Enter");
 

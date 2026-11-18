@@ -182,6 +182,25 @@ describe("the engineer portal", () => {
 		expect(await page.getByRole("button", { name: "Complete job" }).count()).toBe(0);
 	});
 
+	test("on my way tells the customer: the order is then on the way, and still to be started", async () => {
+		const { page } = app;
+		const before = await movements(job.number);
+		await page.getByRole("button", { name: "On my way" }).click();
+		await app.toast("The customer knows you're on the way");
+		expect((await orderByNumber(job.number)).status).toBe("on_the_way");
+		expect(
+			await value(
+				`select count(*) from activity where subject_type = 'order' and subject_id = ? and action = 'departed'`,
+				[String(job.id)],
+			),
+		).toBe(1);
+		// Its stock stays held, as while it was scheduled.
+		expect(await movements(job.number)).toEqual(before);
+		await page.getByText("On the way", { exact: true }).first().waitFor();
+		await page.getByRole("button", { name: "On my way" }).waitFor({ state: "detached" });
+		await page.getByRole("button", { name: "Start job" }).waitFor();
+	});
+
 	test("starting the job puts it in progress, without moving stock", async () => {
 		const { page } = app;
 		const before = await movements(job.number);
@@ -300,7 +319,7 @@ describe("the engineer portal", () => {
 			 or (parent_type = 'order' and parent_id = ?)) order by id`,
 			[north.id, String(job.id), String(job.id)],
 		);
-		const theirs = entries.slice(-4);
+		const theirs = entries.slice(-5);
 		for (const entry of theirs) {
 			expect(entry).toMatchObject({ user_id: engineer.user_id, user_name: name });
 		}
@@ -313,9 +332,15 @@ describe("the engineer portal", () => {
 			})),
 		).toEqual([
 			{
+				action: "departed",
+				subject_type: "order",
+				changes: { status: ["scheduled", "on_the_way"] },
+				note: null,
+			},
+			{
 				action: "work_started",
 				subject_type: "order",
-				changes: { status: ["scheduled", "in_progress"] },
+				changes: { status: ["on_the_way", "in_progress"] },
 				note: null,
 			},
 			{

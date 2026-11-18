@@ -23,6 +23,7 @@ the invoice it has one **status**, and the status says what may happen to it nex
 | **Awaiting acceptance** | A customer reported it in their portal. A planner hasn't decided yet. |
 | **Quote**               | Accepted, or made in the office. Not planned yet.                     |
 | **Scheduled**           | Planned: an engineer, a day and a time.                               |
+| **On the way**          | The engineer has set out; the customer reads "Engineer on the way".   |
 | **In progress**         | The engineer has started the job.                                     |
 | **Completed**           | Done. When the engineer completes it, the customer has signed.        |
 | **Invoiced**            | On an invoice that was sent. The order is frozen.                     |
@@ -44,19 +45,21 @@ The moves have a name, a **verb**, and a person who makes them:
 - **The planner** _accepts_ or _rejects_ a customer's report. Accepted, it's a quote, or scheduled
   at once if they plan it in the same step. Rejected, it's cancelled, with a reason the customer
   reads in their portal.
-- **The engineer** _starts_ a scheduled job and _completes_ the job in progress, with the
-  customer's signature.
+- **The engineer** _departs_ for a scheduled job (**On my way** in the engineer portal: it's then on
+  the way, and the customer is told), _starts_ a scheduled job or one on the way, and _completes_
+  the job in progress, with the customer's signature.
 - **Invoicing** makes a completed order _invoiced_ when an invoice for it is issued, and completed
   again if that invoice is voided.
 - **The office** can also _set_ a status by hand: in the order form, the list's status column, or a
-  bulk action. By hand it can give an order any of quote, scheduled, in progress, completed or
-  cancelled, but never invoiced, and never to an order that is invoiced or awaiting acceptance.
+  bulk action. By hand it can give an order any of quote, scheduled, on the way, in progress,
+  completed or cancelled, but never invoiced, and never to an order that is invoiced or awaiting acceptance.
 
 Once an order is invoiced it can't be edited or deleted: it's on an invoice with its amounts. Void
 the invoice and it's completed again.
 
 The same rules drive the buttons. The status in the orders list offers only the statuses that
-order may be given by hand, and the engineer portal shows **Start job** only on a scheduled order.
+order may be given by hand, and the engineer portal shows **On my way** only on a scheduled order and
+**Start job** only on one that's scheduled or on the way.
 They can't disagree with the server, because they ask the same table.
 
 <TryIt as="planner" />
@@ -64,7 +67,7 @@ They can't disagree with the server, because they ask the same table.
 <HowItWorks />
 
 **One table.** The rules are `orderTransitions` in `src/lib/orders/lifecycle.ts`: a row per verb
-(`set`, `plan`, `accept`, `reject`, `start`, `complete`, `invoice`, `uninvoice`). A row says who
+(`set`, `plan`, `accept`, `reject`, `depart`, `start`, `complete`, `invoice`, `uninvoice`). A row says who
 makes the move (`by`), from which statuses and to which, the activity entry's `action`, its
 refusal, and two choices with defaults:
 
@@ -88,7 +91,10 @@ statuses themselves.
 3. makes one update, with the completion date as the row says;
 4. asks the modules (`saveOrderParts()`), which may refuse, such as materials with too little stock;
 5. makes the verb's own writes: the request's decision, the sign-off;
-6. logs one entry with `recordActivity()`.
+6. logs one entry with `recordActivity()`;
+7. for a move the customer follows (accepted, rejected, planned or moved, on the way, resolved,
+   cancelled), mails the contact who reported the order once the transaction has committed
+   (`tellReporter()`); the customer portal's bell tells the same moves from the log.
 
 The order form is the one other writer. It saves its fields and units itself, so it takes a handle,
 `beginOrderChange()`, which guards the order and gives the status columns to write with the form's.
@@ -98,8 +104,8 @@ of its own. Creating an order (`createOrders()`), deleting it and assigning it k
 checks; they aren't transitions.
 
 - <SourceLink path="src/lib/orders/lifecycle.ts" line={69}><code>orderTransitions</code></SourceLink>
-- <SourceLink path="src/lib/orders/server/lifecycle.ts" line={66}><code>transitionOrder()</code></SourceLink>
-- <SourceLink path="src/lib/orders/server/lifecycle.ts" line={176}><code>beginOrderChange()</code></SourceLink>
+- <SourceLink path="src/lib/orders/server/lifecycle.ts" line={68}><code>transitionOrder()</code></SourceLink>
+- <SourceLink path="src/lib/orders/server/lifecycle.ts" line={189}><code>beginOrderChange()</code></SourceLink>
 - <SourceLink path="src/lib/models.ts">the status sets</SourceLink> (<code>openOrderStatuses</code>,
   <code>doneOrderStatuses</code>, …)
 

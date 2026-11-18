@@ -36,7 +36,7 @@ const statuses: readonly OrderStatus[] = [
 	"awaiting_acceptance",
 	"quote",
 	"scheduled",
-	"scheduled",
+	"on_the_way",
 	"in_progress",
 	"completed",
 	"completed",

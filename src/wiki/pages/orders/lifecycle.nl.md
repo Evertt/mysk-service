@@ -19,6 +19,7 @@ gefactureerd heeft hij steeds één **status**, en die zegt wat er daarna mee ma
 | **Nieuw (te accepteren)** | Een klant heeft hem in zijn portaal gemeld. Een planner moet nog beslissen. |
 | **Nieuw**                 | Geaccepteerd, of op kantoor gemaakt. Nog niet ingepland.                    |
 | **Ingepland**             | Er is een monteur, een dag en een tijd.                                     |
+| **Onderweg**              | De monteur is vertrokken; de klant leest "Monteur onderweg".                |
 | **In behandeling**        | De monteur is aan de klus begonnen.                                         |
 | **Afgerond**              | Klaar. Als de monteur hem afrondt, heeft de klant getekend.                 |
 | **Gefactureerd**          | Op een factuur die is verstuurd. De opdracht ligt vast.                     |
@@ -42,21 +43,22 @@ Elke stap heeft een naam, een **werkwoord** (in de code een _verb_), en iemand d
 - **De planner** _accepteert_ een melding van een klant of _wijst_ hem _af_. Geaccepteerd krijgt
   hij de status Nieuw, of meteen Ingepland als de planner hem in dezelfde stap inplant. Afgewezen
   wordt hij Geannuleerd, met een reden die de klant in zijn portaal leest.
-- **De monteur** _start_ een ingeplande klus en _rondt_ de klus die in behandeling is _af_, met de
-  handtekening van de klant.
+- **De monteur** _vertrekt_ naar een ingeplande klus (**Ik ben onderweg** in het monteursportaal:
+  hij is dan Onderweg, en de klant hoort het), _start_ een ingeplande klus of een waar hij naar
+  onderweg is, en _rondt_ de klus die in behandeling is _af_, met de handtekening van de klant.
 - **Facturatie** maakt een afgeronde opdracht _Gefactureerd_ als er een factuur voor wordt
   verstuurd, en weer Afgerond als die factuur wordt geannuleerd.
 - **Het kantoor** kan een status ook met de hand _zetten_: in het opdrachtformulier, in de statuskolom
   van de lijst, of met een bulkactie. Met de hand kan het een opdracht elke status geven uit Nieuw,
-  Ingepland, In behandeling, Afgerond of Geannuleerd, maar nooit Gefactureerd, en nooit bij een
+  Ingepland, Onderweg, In behandeling, Afgerond of Geannuleerd, maar nooit Gefactureerd, en nooit bij een
   opdracht met de status Gefactureerd of Nieuw (te accepteren).
 
 Is een opdracht eenmaal gefactureerd, dan kun je hem niet meer bewerken of verwijderen: hij staat
 met zijn bedragen op een factuur. Annuleer de factuur en hij is weer Afgerond.
 
 Dezelfde regels sturen de knoppen. De status in de opdrachtenlijst biedt alleen de statussen die
-die opdracht met de hand mag krijgen, en het monteursportaal toont **Klus starten** alleen bij een
-ingeplande opdracht. Ze kunnen de server niet tegenspreken, want ze vragen het aan dezelfde tabel.
+die opdracht met de hand mag krijgen, en het monteursportaal toont **Ik ben onderweg** alleen bij een
+ingeplande opdracht en **Klus starten** alleen bij een die ingepland of onderweg is. Ze kunnen de server niet tegenspreken, want ze vragen het aan dezelfde tabel.
 
 <TryIt as="planner" />
 
@@ -64,7 +66,7 @@ ingeplande opdracht. Ze kunnen de server niet tegenspreken, want ze vragen het a
 
 **Eén tabel.** De regels zijn `orderTransitions`, de statusovergangen (transitions), in
 `src/lib/orders/lifecycle.ts`: een rij per
-werkwoord (`set`, `plan`, `accept`, `reject`, `start`, `complete`, `invoice`, `uninvoice`). Een rij
+werkwoord (`set`, `plan`, `accept`, `reject`, `depart`, `start`, `complete`, `invoice`, `uninvoice`). Een rij
 zegt wie de stap zet (`by`), vanuit welke statussen en naar welke, de `action` van de logregel in het
 activiteitenlog, de weigering, en twee keuzes met een standaardwaarde:
 
@@ -91,7 +93,10 @@ wie hem aanroept. Die:
 4. legt de wijziging voor aan de modules (`saveOrderParts()`), die kunnen weigeren, zoals
    materialen bij te weinig voorraad;
 5. doet wat het werkwoord zelf schrijft: het besluit over de melding, de aftekening;
-6. schrijft één logregel met `recordActivity()`.
+6. schrijft één logregel met `recordActivity()`;
+7. mailt bij een stap die de klant volgt (geaccepteerd, afgewezen, ingepland of verplaatst,
+   onderweg, opgelost, geannuleerd) het klantcontact dat de opdracht meldde, zodra de transactie is
+   vastgelegd (`tellReporter()`); de bel van het klantportaal vertelt dezelfde stappen uit het log.
 
 Het opdrachtformulier is de enige andere die schrijft. Het slaat zijn velden en apparaten zelf op,
 dus het krijgt een handle, `beginOrderChange()`, die de opdracht bewaakt en de statuskolommen geeft
@@ -102,8 +107,8 @@ een eigen update van `order.status`. Een opdracht aanmaken (`createOrders()`), v
 toewijzen houden hun eigen controles; dat zijn geen statusovergangen.
 
 - <SourceLink path="src/lib/orders/lifecycle.ts" line={69}><code>orderTransitions</code></SourceLink>
-- <SourceLink path="src/lib/orders/server/lifecycle.ts" line={66}><code>transitionOrder()</code></SourceLink>
-- <SourceLink path="src/lib/orders/server/lifecycle.ts" line={176}><code>beginOrderChange()</code></SourceLink>
+- <SourceLink path="src/lib/orders/server/lifecycle.ts" line={68}><code>transitionOrder()</code></SourceLink>
+- <SourceLink path="src/lib/orders/server/lifecycle.ts" line={189}><code>beginOrderChange()</code></SourceLink>
 - <SourceLink path="src/lib/models.ts">de statussets</SourceLink> (<code>openOrderStatuses</code>,
   <code>doneOrderStatuses</code>, …)
 

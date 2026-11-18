@@ -29,10 +29,16 @@ import {
 } from "#lib/orders/server/index.ts";
 import { id, text } from "#lib/schema.ts";
 import { visibleOrNone } from "#lib/server/access/index.ts";
-import { currentCustomer, type CustomerAccess, sameTenant } from "#lib/server/auth/index.ts";
+import {
+	currentCustomer,
+	currentTenant,
+	type CustomerAccess,
+	inTenant,
+	sameTenant,
+} from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
-import { customerSite, equipment, order, orderRequest } from "#lib/server/db/schema.ts";
+import { activity, customerSite, equipment, order, orderRequest } from "#lib/server/db/schema.ts";
 import { feedFor, liveFeed } from "#lib/server/live.ts";
 import { orNotFound } from "#lib/server/records.ts";
 import { forCustomers } from "#lib/server/remote-functions.ts";
@@ -124,8 +130,31 @@ export const getPortalOrder = forCustomers.query(v.string(), async (number) => {
 	]);
 	if (!found || !record) error(404, m.client_order_not_found({ number }));
 	const { engineer, units, signoff } = record;
-	return { order: { ...found, engineer, units }, signoff };
+	// For its timeline: who received it, and when the engineer set out for it.
+	const progress = { organization: currentTenant().name, departedAt: await departedAt(found.id) };
+	return { order: { ...found, engineer, units, ...progress }, signoff };
 });
+
+/**
+ * When the engineer last set out for one of the tenant's orders (`departed` in the log), which the
+ * caller found the contact may read; none if they never did.
+ */
+async function departedAt(orderId: number) {
+	const [entry] = await db
+		.select({ at: activity.createdAt })
+		.from(activity)
+		.where(
+			and(
+				inTenant(activity),
+				eq(activity.subjectType, "order"),
+				eq(activity.subjectId, String(orderId)),
+				eq(activity.action, "departed"),
+			),
+		)
+		.orderBy(desc(activity.id))
+		.limit(1);
+	return entry?.at ?? null;
+}
 
 // --- Equipment and locations ---------------------------------------------------------------
 

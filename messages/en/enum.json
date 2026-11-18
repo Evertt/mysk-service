@@ -2,6 +2,7 @@
 	"$schema": "https://inlang.com/schema/inlang-message-format",
 	"enum_order_status_quote": "Quote",
 	"enum_order_status_scheduled": "Scheduled",
+	"enum_order_status_on_the_way": "On the way",
 	"enum_order_status_in_progress": "In progress",
 	"enum_order_status_completed": "Completed",
 	"enum_order_status_invoiced": "Invoiced",

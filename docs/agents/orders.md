@@ -9,7 +9,8 @@ sign-off).
 Which status may follow which, and for whom, is one table: `orderTransitions` in
 `src/lib/orders/lifecycle.ts`, a row per verb. `set` is the office giving a status by hand (the
 form, the list's status, bulk); `plan` the planner's; `accept` and `reject` a customer's report;
-`start` and `complete` the engineer's; `invoice` and `uninvoice` invoicing's. A row says who makes
+`depart` (scheduled → on the way, the portal's "On my way"), `start` (from scheduled or on the
+way) and `complete` the engineer's; `invoice` and `uninvoice` invoicing's. A row says who makes
 the move, from which statuses and to which, the activity entry's action, its refusal, and two
 choices with defaults:
 
@@ -36,6 +37,14 @@ own writes (the order request's decision, the sign-off), and logs one entry. Ref
 order's number for invoicing's, which moves several), or, for the planner, the engineer's problem
 at the field `engineerId`. A command turns them into a 400 itself, as the
 list's status cell does. The caller still emits `orders.committed` and refreshes its queries.
+
+**The customer follows** a move when `customerUpdate()` (`src/lib/orders/server/reporter-mail.ts`)
+says so: accepted, rejected, planned or moved, on the way, resolved, cancelled. `transitionOrder()`
+and the form's `finish()` then call `tellReporter()`, which mails the contact who reported the
+order (in the language of `order_request.reporter_locale`, while they may still read it) after the
+commit; accepted and planned in one step is one mail. The customer portal's bell tells the same
+moves from the log, by the `customer` rules in `#lib/server/notifications/rules.ts`: keep the two
+in step.
 
 The order form saves its own fields and units, so it takes a handle instead:
 `beginOrderChange(tx, id, to)` guards the order (a 404, invoiced, awaiting acceptance) and gives

@@ -36,6 +36,12 @@ vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals }) }));
 vi.mock("#lib/server/activity/index.ts", () => ({
 	recordActivity: (_tx: unknown, record: unknown) => logged(record),
 }));
+// What the reporter is told of each move (the mail itself: `customer-notifications.spec.ts`).
+const told = vi.fn();
+vi.mock("#lib/orders/server/reporter-mail.ts", async (importOriginal) => ({
+	...(await importOriginal<object>()),
+	tellReporter: (orderId: number, update: string) => told(orderId, update),
+}));
 
 // A temporary database with the tables the moves touch (see `acceptance.spec.ts`).
 const folder = await vi.hoisted(async () => {
@@ -69,7 +75,7 @@ vi.mock("#lib/server/db/index.ts", async () => {
 		);
 		create table order_request (
 			order_id integer primary key, organization_id text not null, user_id text,
-			reporter_name text not null, decided_at integer, decided_by text, rejection_reason text
+			reporter_name text not null, reporter_locale text, decided_at integer, decided_by text, rejection_reason text
 		);
 		create table order_signoff (
 			order_id integer primary key, organization_id text not null, signer_name text not null,
@@ -106,6 +112,7 @@ beforeEach(async () => {
 	locals.user = { id: "u1", name: "Jo" };
 	locals.tenant = tenant("north");
 	logged.mockClear();
+	told.mockClear();
 	parts.mockClear();
 	parts.mockImplementation(async () => undefined);
 	await db.delete(orderSignoff);
@@ -450,6 +457,109 @@ function asEngineer(userId = "e1", name = "Eli de Vries") {
 	locals.tenant = tenant("north", ["engineer"]);
 }
 
+describe("depart: the engineer sets out for a scheduled job", () => {
+	test("it's then on the way, with the modules following; logged as departed, the reporter told", async () => {
+		const { id, number } = await orderIn("scheduled", { engineerId: 1 });
+		asEngineer();
+		expect(await db.transaction((tx) => transitionOrder(tx, { verb: "depart", id }))).toEqual({
+			id,
+			number,
+		});
+		expect(await stored(id)).toMatchObject({ status: "on_the_way", completedAt: null });
+		expect(parts).toHaveBeenCalledWith(
+			expect.objectContaining({ from: "scheduled", status: "on_the_way" }),
+		);
+		expect(logged).toHaveBeenCalledWith(
+			expect.objectContaining({ action: "departed", after: { status: "on_the_way" } }),
+		);
+		expect(told).toHaveBeenCalledWith(id, "on_the_way");
+	});
+
+	test("then they start it as before", async () => {
+		const { id } = await orderIn("on_the_way", { engineerId: 1 });
+		asEngineer();
+		await db.transaction((tx) => transitionOrder(tx, { verb: "start", id }));
+		expect(await stored(id)).toMatchObject({ status: "in_progress" });
+		// Starting isn't a change the customer follows.
+		expect(told).not.toHaveBeenCalled();
+	});
+
+	test("only a scheduled job, and only their own", async () => {
+		const { id } = await orderIn("in_progress", { engineerId: 1 });
+		asEngineer();
+		expect(
+			await refusal(() => db.transaction((tx) => transitionOrder(tx, { verb: "depart", id }))),
+		).toEqual(["This order is in progress; it can't be changed here"]);
+		const others = await orderIn("scheduled", { engineerId: 4 });
+		expect(
+			await refusal(() =>
+				db.transaction((tx) => transitionOrder(tx, { verb: "depart", id: others.id })),
+			),
+		).toBe(404);
+		expect(await stored(others.id)).toMatchObject({ status: "scheduled" });
+		expect(told).not.toHaveBeenCalled();
+	});
+});
+
+describe("what the reporter is told", () => {
+	test("accepted; rejected; cancelled; completed by hand; not invoicing's moves", async () => {
+		const accepted = await orderIn("awaiting_acceptance");
+		await db.transaction((tx) => transitionOrder(tx, { verb: "accept", id: accepted.id }));
+		const rejected = await orderIn("awaiting_acceptance");
+		await db.transaction((tx) =>
+			transitionOrder(tx, { verb: "reject", id: rejected.id, reason: "Niet ons onderhoud" }),
+		);
+		const cancelled = await orderIn("scheduled");
+		await db.transaction((tx) =>
+			transitionOrder(tx, { verb: "set", id: cancelled.id, to: "cancelled" }),
+		);
+		const completed = await orderIn("in_progress");
+		await db.transaction((tx) =>
+			transitionOrder(tx, { verb: "set", id: completed.id, to: "completed" }),
+		);
+		expect(told.mock.calls).toEqual([
+			[accepted.id, "accepted"],
+			[rejected.id, "rejected"],
+			[cancelled.id, "cancelled"],
+			[completed.id, "resolved"],
+		]);
+		told.mockClear();
+		const done = { id: completed.id, number: completed.number, status: "completed" as const };
+		await db.transaction((tx) =>
+			transitionOrder(tx, { verb: "invoice", orders: [done], note: "F-1" }),
+		);
+		expect(told).not.toHaveBeenCalled();
+	});
+
+	test("planned, and moved; accepted and planned at once is told once, as planned", async () => {
+		const day = Temporal.PlainDate.from("2026-10-14");
+		const quote = await orderIn("quote");
+		await db.transaction((tx) =>
+			transitionOrder(tx, { verb: "plan", id: quote.id, engineerId: 1, day, time: "09:00" }),
+		);
+		// The same time again: the planner's move is made, but nothing changed for the customer.
+		await db.transaction((tx) =>
+			transitionOrder(tx, { verb: "plan", id: quote.id, engineerId: 4, day, time: "09:00" }),
+		);
+		await db.transaction((tx) =>
+			transitionOrder(tx, { verb: "plan", id: quote.id, engineerId: 4, day, time: "11:00" }),
+		);
+		const report = await orderIn("awaiting_acceptance");
+		await db.transaction((tx) =>
+			transitionOrder(tx, {
+				verb: "accept",
+				id: report.id,
+				plan: { engineerId: 1, day, time: "10:00" },
+			}),
+		);
+		expect(told.mock.calls).toEqual([
+			[quote.id, "planned"],
+			[quote.id, "planned"],
+			[report.id, "planned"],
+		]);
+	});
+});
+
 describe("start: the engineer starts a scheduled job", () => {
 	test("it's then in progress, with the modules following; logged as work started", async () => {
 		const { id, number } = await orderIn("scheduled", { engineerId: 1 });
@@ -728,11 +838,12 @@ describe("the order form's change (beginOrderChange)", () => {
 describe("each verb moves an order only from its statuses, and refuses it from the others", () => {
 	// The statuses each verb moves from, as the plan's rules (Q1) have them.
 	const movesFrom: Record<string, readonly OrderStatus[]> = {
-		set: ["quote", "scheduled", "in_progress", "completed", "cancelled"],
-		plan: ["quote", "scheduled", "in_progress"],
+		set: ["quote", "scheduled", "on_the_way", "in_progress", "completed", "cancelled"],
+		plan: ["quote", "scheduled", "on_the_way", "in_progress"],
 		accept: ["awaiting_acceptance"],
 		reject: ["awaiting_acceptance"],
-		start: ["scheduled"],
+		depart: ["scheduled"],
+		start: ["scheduled", "on_the_way"],
 		complete: ["in_progress"],
 	};
 	// What each verb moves an order with `status` to: the office's set to another status than its
@@ -743,6 +854,7 @@ describe("each verb moves an order only from its statuses, and refuses it from t
 			plan: status,
 			accept: "quote",
 			reject: "cancelled",
+			depart: "on_the_way",
 			start: "in_progress",
 			complete: "completed",
 		};
@@ -753,6 +865,7 @@ describe("each verb moves an order only from its statuses, and refuses it from t
 		awaiting_acceptance: "awaiting acceptance",
 		quote: "quote",
 		scheduled: "scheduled",
+		on_the_way: "on the way",
 		in_progress: "in progress",
 		completed: "completed",
 		invoiced: "invoiced",
@@ -769,7 +882,7 @@ describe("each verb moves an order only from its statuses, and refuses it from t
 		if (verb === "accept" || verb === "reject") {
 			return `Order ${number} isn't awaiting acceptance any more.`;
 		}
-		return status === "scheduled"
+		return status === "scheduled" || status === "on_the_way"
 			? "Start the job first"
 			: `This order is ${statusNames[status]}; it can't be changed here`;
 	};
@@ -780,6 +893,7 @@ describe("each verb moves an order only from its statuses, and refuses it from t
 			plan: { verb: "plan", id, engineerId: null, day, time: "09:00" },
 			accept: { verb: "accept", id },
 			reject: { verb: "reject", id, reason: "Nee" },
+			depart: { verb: "depart", id },
 			start: { verb: "start", id },
 			complete: { verb: "complete", id, signoff },
 		} as const;
@@ -792,7 +906,7 @@ describe("each verb moves an order only from its statuses, and refuses it from t
 		for (const status of orderStatuses) {
 			const moves = from.includes(status);
 			test(`${verb} ${moves ? "moves" : "refuses"} an order that's ${status}`, async () => {
-				const engineers = verb === "start" || verb === "complete";
+				const engineers = verb === "depart" || verb === "start" || verb === "complete";
 				const { id, number } = await orderIn(status, { engineerId: engineers ? 1 : null });
 				if (engineers) asEngineer();
 				const refused = await refusal(() => move(verb, id, status));

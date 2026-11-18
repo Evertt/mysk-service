@@ -25,8 +25,8 @@ import { unitSignals } from "../api/extensions.ts";
 import { type Concern, defaultThresholds, type UnitStatus } from "../model.ts";
 import { component, conditionSettings, unitCondition } from "./schema.ts";
 
-/** The order statuses that make a unit's work planned: scheduled, or under way. */
-const plannedStatuses = ["scheduled", "in_progress"] as const;
+/** The order statuses that make a unit's work planned: scheduled, on the way, or under way. */
+const plannedStatuses = ["scheduled", "on_the_way", "in_progress"] as const;
 
 /** A status's place, worst first (`unitStatuses`), in SQL. */
 const rankOf = (status: SQL) =>

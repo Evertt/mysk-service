@@ -48,6 +48,7 @@ describe("the dashboard's charts", () => {
 			"Awaiting acceptance",
 			"Quote",
 			"Scheduled",
+			"On the way",
 			"In progress",
 			"Completed",
 			"Invoiced",

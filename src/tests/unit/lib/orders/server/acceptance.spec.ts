@@ -65,7 +65,7 @@ vi.mock("#lib/server/db/index.ts", async () => {
 		);
 		create table order_request (
 			order_id integer primary key, organization_id text not null, user_id text,
-			reporter_name text not null, decided_at integer, decided_by text, rejection_reason text
+			reporter_name text not null, reporter_locale text, decided_at integer, decided_by text, rejection_reason text
 		);
 		insert into customer values (1, 'north'), (3, 'south');
 		insert into engineer values (1, 'north', 'Eli', 1), (2, 'south', 'Sam', 1);

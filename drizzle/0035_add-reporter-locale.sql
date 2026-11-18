@@ -1,0 +1,1 @@
+ALTER TABLE `order_request` ADD `reporter_locale` text;

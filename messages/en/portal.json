@@ -11,6 +11,8 @@
 	"portal_no_time": "No time set",
 	"portal_job_started": "Job started",
 	"portal_start_job": "Start job",
+	"portal_on_my_way": "On my way",
+	"portal_on_my_way_sent": "The customer knows you're on the way",
 	"portal_job": "The job",
 	"portal_equipment": "Equipment",
 	"portal_new_installation": "New installation",

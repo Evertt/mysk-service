@@ -9,6 +9,7 @@
  */
 import { and, count, eq } from "drizzle-orm";
 
+import { getLocale } from "#lib/paraglide/runtime.js";
 import { currentTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { order, orderRequest } from "#lib/server/db/schema.ts";
@@ -25,9 +26,14 @@ export async function requestOrder(
 ) {
 	const { organizationId, user } = currentTenant();
 	const [created] = await createOrders(tx, [{ ...draft, status: "awaiting_acceptance" }]);
-	await tx
-		.insert(orderRequest)
-		.values({ orderId: created.id, organizationId, userId: user.id, reporterName: user.name });
+	await tx.insert(orderRequest).values({
+		orderId: created.id,
+		organizationId,
+		userId: user.id,
+		reporterName: user.name,
+		// The mails about its progress are in this language (`./reporter-mail.ts`).
+		reporterLocale: getLocale(),
+	});
 	return created;
 }
 
