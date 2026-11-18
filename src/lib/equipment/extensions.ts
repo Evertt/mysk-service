@@ -22,7 +22,7 @@ export const points = defineRecordPoints("equipment", {
 });
 
 /** The unit a module answers the timeline's points about: one the viewer may read. */
-export interface TimelineUnit {
+interface TimelineUnit {
 	id: number;
 	serialNumber: string;
 	customerId: number;

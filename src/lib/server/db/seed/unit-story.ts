@@ -29,7 +29,7 @@ export const STORY_UNIT = "Sectionaaldeur laaddok 07";
 const LAST_STEP = "14:30";
 
 /** The story's day: today once its last step is past, else yesterday (in the seed's time zone). */
-export function storyDay(at: Temporal.Instant = toMoment(now)) {
+function storyDay(at: Temporal.Instant = toMoment(now)) {
 	const local = at.toZonedDateTimeISO(Temporal.Now.timeZoneId());
 	const last = Temporal.PlainTime.from(LAST_STEP);
 	const today = local.toPlainDate();
@@ -48,7 +48,7 @@ export const storyMoment = (time: string, day = storyDay()) =>
 		.toInstant();
 
 /** A small PNG of one colour, `width` × `height`: a stand-in for a photo the engineer took. */
-export function solidPng(width: number, height: number, [r, g, b]: [number, number, number]) {
+function solidPng(width: number, height: number, [r, g, b]: [number, number, number]) {
 	const chunk = (type: string, data: Buffer) => {
 		const body = Buffer.concat([Buffer.from(type, "ascii"), data]);
 		const length = Buffer.alloc(4);

@@ -77,7 +77,7 @@ const changedTo = (row: Row, field: string) => (row.changes?.[field] as unknown[
  * The core's entries of the unit for a page after `before`: its installation, its warranty's end
  * (the office's), and what the log says of it and of its orders the viewer reads.
  */
-export async function coreEntries(
+async function coreEntries(
 	query: TimelineQuery,
 	unit: { installedAt: Temporal.PlainDate; warrantyUntil: Temporal.PlainDate },
 ): Promise<TimelineAnswer> {
@@ -211,7 +211,7 @@ interface LogContext {
  * The log's rows (oldest first) as timeline entries: an order's steps close together as one
  * (accepted and planned; the photos of a report with the report), photos added together as one.
  */
-export function logEntries(rows: readonly Row[], context: LogContext): TimelineEntry[] {
+function logEntries(rows: readonly Row[], context: LogContext): TimelineEntry[] {
 	const { asking } = context;
 	const office = asking.audience === "office";
 	const entries: TimelineEntry[] = [];

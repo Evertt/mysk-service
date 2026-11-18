@@ -60,8 +60,11 @@
 	</Card.Content>
 </Card.Root>
 
-<Card.Root class="rounded-xl" data-unit-timeline-card>
+<Card.Root class="rounded-xl">
+	<Card.Header>
+		<Card.Title>{m.equipment_timeline_title()}</Card.Title>
+	</Card.Header>
 	<Card.Content>
-		<UnitTimeline serial={unit.serialNumber} shell="engineer" />
+		<UnitTimeline serial={unit.serialNumber} shell="engineer" heading={false} />
 	</Card.Content>
 </Card.Root>

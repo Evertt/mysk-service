@@ -18,6 +18,7 @@ import {
 	rows,
 	useApp,
 	users,
+	value,
 } from "./app.ts";
 
 const { shltr } = organizations;
@@ -140,7 +141,7 @@ describe("the customer portal", () => {
 		await expect.poll(shown).toBe(latest.length);
 	});
 
-	test("their equipment: each site with its locations and units, and a unit's history", async () => {
+	test("their equipment: each site with its locations and units, and a unit's timeline", async () => {
 		await app.go("/portal/equipment");
 		const units = await rows<{ serial_number: string }>(
 			`select serial_number from equipment where customer_id = ?`,
@@ -152,7 +153,7 @@ describe("the customer portal", () => {
 		expect(shown.toSorted()).toEqual(units.map((unit) => unit.serial_number).toSorted());
 
 		// A unit with orders: its page has its state from the modules SHLTR has (its condition, its
-		// inspection status, its last maintenance), and its service history a page of its own.
+		// inspection status, its last maintenance), and what's happening with it.
 		const [unit] = await rows<{ serial_number: string; orders: number }>(
 			`select e.serial_number, count(*) as orders from equipment e
 			 join order_unit ou on ou.equipment_id = e.id
@@ -191,23 +192,20 @@ describe("the customer portal", () => {
 		expect(last).toBe(maintained?.number ?? "");
 		expect(await fitsWidth(app.page)).toBe(true);
 
-		await app.page
-			.locator("main")
-			.getByRole("link", { name: /^Service history/ })
-			.click();
-		await app.page.waitForURL(
-			(url) => url.pathname === `/portal/equipment/${unit.serial_number}/history`,
+		// What's happening with it is on its page: its timeline, its orders linked to their pages.
+		const timeline = app.page.getByRole("region", { name: "What's happening" });
+		await timeline.locator("[data-timeline-entry]").first().waitFor();
+		const linked = await timeline
+			.locator('a[href^="/portal/orders/"]')
+			.evaluateAll((links) => links.map((link) => link.textContent?.trim() ?? ""));
+		const ofUnit = await rows<{ number: string }>(
+			`select o.number from order_unit u join "order" o on o.id = u.order_id
+			 join equipment e on e.id = u.equipment_id where e.serial_number = ?`,
+			[unit.serial_number],
 		);
-		await expect
-			.poll(() =>
-				app.page
-					.getByRole("region", { name: "Orders on this unit" })
-					.locator("[data-order]")
-					.count(),
-			)
-			.toBe(Math.min(50, unit.orders));
-		await app.page.locator("[data-app-bar-back]").click();
-		await app.page.waitForURL((url) => url.pathname === `/portal/equipment/${unit.serial_number}`);
+		expect(linked.length).toBeGreaterThan(0);
+		for (const number of linked) expect(ofUnit.map((row) => row.number)).toContain(number);
+		expect(await fitsWidth(app.page)).toBe(true);
 	});
 
 	test("a done order shows its sign-off, its checklists' results and the work order to print", async () => {
@@ -311,7 +309,7 @@ describe("reporting a breakdown", () => {
 		expect(await scan(app.page, unit.qr_token)).toEqual({
 			status: 200,
 			path: `/portal/equipment/${encodeURIComponent(unit.serial_number)}`,
-			search: "",
+			search: "?via=qr",
 		});
 		await app.page.locator(`[data-client-unit="${unit.serial_number}"]`).waitFor();
 		await app.page.locator("main").getByRole("link", { name: "Report a breakdown" }).click();
@@ -324,6 +322,10 @@ describe("reporting a breakdown", () => {
 		await app.page.getByRole("button", { name: "Send report" }).click();
 		await app.page.locator("[data-reported]").waitFor();
 		expect(await latest()).toMatchObject({ unit: unit.id, priority: "normal" });
+		// Kept as reported through the QR code, as the unit's timeline says.
+		expect(await value(`select via from order_request order by order_id desc limit 1`, [])).toBe(
+			"qr",
+		);
 	});
 
 	test("a location's QR code offers the units at the location", async () => {
@@ -336,7 +338,7 @@ describe("reporting a breakdown", () => {
 		);
 		expect(await scan(app.page, location.qr_token)).toMatchObject({
 			path: "/portal/report",
-			search: `?location=${location.id}`,
+			search: `?location=${location.id}&via=qr`,
 		});
 		const units = await rows<{ id: number }>(`select id from equipment where location_id = ?`, [
 			location.id,

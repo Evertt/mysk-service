@@ -8,11 +8,11 @@
  */
 
 /** How an entry is coloured: by meaning, as the theme's tone tokens are. */
-export const timelineTones = ["neutral", "info", "success", "warning", "danger"] as const;
+const timelineTones = ["neutral", "info", "success", "warning", "danger"] as const;
 export type TimelineTone = (typeof timelineTones)[number];
 
 /** The icon an entry shows, by what happened (the component maps each to its icon). */
-export const timelineIcons = [
+const timelineIcons = [
 	"door",
 	"energy",
 	"alert",

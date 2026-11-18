@@ -5,7 +5,7 @@ import { busiest, equipmentPage, unitId } from "./equipment-helpers.ts";
 
 const { north } = organizations;
 const app = useApp();
-const { card, shownTimeline } = equipmentPage(app);
+const { card, timeline } = equipmentPage(app);
 
 const serial = "ZZ-TEST-0001";
 
@@ -99,9 +99,16 @@ describe("in North", () => {
 				location: null,
 			},
 		]);
-		expect(await page.getByText("No orders yet").count()).toBe(1);
 		expect(await card("Specifications")).toContain(multiSite.names[1]);
-		expect(await shownTimeline()).toEqual(["warranty", "installation"]);
+		// A new unit's timeline: its installation and its warranty's end.
+		await timeline().first().waitFor();
+		expect(
+			(
+				await timeline().evaluateAll((items) =>
+					items.map((item) => item.getAttribute("data-timeline-entry")),
+				)
+			).toSorted(),
+		).toEqual(["unit.installed", "unit.warranty"]);
 		expect(await card("Last service")).toContain("Never");
 	});
 
