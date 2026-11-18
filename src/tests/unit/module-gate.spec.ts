@@ -11,7 +11,7 @@
  * handler; and as SHLTR, which has every module, the same call gets past the module's check.
  */
 import { isHttpError } from "@sveltejs/kit";
-import { describe, expect, test, vi } from "vite-plus/test";
+import { describe, expect, onTestFinished, test, vi } from "vite-plus/test";
 
 import { moduleIds } from "#lib/modules/ids.ts";
 import { issueIntegrationToken } from "#lib/server/auth/integrations.ts";
@@ -78,6 +78,14 @@ async function refusal(run: () => unknown) {
 	}
 }
 
+/**
+ * What a module's handlers log as SHLTR when they run on the untouchable argument: a contribution
+ * of another module that reads it fails, and the extension point logs that.
+ */
+const loggedOnPurpose: Partial<Record<string, string>> = {
+	condition: "Module materials failed at condition.articles:",
+};
+
 describe.each(moduleIds)("%s, for a tenant without it", (id) => {
 	test("each of its remote functions is a 404, before its handler runs", async () => {
 		const remotes = await moduleRemotes(id);
@@ -98,6 +106,10 @@ describe.each(moduleIds)("%s, for a tenant without it", (id) => {
 			}),
 		);
 		// With the module, the same calls are past its check (into the handler, or a role's gate).
+		// A handler that runs fails on the argument; one that asks the other modules' contributions
+		// logs theirs failing, which is all it may log.
+		const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+		onTestFinished(() => logged.mockRestore());
 		await as(shltr.owner, async () => {
 			for (const [name, remote] of remotes) {
 				const { value } = untouchable();
@@ -105,6 +117,13 @@ describe.each(moduleIds)("%s, for a tenant without it", (id) => {
 				expect({ name, ...passed }).not.toEqual({ name, at: "once", status: 404 });
 			}
 		});
+		for (const [message, error] of logged.mock.calls) {
+			expect(message).toMatch(/^Module \S+ failed at \S+:$/);
+			expect(error).toEqual(new Error("The handler ran"));
+		}
+		if (loggedOnPurpose[id]) {
+			expect(logged).toHaveBeenCalledWith(loggedOnPurpose[id], new Error("The handler ran"));
+		}
 	});
 
 	// Most modules have none: their pages read through remote functions.

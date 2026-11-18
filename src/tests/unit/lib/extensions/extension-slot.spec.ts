@@ -1,7 +1,7 @@
 // The server half of `extension-slot.svelte.spec.ts`: what a page's HTML has when a module's part
 // fails while it's server-rendered.
 import { render } from "svelte/server";
-import { expect, test, vi } from "vite-plus/test";
+import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
 
 import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 import { points } from "#lib/orders/extensions.ts";
@@ -42,6 +42,22 @@ vi.mock("#lib/auth/session.remote.ts", () => ({
 
 const props = { point: points.detail.side, props: { number: "ORD-0001" } };
 
+// Gizmos' component not loading is logged; it's on purpose here.
+const logged = vi.spyOn(console, "error");
+beforeEach(() => {
+	logged.mockImplementation(() => {});
+});
+afterEach(() => {
+	logged.mockReset();
+});
+
+/** Whether the slot logged that gizmos' contribution didn't load. */
+const loggedGizmos = () =>
+	expect(logged).toHaveBeenCalledWith(
+		"The contribution gizmos/orders.detail.side/card didn't load.",
+		expect.any(Error),
+	);
+
 test("a failed part renders its notice in the page's HTML, ready to hydrate", async () => {
 	// SvelteKit passes the errors that boundaries catch through `handleError` like this.
 	const transformError = vi.fn(() => ({ status: 500, message: "Internal Error" }));
@@ -55,8 +71,10 @@ test("a failed part renders its notice in the page's HTML, ready to hydrate", as
 	// The error goes with the failed part, for the browser to hydrate its notice.
 	expect(body).toContain('<!--[?{"status":500,"message":"Internal Error"}-->');
 	expect(transformError).toHaveBeenCalledTimes(2);
+	loggedGizmos();
 });
 
 test("without a transformError, the page fails as a whole (SvelteKit always passes one)", async () => {
 	await expect(render(ExtensionSlot, { props })).rejects.toThrow();
+	loggedGizmos();
 });

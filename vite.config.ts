@@ -79,6 +79,9 @@ const wikiCommit = (() => {
 	}
 })();
 
+/** What Chromium logs when a ResizeObserver's notifications wait for the next frame. */
+const resizeObserverLoop = "ResizeObserver loop completed with undelivered notifications.";
+
 /** The unit tests that run in Node (`*.svelte.spec.ts` run in the browser). */
 const serverSpecs = {
 	// Worker threads start faster than forked processes: `vitest doctor` measured 16% off.
@@ -269,6 +272,12 @@ export default defineConfig({
 		// Keeps the transformed modules on disk between runs. Vitest 5.0.1 overflowed the stack reading
 		// back the messages (`patches/vitest@5.0.1.patch`; docs/agents/tests.md).
 		fsModuleCache: true,
+		// Chromium's benign notice when a ResizeObserver's callback resizes what it observes (the
+		// data table's sticky columns, measured as they render, in the client project): not a
+		// failure, so not printed. Only that message; everything else a test logs still is. Vitest
+		// reads this option at the root only, not per project.
+		onConsoleLog: (log, type) =>
+			!(type === "stderr" && log.trim() === `[Error: ${resizeObserverLoop}]`),
 		projects: [
 			{
 				extends: "./vite.config.ts",
