@@ -86,7 +86,7 @@ const pdfText = (text: string) => text.replace(/[()\\]/g, (char) => `\\${char}`)
  * A PDF of one A4 page with `lines` on it, the first as its heading, in Helvetica (WinAnsi, so
  * Dutch letters show): small, and valid enough for every browser's viewer.
  */
-export function demoPdf(lines: readonly string[]): Uint8Array {
+export function demoPdf(lines: readonly string[]): Uint8Array<ArrayBuffer> {
 	const content = [
 		"BT",
 		"/F1 20 Tf 56 770 Td",

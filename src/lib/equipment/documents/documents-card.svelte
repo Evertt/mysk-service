@@ -128,7 +128,13 @@
 					})}
 				>
 					{#snippet children({ id })}
-						<Input {id} accept={documentAccept} {...form.fields.file.as("file")} />
+						<!-- The browser's own file input, which works without JavaScript. -->
+						<input
+							{...form.fields.file.as("file")}
+							{id}
+							accept={documentAccept}
+							class="text-sm file:mr-3 file:rounded-md file:border file:bg-background file:px-3 file:py-1.5 file:text-sm file:font-medium"
+						/>
 					{/snippet}
 				</FormField>
 			</Field.FieldGroup>
