@@ -16,7 +16,7 @@ import { getOrder } from "#lib/orders/order.remote.ts";
 import { addPhotos, deletePhoto } from "#lib/orders/photos.remote.ts";
 import {
 	getPortalOrder,
-	getPortalUnit,
+	getPortalUnitHistory,
 	reportBreakdown,
 } from "#routes/(customer)/portal/client.remote.ts";
 import { getMyUnit } from "#routes/(field)/my/places.remote.ts";
@@ -174,8 +174,8 @@ describe("adding photos later", () => {
 		expect(event?.kind === "order" && event.order.photos.map((photo) => photo.id)).toEqual(ids);
 		const field = await as(lev, () => data(getMyUnit, order.serial));
 		expect(field.orders.find((one) => one.id === order.id)?.photos).toHaveLength(ids.length);
-		const portal = await as(riedel, () => data(getPortalUnit, order.serial));
-		expect(portal.orders.find((one) => one.id === order.id)?.photos).toHaveLength(ids.length);
+		const portal = await as(riedel, () => data(getPortalUnitHistory, order.serial));
+		expect(portal.find((one) => one.id === order.id)?.photos).toHaveLength(ids.length);
 	});
 
 	test("no one else adds any, also by a tampered id", async () => {
