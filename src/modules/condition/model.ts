@@ -1,8 +1,8 @@
 /**
  * The condition module's domain rules (SHLTR Connect, `docs/plans/shltr-domain.md` §2.3): a unit's
  * condition, and each of its components', is a record of its defects with advice, recorded over
- * time (the latest counts), scored on NEN 2767's scale from 1 (excellent) to 6 (very poor)
- * (`nen2767.ts`): the worst defect wins. Its status follows from its score, from the unit's
+ * time (the latest counts), scored on NEN 2767's scale from 1 (excellent) to 6 (very poor): each
+ * element's defects by the norm's method (`nen2767.ts`), the worst element's score the record's. Its status follows from its score, from the unit's
  * inspection (with checklists on) and from its open orders; a unit's status is the worst of its own
  * and its components'. Pure and isomorphic; the same rules are in SQL for the lists
  * (`server/status-sql.ts`).
@@ -14,7 +14,7 @@ import {
 	BEST_SCORE,
 	type ConditionScore,
 	type DefectGrade,
-	defectScore,
+	elementScoreOf,
 	WORST_SCORE,
 	worstScore,
 } from "./nen2767.ts";
@@ -69,31 +69,27 @@ export interface Defect extends DefectGrade {
 
 /**
  * The grade of a rejected checklist point that wasn't given one (the office filled the checklist
- * in for the engineer, or it was rejected before conditions had defects): serious, 10–30% of the
- * element, advanced, which NEN 2767's tables score 3 (Redelijk).
+ * in for the engineer, or it was rejected before conditions had defects): serious, advanced, 20% of
+ * the element, which NEN 2767's tables score 2 (Goed).
  */
 export const REJECTED_POINT_GRADE: DefectGrade = {
 	severity: "serious",
-	extent: 3,
+	extent: 20,
 	intensity: "advanced",
 };
 
-/** The score of each element a condition's defects are on (`null`: the unit itself), its worst. */
+/**
+ * The score of each element a condition's defects are on (`null`: the unit itself), by NEN 2767-1's
+ * method over that element's defects (`elementScoreOf()`).
+ */
 export function elementScores(defects: readonly Defect[]): Map<number | null, ConditionScore> {
-	const scores = new Map<number | null, ConditionScore>();
-	for (const defect of defects) {
-		const score = defectScore(defect);
-		scores.set(
-			defect.componentId,
-			worstScore([scores.get(defect.componentId) ?? BEST_SCORE, score]),
-		);
-	}
-	return scores;
+	const byElement = Map.groupBy(defects, (defect) => defect.componentId);
+	return new Map([...byElement].map(([element, own]) => [element, elementScoreOf(own)]));
 }
 
-/** An element's score: its worst defect's, or 1 without defects. */
+/** An element's score from its defects, by NEN 2767-1's method; 1 without defects. */
 export const elementScore = (defects: readonly Defect[], componentId: number | null) =>
-	worstScore(defects.filter((each) => each.componentId === componentId).map(defectScore));
+	elementScoreOf(defects.filter((each) => each.componentId === componentId));
 
 /** A recorded defect as the pages show it, with its element and its photos' ids. */
 export interface RecordedDefect extends DefectGrade {
@@ -105,9 +101,12 @@ export interface RecordedDefect extends DefectGrade {
 	photos: { id: number }[];
 }
 
-/** A condition's score: the worst of its defects, or 1 without any. */
-export const recordScore = (defects: readonly DefectGrade[]) =>
-	worstScore(defects.map(defectScore));
+/**
+ * A condition's score: the worst of its elements' (each by NEN 2767-1's method over its own
+ * defects), or 1 without defects. A component's condition has one element, the component.
+ */
+export const recordScore = (defects: readonly Defect[]) =>
+	worstScore(elementScores(defects).values());
 
 /**
  * A unit's current score: the worst of its own latest condition's and its components' latest

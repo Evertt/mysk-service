@@ -10,7 +10,6 @@ import { unitBySerial } from "#lib/equipment/server/index.ts";
 import { equipment } from "#lib/server/db/schema.ts";
 
 import { conditionSchema } from "./form/condition-schema.ts";
-import type { DefectExtent } from "./nen2767.ts";
 import { form, query } from "./remote-functions.ts";
 import { conditionsOf, elementsOf, recordOfficeCondition } from "./server/conditions.ts";
 import { thresholdsOf } from "./server/settings.ts";
@@ -60,7 +59,6 @@ export const recordCondition = form(conditionSchema, ({ serialNumber, componentI
 		defects: input.defects.map((defect) => ({
 			...defect,
 			componentId: defect.componentId ?? null,
-			extent: defect.extent as DefectExtent,
 		})),
 	}),
 );
