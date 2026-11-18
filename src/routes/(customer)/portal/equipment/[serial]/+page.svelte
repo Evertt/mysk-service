@@ -24,8 +24,7 @@
 
 	let { params }: PageProps = $props();
 
-	const data = $derived(await getPortalUnit(params.serial));
-	const unit = $derived(data.unit);
+	const unit = $derived(await getPortalUnit(params.serial));
 	const parts = $derived({ serialNumber: unit.serialNumber });
 
 	// Live: the unit and its place (its history is its own page's).

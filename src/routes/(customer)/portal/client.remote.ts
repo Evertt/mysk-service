@@ -189,18 +189,30 @@ export const getPortalSites = forCustomers.query(async () => {
 	}));
 });
 
-/**
- * One of the customer's units the contact sees, by its serial number (or a 404): what it is,
- * where, and its orders (its service history), newest first.
- */
-export const getPortalUnit = forCustomers.query(v.string(), async (serialNumber) => {
-	const access = await currentCustomer();
-	const unit = orNotFound(
+/** One of the customer's units `access` sees, by its serial number, or a 404. */
+async function portalUnit(access: CustomerAccess, serialNumber: string) {
+	return orNotFound(
 		await readUnits(await customerUnits(access), eq(equipment.serialNumber, serialNumber)),
 		m.client_unit_not_found({ serial: serialNumber }),
 	);
-	const orders = await ordersWhere(access, onUnit(unit.id), 50);
-	return { unit, orders };
+}
+
+/**
+ * One of the customer's units the contact sees, by its serial number (or a 404): what it is and
+ * where. Its orders are its history's (`getPortalUnitHistory`).
+ */
+export const getPortalUnit = forCustomers.query(v.string(), async (serialNumber) =>
+	portalUnit(await currentCustomer(), serialNumber),
+);
+
+/**
+ * The service history of one of the customer's units the contact sees, by its serial number (or a
+ * 404, as `getPortalUnit`): its latest 50 orders, newest first.
+ */
+export const getPortalUnitHistory = forCustomers.query(v.string(), async (serialNumber) => {
+	const access = await currentCustomer();
+	const unit = await portalUnit(access, serialNumber);
+	return ordersWhere(access, onUnit(unit.id), 50);
 });
 
 /** One of the customer's locations the contact sees (or a 404), its site and its units. */
