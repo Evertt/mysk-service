@@ -115,7 +115,7 @@ describe("the Connect page, in SHLTR", () => {
 		});
 		expect(shown.find((row) => row.component?.number === "OC-1041")).toMatchObject({
 			name: "Sectionaaldeur laaddok 07",
-			score: 22,
+			score: 5,
 			status: "critical",
 			advice: "Veerpakket vervangen (SD-001) — cyclusteller boven 90%.",
 			component: { name: "Torsieveerpakket", sku: "SD-001" },
@@ -152,7 +152,7 @@ describe("the Connect page, in SHLTR", () => {
 		expect((await countsFor("status=critical,attention")).status).toEqual(counts);
 	});
 
-	test("sorts by condition, the lowest first, the rows without one last", async () => {
+	test("sorts by condition, the best (lowest) first, the rows without one last", async () => {
 		const rows = rowsOf(await unitStates(shltrId));
 		const { rows: shown } = await listed("sort=condition");
 		const scores = shown.flatMap((row) => (row.score === null ? [] : [row.score]));
@@ -167,7 +167,7 @@ describe("the Connect page, in SHLTR", () => {
 	test("filters by the condition's band", async () => {
 		const rows = rowsOf(await unitStates(shltrId));
 		const { rowCount } = await listed("condition=low");
-		expect(rowCount).toBe(rows.filter((row) => row.score !== null && row.score < 40).length);
+		expect(rowCount).toBe(rows.filter((row) => row.score !== null && row.score >= 5).length);
 		const none = await listed("condition=none");
 		expect(none.rowCount).toBe(rows.filter((row) => row.score === null).length);
 	});
@@ -271,7 +271,7 @@ describe("the equipment list's condition columns, in North", () => {
 		}
 	});
 
-	test("sort by condition, the lowest first, the units without one last", async () => {
+	test("sort by condition, the best (lowest) first, the units without one last", async () => {
 		const recorded = (await unitStates(northId, true))
 			.flatMap((unit) => unit.score ?? [])
 			.toSorted((a, b) => a - b);
@@ -291,7 +291,7 @@ describe("the equipment list's condition columns, in North", () => {
 		const { rowCount } = await as(north.member, () =>
 			data(getEquipmentList, equipmentQuery({ "condition.score": ["low", "fair"] })),
 		);
-		expect(rowCount).toBe(units.filter((unit) => unit.score !== null && unit.score < 70).length);
+		expect(rowCount).toBe(units.filter((unit) => unit.score !== null && unit.score >= 4).length);
 	});
 });
 

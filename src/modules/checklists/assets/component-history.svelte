@@ -5,8 +5,9 @@
 -->
 <script lang="ts">
 	import { getTimeZone } from "#lib/dates.ts";
-	import { formatDate, formatNumber } from "#lib/i18n/index.ts";
+	import { formatDate } from "#lib/i18n/index.ts";
 	import { OrderLink } from "#lib/orders/components.ts";
+	import { scoreText } from "#modules/condition/api/scale.ts";
 
 	import { getComponentScores } from "./assets.remote.ts";
 
@@ -42,7 +43,7 @@
 								</span>
 							</span>
 							<span class="font-semibold tabular-nums">
-								{m.checklists_score({ score: formatNumber(entry.score) })}
+								{scoreText(entry.score)}
 							</span>
 						</li>
 					{/each}

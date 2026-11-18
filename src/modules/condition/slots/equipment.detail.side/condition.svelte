@@ -1,8 +1,9 @@
 <!--
 	@component
 	The condition module's card on a unit of equipment's page (`equipment.detail.side`,
-	`#lib/equipment/extensions.ts`): the unit's latest condition and status, how its condition went,
-	and "Record condition".
+	`#lib/equipment/extensions.ts`): the unit's current score on NEN 2767's scale (the worst of its
+	own latest condition and its components') and status, how its condition went (each condition
+	with its defects), and "Record condition".
 -->
 <script lang="ts">
 	import PlusIcon from "@lucide/svelte/icons/plus";
@@ -12,8 +13,7 @@
 	import { getUnitCondition } from "../../condition.remote.ts";
 	import ConditionHistory from "../../detail/condition-history.svelte";
 	import RecordDialog from "../../detail/record-dialog.svelte";
-	import { scoreBand } from "../../model.ts";
-	import ConditionBar from "../../ui/condition-bar.svelte";
+	import ScoreBadge from "../../ui/score-badge.svelte";
 	import StatusBadge from "../../ui/status-badge.svelte";
 
 	let { serialNumber }: { serialNumber: string } = $props();
@@ -26,7 +26,6 @@
 		() => ({ type: "equipment", id: unitId }),
 		() => getUnitCondition(serialNumber).refresh(),
 	);
-	const latest = $derived(data.history[0] ?? null);
 	let recording = $state(false);
 </script>
 
@@ -43,10 +42,7 @@
 	</Card.Header>
 	<Card.Content class="flex flex-col gap-4">
 		<div class="flex flex-wrap items-center justify-between gap-3">
-			<ConditionBar
-				score={latest?.score ?? null}
-				band={latest ? scoreBand(latest.score, data.thresholds) : null}
-			/>
+			<ScoreBadge score={data.score} />
 			<StatusBadge status={data.status} concern={data.concern} />
 		</div>
 		{#if data.history.length}
@@ -62,4 +58,4 @@
 	</Card.Content>
 </Card.Root>
 
-<RecordDialog unit={data.unit} score={latest?.score ?? null} bind:open={recording} />
+<RecordDialog unit={data.unit} components={data.components} bind:open={recording} />

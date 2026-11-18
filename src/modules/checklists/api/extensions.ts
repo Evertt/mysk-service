@@ -11,14 +11,6 @@ import type { Transaction } from "#lib/server/db/index.ts";
 import type { ChecklistKind, PointResult } from "../model.ts";
 
 /**
- * The rule a checklist's score is worked out by (see `../model.ts`): the share of its points found
- * OK among those found OK or rejected, none when no point counts. Here for the modules that are told
- * a checklist is completed, which work it out over some of its points (the condition module, over
- * a component's own).
- */
-export { checklistScore } from "../model.ts";
-
-/**
  * A unit's inspection status today (`inspectionStatus()` in `../model.ts`): what the condition
  * module's status takes in, through `condition.signals`.
  */
@@ -69,11 +61,30 @@ export const clientRejected = defineSlot<{ number: string; rejected: RejectedPoi
 	"checklists.client.rejected",
 );
 
+/**
+ * Below a rejected point of a unit's checklist on the engineer portal, while it's a draft, under the
+ * remark: e.g. the condition module's defect (its severity, extent and intensity, and photos). They
+ * get the order's number, the unit's id and the point's id (`checklist_result`'s, by which they
+ * keep what they ask, checking it with `rejectedFieldPoint()` in `points.server.ts`), and render
+ * nothing when they have nothing to ask.
+ */
+export const fieldRejected = defineSlot<{
+	number: string;
+	equipmentId: number;
+	pointId: number;
+}>("checklists.field.rejected");
+
 /** A point of a completed checklist: the template point it was copied from, and what was found. */
 interface CompletedPoint {
+	/** The point's own id (`checklist_result`'s), as `checklists.field.rejected` was given it. */
+	id: number;
 	/** None for a point copied before checklists kept it that no template point matched. */
 	templateItemId: number | null;
+	/** What it checks, e.g. "Veerspanning controleren". */
+	text: string;
 	result: PointResult | null;
+	/** What's wrong, for a rejected point: its remark. */
+	remark: string | null;
 }
 
 /** A checklist that's being completed, in the transaction that completes it. */
@@ -93,8 +104,8 @@ export interface ChecklistCompleting {
 /**
  * When a checklist is completed ("na elke afgeronde werkbon"), by an engineer in the field or by the
  * office on their behalf, in its transaction: e.g. the
- * condition module records the unit's condition, its score worked out from the points
- * (`checklistScore()`), and its components'. A module that answers problems refuses the
+ * condition module records the unit's condition, its defects from the rejected points
+ * (`checklists.field.rejected`), and its components'. A module that answers problems refuses the
  * completion, which rolls it back.
  */
 export const checklistCompleted = defineSaveHook<ChecklistCompleting, { message: string }>(
@@ -131,7 +142,7 @@ export interface UnitComponent {
 	/** E.g. `OC-1041`: what the page's URL names it by. */
 	number: string;
 	name: string;
-	/** Its latest score (0–100), if it has one. */
+	/** Its latest score on NEN 2767's scale (1–6, the condition module's), if it has one. */
 	score: number | null;
 	/** The template points that check it: the points of a checklist that are its. */
 	templateItemIds: number[];

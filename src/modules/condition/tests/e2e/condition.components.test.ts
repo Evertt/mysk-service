@@ -42,7 +42,7 @@ describe("a unit's components", () => {
 		expect(await row("OC-1041").innerText()).toContain("Torsieveerpakket");
 		expect(await row("OC-1041").innerText()).toContain("OC-1041 · art. SD-001 · 2 points");
 		expect(await row("OC-1041").locator("[data-condition]").getAttribute("data-condition")).toBe(
-			"22",
+			"5",
 		);
 		expect(await row("OC-1041").locator("[data-status]").getAttribute("data-status")).toBe(
 			"critical",
@@ -94,11 +94,18 @@ describe("a unit's components", () => {
 	test("its condition is recorded as a correction, and its status and its unit's follow", async () => {
 		await row(made.number).getByRole("button", { name: "Actions for Kabelset" }).click();
 		await app.page.getByRole("menuitem", { name: "Record condition" }).click();
-		await dialog().getByLabel("Condition (%)").fill("35");
+		// Its defects are on it: there's no element to choose.
+		await dialog().getByRole("button", { name: "Add defect" }).click();
+		const defect = dialog().locator('[data-defect="0"]');
+		expect(await defect.getByLabel("Element").count()).toBe(0);
+		await defect.getByLabel("Defect", { exact: true }).fill("Draadbreuk bij de trommel");
+		await defect.getByLabel("Severity").selectOption("severe");
+		await defect.getByLabel("Extent").selectOption("4");
+		await defect.getByLabel("Intensity").selectOption("advanced");
 		await dialog().getByLabel("Advice").fill("Kabelset vervangen (SD-002).");
 		await dialog().getByRole("button", { name: "Save condition" }).click();
 		await app.toast("Condition recorded");
-		await row(made.number).locator('[data-condition="35"]').waitFor();
+		await row(made.number).locator('[data-condition="5"]').waitFor();
 		const state = (await unitStates(shltr.id)).find((each) => each.id === unit.id)!;
 		const part = state.components.find((each) => each.id === made.id)!;
 		expect(await row(made.number).locator("[data-status]").getAttribute("data-status")).toBe(
@@ -133,7 +140,7 @@ test("the customer portal's home shows a unit's components, with their condition
 		const text = await springs.innerText();
 		expect(text).toContain("Torsieveerpakket");
 		expect(text).toContain("Veerpakket vervangen (SD-001) — cyclusteller boven 90%.");
-		expect(await springs.locator("[data-condition]").getAttribute("data-condition")).toBe("22");
+		expect(await springs.locator("[data-condition]").getAttribute("data-condition")).toBe("5");
 		expect(await parts.locator("[data-component]").count()).toBe(2);
 	} finally {
 		await page.context().close();

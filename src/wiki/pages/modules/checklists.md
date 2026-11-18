@@ -54,8 +54,9 @@ after Equipment.
 
 ### Works with
 
-- **Condition** (enhances): the inspection status becomes part of a unit's condition status, and a
-  completed checklist gives the unit and its components their score. See
+- **Condition** (enhances): the inspection status becomes part of a unit's condition status, a
+  rejected point asks for its defect (on the NEN 2767 scale) in the engineer portal, and a
+  completed checklist gives the unit and its components their condition from those defects. See
   [Condition](/wiki/modules/condition).
 - **Parts shop** (enhances): a rejected point suggests the part that fixes it, with an "Add to
   order" button. See [Parts shop](/wiki/modules/parts-shop).
@@ -98,7 +99,7 @@ condition module repeats it many times in one statement.
   the checklists that follow an order's units.
 - <SourceLink path="src/modules/checklists/server/field.ts" line={45}>Filler</SourceLink>: one set
   of rules for the engineer and the office.
-- <SourceLink path="src/modules/checklists/model.ts" line={239}>inspectionStatus()</SourceLink>: valid,
+- <SourceLink path="src/modules/checklists/model.ts" line={227}>inspectionStatus()</SourceLink>: valid,
   expiring, expired, rejected, none.
 
 <DocsPointer doc="docs/agents/modules.md" section="Modules" />

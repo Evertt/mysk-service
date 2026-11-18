@@ -8,7 +8,7 @@
  */
 import { and, eq, sql } from "drizzle-orm";
 
-import { formatDate, formatNumber } from "#lib/i18n/index.ts";
+import { formatDate } from "#lib/i18n/index.ts";
 import type { DailyReport, DailyRun } from "#lib/jobs/extensions.ts";
 import { openOrderStatuses } from "#lib/models.ts";
 import { createOrders } from "#lib/orders/server/index.ts";
@@ -18,6 +18,7 @@ import { inList } from "#lib/server/db/parameters.ts";
 import { equipment, order, orderUnit } from "#lib/server/db/schema.ts";
 import { dailyOrderRun } from "#lib/server/jobs/automatic-orders.ts";
 
+import { scoreText } from "../display.ts";
 import { addWorkingDays, PLAN_WITHIN_WORKING_DAYS } from "../model.ts";
 import { inCare } from "./list-sql.ts";
 import { component } from "./schema.ts";
@@ -34,7 +35,7 @@ const hasOpenOrder = () =>
 		inList(order.status, [...openOrderStatuses]),
 	)})`;
 
-/** A unit's critical component, the lowest scored: what makes a unit critical but for itself. */
+/** A unit's critical component, the worst scored: what makes a unit critical but for itself. */
 interface CriticalComponent {
 	number: string;
 	name: string;
@@ -54,17 +55,17 @@ async function criticalUnits(tx: Transaction | typeof db, id?: number) {
 	}, 'score', ${part.score}, 'advice', ${part.advice}) from ${component} where ${eq(
 		component.equipmentId,
 		equipment.id,
-	)} and ${sameTenant(component, equipment)} and ${part.score} < ${
+	)} and ${sameTenant(component, equipment)} and ${part.score} >= ${
 		unit.parts.critical
-	} order by ${part.score}, ${component.position} limit 1)`.mapWith(
+	} order by ${part.score} desc, ${component.position} limit 1)`.mapWith(
 		(text: string | null): CriticalComponent | null => (text ? JSON.parse(text) : null),
 	);
 	return tx
 		.select({
 			id: equipment.id,
 			customerId: equipment.customerId,
-			score: unit.score,
-			band: unit.band,
+			score: unit.ownScore,
+			band: unit.ownBand,
 			advice: unit.advice,
 			component: worstComponent,
 		})
@@ -90,12 +91,12 @@ function describe(
 	by: Temporal.PlainDate,
 ) {
 	const date = formatDate(by);
-	// Its score is below the critical threshold, or a component's is, or else its inspection has
-	// expired.
+	// Its own score is at or past the critical threshold, or a component's is, or else its
+	// inspection has expired.
 	if (unit.score !== null && unit.band === "low") {
 		return m
 			.condition_auto_order_score({
-				score: `${formatNumber(unit.score)}%`,
+				score: scoreText(unit.score),
 				date,
 				advice: unit.advice ?? "",
 			})
@@ -105,7 +106,7 @@ function describe(
 		return m
 			.condition_auto_order_component({
 				component: `${unit.component.number} ${unit.component.name}`,
-				score: `${formatNumber(unit.component.score)}%`,
+				score: scoreText(unit.component.score),
 				date,
 				advice: unit.component.advice ?? "",
 			})

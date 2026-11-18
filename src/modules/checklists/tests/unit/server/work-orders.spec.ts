@@ -346,7 +346,8 @@ describe("the office filling a checklist in for the engineer", () => {
 			remarks: "Aandrijving vervangen.",
 		});
 		// The scores, by the hook a completed checklist runs: the unit's from all its points, the
-		// component's from its own, on the order, by the member.
+		// component's from its own, on the order, by the member: the rejected point a defect of the
+		// office's grade (3 on NEN 2767's scale), as no engineer gave it one.
 		const scores = await rows<Record<string, unknown>>(
 			`select component_id, score, source, order_id, engineer_id, user_id from unit_condition
 			 where equipment_id = ? and order_id = ? order by component_id`,
@@ -354,18 +355,14 @@ describe("the office filling a checklist in for the engineer", () => {
 		);
 		const by = { source: "checklist", order_id: draft.order_id, engineer_id: null, user_id: jan };
 		expect(scores).toEqual([
-			{
-				component_id: null,
-				score: Math.round((100 * (points.length - 1)) / points.length),
-				...by,
-			},
-			{ component_id: part.id, score: 0, ...by },
+			{ component_id: null, score: 3, ...by },
+			{ component_id: part.id, score: 3, ...by },
 		]);
 		// Its scores, the newest first.
 		const history = await as(shltr.member, () =>
 			data(getComponentScores, { serialNumber: draft.serial, componentId: part.id }),
 		);
-		expect(history[0]).toMatchObject({ score: 0, source: "checklist" });
+		expect(history[0]).toMatchObject({ score: 3, source: "checklist" });
 		// Final: it isn't changed any more, and the unit is done this year.
 		expect(
 			await as(shltr.member, () => call(officeAnswer, { id: checked.id, result: "ok" })),

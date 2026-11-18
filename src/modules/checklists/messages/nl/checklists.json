@@ -291,7 +291,6 @@
 	"checklists_assets_pick_title": "Kies een asset",
 	"checklists_assets_pick_description": "Hier zie je de checklist van dit jaar, met de historie eronder.",
 	"checklists_assets_components": "Onderdelen van {unit}",
-	"checklists_score": "{score}%",
 	"checklists_no_score": "Geen score",
 	"checklists_start_created": "{number} aangemaakt: plan hem in op de planning.",
 	"checklists_start_opened": "{number} staat al open: hier is de checklist.",

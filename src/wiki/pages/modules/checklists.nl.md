@@ -55,7 +55,9 @@ staat in de zijbalk direct na Apparatuur.
 ### Werkt samen met
 
 - **Onderdelenbeheer** (verrijkt): de keuringsstatus wordt deel van de conditiestatus van een
-  apparaat, en een afgeronde checklist geeft het apparaat en zijn onderdelen hun score. Zie
+  apparaat, een afgekeurd punt vraagt in het monteursportaal om zijn gebrek (op de NEN
+  2767-schaal), en een afgeronde checklist geeft het apparaat en zijn onderdelen hun conditie uit
+  die gebreken. Zie
   [Onderdelenbeheer](/wiki/modules/condition).
 - **Onderdelen Shop** (verrijkt): een afgekeurd punt stelt het onderdeel voor dat het oplost, met
   een knop "Toevoegen aan opdracht". Zie [Onderdelen Shop](/wiki/modules/parts-shop).
@@ -100,7 +102,7 @@ parameters bindt omdat Onderdelenbeheer hem vaak herhaalt in één statement.
   de checklists die de apparaten van een opdracht volgen.
 - <SourceLink path="src/modules/checklists/server/field.ts" line={45}>Filler</SourceLink>: één set
   regels voor de monteur en het kantoor.
-- <SourceLink path="src/modules/checklists/model.ts" line={239}>inspectionStatus()</SourceLink>: geldig,
+- <SourceLink path="src/modules/checklists/model.ts" line={227}>inspectionStatus()</SourceLink>: geldig,
   bijna verlopen, verlopen, afgekeurd, geen.
 
 <DocsPointer doc="docs/agents/modules.md" section="Modules" />

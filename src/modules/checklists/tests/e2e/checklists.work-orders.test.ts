@@ -189,9 +189,10 @@ describe("an asset", () => {
 		expect(await card.locator("[data-other-points]").innerText()).toMatch(
 			new RegExp(`^${all.length - own.length} other points? of this unit (is|are) hidden$`),
 		);
-		const ok = own.filter((point) => point.result === "ok").length;
-		const counted = ok + own.filter((point) => point.result === "nok").length;
-		const score = counted ? `${Math.round((100 * ok) / counted)}%` : "No score";
+		// On NEN 2767's scale: 1 without a rejected point, 3 with one (the office's grade).
+		const counted = own.some((point) => point.result === "ok" || point.result === "nok");
+		const rejected = own.some((point) => point.result === "nok");
+		const score = !counted ? "No score" : rejected ? "3 · Fair" : "1 · Excellent";
 		expect(await card.locator("[data-component-score]").innerText()).toContain(score);
 		// Its own history: its scores.
 		const scores = Number(

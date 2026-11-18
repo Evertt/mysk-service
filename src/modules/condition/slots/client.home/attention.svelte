@@ -12,8 +12,7 @@
 	import { formatNumber } from "#lib/i18n/index.ts";
 
 	import { getClientAttention } from "../../client/client-condition.remote.ts";
-	import type { ScoreBand } from "../../model.ts";
-	import ConditionBar from "../../ui/condition-bar.svelte";
+	import ScoreBadge from "../../ui/score-badge.svelte";
 	import StatusBadge from "../../ui/status-badge.svelte";
 
 	const data = $derived(await getClientAttention());
@@ -59,10 +58,7 @@
 									<li class="flex flex-col gap-1 border-l-2 pl-3" data-component={part.number}>
 										<div class="flex flex-wrap items-center justify-between gap-2">
 											<span class="text-sm">{part.name}</span>
-											<ConditionBar
-												score={part.score}
-												band={part.band === "none" ? null : (part.band as ScoreBand)}
-											/>
+											<ScoreBadge score={part.score} />
 										</div>
 										{#if part.advice}
 											<span class="text-xs text-muted-foreground">{part.advice}</span>

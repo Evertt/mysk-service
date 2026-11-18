@@ -200,6 +200,19 @@ checkbox "Alleen onderdelen die aandacht nodig hebben" (status ∈ {`Kritiek`, `
 **Not done although the copy claims it:** the condition score is never computed; completing a work order
 doesn't touch `conditie` or `volgende_onderhoud`; nothing sends Kritiek to the planning or reserves parts.
 
+**In Fieldworks: the NEN 2767 condition scale** [decided]. The mockup's `conditie`% is replaced by NEN 2767's
+scale: 1 Uitstekend "Nieuwbouwkwaliteit, geen gebreken", 2 Goed, 3 Redelijk, 4 Matig, 5 Slecht, 6 Zeer slecht
+"Technisch rijp voor vervanging" (`src/modules/condition/nen2767.ts`). A condition record holds defects
+("gebreken"), each with its element (the unit or a component), ernst (gering, serieus, ernstig), omvang (NEN's
+classes <2%, 2–10%, 10–30%, 30–70%, ≥70%), intensiteit (begin, gevorderd, eind) and photos; NEN 2767-1's tables
+score each defect, and the worst defect wins (none: 1). A unit's score is the worst of its own latest record and
+its components'. A completed checklist's rejected points are its defects (the engineer grades each in the
+portal). The thresholds are "Kritiek vanaf" 5 and "Aandacht vanaf" 4 by default; the colours are 1–3 green and
+teal, 4 amber, 5 orange, 6 red. Records from before were converted by band (≥90 → 1, 80–89 → 2, 70–79 → 3,
+40–69 → 4, 20–39 → 5, <20 → 6), keeping the percentage as `legacy_percent`, and a tenant's thresholds the same
+way, from the highest percentage still below them (40/70 → 5/4). The column above reads "3 · Redelijk" instead
+of a bar and a percentage, and the legend's Kritiek rule "Conditie 5 · Slecht of slechter of keuring verlopen".
+
 ### 2.4 Salvo Docks (`/dock`): Dock Time Management
 
 Static data, with door-open seconds counting up live [code].

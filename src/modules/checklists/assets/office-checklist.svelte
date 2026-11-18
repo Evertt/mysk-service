@@ -20,6 +20,7 @@
 	import { formatDateTime, formatNumber, label } from "#lib/i18n/index.ts";
 	import { isOpenOrder, type OrderStatus } from "#lib/models.ts";
 	import { OrderLink } from "#lib/orders/components.ts";
+	import { pointsScore, scoreText } from "#modules/condition/api/scale.ts";
 
 	import type { UnitComponent } from "../api/extensions.ts";
 	import { checklistDraft } from "../detail/checklist-draft.svelte.ts";
@@ -27,7 +28,6 @@
 	import { completerName, pickedResultClasses } from "../display.ts";
 	import { checklistLabels } from "../labels.ts";
 	import {
-		checklistScore,
 		componentPoints,
 		isAnswered,
 		type PointResult,
@@ -101,7 +101,7 @@
 	);
 	const counts = $derived(progress(shown.points));
 	const groups = $derived([...Map.groupBy(shown.points, (point) => point.group)]);
-	const score = $derived(component ? checklistScore(editable ? shown.points : shownResults) : null);
+	const score = $derived(component ? pointsScore(editable ? shown.points : shownResults) : null);
 
 	async function completeIt() {
 		if (await draft.complete()) {
@@ -179,9 +179,7 @@
 					{component.name} · {m.checklists_assets_component_score()}
 				</span>
 				<span class="font-semibold tabular-nums">
-					{score === null
-						? m.checklists_no_score()
-						: m.checklists_score({ score: formatNumber(score) })}
+					{score === null ? m.checklists_no_score() : scoreText(score)}
 				</span>
 			</div>
 		{/if}

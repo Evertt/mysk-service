@@ -204,17 +204,17 @@ describe("Lev's planned inspection", () => {
 				[String(id), String(job.id)],
 			),
 		).toEqual([{ action: "completed", note: "1 point rejected", user_id: levUser }]);
-		// The condition module's hook: the unit's score from its points, on the order, by Lev.
+		// The condition module's hook: the unit's condition from its rejected points (on NEN 2767's
+		// scale, the worst defect's; one without a grade of the engineer's is 3), on the order, by Lev.
 		const answers = await resultsOf(first.id);
-		const ok = answers.filter((point) => point.result === "ok").length;
-		const counted = ok + answers.filter((point) => point.result === "nok").length;
+		const rejected = answers.some((point) => point.result === "nok");
 		const [score] = await rows(
 			`select score, source, order_id, engineer_id from unit_condition
 			 where equipment_id = ? and component_id is null order by id desc limit 1`,
 			[first.equipment_id],
 		);
 		expect(score).toEqual({
-			score: Math.round((100 * ok) / counted),
+			score: rejected ? 3 : 1,
 			source: "checklist",
 			order_id: job.id,
 			engineer_id: levId,

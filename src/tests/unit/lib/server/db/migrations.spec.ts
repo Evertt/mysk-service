@@ -652,7 +652,10 @@ test("0026_add-components keeps the conditions and their sequence", async () => 
 	const client = createClient({ url: `file:${join(folder, "components.db")}` });
 	await migrate(drizzle(client), { migrationsFolder: before });
 	await client.executeMultiple(beforeComponents);
-	await migrate(drizzle(client), { migrationsFolder });
+	// Up to it: 0037_condition-nen2767 converts the scores after.
+	await migrate(drizzle(client), {
+		migrationsFolder: streamBefore(migrationsFolder, "0027_add-simulation", "upto-components"),
+	});
 	expect(await afterComponents(client)).toEqual(componentsMade);
 	client.close();
 });
