@@ -36,9 +36,28 @@ export { isRemote, remoteErrorStatus, tamperWithQuery } from "./remote-functions
 
 // --- Browser ---------------------------------------------------------------------------------
 
-/** Waits until a page is interactive (see the root layout), or settled if it errored. */
-export const hydrated = (page: Page) =>
-	Promise.race([page.locator("html[data-hydrated]").waitFor({ state: "attached" }), quiet(page)]);
+/**
+ * Waits until a page is interactive (see the root layout), or settled if it has no app to start
+ * (SvelteKit's own error page). Not just until the network is quiet: on a busy machine the scripts
+ * are in well before they've hydrated the page, and a click in between is lost (the sidebar's
+ * organization menu didn't open, and the step waited for its item until the test timed out).
+ */
+export async function hydrated(page: Page) {
+	const marked = page.locator("html[data-hydrated]").waitFor({ state: "attached" });
+	// A page with nothing to start never gets the mark; the race below then needs no answer.
+	marked.catch(() => {});
+	const settled = quiet(page).then(
+		async () => {
+			const starts = await page
+				.evaluate(() => [...document.scripts].some((script) => /\.start\(/.test(script.text)))
+				// Gone on to another document meanwhile, which is the one to wait for.
+				.catch(() => true);
+			if (starts) await marked;
+		},
+		() => marked,
+	);
+	await Promise.race([marked, settled]);
+}
 
 /** Whether the page fits its screen's width: nothing on it makes it scroll sideways. */
 export const fitsWidth = (page: Page) =>
@@ -488,7 +507,8 @@ export function useApp({
 		// The next test's toasts are its own.
 		if (page) await markToasts(page);
 		const logged = errors.splice(0);
-		expect(logged, "console errors and hydration warnings").toEqual([]);
+		// Named by the page's user: a file with several pages (another user's tab) says whose it was.
+		expect(logged, `console errors and hydration warnings (${user ?? "signed out"})`).toEqual([]);
 	});
 
 	afterAll(async () => {

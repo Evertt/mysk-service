@@ -210,7 +210,9 @@ logged with its record as its parent, so its changes count too.
 
 A list, a bell or a page that shows records it doesn't key by id refreshes with
 `refreshOnActivity(() => getX().refresh(), { types })` (`live-activity.svelte.ts`: any change the
-feed tells, of those `types` if given, one refresh for a burst). A page of an order that can be
+feed tells, of those `types` if given, one refresh for a burst). A part of a record's page that
+also does skips the record's own changes (`skip`), which its `refreshOnRecordChange()` follows:
+else the record's deletion refreshes it into a 404 while the page goes (the unit timeline). A page of an order that can be
 taken off the viewer (the engineer's) leaves on `ACCESS_REVOKED` (`onRecordChange()`), which
 `refreshOnRecordChange()` skips, so nothing refreshes it into a 404 first.
 

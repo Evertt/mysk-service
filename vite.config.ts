@@ -308,6 +308,11 @@ export default defineConfig({
 						provider: playwright(),
 						instances: [{ browser: "chromium", headless: true }],
 					},
+					// Each click or keypress is a round trip from the page through Vitest to Playwright. In
+					// `pnpm test`, beside the other projects, those took ten times as long as alone (a test
+					// of 0.4 s took 7 s), and a few tests of four or five steps passed the browser's default
+					// of 15 s (bulk-action-bar's, data-table's, error-boundary's; 2026-11-18): as long as e2e.
+					testTimeout: 30_000,
 					include: [
 						"src/tests/unit/**/*.svelte.{test,spec}.{js,ts}",
 						"src/modules/*/tests/unit/**/*.svelte.{test,spec}.{js,ts}",

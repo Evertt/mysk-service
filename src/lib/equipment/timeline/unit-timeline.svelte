@@ -98,8 +98,13 @@
 		more = [];
 	}
 
+	// The unit's own changes are the first's, which skips its deletion: the page that deleted it goes
+	// to the list, and the timeline read again then would be a 404 the page shows as its error.
 	refreshOnRecordChange(() => ({ type: "equipment", id: first.unitId }), refresh);
-	refreshOnActivity(refresh, { types: first.liveTypes });
+	refreshOnActivity(refresh, {
+		types: first.liveTypes,
+		skip: (change) => change.type === "equipment" && change.id === String(first.unitId),
+	});
 
 	const icons: Record<TimelineIcon, Component<{ class?: string }>> = {
 		door: DoorOpenIcon,
