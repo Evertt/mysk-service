@@ -172,6 +172,14 @@ export const reportUrgencies = [
 export const reportFaults = ["door_wont_close", "damage", "noise", "other"] as const;
 export type ReportFault = (typeof reportFaults)[number];
 
+/**
+ * How a customer's contact came to report a breakdown (`order_request.via`): by scanning the QR
+ * code on the unit or its location (`qr`, the portal's report form opened from the scan), or from
+ * the portal itself (`portal`). A unit's timeline says which.
+ */
+export const reportChannels = ["qr", "portal"] as const;
+export type ReportChannel = (typeof reportChannels)[number];
+
 /** @labels orderPriority */
 export const orderPriorities = ["low", "normal", "high", "urgent"] as const;
 export type OrderPriority = (typeof orderPriorities)[number];

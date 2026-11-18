@@ -8,7 +8,13 @@ import {
 	uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-import { orderPriorities, orderStatuses, orderTypes, reportFaults } from "#lib/models.ts";
+import {
+	orderPriorities,
+	orderStatuses,
+	orderTypes,
+	reportChannels,
+	reportFaults,
+} from "#lib/models.ts";
 
 import { user } from "../auth.schema.ts";
 import { createdAt, moment, tenantRef, tenantTable } from "../columns.ts";
@@ -185,6 +191,11 @@ export const orderRequest = tenantTable(
 		rejectionReason: text("rejection_reason"),
 		/** What kind of fault the customer chose ("Wat is er aan de hand?"); none if they chose none. */
 		fault: text("fault", { enum: reportFaults }),
+		/**
+		 * How they came to report it: from a scanned QR code, or in the portal; none for reports made
+		 * before it was kept (shown as the portal's).
+		 */
+		via: text("via", { enum: reportChannels }),
 	},
 	(table) => [
 		index("order_request_organization_order").on(table.organizationId, table.orderId),

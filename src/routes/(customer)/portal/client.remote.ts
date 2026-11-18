@@ -243,6 +243,8 @@ export const reportBreakdown = forCustomers.form(
 		description: text(m.client_report_description_required),
 		urgency: v.picklist(reportUrgencies, m.client_report_urgency_required),
 		fault: v.optional(v.picklist(reportFaults)),
+		/** How they came to the form: from a scanned QR code, or in the portal. */
+		via: v.optional(v.picklist(reportChannels)),
 		photos: v.optional(v.array(v.file()), []),
 	}),
 	async (input, issue) => {
@@ -265,6 +267,7 @@ export const reportBreakdown = forCustomers.form(
 			priority: input.urgency,
 			description: input.description,
 			fault: input.fault,
+			via: input.via,
 			photos: input.photos,
 		});
 		void getPortalHome().refresh();
