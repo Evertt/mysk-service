@@ -142,5 +142,11 @@
 	"maintenance_reminder_mail_subject": "Onderhoud gepland voor apparaat {serial}",
 	"maintenance_reminder_mail_greeting": "Beste {contact},",
 	"maintenance_reminder_mail_body": "{organization} heeft “{description}” gepland voor je apparaat {serial}. We nemen contact met je op om een datum af te spreken.",
-	"maintenance_reminder_mail_reference": "Referentie: opdracht {number}"
+	"maintenance_reminder_mail_reference": "Referentie: opdracht {number}",
+	"maintenance_site_section": "Onderhoud",
+	"maintenance_site_done": "Uitgevoerd in de periode",
+	"maintenance_site_due": "Binnenkort",
+	"maintenance_site_overdue": "Achterstallig",
+	"maintenance_site_last": "Laatste onderhoud",
+	"maintenance_site_next": "Volgend onderhoud"
 }

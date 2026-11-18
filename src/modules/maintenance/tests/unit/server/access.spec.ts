@@ -1,8 +1,8 @@
 /**
  * Who may read and change the maintenance module's records (`server/access.ts`), on the seeded
  * database as SHLTR's people: the office reads the plans of its tenant and the settings (a manager
- * changes those, any member the plans); no portal reads them; and none of it exists for a tenant
- * without the module.
+ * changes those, any member the plans); a customer's contact reads the plans of their own units (the
+ * site report), an engineer none; and none of it exists for a tenant without the module.
  */
 import { describe, expect, test } from "vite-plus/test";
 
@@ -32,10 +32,27 @@ describe("the plans", () => {
 		});
 	});
 
-	test("are not read by an engineer or a customer's contact", async () => {
+	test("are not read by an engineer", async () => {
 		const own = (await idsOf("maintenance_plan", "org-shltr")).slice(0, 15);
 		expect(await readOneByOne(shltr.engineer, "maintenancePlan", own)).toEqual([]);
-		expect(await readOneByOne(riedel, "maintenancePlan", own)).toEqual([]);
+	});
+
+	test("are read by a customer's contact for their own units only, and never changed", async () => {
+		const unitsOf = `and equipment_id in (select id from equipment where customer_id = (select id from customer where name = 'Riedel B.V.' and organization_id = 'org-shltr'))`;
+		const theirs = await idsOf("maintenance_plan", "org-shltr", unitsOf);
+		const others = (
+			await idsOf(
+				"maintenance_plan",
+				"org-shltr",
+				unitsOf.replace("equipment_id in", "equipment_id not in"),
+			)
+		).slice(0, 15);
+		expect(theirs.length).toBeGreaterThan(0);
+		expect(await readOneByOne(riedel, "maintenancePlan", theirs)).toEqual(theirs);
+		expect(await readOneByOne(riedel, "maintenancePlan", others)).toEqual([]);
+		await as(riedel, async () => {
+			expect(await mayChange({ type: "maintenancePlan", id: theirs[0] })).toBe(false);
+		});
 	});
 });
 

@@ -216,5 +216,11 @@
 	"condition_point_defect_saved_toast": "Gebrek opgeslagen",
 	"condition_point_not_found": "Checklistpunt niet gevonden.",
 	"condition_point_closed": "De checklist kan niet meer worden gewijzigd.",
-	"condition_activity_subject_photo": "de foto"
+	"condition_activity_subject_photo": "de foto",
+	"condition_site_section": "Conditie (NEN 2767)",
+	"condition_site_critical": "Kritiek",
+	"condition_site_attention": "Aandacht",
+	"condition_site_score": "Score {score} · {label}",
+	"condition_site_no_score": "Nog geen score",
+	"condition_site_column": "Conditie"
 }

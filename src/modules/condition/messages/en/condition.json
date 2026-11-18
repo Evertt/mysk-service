@@ -216,5 +216,11 @@
 	"condition_point_defect_saved_toast": "Defect saved",
 	"condition_point_not_found": "Checklist point not found.",
 	"condition_point_closed": "The checklist can't be changed any more.",
-	"condition_activity_subject_photo": "the photo"
+	"condition_activity_subject_photo": "the photo",
+	"condition_site_section": "Condition (NEN 2767)",
+	"condition_site_critical": "Critical",
+	"condition_site_attention": "Needs attention",
+	"condition_site_score": "Score {score} · {label}",
+	"condition_site_no_score": "No score yet",
+	"condition_site_column": "Condition"
 }

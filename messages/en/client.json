@@ -120,5 +120,6 @@
 	"client_created_on": "Created {date}",
 	"client_unit_documents_link": "Manuals & documents",
 	"client_unit_documents_description": "Its manuals, certificates and drawings",
-	"client_unit_documents_none": "There are no documents of this unit yet."
+	"client_unit_documents_none": "There are no documents of this unit yet.",
+	"client_nav_sites": "All sites"
 }

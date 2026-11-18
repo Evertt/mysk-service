@@ -323,5 +323,13 @@
 	"checklists_score_source_checklist": "Checklist on {order}",
 	"checklists_score_source_office": "Recorded in the office",
 	"checklists_score_source_unknown": "Checklist",
-	"checklists_assets_component_of": "Component of {unit}"
+	"checklists_assets_component_of": "Component of {unit}",
+	"checklists_site_section": "Inspections",
+	"checklists_site_done": "Inspections done",
+	"checklists_site_valid": "Valid",
+	"checklists_site_due": "Inspection due",
+	"checklists_site_expired": "Inspection expired",
+	"checklists_site_rejected": "Rejected",
+	"checklists_site_last": "Last inspection",
+	"checklists_site_next": "Next inspection"
 }
