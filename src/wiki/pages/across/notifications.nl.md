@@ -22,8 +22,8 @@ dagen, per dag, elk met een icoon voor de categorie en de zin uit het log.
 - **Waarschuwing.** Het systeem heeft zelf een opdracht gemaakt: een onderhoudsplan kwam aan de
   beurt, de conditie van een apparaat werd kritiek, een dockdeur bleef te lang open. Een deuralarm
   van de module Docks telt ook mee.
-- **Voortgang in het veld.** Een monteur is aan een opdracht begonnen of heeft hem afgerond, of een
-  checklist werd afgerond met een punt dat is afgekeurd.
+- **Voortgang in het veld.** Een monteur is naar een opdracht vertrokken, is eraan begonnen of heeft
+  hem afgerond, of een checklist werd afgerond met een punt dat is afgekeurd.
 - **Jouw gegevens.** Iemand wijzigde een record dat jij hebt aangemaakt of als laatste hebt
   gewijzigd.
 

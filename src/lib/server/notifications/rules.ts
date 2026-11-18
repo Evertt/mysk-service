@@ -113,11 +113,11 @@ export const coreNotificationRules: readonly NotificationRule[] = [
 		where: () => and(entryAbout("order", ["created"]), bySystem)!,
 	},
 	{
-		// Only an engineer starts and completes an order (`orderTransitions`).
+		// Only an engineer sets out for, starts and completes an order (`orderTransitions`).
 		id: "orders.fieldProgress",
 		audience: "office",
 		category: "field",
-		where: () => entryAbout("order", ["work_started", "completed"]),
+		where: () => entryAbout("order", ["departed", "work_started", "completed"]),
 	},
 	{
 		id: "records.mine",
