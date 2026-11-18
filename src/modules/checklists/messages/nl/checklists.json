@@ -250,6 +250,7 @@
 	"checklists_print_location": "Locatie",
 	"checklists_print_outcome": "Uitkomst",
 	"checklists_client_order_description": "Wat de monteur per apparaat heeft gecontroleerd, en wat er is gevonden.",
+	"checklists_client_inspection": "Keuring",
 	"checklists_office_order_closed": "{number} is afgesloten: de checklists kun je niet meer wijzigen.",
 	"checklists_by_office": "{name} (kantoor)",
 	"checklists_the_office": "het kantoor",

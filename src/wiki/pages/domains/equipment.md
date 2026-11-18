@@ -40,11 +40,11 @@ yearly inspection of fifteen doors, counts for a fifteenth in each.
 Every unit and every location has a QR code of its own, printed on a label and stuck on. What it
 does depends on who scans it:
 
-| Who scans                | It leads to                                                                           |
-| ------------------------ | ------------------------------------------------------------------------------------- |
-| **An engineer**          | the unit (or the place) in the engineer portal, with their open orders for it         |
-| **A customer's contact** | **Report a breakdown**, with the unit filled in (or the place's units to choose from) |
-| **The office**           | the unit's or the place's page in the office app                                      |
+| Who scans                | It leads to                                                                                                                                                    |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **An engineer**          | the unit (or the place) in the engineer portal, with their open orders for it                                                                                  |
+| **A customer's contact** | the unit's page in the customer portal, with **Report a breakdown** as its main button (or, for a place, **Report a breakdown** with its units to choose from) |
+| **The office**           | the unit's or the place's page in the office app                                                                                                               |
 
 The code works only for people who belong: someone signed out is sent to the login page and back
 to the same code; someone from another company, or a customer scanning another customer's unit, gets
@@ -77,8 +77,8 @@ place that reads across tenants on purpose, because the code doesn't say whose i
    whether they may read that unit or location (their customer's, at a site they see), else 404.
 3. If the code is of another of the user's organizations, that becomes their current one.
 4. `qrDestination(target, viewer)` picks the page for the viewer's shell: `/my/equipment/<serial>`
-   or `/my/locations/<id>`, `/portal/report?unit=<serial>` or `?location=<id>`, or `/equipment/<serial>`
-   or `/equipment/locations/<id>`.
+   or `/my/locations/<id>`, `/portal/equipment/<serial>` or `/portal/report?location=<id>`, or
+   `/equipment/<serial>` or `/equipment/locations/<id>`.
 
 Both portals list `/q/[token]` among the routes they own (`shells.ts`), so the page guard doesn't
 bounce a scanner away from it.
@@ -90,8 +90,8 @@ The scopes (`officeUnits()`, `engineerUnits()`, `customerUnits(access)`) take th
 access registry. See [The work record](/wiki/orders/work-record).
 
 - <SourceLink path="src/lib/server/db/schema/equipment.ts" line={81}><code>equipment</code></SourceLink>, <SourceLink path="src/lib/server/db/schema/equipment.ts" line={51} symbol="equipmentLocation"><code>equipment_location</code></SourceLink>
-- <SourceLink path="src/lib/equipment/server/qr.ts" line={63}><code>resolveQrCode()</code></SourceLink> and <SourceLink path="src/lib/equipment/server/qr.ts" line={83}><code>qrDestination()</code></SourceLink>
-- <SourceLink path="src/routes/q/[token]/+server.ts" line={16} symbol="GET">the <code>/q/[token]</code> route</SourceLink>
+- <SourceLink path="src/lib/equipment/server/qr.ts" line={63}><code>resolveQrCode()</code></SourceLink> and <SourceLink path="src/lib/equipment/server/qr.ts" line={84}><code>qrDestination()</code></SourceLink>
+- <SourceLink path="src/routes/q/[token]/+server.ts" line={17} symbol="GET">the <code>/q/[token]</code> route</SourceLink>
 - <SourceLink path="src/lib/equipment/labels/labels.remote.ts" line={18}><code>getLabelSheet</code></SourceLink>
 - <SourceLink path="src/lib/equipment/detail/service-history.ts" line={67}><code>buildTimeline()</code></SourceLink>
 

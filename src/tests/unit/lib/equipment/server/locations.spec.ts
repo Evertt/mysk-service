@@ -280,7 +280,7 @@ describe("QR codes", () => {
 		expect(await findQrTarget(unitToken.toUpperCase())).toBeUndefined();
 	});
 
-	test("it leads the office to its page, a field engineer into the portal", async () => {
+	test("it leads the office to its page, a field engineer into the portal, a customer to the unit's page", async () => {
 		expect(await resolveQrCode(unitToken, "office")).toMatchObject({ viewer: "office" });
 		expect(await resolveQrCode(unitToken, "field")).toMatchObject({ viewer: "engineer" });
 		// An admin who's an engineer too works in the office.
@@ -296,6 +296,9 @@ describe("QR codes", () => {
 		expect(qrDestination(unit, "engineer")).toBe("/my/equipment/SN%201%2F2");
 		expect(qrDestination(location, "office")).toBe("/equipment/locations/50");
 		expect(qrDestination(location, "engineer")).toBe("/my/locations/50");
+		// A customer's contact: the unit's page in their portal, or the report at the location.
+		expect(qrDestination(unit, "customer")).toBe("/portal/equipment/SN%201%2F2");
+		expect(qrDestination(location, "customer")).toBe("/portal/report?location=50");
 	});
 
 	test("another tenant's code is nothing for who isn't a member there", async () => {

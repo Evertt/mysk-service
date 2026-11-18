@@ -1,15 +1,18 @@
 /**
  * The condition of a customer's units as their contact reads it in the customer portal: those that
  * are critical or need attention, worst first, with their components' conditions and advice, for
- * the portal's home (`client.home`). Gated by
+ * the portal's home (`client.home`), and one unit's status, for the badge on its page
+ * (`client.unit.badges`). Gated by
  * `forCustomers` and scoped to their customer and the sites they see
  * (`#lib/server/auth/customer.ts`).
  */
 import { and, asc, eq, sql } from "drizzle-orm";
+import * as v from "valibot";
 
 import {
 	atSites,
 	currentCustomer,
+	customerEquipment,
 	ofCustomer,
 	tenantJoin,
 	sameTenant,
@@ -17,6 +20,7 @@ import {
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { customerSite, equipment } from "#lib/server/db/schema.ts";
+import { orNotFound } from "#lib/server/records.ts";
 
 import { forCustomers } from "../remote-functions.ts";
 import { component } from "../server/schema.ts";
@@ -93,4 +97,21 @@ export const getClientAttention = forCustomers.query(async () => {
 		})),
 		total,
 	};
+});
+
+/**
+ * The customer's unit `serialNumber`'s status by its condition (or a 404), with what its state asks
+ * for behind a planned one (`concern`), as the badge on the office's unit shows them: not its
+ * scores, advice or thresholds, which the office keeps.
+ */
+export const getClientUnitCondition = forCustomers.query(v.string(), async (serialNumber) => {
+	const access = await currentCustomer();
+	const condition = conditionSql();
+	return orNotFound(
+		await db
+			.select({ unitId: equipment.id, status: condition.status, concern: condition.concern })
+			.from(equipment)
+			.where(and(eq(equipment.serialNumber, serialNumber), customerEquipment(access))),
+		m.client_unit_not_found({ serial: serialNumber }),
+	);
 });

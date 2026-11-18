@@ -1,7 +1,8 @@
 /**
  * The customer portal (`/portal`), as SHLTR's customer Riedel's facilities contact uses it on a
- * phone: their open orders and reports, an order's progress, their equipment and locations, and
- * reporting a breakdown, also from a unit's or location's QR code. Isolation is in
+ * phone: their open orders and reports, an order's progress, their equipment and locations, a
+ * unit's page (which its QR code opens), and reporting a breakdown, also from there or from a
+ * location's QR code. Isolation is in
  * `client.tenancy.test.ts`, the office's side (inviting, accepting) in `client.access.test.ts` and
  * `client.acceptance.test.ts`.
  */
@@ -150,7 +151,8 @@ describe("the customer portal", () => {
 			.evaluateAll((links) => links.map((link) => link.getAttribute("data-unit") ?? ""));
 		expect(shown.toSorted()).toEqual(units.map((unit) => unit.serial_number).toSorted());
 
-		// A unit with orders: its page has them, and its inspection status (checklists is on).
+		// A unit with orders: its page has its state from the modules SHLTR has (its condition, its
+		// inspection status, its last maintenance), and its service history a page of its own.
 		const [unit] = await rows<{ serial_number: string; orders: number }>(
 			`select e.serial_number, count(*) as orders from equipment e
 			 join order_unit ou on ou.equipment_id = e.id
@@ -159,7 +161,29 @@ describe("the customer portal", () => {
 		);
 		await app.page.locator(`[data-unit="${unit.serial_number}"]`).first().click();
 		await app.page.waitForURL((url) => url.pathname === `/portal/equipment/${unit.serial_number}`);
-		await app.page.locator("[data-client-inspection]").waitFor();
+		const card = app.page.locator(`[data-client-unit="${unit.serial_number}"]`);
+		await card.locator("[data-client-condition] [data-status]").waitFor();
+		await card.locator("[data-client-inspection-fact]").waitFor();
+		const last = await card
+			.locator("[data-client-last-maintenance]")
+			.getAttribute("data-client-last-maintenance");
+		const [maintained] = await rows<{ number: string }>(
+			`select o.number from order_unit u join "order" o on o.id = u.order_id
+			 join equipment e on e.id = u.equipment_id
+			 where e.serial_number = ? and o.status in ('completed', 'invoiced')
+			 and o.type in ('maintenance', 'inspection') order by o.completed_at desc, o.id desc limit 1`,
+			[unit.serial_number],
+		);
+		expect(last).toBe(maintained?.number ?? "");
+		expect(await fitsWidth(app.page)).toBe(true);
+
+		await app.page
+			.locator("main")
+			.getByRole("link", { name: /^Service history/ })
+			.click();
+		await app.page.waitForURL(
+			(url) => url.pathname === `/portal/equipment/${unit.serial_number}/history`,
+		);
 		await expect
 			.poll(() =>
 				app.page
@@ -168,6 +192,8 @@ describe("the customer portal", () => {
 					.count(),
 			)
 			.toBe(Math.min(50, unit.orders));
+		await app.page.locator("[data-unit-back]").click();
+		await app.page.waitForURL((url) => url.pathname === `/portal/equipment/${unit.serial_number}`);
 	});
 
 	test("a done order shows its sign-off, its checklists' results and the work order to print", async () => {
@@ -260,16 +286,22 @@ describe("reporting a breakdown", () => {
 		expect(await app.issues()).toContain("Describe what's wrong.");
 	});
 
-	test("a unit's QR code opens the report with the unit filled in", async () => {
+	test("a unit's QR code opens its page, whose main button reports it with the unit filled in", async () => {
 		const [unit] = await rows<{ id: number; serial_number: string; qr_token: string }>(
 			`select id, serial_number, qr_token from equipment where customer_id = ? order by id desc limit 1`,
 			[await customerId("Riedel B.V.")],
 		);
 		expect(await scan(app.page, unit.qr_token)).toEqual({
 			status: 200,
-			path: "/portal/report",
-			search: `?unit=${encodeURIComponent(unit.serial_number)}`,
+			path: `/portal/equipment/${encodeURIComponent(unit.serial_number)}`,
+			search: "",
 		});
+		await app.page.locator(`[data-client-unit="${unit.serial_number}"]`).waitFor();
+		await app.page.locator("main").getByRole("link", { name: "Report a breakdown" }).click();
+		await app.page.waitForURL(
+			(url) =>
+				url.pathname === "/portal/report" && url.searchParams.get("unit") === unit.serial_number,
+		);
 		await app.page.locator(`[data-scanned-unit="${unit.serial_number}"]`).waitFor();
 		await app.page.getByLabel("What's wrong?").fill("Lamp brandt niet.");
 		await app.page.getByRole("button", { name: "Report breakdown" }).click();

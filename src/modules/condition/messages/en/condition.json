@@ -145,6 +145,7 @@
 	"condition_activity_subject_settings": "the condition settings",
 	"condition_client_title": "Units needing attention",
 	"condition_client_components": "Components",
+	"condition_client_unit_badge": "Condition",
 	"condition_banner_eyebrow": "Connect",
 	"condition_banner_title": "Components per customer",
 	"condition_banner_intro": "Every customer, component, preference and activity in one place. From the first sign to the completed checklist, in one line.",

@@ -250,6 +250,7 @@
 	"checklists_print_location": "Location",
 	"checklists_print_outcome": "Outcome",
 	"checklists_client_order_description": "What the engineer checked on each unit, and what they found.",
+	"checklists_client_inspection": "Inspection",
 	"checklists_office_order_closed": "{number} is closed: its checklists can't be changed any more.",
 	"checklists_by_office": "{name} (office)",
 	"checklists_the_office": "the office",

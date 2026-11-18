@@ -54,7 +54,8 @@ hebben aandacht nodig, en hoe snel?
   vastgelegde condities.
 - Het dashboard heeft een tegel voor de apparaten die kritiek zijn of aandacht nodig hebben.
 - Het monteursportaal vraagt om advies zodra een checklist is afgerond.
-- In het klantportaal toont de startpagina de apparaten van de klant die aandacht nodig hebben.
+- In het klantportaal toont de startpagina de apparaten van de klant die aandacht nodig hebben, en
+  toont de pagina van een apparaat zijn status als badge (niet zijn score of advies).
 
 ### Werkt samen met
 

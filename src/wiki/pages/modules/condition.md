@@ -55,7 +55,8 @@ attention, and how soon?
   of its units: the orders and checklists completed and the conditions recorded.
 - The dashboard has a tile for the units that are critical or need attention.
 - The engineer portal asks for advice once a checklist is completed.
-- In the customer portal, the home page lists the customer's units needing attention.
+- In the customer portal, the home page lists the customer's units needing attention, and a unit's
+  page shows its status as a badge (not its score or advice).
 
 ### Works with
 

@@ -40,6 +40,8 @@ visit every so many months, and the module turns each visit that comes due into 
 - The dashboard has a card with the visits that are due and the number overdue.
 - A contract's page lists the plans of its covered units, and can give every covered unit without a
   plan this one, first due one interval from today.
+- In the customer portal, a unit's page shows the day it was last maintained (its latest finished
+  maintenance or inspection order), linking to that order. The plans themselves stay in the office.
 
 ### Works with
 
@@ -60,7 +62,9 @@ action. It is also the example of a **column in a core list** (`columns/equipmen
 with its SQL in `server/columns/`, contributed to the equipment list's `equipment.list.columns`
 point), of **contributing to another module's slot** (`slots/contracts.detail.side/`,
 which may import only contracts' `api/extensions.ts` and is given the covered units as props), and
-of making records through a core service.
+of making records through a core service. For the customer portal it has a remote set of its own,
+`forCustomers` (`moduleRemote("maintenance", "customer")`), which reads a unit's last maintenance
+for its fact on the unit's page (`slots/client.unit.facts/`).
 
 Both ways of turning a plan into an order go through `orderPlan()` in `server/orders.ts`, which
 calls the core's `createOrders()`, so a plan's order is numbered, checked and logged exactly like any

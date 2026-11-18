@@ -145,6 +145,7 @@
 	"condition_activity_subject_settings": "de instellingen van onderdelenbeheer",
 	"condition_client_title": "Apparaten die aandacht nodig hebben",
 	"condition_client_components": "Onderdelen",
+	"condition_client_unit_badge": "Conditie",
 	"condition_banner_eyebrow": "Connect",
 	"condition_banner_title": "Onderdelenbeheer per klant",
 	"condition_banner_intro": "Alle klanten, onderdelen, voorkeuren en activiteiten op één plek. Van signalering tot afgeronde werkbon in één lijn.",

@@ -39,11 +39,11 @@ voor een vijftiende.
 Elk apparaat en elke locatie heeft een eigen QR-code, op een label gedrukt en erop geplakt. Wat de
 code doet, hangt af van wie hem scant:
 
-| Wie scant            | Waar hij naartoe leidt                                                                          |
-| -------------------- | ----------------------------------------------------------------------------------------------- |
-| **Een monteur**      | het apparaat (of de plek) in het monteursportaal, met zijn open opdrachten ervoor               |
-| **Een klantcontact** | **Storing melden**, met het apparaat al ingevuld (of de apparaten van de plek om uit te kiezen) |
-| **Het kantoor**      | de pagina van het apparaat of de plek in de kantoorapp                                          |
+| Wie scant            | Waar hij naartoe leidt                                                                                                                                              |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Een monteur**      | het apparaat (of de plek) in het monteursportaal, met zijn open opdrachten ervoor                                                                                   |
+| **Een klantcontact** | de pagina van het apparaat in het klantportaal, met **Storing melden** als hoofdknop (of, voor een plek, **Storing melden** met de apparaten daar om uit te kiezen) |
+| **Het kantoor**      | de pagina van het apparaat of de plek in de kantoorapp                                                                                                              |
 
 De code werkt alleen voor wie erbij hoort: wie niet is ingelogd, gaat naar de inlogpagina en daarna
 terug naar dezelfde code; iemand van een ander bedrijf, of een klant die het apparaat van een andere
@@ -80,8 +80,8 @@ opzet over tenants heen leest, omdat de code niet zegt van wie hij is.
    ziet), anders 404.
 3. Hoort de code bij een andere organisatie van de gebruiker, dan wordt dat zijn huidige.
 4. `qrDestination(target, viewer)` kiest de pagina voor de shell (de omgeving) van de kijker:
-   `/my/equipment/<serial>` of `/my/locations/<id>`, `/portal/report?unit=<serial>` of
-   `?location=<id>`, of `/equipment/<serial>` of `/equipment/locations/<id>`.
+   `/my/equipment/<serial>` of `/my/locations/<id>`, `/portal/equipment/<serial>` of
+   `/portal/report?location=<id>`, of `/equipment/<serial>` of `/equipment/locations/<id>`.
 
 Beide portalen noemen `/q/[token]` bij de routes die van hen zijn (`shells.ts`), zodat de guard van
 de pagina's een scanner er niet van wegstuurt.
@@ -94,8 +94,8 @@ alleen het adres van de vestiging. De scopes (`officeUnits()`, `engineerUnits()`
 [wat er van het werk aan een opdracht wordt bijgehouden](/wiki/orders/work-record).
 
 - <SourceLink path="src/lib/server/db/schema/equipment.ts" line={81}><code>equipment</code></SourceLink>, <SourceLink path="src/lib/server/db/schema/equipment.ts" line={51} symbol="equipmentLocation"><code>equipment_location</code></SourceLink>
-- <SourceLink path="src/lib/equipment/server/qr.ts" line={63}><code>resolveQrCode()</code></SourceLink> en <SourceLink path="src/lib/equipment/server/qr.ts" line={83}><code>qrDestination()</code></SourceLink>
-- <SourceLink path="src/routes/q/[token]/+server.ts" line={16} symbol="GET">de route <code>/q/[token]</code></SourceLink>
+- <SourceLink path="src/lib/equipment/server/qr.ts" line={63}><code>resolveQrCode()</code></SourceLink> en <SourceLink path="src/lib/equipment/server/qr.ts" line={84}><code>qrDestination()</code></SourceLink>
+- <SourceLink path="src/routes/q/[token]/+server.ts" line={17} symbol="GET">de route <code>/q/[token]</code></SourceLink>
 - <SourceLink path="src/lib/equipment/labels/labels.remote.ts" line={18}><code>getLabelSheet</code></SourceLink>
 - <SourceLink path="src/lib/equipment/detail/service-history.ts" line={67}><code>buildTimeline()</code></SourceLink>
 

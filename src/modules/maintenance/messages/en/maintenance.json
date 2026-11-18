@@ -65,6 +65,8 @@
 	"maintenance_field_last_order": "Last order",
 	"maintenance_activity_subject": "maintenance plan",
 	"maintenance_card_title": "Maintenance",
+	"maintenance_client_last": "Last maintenance",
+	"maintenance_client_last_none": "Not yet",
 	"maintenance_card_description": "Visits on a fixed interval.",
 	"maintenance_card_empty_title": "No maintenance plans",
 	"maintenance_card_empty_description": "Add a plan to service this unit on a fixed interval.",

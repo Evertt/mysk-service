@@ -1,17 +1,16 @@
 <!--
 	@component
 	The checklists module's card on a unit's page in the customer portal (`client.unit`,
-	`#lib/client/extensions.ts`): its inspection status by its latest completed inspection, until
-	when it's valid, and its completed checklists, newest first.
+	`#lib/client/extensions.ts`): its completed checklists, newest first, each linking to its order.
+	Its inspection status and validity are its fact in the unit's card (`client.unit.facts`).
+	Nothing before the first is completed.
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
 
-	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { formatDate } from "#lib/i18n/index.ts";
 
 	import { getClientUnitInspection } from "../../client/client-checklists.remote.ts";
-	import { inspectionStatusDisplay } from "../../display.ts";
 	import { checklistLabels } from "../../labels.ts";
 	import OutcomeBadge from "../../ui/outcome-badge.svelte";
 
@@ -22,27 +21,11 @@
 	const completed = $derived(data.checklists.slice(0, 10));
 </script>
 
-<Card.Root data-client-inspection>
-	<Card.Header>
-		<Card.Title>{m.checklists_unit_title()}</Card.Title>
-		<Card.Description>
-			{#if data.validUntil && data.status !== "expired"}
-				{m.checklists_valid_until({ date: formatDate(data.validUntil) })}
-			{:else if data.validUntil}
-				{m.checklists_expired_on({ date: formatDate(data.validUntil) })}
-			{:else}
-				{m.checklists_unit_no_inspection()}
-			{/if}
-		</Card.Description>
-		<Card.Action>
-			<EnumBadge
-				display={inspectionStatusDisplay}
-				value={data.status}
-				data-inspection={data.status}
-			/>
-		</Card.Action>
-	</Card.Header>
-	{#if completed.length}
+{#if completed.length}
+	<Card.Root data-client-inspection>
+		<Card.Header>
+			<Card.Title>{m.checklists_unit_title()}</Card.Title>
+		</Card.Header>
 		<Card.Content>
 			<ul class="flex flex-col divide-y rounded-md border">
 				{#each completed as checklist (checklist.id)}
@@ -69,5 +52,5 @@
 				{/each}
 			</ul>
 		</Card.Content>
-	{/if}
-</Card.Root>
+	</Card.Root>
+{/if}
