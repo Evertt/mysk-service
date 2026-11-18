@@ -6,9 +6,9 @@
 	The photos are the form field's value, which the file input sends.
 -->
 <script lang="ts">
+	import type { RemoteFormField } from "$app/server";
 	import ImagePlusIcon from "@lucide/svelte/icons/image-plus";
 	import XIcon from "@lucide/svelte/icons/x";
-	import type { RemoteFormField } from "@sveltejs/kit";
 	import { onDestroy } from "svelte";
 
 	import { formatNumber } from "#lib/i18n/index.ts";

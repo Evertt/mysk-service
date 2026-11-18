@@ -130,7 +130,7 @@
 						label: label("reportFault", each),
 					}))}
 					value={fault}
-					onchange={(chosen) => (fault = chosen)}
+					onchange={(chosen) => (fault = reportFaults.find((each) => each === chosen) ?? null)}
 					data-report-faults
 				/>
 				{#if fault}
