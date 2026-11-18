@@ -130,7 +130,7 @@ optioneel zijn. De servicegeschiedenis is een weergave van het activiteitenlog
 - <SourceLink path="src/modules/condition/module.ts">module.ts</SourceLink>: het manifest, en <SourceLink path="src/modules/condition">de map van de module</SourceLink>.
 - <SourceLink path="src/modules/condition/nen2767.ts" line={85}>defectScore()</SourceLink>: de
   score van een gebrek uit de tabellen van NEN 2767.
-- <SourceLink path="src/modules/condition/model.ts" line={195}>rolledUpStatus()</SourceLink>: de
+- <SourceLink path="src/modules/condition/model.ts" line={192}>rolledUpStatus()</SourceLink>: de
   status van een apparaat, met die van zijn onderdelen.
 - <SourceLink path="src/modules/condition/server/conditions.ts" line={297}>recordChecklistConditions()</SourceLink>:
   de condities en gebreken van een afgeronde checklist.
