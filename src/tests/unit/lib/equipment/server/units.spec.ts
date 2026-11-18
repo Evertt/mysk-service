@@ -18,6 +18,7 @@ import {
 } from "#lib/equipment/equipment.remote.ts";
 import { getLabelSheet } from "#lib/equipment/labels/labels.remote.ts";
 import { getLocation } from "#lib/equipment/locations/locations.remote.ts";
+import { getUnitTimeline } from "#lib/equipment/timeline/timeline.remote.ts";
 import { batchQueryTests } from "#unit/lib/server/batch-query.test-support.ts";
 import type { Actor } from "#unit/lib/server/harness/actors.ts";
 import {
@@ -306,8 +307,13 @@ describe("in South", () => {
 			unit: { model: "TX-S", organizationId: southId },
 			orderCount: 0,
 		});
-		const { events } = await as(south.owner, () => data(getServiceHistory, busy.serial));
-		expect(events.map((event) => event.kind)).toEqual(["warranty", "installation"]);
+		const { orders } = await as(south.owner, () => data(getServiceHistory, busy.serial));
+		expect(orders).toEqual([]);
+		const { entries } = await as(south.owner, () => data(getUnitTimeline, { serial: busy.serial }));
+		expect(entries.map((entry) => entry.kind).toSorted()).toEqual([
+			"unit.installed",
+			"unit.warranty",
+		]);
 
 		const own = await unitId(busy.serial, southId);
 		expect(await as(south.owner, () => submit(deleteEquipment, { id: String(own) }))).toMatchObject(

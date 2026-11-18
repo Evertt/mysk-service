@@ -30,12 +30,13 @@ how to find it. Locations let the site's units be found by where they are.
 
 ## Service history
 
-A unit's page tells its story: a timeline of its installation, every order on it and the end of its
-warranty (which may still be ahead), and figures that sum it up: how many orders, how many open,
-what the work cost, and how long between repairs. The order that covers several units, such as a
-yearly inspection of fifteen doors, counts for a fifteenth in each. Each order shows its photos
-there, as small thumbnails; the engineer portal and the customer portal show a count per order on
-a unit's orders (see [Photos of an order](/wiki/orders/photos)).
+A unit's page sums its service up in figures: how many orders, how many open, what the work cost,
+and how long between repairs. The order that covers several units, such as a yearly inspection of
+fifteen doors, counts for a fifteenth in each. Under them is its timeline, in every shell: its
+installation, its reports and orders step by step with their photos as small thumbnails, its
+documents, and what the modules add (the door's openings, conditions measured, inspections), with
+today's figures above it (see [A unit's timeline](/wiki/domains/unit-timeline) and
+[Photos of an order](/wiki/orders/photos)).
 
 ## Manuals and documents
 
@@ -91,7 +92,7 @@ place that reads across tenants on purpose, because the code doesn't say whose i
    whether they may read that unit or location (their customer's, at a site they see), else 404.
 3. If the code is of another of the user's organizations, that becomes their current one.
 4. `qrDestination(target, viewer)` picks the page for the viewer's shell: `/my/equipment/<serial>`
-   or `/my/locations/<id>`, `/portal/equipment/<serial>` or `/portal/report?location=<id>`, or
+   or `/my/locations/<id>`, `/portal/equipment/<serial>?via=qr` or `/portal/report?location=<id>&via=qr`, or
    `/equipment/<serial>` or `/equipment/locations/<id>`.
 
 Both portals list `/q/[token]` among the routes they own (`shells.ts`), so the page guard doesn't
@@ -104,9 +105,9 @@ The scopes (`officeUnits()`, `engineerUnits()`, `customerUnits(access)`) take th
 access registry. See [The work record](/wiki/orders/work-record).
 
 - <SourceLink path="src/lib/server/db/schema/equipment.ts" line={82}><code>equipment</code></SourceLink>, <SourceLink path="src/lib/server/db/schema/equipment.ts" line={52} symbol="equipmentLocation"><code>equipment_location</code></SourceLink>
-- <SourceLink path="src/lib/equipment/server/qr.ts" line={63}><code>resolveQrCode()</code></SourceLink> and <SourceLink path="src/lib/equipment/server/qr.ts" line={84}><code>qrDestination()</code></SourceLink>
+- <SourceLink path="src/lib/equipment/server/qr.ts" line={63}><code>resolveQrCode()</code></SourceLink> and <SourceLink path="src/lib/equipment/server/qr.ts" line={85}><code>qrDestination()</code></SourceLink>
 - <SourceLink path="src/routes/q/[token]/+server.ts" line={17} symbol="GET">the <code>/q/[token]</code> route</SourceLink>
 - <SourceLink path="src/lib/equipment/labels/labels.remote.ts" line={18}><code>getLabelSheet</code></SourceLink>
-- <SourceLink path="src/lib/equipment/detail/service-history.ts" line={69}><code>buildTimeline()</code></SourceLink>
+- <SourceLink path="src/lib/equipment/detail/service-history.remote.ts" line={18}><code>getServiceHistory</code></SourceLink>
 
 <DocsPointer doc="docs/agents/orders.md" section="Units and locations" />

@@ -324,6 +324,23 @@
 	"checklists_score_source_office": "Recorded in the office",
 	"checklists_score_source_unknown": "Checklist",
 	"checklists_assets_component_of": "Component of {unit}",
+	"checklists_timeline_inspection": "Inspection completed: {name}",
+	"checklists_timeline_maintenance": "Maintenance checklist completed: {name}",
+	"checklists_timeline_approved": "Every point approved",
+	"checklists_timeline_rejected": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} point rejected",
+				"countPlural=*": "{countText} points rejected"
+			}
+		}
+	],
 	"checklists_site_section": "Inspections",
 	"checklists_site_done": "Inspections done",
 	"checklists_site_valid": "Valid",

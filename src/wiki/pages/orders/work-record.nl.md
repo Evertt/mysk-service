@@ -84,6 +84,6 @@ gelezen zoals hun doelgroep ze ziet, door `readUnits()` (`src/lib/equipment/serv
 
 - <SourceLink path="src/lib/orders/server/work-record.ts" line={62}><code>audiences</code></SourceLink>
 - <SourceLink path="src/lib/orders/server/work-record.ts" line={211}><code>readWorkRecord()</code></SourceLink>
-- <SourceLink path="src/lib/server/db/schema/orders.ts" line={118} symbol="orderNote"><code>order_note</code></SourceLink> en <SourceLink path="src/lib/server/db/schema/orders.ts" line={139} symbol="orderSignoff"><code>order_signoff</code></SourceLink>
+- <SourceLink path="src/lib/server/db/schema/orders.ts" line={124} symbol="orderNote"><code>order_note</code></SourceLink> en <SourceLink path="src/lib/server/db/schema/orders.ts" line={145} symbol="orderSignoff"><code>order_signoff</code></SourceLink>
 
 <DocsPointer doc="docs/agents/orders.md" section="The work record" />

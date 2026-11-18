@@ -100,6 +100,23 @@ true })`, whose contributors answer at once, without awaiting: for an owner that
   fails the request, since a skipped check would be a way in. The docks' `server/access.ts` is the
   smallest example. `access.spec.ts` fails a subject type without a rule, or a rule for a type the
   module doesn't own.
+- **A unit's timeline** (`equipment.timeline` and `equipment.figures`, `skip` collectors in
+  `src/lib/equipment/extensions.ts`; the model in `#lib/equipment/timeline/timeline.ts`): what
+  happened to a unit, on its page in all three shells (`<UnitTimeline shell>`), and today's
+  headline figures above it. Given `{ unit, viewer, before, limit }`, a module answers its entries
+  after the cursor `before` (`isAfter()`), newest first, at most `limit`, and whether it has older
+  ones: `answerOf(entries, before, limit, more)` makes that answer, and the core's `pageOf()` holds
+  the page back to the last entry of a source that has more. An entry is `{ id, at, kind, title,
+detail?, order?, photos?, tone, icon }`, its text in the request's language and only what the
+  viewer may read: each module asks the access registry for its own types as `query.viewer`
+  (`visible(type, "read", viewer)`), so a customer's contact never gets, say, a defect's photos.
+  `liveTypes` names the change types that change its entries (energy's `energy_reading`), which
+  the page refreshes on besides the unit's and its orders'. A figure (`{ key, label, value,
+detail?, tone? }`) is today's, from `from` (the start of the user's day) to `to`. The core's own
+  entries are the activity log's (`coreEntries()`, `src/lib/equipment/server/timeline.ts`); energy's
+  (`server/timeline.ts`: openings, long ones each and the rest per hour, alerts), condition's
+  (conditions measured, defect photos) and checklists' (completed checklists) are the examples. A
+  module's entry ids start with its own prefix, and stay the same between reads.
 - **A record's points** (an order's, a customer's, a unit's, an engineer's, a contract's) are
   declared by one call in its owner's `extensions.ts`, named alike for every record:
   `export const points = defineRecordPoints("orders", { detail: slotProps<{ number: string }>(),

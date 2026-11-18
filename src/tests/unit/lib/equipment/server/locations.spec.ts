@@ -297,8 +297,8 @@ describe("QR codes", () => {
 		expect(qrDestination(location, "office")).toBe("/equipment/locations/50");
 		expect(qrDestination(location, "engineer")).toBe("/my/locations/50");
 		// A customer's contact: the unit's page in their portal, or the report at the location.
-		expect(qrDestination(unit, "customer")).toBe("/portal/equipment/SN%201%2F2");
-		expect(qrDestination(location, "customer")).toBe("/portal/report?location=50");
+		expect(qrDestination(unit, "customer")).toBe("/portal/equipment/SN%201%2F2?via=qr");
+		expect(qrDestination(location, "customer")).toBe("/portal/report?location=50&via=qr");
 	});
 
 	test("another tenant's code is nothing for who isn't a member there", async () => {

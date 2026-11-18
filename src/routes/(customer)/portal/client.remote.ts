@@ -23,13 +23,13 @@ import { formatNumber } from "#lib/i18n/index.ts";
 import {
 	doneOrderStatuses,
 	pendingOrderStatuses,
+	reportChannels,
 	reportFaults,
 	reportUrgencies,
 } from "#lib/models.ts";
 import {
 	customerWork,
 	listedUnitsOf,
-	onUnit,
 	photosOf,
 	readWorkRecord,
 	reportOrder,
@@ -200,23 +200,11 @@ async function portalUnit(access: CustomerAccess, serialNumber: string) {
 
 /**
  * One of the customer's units the contact sees, by its serial number (or a 404): what it is and
- * where. Its orders are its history's (`getPortalUnitHistory`).
+ * where. What happened to it is its timeline's (`getPortalUnitTimeline`, `#lib/equipment`).
  */
 export const getPortalUnit = forCustomers.query(v.string(), async (serialNumber) =>
 	portalUnit(await currentCustomer(), serialNumber),
 );
-
-/**
- * The service history of one of the customer's units the contact sees, by its serial number (or a
- * 404, as `getPortalUnit`): its latest 50 orders, newest first.
- */
-export const getPortalUnitHistory = forCustomers.query(v.string(), async (serialNumber) => {
-	const access = await currentCustomer();
-	const unit = await portalUnit(access, serialNumber);
-	const orders = await ordersWhere(access, onUnit(unit.id), 50);
-	const photos = await photosOf(orders.map((one) => one.id));
-	return orders.map((one) => ({ ...one, photos: photos.get(one.id) ?? [] }));
-});
 
 /** One of the customer's locations the contact sees (or a 404), its site and its units. */
 export const getPortalLocation = forCustomers.query(id(), async (locationId) =>
@@ -244,6 +232,8 @@ export const reportBreakdown = forCustomers.form(
 		description: text(m.client_report_description_required),
 		urgency: v.picklist(reportUrgencies, m.client_report_urgency_required),
 		fault: v.optional(v.picklist(reportFaults)),
+		/** How they came to the form: from a scanned QR code, or in the portal. */
+		via: v.optional(v.picklist(reportChannels)),
 		photos: v.optional(v.array(v.file()), []),
 	}),
 	async (input, issue) => {
@@ -266,6 +256,7 @@ export const reportBreakdown = forCustomers.form(
 			priority: input.urgency,
 			description: input.description,
 			fault: input.fault,
+			via: input.via,
 			photos: input.photos,
 		});
 		void getPortalHome().refresh();

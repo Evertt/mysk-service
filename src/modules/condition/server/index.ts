@@ -8,10 +8,12 @@
  * the components on the work orders page, with their scores, their history and what its search
  * finds them by (`checklists.components`, `checklists.componentScores`,
  * `checklists.componentSearch`, `checklist-components.ts`). Its records' access rules are `access.ts`'s
- * (`access.rules`).
+ * (`access.rules`). A unit's timeline shows its conditions measured and its figures its NEN 2767
+ * score (`equipment.timeline`, `equipment.figures`, `timeline.ts`).
  */
 import { accessRules } from "#lib/access/extensions.ts";
 import { siteSummary } from "#lib/customers/extensions.ts";
+import { figures, timeline } from "#lib/equipment/extensions.ts";
 import { daily } from "#lib/jobs/extensions.ts";
 import { contribute, defineServerModule } from "#lib/server/extensions.ts";
 import {
@@ -32,6 +34,7 @@ import {
 import { componentArticles } from "./components.ts";
 import { recordChecklistConditions } from "./conditions.ts";
 import { conditionSiteSummary } from "./site-summary.ts";
+import { conditionFigures, conditionTimeline } from "./timeline.ts";
 
 export default defineServerModule("condition", [
 	contribute(accessRules, () => conditionAccess),
@@ -42,4 +45,6 @@ export default defineServerModule("condition", [
 	contribute(unitComponents, componentsOfUnits),
 	contribute(componentScores, componentScoresOf),
 	contribute(componentSearch, componentSearchText),
+	contribute(timeline, conditionTimeline),
+	contribute(figures, conditionFigures),
 ]);

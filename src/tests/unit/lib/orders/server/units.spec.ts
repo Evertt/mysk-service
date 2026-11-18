@@ -106,13 +106,12 @@ describe("an order about several units", () => {
 
 	test("is in each unit's service history, at the unit's share of its cost", async () => {
 		for (const unit of units) {
-			const { events } = await as(north.member, () => data(getServiceHistory, unit.serial));
-			const entry = events.find((event) => event.kind === "order" && event.order.number === number);
-			expect(entry?.kind).toBe("order");
-			if (entry?.kind !== "order") continue;
-			expect(entry.order.units).toBe(3);
-			expect(entry.order.cost.total).toBeGreaterThan(0);
-			expect(unitShare(entry.order)).toBe(Math.round(entry.order.cost.total / 3));
+			const { orders } = await as(north.member, () => data(getServiceHistory, unit.serial));
+			const entry = orders.find((each) => each.number === number);
+			expect(entry?.units).toBe(3);
+			if (!entry) continue;
+			expect(entry.cost.total).toBeGreaterThan(0);
+			expect(unitShare(entry)).toBe(Math.round(entry.cost.total / 3));
 		}
 	});
 });

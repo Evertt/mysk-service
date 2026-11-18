@@ -85,8 +85,8 @@ photo store (`photoStore()`, `#lib/server/files/photos.ts`: the `PHOTOS` R2 buck
 (`reportOrder()`); the order's engineer (while `fieldActions()`'s `photo`) and the office (until it's
 invoiced) later with `addPhotos`, and anyone may try `deletePhoto` (both in `photos.remote.ts`,
 `forAnyRole`). The limits and `mayAddPhotos()` are in `#lib/orders/photos.ts`; the UI is
-`OrderPhotosCard`, `OrderPhotos`, `PhotoPicker` (it shrinks in the browser), `PhotoCount` and
-`PhotoThumbs` from `#lib/orders/components.ts`.
+`OrderPhotosCard`, `OrderPhotos`, `PhotoPicker` (it shrinks in the browser) and `PhotoCount`
+from `#lib/orders/components.ts`; a unit's timeline shows an order's as thumbnails (`#lib/equipment/timeline/`).
 
 - **Who:** the access registry's `order_photo` is a part of `order` for reading; its change is the
   office's for all, and, through `partOf()`'s `changedBy`, the adder's own while the order is in

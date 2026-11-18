@@ -39,9 +39,9 @@ Elke toegevoegde of verwijderde foto staat in de activiteit van de opdracht, met
 - De pagina van de opdracht op kantoor, met een fotokaart om ze toe te voegen en te verwijderen.
 - De opdracht van de monteur, met dezelfde kaart.
 - De pagina van de opdracht bij de klant, op de kaart van zijn melding.
-- De servicegeschiedenis van een apparaat: op kantoor kleine miniaturen per opdracht, in het
-  monteursportaal (de opdrachten van een gescand apparaat) en het klantportaal (Servicehistorie) een
-  aantal per opdracht.
+- De tijdlijn van een apparaat, in elke omgeving: kleine miniaturen bij het afronden van de
+  opdracht of bij de toegevoegde foto's; in het monteursportaal tellen de opdrachten van een gescand
+  apparaat ook de hunne.
 
 <TryIt as="engineer" /> <TryIt as="planner" />
 
@@ -95,6 +95,6 @@ documenten met `<tenant>/equipment/`, dus de ene opruimronde ziet de bestanden v
 - <SourceLink path="src/lib/server/access/core.ts" line={123}><code>order_photo</code></SourceLink>
 - <SourceLink path="src/lib/orders/photos.remote.ts" line={21}><code>addPhotos</code></SourceLink>
   en <SourceLink path="src/lib/orders/photos.remote.ts" line={29}><code>deletePhoto</code></SourceLink>
-- <SourceLink path="src/lib/server/db/schema/orders.ts" line={206} symbol="orderPhoto"><code>order_photo</code></SourceLink>
+- <SourceLink path="src/lib/server/db/schema/orders.ts" line={217} symbol="orderPhoto"><code>order_photo</code></SourceLink>
 
 <DocsPointer doc="docs/agents/orders.md" section="Photos" />

@@ -105,19 +105,8 @@
 	"equipment_detail_model": "Model",
 	"equipment_owner": "Eigenaar",
 	"equipment_owner_company": "Bedrijf",
-	"equipment_history_title": "Servicegeschiedenis",
-	"equipment_history_description": "Alles wat er met dit apparaat gebeurd is, het meest recente eerst.",
-	"equipment_history_empty_title": "Nog geen opdrachten",
-	"equipment_history_empty_description": "Er is nog geen onderhoud aan dit apparaat gedaan.",
-	"equipment_history_installed": "Geïnstalleerd",
 	"equipment_history_warranty_ends": "Garantie loopt af",
 	"equipment_history_warranty_ended": "Garantie afgelopen",
-	"equipment_history_engineer": "Monteur",
-	"equipment_history_scheduled": "Gepland",
-	"equipment_history_completed": "Afgerond",
-	"equipment_history_labour": "Arbeid",
-	"equipment_history_cost": "{label} · {cost}",
-	"equipment_history_adjustments": "Aanpassingen",
 	"equipment_stats_orders": "Opdrachten",
 	"equipment_stats_open": "{count} open",
 	"equipment_stats_orders_by_type": "Opdrachten per type",
@@ -281,7 +270,6 @@
 	"equipment_category_delete_description": "De categorie verdwijnt uit je categorieën. Apparatuur in deze categorie heeft eerst een andere nodig.",
 	"equipment_category_deleted": "Categorie verwijderd",
 	"equipment_categories_column_actions": "Acties",
-	"equipment_history_shared": "Een van {count} apparaten op deze opdracht; het deel van dit apparaat is {share}",
 	"equipment_categories_all": "Alle",
 	"equipment_documents_title": "Documenten",
 	"equipment_documents_description": "Handleidingen, certificaten en tekeningen van dit apparaat. De monteurs en de klantcontacten lezen ze ook.",
@@ -310,5 +298,54 @@
 	"equipment_documents_not_found": "Document niet gevonden.",
 	"equipment_documents_open": "{title} openen",
 	"equipment_documents_download": "{title} downloaden",
-	"equipment_documents_added_on": "Toegevoegd op {date}"
+	"equipment_documents_added_on": "Toegevoegd op {date}",
+	"equipment_timeline_title": "Wat gebeurt er",
+	"equipment_timeline_description": "Alles wat er met dit apparaat gebeurde, nieuwste eerst.",
+	"equipment_timeline_figures": "Cijfers van vandaag",
+	"equipment_timeline_today": "Vandaag",
+	"equipment_timeline_yesterday": "Gisteren",
+	"equipment_timeline_more": "Meer laden",
+	"equipment_timeline_empty": "Er is nog niets met dit apparaat gebeurd.",
+	"equipment_timeline_installed": "Geïnstalleerd",
+	"equipment_timeline_document": "Document toegevoegd: {title}",
+	"equipment_timeline_photos": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} foto toegevoegd",
+				"countPlural=*": "{countText} foto's toegevoegd"
+			}
+		}
+	],
+	"equipment_timeline_reported_qr": "Storing gemeld via de QR-code",
+	"equipment_timeline_reported_portal": "Storing gemeld in het klantportaal",
+	"equipment_timeline_created": "Opdracht aangemaakt: {type}",
+	"equipment_timeline_accepted": "Melding geaccepteerd, opdracht aangemaakt",
+	"equipment_timeline_accepted_scheduled": "Opdracht aangemaakt, monteur ingepland",
+	"equipment_timeline_scheduled": "Monteur ingepland",
+	"equipment_timeline_departed": "Monteur onderweg",
+	"equipment_timeline_started": "Werk gestart",
+	"equipment_timeline_completed": "Opdracht afgerond",
+	"equipment_timeline_completed_photos": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "Opdracht afgerond, met {countText} foto",
+				"countPlural=*": "Opdracht afgerond, met {countText} foto's"
+			}
+		}
+	],
+	"equipment_timeline_cancelled": "Opdracht geannuleerd",
+	"equipment_timeline_rejected": "Melding afgewezen",
+	"equipment_timeline_by": "{text} · door {name}"
 }

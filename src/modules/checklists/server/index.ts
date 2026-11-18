@@ -9,10 +9,12 @@
  * on, its products are linked to the templates' points (`parts-shop.checkpoints`). A checklist
  * completed with rejected points rings the office's bell (`notifications.rules`). Its units'
  * inspections are figures of customers' sites (`customers.siteSummary`). Its records' access
- * rules are `access.ts`'s (`access.rules`).
+ * rules are `access.ts`'s (`access.rules`). A unit's timeline shows its checklists completed, with
+ * their outcome (`equipment.timeline`, `timeline.ts`).
  */
 import { accessRules } from "#lib/access/extensions.ts";
 import { siteSummary } from "#lib/customers/extensions.ts";
+import { timeline } from "#lib/equipment/extensions.ts";
 import { notificationRules } from "#lib/notifications/extensions.ts";
 import { saving, units } from "#lib/orders/extensions.ts";
 import { contribute, defineServerModule } from "#lib/server/extensions.ts";
@@ -30,6 +32,7 @@ import { inspectionSignal } from "./inspection-sql.ts";
 import { checklistNotificationRules } from "./notifications.ts";
 import { shopCheckpoints, unitCheckpoints } from "./shop.ts";
 import { checklistSiteSummary } from "./site-summary.ts";
+import { checklistTimeline } from "./timeline.ts";
 
 export default defineServerModule("checklists", [
 	contribute(accessRules, () => checklistAccess),
@@ -41,4 +44,5 @@ export default defineServerModule("checklists", [
 	contribute(componentCheckpoints, unitCheckpoints),
 	contribute(fieldPoints, rejectedFieldPoint),
 	contribute(notificationRules, checklistNotificationRules),
+	contribute(timeline, checklistTimeline),
 ]);

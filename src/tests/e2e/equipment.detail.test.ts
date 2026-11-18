@@ -1,6 +1,6 @@
 /**
- * A unit's page: its service history newest first, with each order's engineer, materials and
- * cost, and the summary's numbers; its cards packed into columns (with every module's), or
+ * A unit's page: its timeline (what happened to it, newest first, with its orders linked) and
+ * the summary's numbers; its cards packed into columns (with every module's), or
  * stacked on a phone; an unknown serial number is a 404. What the server refuses of
  * a unit with orders (deleting, moving it), what its history costs and how a completed order
  * shows in it are `equipment/server/units.spec.ts`'s and `history.spec.ts`'s.
@@ -10,43 +10,17 @@ import { describe, expect, test } from "vite-plus/test";
 import { stickiness } from "#lib/components/masonry.ts";
 import { formatCents, formatDate } from "#lib/i18n/format.ts";
 
-import { cents, fitsWidth, onPhone, organizations, rows, useApp, value } from "./app.ts";
-import { covered, priceOf, pricedOrders } from "./contracts-helpers.ts";
+import { fitsWidth, onPhone, organizations, rows, useApp, value } from "./app.ts";
+import { priceOf, pricedOrders } from "./contracts-helpers.ts";
 import { busiest, equipmentPage } from "./equipment-helpers.ts";
 import { type Box, cardBoxes, columnsOf, expectApart, packedBoxes } from "./masonry-helpers.ts";
 
 const { north } = organizations;
 const app = useApp();
-const { card, shownTimeline, timeline } = equipmentPage(app);
+const { card, timeline } = equipmentPage(app);
 
 /** That the order `o` is about the unit `?`, one of its units or its only one. */
 const onUnit = `exists (select 1 from order_unit x where x.order_id = o.id and x.equipment_id = ?)`;
-
-/**
- * What a unit's timeline should show, newest first: each order when it was completed, else
- * scheduled, else created; on the same day, the warranty's end above orders and the installation
- * below them.
- */
-async function expectedTimeline(id: number) {
-	const [unit] = await rows<{ installed: string; warranty: string }>(
-		`select installed_at as installed, warranty_until as warranty from equipment where id = ?`,
-		[id],
-	);
-	// An order's day in the machine's time zone (the test server's), and its moment that day.
-	const orders = await rows<{ number: string; day: string; at: number }>(
-		`select number, date(coalesce(completed_at, scheduled_for, created_at), 'unixepoch',
-		 'localtime') as day, coalesce(completed_at, scheduled_for, created_at) as at from "order" o
-		 where ${onUnit} order by at desc, id desc`,
-		[id],
-	);
-	return [
-		{ label: "warranty", day: unit.warranty, rank: 0, at: 0 },
-		...orders.map((order) => ({ label: order.number, day: order.day, rank: 1, at: order.at })),
-		{ label: "installation", day: unit.installed, rank: 2, at: 0 },
-	]
-		.sort((a, b) => b.day.localeCompare(a.day) || a.rank - b.rank || b.at - a.at)
-		.map((event) => event.label);
-}
 
 /** Calendar days from one date to another. */
 const daysBetween = (from: Date, to: Date) => {
@@ -96,41 +70,30 @@ async function expectedStats(id: number) {
 
 /**
  * Opens a unit's page once it's hydrated and shows its timeline: `go()` may be back before, once
- * the network is quiet, and hydrating renders the timeline again, its orders' links gone for a
- * moment (seen with the CPU 20 times slower).
+ * the network is quiet, and hydrating renders the timeline again.
  */
 async function openUnit(unit: { id: number; serial: string }) {
 	await app.go(`/equipment/${unit.serial}`);
 	await app.page.locator("html[data-hydrated]").waitFor({ state: "attached" });
-	const events = await expectedTimeline(unit.id);
-	await expect.poll(shownTimeline).toEqual(events);
+	await timeline().first().waitFor();
 }
 
 describe("in North", () => {
-	test("the detail page shows the unit's service history, newest first", async () => {
+	test("the detail page shows the unit's timeline and the summary of its service", async () => {
 		const { page } = app;
 		const busy = await busiest(north.id);
 		await openUnit(busy);
 
-		// An order shows its engineer, its materials and what it cost.
-		const [latest] = await rows<{ id: number; number: string; engineer: string | null }>(
-			`select o.id, o.number, g.name as engineer from "order" o
-			 left join engineer g on g.id = o.engineer_id
-			 where ${onUnit} and o.status in ('completed', 'invoiced')
-			 and exists (select 1 from order_line l where l.order_id = o.id)
-			 order by o.completed_at desc limit 1`,
+		// Its latest completed order, linked to its page (what the timeline tells of each step is
+		// `equipment/server/timeline.spec.ts`'s).
+		const [latest] = await rows<{ number: string }>(
+			`select o.number from "order" o where ${onUnit} and o.status in ('completed', 'invoiced')
+			 order by o.completed_at desc, o.id desc limit 1`,
 			[busy.id],
 		);
 		const item = timeline().filter({ has: page.getByRole("link", { name: latest.number }) });
-		const shown = await item.innerText();
-		expect(shown).toContain(latest.engineer ?? "Unassigned");
-		const materials = await rows<{ sku: string }>(
-			`select m.sku from order_line l join material m on m.id = l.material_id where l.order_id = ?`,
-			[latest.id],
-		);
-		expect(materials.length).toBeGreaterThan(0);
-		for (const { sku } of materials) expect(shown).toContain(sku);
-		expect(await item.locator('a[href^="/materials/"]').count()).toBe(materials.length);
+		await expect.poll(() => item.count()).toBeGreaterThan(0);
+		expect(await item.first().innerText()).toMatch(/Order completed/);
 
 		// The summary shows its numbers (`service-history.spec.ts` counts them): its orders by type,
 		// their cost and the time between repairs.
@@ -164,28 +127,6 @@ describe("in North", () => {
 		const repairs = await card("Since last repair");
 		expect(repairs).toContain(expected.sinceRepair!);
 		expect(repairs).toContain(`Mean time between repairs: ${expected.betweenRepairs} day`);
-
-		// What a contract includes shows on the order, less (what each order costs, as on its own
-		// page, is `equipment/server/history.spec.ts`'s). On the busiest unit with an order that a
-		// contract includes something of.
-		const [covering] = await rows<{ id: number; serial: string }>(
-			`with ${covered} select e.id, e.serial_number as serial from equipment e
-			 join order_unit ou on ou.equipment_id = e.id join "order" o on o.id = ou.order_id
-			 join covered c on c.order_id = o.id and c.n = 1
-			 where e.organization_id = ? and c.level in ('standard', 'premium') and o.labor_hours > 0
-			 group by e.id order by (select count(*) from order_unit x where x.equipment_id = e.id) desc, e.id
-			 limit 1`,
-			[north.id],
-		);
-		if (covering.id !== busy.id) await openUnit(covering);
-		const [order] = (await pricedOrders(north.id, onUnit, [covering.id])).filter(
-			(each) => priceOf(each).included > 0,
-		);
-		const entry = timeline().filter({ has: page.getByRole("link", { name: order.number }) });
-		expect(cents(await entry.locator('[data-cost="adjustment"]').innerText())).toBe(
-			-priceOf(order).included,
-		);
-		expect(await entry.innerText()).toContain(`Covered by ${order.contract}`);
 	});
 
 	test("an unknown serial number is a 404", async () => {
@@ -223,7 +164,7 @@ describe("the unit's cards", () => {
 		const titles = boxes.map((box) => box.title);
 		// In the page's order: the timeline, the unit's own cards, the modules' and the activity.
 		expect(titles.slice(0, 6)).toEqual([
-			"Service history",
+			"What's happening",
 			"Specifications",
 			"Owner",
 			"Site",
@@ -261,7 +202,7 @@ describe("the unit's cards", () => {
 			await app.go(`/equipment/${serial}`);
 			expect(await app.page.locator("[data-record-cards][data-masonry]").count()).toBe(0);
 			const boxes = await cardBoxes(cards());
-			expect(boxes[0].title).toBe("Service history");
+			expect(boxes[0].title).toBe("What's happening");
 			expect(boxes.at(-1)?.title).toBe("Activity");
 			expect(columnsOf(boxes).size).toBe(1);
 			for (const [index, box] of boxes.slice(1).entries()) {

@@ -1,6 +1,6 @@
 /**
  * The energy module's demo data: SHLTR's "Riedel Ede — Productielocatie" (§2.5, `riedel.ts`) with
- * its eight zones, eleven consumers and four doors (the freezer's door and the dock lift linked to
+ * its eight zones, eleven consumers and five doors (D-07 linked to the unit of the demo's timeline, the freezer's door and the dock lift linked to
  * Riedel's units), each zone's default thresholds, 30 days of history and today's readings so far
  * (15-minute aggregates per zone, from the simulation the simulator posts too, so a day posted
  * again changes nothing), the doors' events, a few open alerts from the last day and the token the
@@ -16,6 +16,7 @@ import { now } from "#lib/server/db/seed/clock.ts";
 import { seedIntegrationToken } from "#lib/server/db/seed/integrations.ts";
 import { defineSeed, type SeedTransaction } from "#lib/server/db/seed/module-seed.ts";
 import { toMoment } from "#lib/server/db/seed/temporal.ts";
+import { storyMoment } from "#lib/server/db/seed/unit-story.ts";
 
 import {
 	type Breach,
@@ -44,6 +45,9 @@ import {
 	energyThreshold,
 	energyZone,
 } from "./schema.ts";
+
+/** The door that is the unit of the demo's timeline (`#lib/server/db/seed/unit-story.ts`). */
+const STORY_DOOR = "D-07";
 
 /** How many days of history before today. */
 const HISTORY_DAYS = 30;
@@ -166,6 +170,21 @@ export default defineSeed({
 					events.push({ organizationId, doorId: doorId.get(door)!, ...event });
 				}
 			}
+			// D-07's day as its timeline tells it: open for 14 minutes from 08:12 (`unit-story.ts`).
+			const storyDoor = doorId.get(STORY_DOOR)!;
+			const [opens, closes] = [storyMoment("08:12"), storyMoment("08:26")];
+			const quiet = [opens.subtract({ minutes: 7 }), closes.add({ minutes: 5 })];
+			const story = events.filter(
+				(event) =>
+					event.doorId !== storyDoor ||
+					Temporal.Instant.compare(event.at, quiet[0]) < 0 ||
+					Temporal.Instant.compare(event.at, quiet[1]) >= 0,
+			);
+			story.push(
+				{ organizationId, doorId: storyDoor, at: opens, open: true },
+				{ organizationId, doorId: storyDoor, at: closes, open: false },
+			);
+			events.splice(0, events.length, ...story);
 			await insertRows(tx, energyReading, readings);
 			await insertRows(tx, energyDoorEvent, events);
 			count("energyReadings", readings);
@@ -200,7 +219,7 @@ export default defineSeed({
 					alerts.push({ organizationId, energySiteId: site.id, zoneId: zone.id, ...breach });
 				}
 			}
-			for (const door of riedelDoors) {
+			for (const door of riedelDoors.filter((each) => each.code !== STORY_DOOR)) {
 				const id = doorId.get(door.code)!;
 				const own = events.filter((event) => event.doorId === id);
 				const breaches = doorBreaches(id, openings(own), door.thresholdMinutes, until);
@@ -218,6 +237,19 @@ export default defineSeed({
 			// The oldest one was dealt with already.
 			alerts.sort((a, b) => Temporal.Instant.compare(a.at, b.at));
 			if (alerts.length > 1) Object.assign(alerts[0], { status: "done", doneAt: until });
+			// D-07's long opening of its story's day, open: after the others, so theirs stay as they were.
+			const storyOwn = events.filter((event) => event.doorId === storyDoor);
+			const storyThreshold = riedelDoors.find((door) => door.code === STORY_DOOR)!.thresholdMinutes;
+			for (const breach of doorBreaches(storyDoor, openings(storyOwn), storyThreshold, until)) {
+				if (!breach.at.equals(opens)) continue;
+				alerts.push({
+					organizationId,
+					energySiteId: site.id,
+					zoneId: zoneId.get("Z-DOCK")!,
+					doorId: storyDoor,
+					...breach,
+				});
+			}
 			if (alerts.length) await tx.insert(energyAlert).values(alerts);
 			count("energyAlerts", alerts);
 

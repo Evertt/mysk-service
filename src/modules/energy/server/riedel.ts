@@ -1,6 +1,6 @@
 /**
  * SHLTR's demo site, "Riedel Ede — Productielocatie" (`docs/plans/shltr-domain.md` §2.5): its
- * contract, eight zones, eleven consumers and four doors, with how the simulation runs them (a
+ * contract, eight zones, eleven consumers and five doors, with how the simulation runs them (a
  * zone's typical working day: its peak and consumption, the mockup's `piekKw` and `kwhVandaag`).
  * The seed makes the site from it, and the simulator posts its readings. Plain data, plain Node.
  */
@@ -142,8 +142,9 @@ interface RiedelDoor extends SimulatedDoor {
 }
 
 /**
- * The four monitored doors. D-05 is Salvo's DOCK 05 (§2.5): the docks module can show the dock's
+ * The five monitored doors. D-05 is Salvo's DOCK 05 (§2.5): the docks module can show the dock's
  * state next to it later; Riedel's units don't include docks 05 and 06, so those two have none.
+ * D-07 is a unit of Riedel's, whose timeline shows its openings.
  */
 export const riedelDoors: RiedelDoor[] = [
 	{
@@ -214,5 +215,25 @@ export const riedelDoors: RiedelDoor[] = [
 		toHour: 20,
 		overrunChance: 0.06,
 		overrunMinutes: 5,
+	},
+	// Riedel's "Sectionaaldeur laaddok 07", the mockup's Sectionaaldeur D-07: the unit whose
+	// timeline the demo shows (its long opening of the day is the seed's, `STORY_DOOR`).
+	{
+		code: "D-07",
+		name: "Sectionaaldeur laaddok 07",
+		zone: "Z-DOCK",
+		kind: "sectional",
+		lossKw: 11.4,
+		thresholdMinutes: 10,
+		insideC: 18,
+		outsideC: 9,
+		cycleMinutes: 25,
+		openMinutes: 3,
+		offsetMinutes: 5,
+		fromHour: 6,
+		toHour: 22,
+		overrunChance: 0,
+		overrunMinutes: 0,
+		unit: "Sectionaaldeur laaddok 07",
 	},
 ];

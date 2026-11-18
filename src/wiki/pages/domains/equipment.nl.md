@@ -28,13 +28,14 @@ plek waar ze staan.
 
 ## Servicegeschiedenis
 
-De pagina van een apparaat vertelt zijn verhaal: een tijdlijn met de installatie, elke opdracht
-eraan en het einde van de garantie (dat nog kan komen), en cijfers die het samenvatten: hoeveel
-opdrachten, hoeveel daarvan open, wat het werk kostte, en hoe lang er tussen reparaties zit. Een
-opdracht voor meerdere apparaten, zoals een jaarlijkse inspectie van vijftien deuren, telt bij elk
-voor een vijftiende. Elke opdracht toont daar zijn foto's, als kleine miniaturen; het
-monteursportaal en het klantportaal tonen een aantal per opdracht bij de opdrachten van een
-apparaat (zie [Foto's bij een opdracht](/wiki/orders/photos)).
+De pagina van een apparaat vat zijn service samen in cijfers: hoeveel opdrachten, hoeveel daarvan
+open, wat het werk kostte, en hoe lang er tussen reparaties zit. Een opdracht voor meerdere
+apparaten, zoals een jaarlijkse inspectie van vijftien deuren, telt bij elk voor een vijftiende.
+Daaronder staat de tijdlijn, in elke omgeving: de installatie, de meldingen en opdrachten stap voor
+stap met hun foto's als kleine miniaturen, de documenten, en wat de modules toevoegen (de openingen
+van de deur, gemeten condities, keuringen), met de cijfers van vandaag erboven (zie
+[De tijdlijn van een apparaat](/wiki/domains/unit-timeline) en
+[Foto's bij een opdracht](/wiki/orders/photos)).
 
 ## Handleidingen en documenten
 
@@ -95,8 +96,8 @@ opzet over tenants heen leest, omdat de code niet zegt van wie hij is.
    ziet), anders 404.
 3. Hoort de code bij een andere organisatie van de gebruiker, dan wordt dat zijn huidige.
 4. `qrDestination(target, viewer)` kiest de pagina voor de shell (de omgeving) van de kijker:
-   `/my/equipment/<serial>` of `/my/locations/<id>`, `/portal/equipment/<serial>` of
-   `/portal/report?location=<id>`, of `/equipment/<serial>` of `/equipment/locations/<id>`.
+   `/my/equipment/<serial>` of `/my/locations/<id>`, `/portal/equipment/<serial>?via=qr` of
+   `/portal/report?location=<id>&via=qr`, of `/equipment/<serial>` of `/equipment/locations/<id>`.
 
 Beide portalen noemen `/q/[token]` bij de routes die van hen zijn (`shells.ts`), zodat de guard van
 de pagina's een scanner er niet van wegstuurt.
@@ -109,9 +110,9 @@ alleen het adres van de vestiging. De scopes (`officeUnits()`, `engineerUnits()`
 [wat er van het werk aan een opdracht wordt bijgehouden](/wiki/orders/work-record).
 
 - <SourceLink path="src/lib/server/db/schema/equipment.ts" line={82}><code>equipment</code></SourceLink>, <SourceLink path="src/lib/server/db/schema/equipment.ts" line={52} symbol="equipmentLocation"><code>equipment_location</code></SourceLink>
-- <SourceLink path="src/lib/equipment/server/qr.ts" line={63}><code>resolveQrCode()</code></SourceLink> en <SourceLink path="src/lib/equipment/server/qr.ts" line={84}><code>qrDestination()</code></SourceLink>
+- <SourceLink path="src/lib/equipment/server/qr.ts" line={63}><code>resolveQrCode()</code></SourceLink> en <SourceLink path="src/lib/equipment/server/qr.ts" line={85}><code>qrDestination()</code></SourceLink>
 - <SourceLink path="src/routes/q/[token]/+server.ts" line={17} symbol="GET">de route <code>/q/[token]</code></SourceLink>
 - <SourceLink path="src/lib/equipment/labels/labels.remote.ts" line={18}><code>getLabelSheet</code></SourceLink>
-- <SourceLink path="src/lib/equipment/detail/service-history.ts" line={69}><code>buildTimeline()</code></SourceLink>
+- <SourceLink path="src/lib/equipment/detail/service-history.remote.ts" line={18}><code>getServiceHistory</code></SourceLink>
 
 <DocsPointer doc="docs/agents/orders.md" section="Units and locations" />

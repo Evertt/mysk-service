@@ -41,8 +41,8 @@ Every photo added or deleted is in the order's activity, with who did it.
 - The order's page in the office, with a photos card that adds and deletes them.
 - The engineer's order, with the same card.
 - The customer's order page, on the card of their report.
-- A unit's service history: in the office small thumbnails per order, in the engineer portal (a
-  scanned unit's orders) and the customer portal (Service history) a count per order.
+- A unit's timeline, in every shell: small thumbnails with the order's completion or with the
+  photos added; in the engineer portal a scanned unit's orders also count theirs.
 
 <TryIt as="engineer" /> <TryIt as="planner" />
 
@@ -93,6 +93,6 @@ never sees the other's files.
 - <SourceLink path="src/lib/server/access/core.ts" line={123}><code>order_photo</code></SourceLink>
 - <SourceLink path="src/lib/orders/photos.remote.ts" line={21}><code>addPhotos</code></SourceLink>
   and <SourceLink path="src/lib/orders/photos.remote.ts" line={29}><code>deletePhoto</code></SourceLink>
-- <SourceLink path="src/lib/server/db/schema/orders.ts" line={206} symbol="orderPhoto"><code>order_photo</code></SourceLink>
+- <SourceLink path="src/lib/server/db/schema/orders.ts" line={217} symbol="orderPhoto"><code>order_photo</code></SourceLink>
 
 <DocsPointer doc="docs/agents/orders.md" section="Photos" />

@@ -166,11 +166,9 @@ describe("a premium-covered repair", () => {
 			expect(listed.rows.map((row) => [row.number, row.total])).toEqual([
 				[order.number, totals.total],
 			]);
-			const { events } = await data(getServiceHistory, order.serial);
-			const event = events.find(
-				(each) => each.kind === "order" && each.order.number === order.number,
-			);
-			expect(event?.kind === "order" && event.order.cost).toMatchObject({
+			const { orders } = await data(getServiceHistory, order.serial);
+			const shown = orders.find((each) => each.number === order.number);
+			expect(shown?.cost).toMatchObject({
 				total: totals.total,
 				adjustments: totals.adjustments,
 			});

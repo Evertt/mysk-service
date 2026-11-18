@@ -32,7 +32,7 @@ describe("in the customer portal", () => {
 			await site.locator('[data-kpi="consumption"] [data-slot="card-title"]').textContent(),
 		).toBe(kwh(await kwhToday(siteId)));
 		expect(await site.locator("[data-comparison] [data-zone-row]").count()).toBe(8);
-		expect(await site.locator("[data-client-door]").count()).toBe(4);
+		expect(await site.locator("[data-client-door]").count()).toBe(5);
 		// Read-only: nothing to act on, no way into the office.
 		expect(await site.getByRole("button").count()).toBe(0);
 		expect(await site.locator('a[href^="/equipment"], a[href^="/energy/"]').count()).toBe(0);

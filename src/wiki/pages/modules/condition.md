@@ -89,6 +89,11 @@ attention, and how soon?
 
 Condition requires no module.
 
+A unit's timeline shows each condition measured ("Condition measured: 3 · Redelijk, 2 defects"),
+with the status it brings and, for the office and the unit's engineers, its defects' photos (never
+for a customer's contact); its current score is one of today's figures above it. See
+[A unit's timeline](/wiki/domains/unit-timeline).
+
 <TryIt as="planner" />
 
 <HowItWorks />
@@ -128,6 +133,7 @@ modules they refer to are optional. The service history is a view of the activit
 (`server/history.ts`), not a table.
 
 - <SourceLink path="src/modules/condition/module.ts">module.ts</SourceLink>: the manifest, and <SourceLink path="src/modules/condition">the module's folder</SourceLink>.
+- <SourceLink path="src/modules/condition/server/timeline.ts" line={47}>conditionTimeline()</SourceLink>: the conditions on a unit's timeline.
 - <SourceLink path="src/modules/condition/nen2767.ts" line={128}>elementScoreOf()</SourceLink>: an
   element's score from its defects, by NEN 2767-1's method.
 - <SourceLink path="src/modules/condition/model.ts" line={191}>rolledUpStatus()</SourceLink>: a

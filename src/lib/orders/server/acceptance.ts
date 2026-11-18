@@ -9,7 +9,7 @@
  */
 import { and, count, eq } from "drizzle-orm";
 
-import type { ReportFault } from "#lib/models.ts";
+import type { ReportChannel, ReportFault } from "#lib/models.ts";
 import { getLocale } from "#lib/paraglide/runtime.js";
 import { currentTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
@@ -20,16 +20,19 @@ import { addOrderPhotos, withStoredPhotos } from "./photos.ts";
 
 /**
  * Creates an order a customer's contact reports in the portal, in `tx`, through `createOrders()`
- * (checked, numbered and logged as created, by them), awaiting acceptance, with who reported it and
- * the kind of fault they chose, if any.
+ * (checked, numbered and logged as created, by them), awaiting acceptance, with who reported it,
+ * the kind of fault they chose, if any, and how they came to report it (`via`: a scanned QR code,
+ * or the portal).
  */
 export async function requestOrder(
 	tx: Transaction,
 	{
 		fault = null,
+		via = "portal",
 		...draft
 	}: Omit<OrderDraft, "status" | "engineerId" | "scheduledFor" | "completedAt" | "laborHours"> & {
 		fault?: ReportFault | null;
+		via?: ReportChannel;
 	},
 ) {
 	const { organizationId, user } = currentTenant();
@@ -40,6 +43,7 @@ export async function requestOrder(
 		userId: user.id,
 		reporterName: user.name,
 		fault,
+		via,
 		// The mails about its progress are in this language (`./reporter-mail.ts`).
 		reporterLocale: getLocale(),
 	});

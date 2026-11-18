@@ -226,5 +226,23 @@
 	"condition_extent_range": "Een heel percentage van 1 tot 100.",
 	"condition_extent_percent": "% van het element",
 	"condition_extent_percent_label": "Omvang (%)",
-	"condition_extent_presets": "Omvangklassen"
+	"condition_extent_presets": "Omvangklassen",
+	"condition_timeline_measured": "Conditie gemeten: {score}",
+	"condition_timeline_measured_defects": "Conditie gemeten: {score}, {defects}",
+	"condition_count_defects": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} gebrek",
+				"countPlural=*": "{countText} gebreken"
+			}
+		}
+	],
+	"condition_timeline_status": "{status}, was {was}",
+	"condition_timeline_figure": "Conditie (NEN 2767)"
 }

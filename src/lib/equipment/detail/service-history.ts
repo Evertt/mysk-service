@@ -7,13 +7,11 @@ import {
 	type OrderType,
 	orderTypes,
 } from "#lib/models.ts";
-import type { OrderCost, PriceAdjustment } from "#lib/orders/extensions.ts";
-
 /**
- * A unit's service history: what happened to it in order (`buildTimeline`) and the figures that
- * sum it up (`serviceStats`).
+ * A unit's service history in figures (`serviceStats`), above its page's timeline (what happened
+ * to it, `../timeline/`).
  */
-import { isUnderWarranty } from "../display.ts";
+import type { OrderCost, PriceAdjustment } from "#lib/orders/extensions.ts";
 
 /** An order on the unit, with what it took and cost. */
 export interface HistoryOrder {
@@ -34,8 +32,6 @@ export interface HistoryOrder {
 	 * materials used) and adjustments (e.g. contract coverage). In cents. The whole order's.
 	 */
 	cost: { costs: OrderCost[]; labor: number; adjustments: PriceAdjustment[]; total: number };
-	/** Its photos, by which `/photos/<id>` serves them. */
-	photos: { id: number }[];
 }
 
 /**
@@ -45,51 +41,10 @@ export interface HistoryOrder {
 export const unitShare = (order: Pick<HistoryOrder, "units" | "cost">) =>
 	Math.round(order.cost.total / Math.max(1, order.units));
 
-/** Something that happened to a unit, on a day (an order's in the user's time zone). */
-export type ServiceEvent =
-	| { kind: "installation"; date: Temporal.PlainDate }
-	| { kind: "order"; date: Temporal.PlainDate; order: HistoryOrder }
-	/** The warranty's last day; `upcoming` while it still covers work. */
-	| { kind: "warranty"; date: Temporal.PlainDate; upcoming: boolean };
-
 /** When an order happened: when it was completed, else when it's scheduled, else when it was made. */
 export const orderDate = (
 	order: Pick<HistoryOrder, "completedAt" | "scheduledFor" | "createdAt">,
 ) => order.completedAt ?? order.scheduledFor ?? order.createdAt;
-
-/** A moment's day, in the user's time zone. */
-
-/** On the same day, the warranty's end goes above orders, and the installation below them. */
-const rank: Record<ServiceEvent["kind"], number> = { warranty: 0, order: 1, installation: 2 };
-
-/**
- * Everything that happened (or is about to) to a unit, newest first: its installation, its orders
- * and the end of its warranty, which may still be ahead.
- */
-export function buildTimeline(
-	unit: { installedAt: Temporal.PlainDate; warrantyUntil: Temporal.PlainDate },
-	orders: HistoryOrder[],
-	now: Temporal.Instant | Temporal.PlainDate = Temporal.Now.instant(),
-): ServiceEvent[] {
-	const events: ServiceEvent[] = [
-		{ kind: "installation", date: unit.installedAt },
-		...orders.map((order) => ({ kind: "order" as const, date: dayOf(orderDate(order)), order })),
-		{
-			kind: "warranty",
-			date: unit.warrantyUntil,
-			upcoming: isUnderWarranty(unit.warrantyUntil, now),
-		},
-	];
-	return events.sort(
-		(a, b) =>
-			Temporal.PlainDate.compare(b.date, a.date) ||
-			rank[a.kind] - rank[b.kind] ||
-			(a.kind === "order" && b.kind === "order"
-				? Temporal.Instant.compare(orderDate(b.order), orderDate(a.order)) ||
-					b.order.id - a.order.id
-				: 0),
-	);
-}
 
 /**
  * Calendar days from one moment to another in the user's time zone, e.g. 1 from late on Monday
