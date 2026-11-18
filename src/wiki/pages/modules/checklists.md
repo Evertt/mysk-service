@@ -47,8 +47,9 @@ after Equipment.
 ### Where it shows up
 
 - The order's page, the unit's page and the engineer portal's order page carry the checklists.
-- Customers see what the engineer found on each unit in their portal: on the order, on the unit, and
-  as a printable work order.
+- Customers see what the engineer found on each unit in their portal: on the order, on the unit (its
+  inspection status and validity at the top of its page, its completed checklists below), and as a
+  printable work order.
 - The office's bell rings when a checklist is completed with rejected points.
 
 ### Works with

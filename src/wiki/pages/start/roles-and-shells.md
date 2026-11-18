@@ -57,6 +57,12 @@ For the customer's own contacts. It starts at `/portal`: a button to report a br
 customer's open orders (also those not accepted yet) and their latest finished work. Besides that,
 pages for their orders, units and locations.
 
+Scanning a unit's QR code opens the unit's page, made for a phone: a card with what it is and
+where, its status, and what the organization's modules add (its condition as a badge, its
+inspection status and the day of its last maintenance), then a big Report a breakdown button with
+the unit filled in, then a link to its service history. Scanning a location's code opens Report a
+breakdown with the location's units to choose from.
+
 A contact sees only their own customer's records, and, if the office invited them for some sites
 only, only those sites'. They don't see the engineers' notes; of an engineer they see the first
 name. The role is `customer`; an owner or admin invites a contact from the customer's page,

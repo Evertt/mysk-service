@@ -46,8 +46,8 @@ export async function findQrTarget(token: string): Promise<QrTarget | undefined>
 
 /**
  * Who scans a code, as it decides where it leads: the shell they work in (`shellOf()`), the
- * office, a field engineer's portal, or the customer portal, where it opens "report a breakdown"
- * on the unit or at the location.
+ * office, a field engineer's portal, or the customer portal, where it opens the unit's page (with
+ * "report a breakdown" as its main button) or "report a breakdown" at the location.
  */
 export type QrViewer = ShellName;
 
@@ -77,13 +77,14 @@ export async function resolveQrCode(
 
 /**
  * The page a code leads `viewer` to: the office's page of the unit or location, the engineer
- * portal's, with the engineer's open orders for it, or the customer portal's "report a breakdown",
- * with the unit filled in or the location's units to choose from.
+ * portal's, with the engineer's open orders for it, or the customer portal's: the unit's page (what
+ * it is, its state, "report a breakdown"), or "report a breakdown" with the location's units to
+ * choose from.
  */
 export function qrDestination(target: QrTarget, viewer: QrViewer): string {
 	if (target.kind === "unit") {
 		const serial = encodeURIComponent(target.serialNumber);
-		if (viewer === "customer") return `/portal/report?unit=${serial}`;
+		if (viewer === "customer") return `/portal/equipment/${serial}`;
 		return viewer === "engineer" ? `/my/equipment/${serial}` : `/equipment/${serial}`;
 	}
 	if (viewer === "customer") return `/portal/report?location=${target.id}`;

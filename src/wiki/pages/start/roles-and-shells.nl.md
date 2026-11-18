@@ -56,6 +56,13 @@ Voor de klantcontacten, de eigen contactpersonen van de klant. Het begint op `/p
 melden, de open opdrachten van de klant (ook die nog niet geaccepteerd zijn) en het laatst afgeronde
 werk. Daarnaast zijn er pagina's voor hun opdrachten, apparaten en locaties.
 
+Wie de QR-code van een apparaat scant, komt op de pagina van dat apparaat, gemaakt voor een
+telefoon: een kaart met wat het is en waar het staat, de status en wat de modules van de organisatie
+toevoegen (de conditie als badge, de keuringsstatus en de dag van het laatste onderhoud), dan een
+grote knop Storing melden met het apparaat al ingevuld, en dan een link naar de servicehistorie.
+Wie de code van een locatie scant, komt bij Storing melden, met de apparaten op die locatie om uit
+te kiezen.
+
 Een klantcontact ziet alleen de gegevens van zijn eigen klant, en als het kantoor hem voor slechts
 een paar vestigingen heeft uitgenodigd, alleen die van die vestigingen. De notities van de monteurs
 ziet hij niet; van een monteur ziet hij de voornaam. De rol is `customer`; een eigenaar of

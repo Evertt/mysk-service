@@ -127,7 +127,7 @@ describe("another customer's records", () => {
 		expect(await resolveQrCode(other.location_token, contact)).toBeUndefined();
 		expect(await resolveQrCode(await tokenIn(northId), contact)).toBeUndefined();
 		expect(await resolveQrCode(await tokenIn(southId), contact)).toBeUndefined();
-		// Their own customer's lead them to the report form.
+		// Their own customer's lead them to the unit's page.
 		const own = await unitOf("Riedel B.V.");
 		expect(await resolveQrCode(own.qr_token, contact)).toMatchObject({ viewer: "customer" });
 	});

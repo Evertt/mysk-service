@@ -10,7 +10,8 @@
 	Each contribution is rendered in a boundary of its own (`ErrorBoundary`, which logs and reports
 	the error, and resets a part that failed for an unknown reason once by itself), so when it fails
 	(its remote query throws, its chunk doesn't load) the page and the other contributions still
-	render, and it shows a small card saying so, with a retry. Trying again loads the contribution
+	render, and it shows a small card saying so, with a retry (or, with `notice="inline"`, a line of
+	text, for a slot whose parts are badges or facts rather than cards). Trying again loads the contribution
 	again, in a new boundary: resetting the boundary alone wouldn't load a chunk that failed. The
 	parts are server-rendered and awaited like the rest of the page, without a loading state.
 
@@ -42,6 +43,7 @@
 		props,
 		fields,
 		class: className = "contents",
+		notice = "card",
 	}: (
 		| { point: SlotPoint<Props>; fields?: undefined }
 		| {
@@ -49,7 +51,12 @@
 				/** The form's `modules` field, whose `<key>` (`formPartKey()`) is each module's part. */
 				fields: object;
 		  }
-	) & { props: Props; class?: string } = $props();
+	) & {
+		props: Props;
+		class?: string;
+		/** How a part that failed says so: a card, or a line of text where the parts are small. */
+		notice?: "card" | "inline";
+	} = $props();
 
 	/** What a contribution gets besides `props`: at a form slot, its module's part's fields. */
 	const partOf = (module: ModuleId) =>
@@ -100,15 +107,33 @@
 					{/if}
 
 					{#snippet failed()}
-						<Card.Root size="sm" data-extension-failed={id}>
-							<Card.Content class="flex-row items-center gap-3 text-muted-foreground">
-								<TriangleAlertIcon class="size-4 shrink-0" aria-hidden="true" />
-								<p class="flex-1">{m.common_error_module_part({ module: labelOf(module) })}</p>
-								<Button variant="outline" size="sm" onclick={() => (attempts[id] = attempt + 1)}>
+						{#if notice === "inline"}
+							<span
+								class="inline-flex items-center gap-1.5 text-xs text-muted-foreground"
+								data-extension-failed={id}
+							>
+								<TriangleAlertIcon class="size-3.5 shrink-0" aria-hidden="true" />
+								{m.common_error_module_part({ module: labelOf(module) })}
+								<Button
+									variant="link"
+									size="sm"
+									class="h-auto p-0 text-xs"
+									onclick={() => (attempts[id] = attempt + 1)}
+								>
 									{m.common_try_again()}
 								</Button>
-							</Card.Content>
-						</Card.Root>
+							</span>
+						{:else}
+							<Card.Root size="sm" data-extension-failed={id}>
+								<Card.Content class="flex-row items-center gap-3 text-muted-foreground">
+									<TriangleAlertIcon class="size-4 shrink-0" aria-hidden="true" />
+									<p class="flex-1">{m.common_error_module_part({ module: labelOf(module) })}</p>
+									<Button variant="outline" size="sm" onclick={() => (attempts[id] = attempt + 1)}>
+										{m.common_try_again()}
+									</Button>
+								</Card.Content>
+							</Card.Root>
+						{/if}
 					{/snippet}
 				</ErrorBoundary>
 			{/key}

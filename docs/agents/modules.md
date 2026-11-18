@@ -296,11 +296,15 @@ e2e src/tests/e2e/skeletons.repro.test.ts`; it counts page errors, and the race 
   `docs/agents/tenancy.md`): a module adds to its pages through the slots in
   `src/lib/client/extensions.ts`, `client.home` (the home page, after the open orders: the condition
   module's units needing attention), `client.order` (`{ number }`, an order's page: checklists'
-  results and the work order to print) and `client.unit` (`{ serialNumber }`, a unit's page: its
-  inspection status). Their components read through the module's set for customers,
+  results and the work order to print) and the unit's page (`{ serialNumber }`, what scanning its QR
+  code opens), whose parts go by what they show: `client.unit.badges` (a badge beside its status:
+  condition's), `client.unit.facts` (one fact in its card's grid, a `<dl>` of one `<DetailItem>`:
+  checklists' inspection status, maintenance's last visit) and `client.unit` (a card below the page's
+  button and links: checklists' completed inspections). `<ExtensionSlot notice="inline">` makes a
+  failed badge or fact a line of text rather than a card. Their components read through the module's set for customers,
   `moduleRemote(id, "customer")`, whose handlers scope every query with `currentCustomer()` and the
-  helpers of `#lib/server/auth/customer.ts` (checklists' and condition's `client/` folders are the
-  examples). A module's own pages in the portal are its routes in the `(customer)` group:
+  helpers of `#lib/server/auth/customer.ts` (checklists', condition's and maintenance's `client/`
+  folders are the examples). A module's own pages in the portal are its routes in the `(customer)` group:
   `routes/(customer)/<rest>` is the route `/(customer)/(modules)/<id>/<rest>`, at `/<id>/<rest>`, in
   the portal's shell and guarded like any module route (checklists'
   `routes/(customer)/portal/work-orders/[number]`, the printable work order; mind that a path that

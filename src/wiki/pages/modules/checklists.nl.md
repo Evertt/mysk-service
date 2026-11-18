@@ -48,7 +48,8 @@ staat in de zijbalk direct na Apparatuur.
 - De pagina van de opdracht, de pagina van het apparaat en de opdrachtpagina in het monteursportaal
   tonen de checklists.
 - Klanten zien in hun portaal wat de monteur bij elk apparaat heeft gevonden: bij de opdracht, bij
-  het apparaat, en als werkbon om af te drukken.
+  het apparaat (de keuringsstatus en tot wanneer die geldt bovenaan de pagina, de afgeronde
+  checklists daaronder), en als werkbon om af te drukken.
 - De bel van kantoor gaat als een checklist wordt afgerond met afgekeurde punten.
 
 ### Werkt samen met

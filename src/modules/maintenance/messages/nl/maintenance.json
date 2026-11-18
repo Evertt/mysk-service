@@ -65,6 +65,8 @@
 	"maintenance_field_last_order": "Laatste opdracht",
 	"maintenance_activity_subject": "onderhoudsplan",
 	"maintenance_card_title": "Onderhoud",
+	"maintenance_client_last": "Laatste onderhoud",
+	"maintenance_client_last_none": "Nog niet",
 	"maintenance_card_description": "Bezoeken op een vast interval.",
 	"maintenance_card_empty_title": "Geen onderhoudsplannen",
 	"maintenance_card_empty_description": "Voeg een plan toe om dit apparaat op een vast interval te onderhouden.",

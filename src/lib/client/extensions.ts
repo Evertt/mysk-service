@@ -17,5 +17,24 @@ export const home = defineSlot<Record<string, never>>("client.home");
  */
 export const order = defineSlot<{ number: string }>("client.order");
 
-/** Cards on the portal's page of one of the customer's units: e.g. its inspection status. */
+/*
+ * The portal's page of one of the customer's units (`portal/equipment/[serial]`, what scanning its
+ * QR code opens) takes modules' parts in three places, by what they show:
+ *
+ * - `client.unit.badges`: a badge beside the unit's status in its card at the top (condition's);
+ * - `client.unit.facts`: one fact in the grid below them, a `<dl>` of one `<DetailItem>` (checklists'
+ *   inspection status, maintenance's last visit), two to a row;
+ * - `client.unit`: a card after the page's main button and its links (checklists' completed
+ *   inspections).
+ *
+ * Each component gets the unit's serial number and reads only what a customer may see of it.
+ */
+
+/** A badge beside the unit's status, at the top of its page: e.g. its condition. */
+export const unitBadges = defineSlot<{ serialNumber: string }>("client.unit.badges");
+
+/** A fact in the grid of the unit's card (a `<dl>` with one `<DetailItem>`): e.g. its last visit. */
+export const unitFacts = defineSlot<{ serialNumber: string }>("client.unit.facts");
+
+/** Cards on the portal's page of one of the customer's units: e.g. its completed inspections. */
 export const unit = defineSlot<{ serialNumber: string }>("client.unit");

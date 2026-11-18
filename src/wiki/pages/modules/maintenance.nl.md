@@ -41,6 +41,9 @@ bezoek dat eraan komt een opdracht.
 - Het dashboard heeft een kaart met de bezoeken die eraan komen en het aantal dat te laat is.
 - De pagina van een contract toont de plannen van de gedekte apparaten, en kan elk gedekt apparaat
   zonder plan dit plan geven, voor het eerst gepland één interval na vandaag.
+- In het klantportaal toont de pagina van een apparaat de dag van het laatste onderhoud (de laatst
+  afgeronde onderhouds- of inspectieopdracht), met een link naar die opdracht. De plannen zelf
+  blijven op kantoor.
 
 ### Werkt samen met
 
@@ -62,7 +65,10 @@ een lijst van de kern** (`columns/equipment.list.columns.ts`, met de SQL in `ser
 bijgedragen aan het punt `equipment.list.columns` van de apparatenlijst), van **bijdragen aan het
 slot van een andere module** (een plek in een pagina die een module vult:
 `slots/contracts.detail.side/`, die alleen `api/extensions.ts` van Servicecontracten mag importeren
-en de gedekte apparaten als props krijgt), en van gegevens maken via een service van de kern.
+en de gedekte apparaten als props krijgt), en van gegevens maken via een service van de kern. Voor
+het klantportaal heeft hij een eigen set remote functions, `forCustomers`
+(`moduleRemote("maintenance", "customer")`), die het laatste onderhoud van een apparaat leest voor
+zijn gegeven op de pagina van het apparaat (`slots/client.unit.facts/`).
 
 Beide manieren om van een plan een opdracht te maken lopen via `orderPlan()` in `server/orders.ts`,
 dat `createOrders()` van de kern aanroept, zodat de opdracht van een plan precies zo wordt
