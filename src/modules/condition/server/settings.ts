@@ -18,5 +18,5 @@ export const { settingsOf, updateSettings, getSettings, saveSettings } = defineT
 /** The tenant's thresholds. */
 export async function thresholdsOf(): Promise<Thresholds> {
 	const settings = await settingsOf();
-	return { critical: settings.criticalBelow, attention: settings.attentionBelow };
+	return { critical: settings.criticalFrom, attention: settings.attentionFrom };
 }

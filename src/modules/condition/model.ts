@@ -1,12 +1,23 @@
 /**
  * The condition module's domain rules (SHLTR Connect, `docs/plans/shltr-domain.md` §2.3): a unit's
- * condition, and each of its components', is a score from 0 to 100 with advice, recorded over time
- * (the latest counts), and its status follows from it, from the unit's inspection (with checklists
- * on) and from its open orders; a unit's status is the worst of its own and its components'. Pure
- * and isomorphic; the same rules are in SQL for the lists (`server/status-sql.ts`).
+ * condition, and each of its components', is a record of its defects with advice, recorded over
+ * time (the latest counts), scored on NEN 2767's scale from 1 (excellent) to 6 (very poor)
+ * (`nen2767.ts`): the worst defect wins. Its status follows from its score, from the unit's
+ * inspection (with checklists on) and from its open orders; a unit's status is the worst of its own
+ * and its components'. Pure and isomorphic; the same rules are in SQL for the lists
+ * (`server/status-sql.ts`).
  */
 import type { NumberFormat } from "#lib/numbering.ts";
 import type { InspectionStatus } from "#modules/checklists/api/extensions.ts";
+
+import {
+	BEST_SCORE,
+	type ConditionScore,
+	type DefectGrade,
+	defectScore,
+	WORST_SCORE,
+	worstScore,
+} from "./nen2767.ts";
 
 /**
  * A unit's status, worst first: the order the Connect page sorts by.
@@ -28,20 +39,90 @@ export const needsAttention = ["critical", "attention"] as const satisfies UnitS
 export const conditionSources = ["checklist", "office"] as const;
 export type ConditionSource = (typeof conditionSources)[number];
 
-/** A condition score's range, in percent. */
-export const scoreLimits = { min: 0, max: 100 } as const;
+/** A condition score's range: NEN 2767's scale. */
+export const scoreLimits = { min: BEST_SCORE, max: WORST_SCORE } as const;
 
 /** The most an advice may have. */
 export const ADVICE_MAX = 500;
 
-/** The scores below which a unit is critical and needs attention: the module's settings. */
+/** The most a defect's description may have. */
+export const DEFECT_TEXT_MAX = 300;
+
+/** How many defects a condition may have. */
+export const DEFECTS_MAX = 30;
+
+/**
+ * The scores from which a unit is critical and needs attention ("vanaf"): the module's settings.
+ * Both from 2 to 6, attention below critical (`validThresholds()`).
+ */
 export interface Thresholds {
 	critical: number;
 	attention: number;
 }
 
-/** The thresholds a tenant starts with: Kritiek below 40%, Aandacht below 70%. */
-export const defaultThresholds: Thresholds = { critical: 40, attention: 70 };
+/** The thresholds a tenant starts with: Kritiek from 5 (Slecht), Aandacht from 4 (Matig). */
+export const defaultThresholds: Thresholds = { critical: 5, attention: 4 };
+
+// --- Defects and scores ------------------------------------------------------------------------
+
+/** A defect as its score is worked out: its grade, and the element it's on (none: the unit). */
+export interface Defect extends DefectGrade {
+	componentId: number | null;
+}
+
+/**
+ * The grade of a rejected checklist point that wasn't given one (the office filled the checklist
+ * in for the engineer, or it was rejected before conditions had defects): serious, 10–30% of the
+ * element, advanced, which NEN 2767's tables score 3 (Redelijk).
+ */
+export const REJECTED_POINT_GRADE: DefectGrade = {
+	severity: "serious",
+	extent: 3,
+	intensity: "advanced",
+};
+
+/** The score of each element a condition's defects are on (`null`: the unit itself), its worst. */
+export function elementScores(defects: readonly Defect[]): Map<number | null, ConditionScore> {
+	const scores = new Map<number | null, ConditionScore>();
+	for (const defect of defects) {
+		const score = defectScore(defect);
+		scores.set(
+			defect.componentId,
+			worstScore([scores.get(defect.componentId) ?? BEST_SCORE, score]),
+		);
+	}
+	return scores;
+}
+
+/** An element's score: its worst defect's, or 1 without defects. */
+export const elementScore = (defects: readonly Defect[], componentId: number | null) =>
+	worstScore(defects.filter((each) => each.componentId === componentId).map(defectScore));
+
+/** A recorded defect as the pages show it, with its element and its photos' ids. */
+export interface RecordedDefect extends DefectGrade {
+	id: number;
+	description: string;
+	/** The component it's on, by number and name; none for the unit itself. */
+	component: { id: number; number: string; name: string } | null;
+	score: number;
+	photos: { id: number }[];
+}
+
+/** A condition's score: the worst of its defects, or 1 without any. */
+export const recordScore = (defects: readonly DefectGrade[]) =>
+	worstScore(defects.map(defectScore));
+
+/**
+ * A unit's current score: the worst of its own latest condition's and its components' latest
+ * conditions' scores; none while none of them has one.
+ */
+export function currentScore(
+	own: number | null,
+	components: readonly (number | null)[],
+): number | null {
+	const known = [own, ...components].filter((score): score is number => score !== null);
+	return known.length ? worstScore(known) : null;
+}
 
 /** What a unit's status is worked out from. */
 export interface UnitFacts {
@@ -56,17 +137,17 @@ export interface UnitFacts {
 }
 
 /**
- * What a unit's state asks for: `critical` when its score is below the critical threshold or its
- * inspection has expired; `attention` when its score is below the attention threshold, its latest
- * inspection rejected a point, or there's open advice; else `ok`.
+ * What a unit's state asks for: `critical` when its score is at or past the critical threshold or
+ * its inspection has expired; `attention` when its score is at or past the attention threshold, its
+ * latest inspection rejected a point, or there's open advice; else `ok`.
  */
 export function concernOf(facts: UnitFacts, thresholds: Thresholds): Concern {
 	const { score, advice, inspection } = facts;
-	if ((score !== null && score < thresholds.critical) || inspection === "expired") {
+	if ((score !== null && score >= thresholds.critical) || inspection === "expired") {
 		return "critical";
 	}
 	if (
-		(score !== null && score < thresholds.attention) ||
+		(score !== null && score >= thresholds.attention) ||
 		inspection === "rejected" ||
 		!!advice?.trim()
 	) {
@@ -139,22 +220,28 @@ export const COMPONENT_NAME_MAX = 80;
 /** How many components a unit may have. */
 export const COMPONENTS_MAX = 50;
 
-/** How a score shows: below the critical threshold, below the attention one, or fine. */
+/**
+ * Where a score stands against the tenant's thresholds, what the lists filter by: `low` from the
+ * critical threshold on, `fair` from the attention one, else `good`.
+ */
 export type ScoreBand = "low" | "fair" | "good";
 
 export function scoreBand(score: number, thresholds: Thresholds): ScoreBand {
-	if (score < thresholds.critical) return "low";
-	if (score < thresholds.attention) return "fair";
+	if (score >= thresholds.critical) return "low";
+	if (score >= thresholds.attention) return "fair";
 	return "good";
 }
 
-/** Whether the thresholds can be set so: both a score, critical below attention. */
+/** The range a threshold may be set in: 2 (Goed) to 6 (Zeer slecht). */
+export const thresholdLimits = { min: BEST_SCORE + 1, max: WORST_SCORE } as const;
+
+/** Whether the thresholds can be set so: both from 2 to 6, attention below critical. */
 export const validThresholds = ({ critical, attention }: Thresholds) =>
 	Number.isInteger(critical) &&
 	Number.isInteger(attention) &&
-	critical > scoreLimits.min &&
-	attention <= scoreLimits.max &&
-	critical < attention;
+	attention >= thresholdLimits.min &&
+	critical <= thresholdLimits.max &&
+	attention < critical;
 
 // --- Planning critical units -------------------------------------------------------------------
 

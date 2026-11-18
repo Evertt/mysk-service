@@ -1,7 +1,8 @@
 /**
- * The status in SQL (`status-sql.ts`, `list-sql.ts`) against the pure rules (`rolledUpStatus()`,
- * `componentStatus()` in `model.ts`): units with components and without, conditions as a whole and
- * of components at random moments, planned work or not, in a temporary database made by the app's
+ * The status and current score in SQL (`status-sql.ts`, `list-sql.ts`) against the pure rules
+ * (`rolledUpStatus()`, `componentStatus()`, `currentScore()`, `scoreBand()` in `model.ts`): units
+ * with components and without, conditions on NEN 2767's scale as a whole and of components at
+ * random moments, planned work or not, random thresholds, in a temporary database made by the app's
  * migrations, with a second tenant's that mustn't count.
  */
 import { rmSync } from "node:fs";
@@ -16,12 +17,14 @@ import { equipment } from "#lib/server/db/schema.ts";
 import {
 	type ComponentFacts,
 	componentStatus,
-	defaultThresholds,
+	currentScore,
 	rolledUpStatus,
+	scoreBand,
+	type Thresholds,
 	type UnitFacts,
 } from "#modules/condition/model.ts";
 import { rowsSql } from "#modules/condition/server/list-sql.ts";
-import { component, unitCondition } from "#modules/condition/server/schema.ts";
+import { component, conditionSettings, unitCondition } from "#modules/condition/server/schema.ts";
 import { componentSql, conditionSql } from "#modules/condition/server/status-sql.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
@@ -103,13 +106,13 @@ beforeEach(() => {
 const units = [10, 11, 12];
 const parts: Record<number, number[]> = { 10: [1, 2], 11: [3], 12: [] };
 
-/** A random condition: a score, sometimes advice; recorded at a random moment. */
+/** A random condition: a score on the scale, sometimes advice; recorded at a random moment. */
 function randomCondition(random: Faker, equipmentId: number, componentId: number | null) {
 	return {
 		organizationId: "north",
 		equipmentId,
 		componentId,
-		score: random.number.int({ min: 0, max: 100 }),
+		score: random.number.int({ min: 1, max: 6 }),
 		advice: random.datatype.boolean(0.2) ? "Meenemen bij de volgende beurt." : null,
 		source: "office" as const,
 		recordedAt: Temporal.Instant.fromEpochMilliseconds(
@@ -131,6 +134,18 @@ describe("the status in SQL", () => {
 		for (let round = 0; round < 25; round++) {
 			await db.delete(unitCondition);
 			const planned = random.datatype.boolean(0.3);
+			// The tenant's thresholds: any valid pair, both from 2 to 6, attention below critical.
+			const critical = random.number.int({ min: 3, max: 6 });
+			const thresholds: Thresholds = {
+				critical,
+				attention: random.number.int({ min: 2, max: critical - 1 }),
+			};
+			await db.delete(conditionSettings);
+			await db.insert(conditionSettings).values({
+				organizationId: "north",
+				criticalFrom: thresholds.critical,
+				attentionFrom: thresholds.attention,
+			});
 			await db.run(
 				sql`update "order" set status = ${planned ? "scheduled" : "quote"} where id = 100`,
 			);
@@ -155,12 +170,24 @@ describe("the status in SQL", () => {
 			const unit = conditionSql();
 			const part = componentSql(unit);
 			const found = await db
-				.select({ id: equipment.id, status: unit.status, concern: unit.concern, score: unit.score })
+				.select({
+					id: equipment.id,
+					status: unit.status,
+					concern: unit.concern,
+					score: unit.score,
+					band: unit.band,
+				})
 				.from(equipment)
 				.where(eq(equipment.organizationId, "north"))
 				.orderBy(asc(equipment.id));
 			const foundParts = await db
-				.select({ id: component.id, status: part.status, concern: part.concern, score: part.score })
+				.select({
+					id: component.id,
+					status: part.status,
+					concern: part.concern,
+					score: part.score,
+					band: part.band,
+				})
 				.from(component)
 				.innerJoin(
 					equipment,
@@ -184,19 +211,32 @@ describe("the status in SQL", () => {
 					const latest = latestOf(stored.filter((row) => row.componentId === partId));
 					return { score: latest?.score ?? null, advice: latest?.advice ?? null };
 				});
-				const expected = rolledUpStatus(facts, components, defaultThresholds);
+				const expected = rolledUpStatus(facts, components, thresholds);
+				const score = currentScore(
+					facts.score,
+					components.map((each) => each.score),
+				);
 				const row = found.find((each) => each.id === id)!;
 				expect(
-					{ status: row.status, concern: row.concern, score: row.score },
+					{ status: row.status, concern: row.concern, score: row.score, band: row.band },
 					`${round}: ${id}`,
-				).toEqual({ ...expected, score: facts.score });
+				).toEqual({
+					...expected,
+					score,
+					band: score === null ? "none" : scoreBand(score, thresholds),
+				});
 				parts[id].forEach((partId, i) => {
-					const expectedPart = componentStatus(components[i], facts, defaultThresholds);
+					const expectedPart = componentStatus(components[i], facts, thresholds);
 					const got = foundParts.find((each) => each.id === partId)!;
+					const own = components[i].score;
 					expect(
-						{ status: got.status, concern: got.concern, score: got.score },
+						{ status: got.status, concern: got.concern, score: got.score, band: got.band },
 						`${round}: ${partId}`,
-					).toEqual({ ...expectedPart, score: components[i].score });
+					).toEqual({
+						...expectedPart,
+						score: own,
+						band: own === null ? "none" : scoreBand(own, thresholds),
+					});
 				});
 			}
 		}

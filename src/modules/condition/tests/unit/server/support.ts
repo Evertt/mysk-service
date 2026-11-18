@@ -8,6 +8,7 @@ import type { InspectionStatus } from "#modules/checklists/api/extensions.ts";
 import {
 	type Concern,
 	componentStatus,
+	currentScore,
 	defaultThresholds,
 	rolledUpStatus,
 	type Thresholds,
@@ -38,7 +39,10 @@ interface UnitState {
 	serial: string;
 	customer: string;
 	customerName: string;
+	/** Its current score: the worst of its own latest condition's and its components'. */
 	score: number | null;
+	/** Its own latest condition's score, as a whole. */
+	ownScore: number | null;
 	status: UnitStatus;
 	concern: Concern;
 	components: ComponentState[];
@@ -46,12 +50,12 @@ interface UnitState {
 
 /** The tenant's thresholds, as stored (the defaults until its settings are first read). */
 async function thresholdsOf(organizationId: string): Promise<Thresholds> {
-	const [found] = await rows<{ critical_below: number; attention_below: number }>(
-		`select critical_below, attention_below from condition_settings where organization_id = ?`,
+	const [found] = await rows<{ critical_from: number; attention_from: number }>(
+		`select critical_from, attention_from from condition_settings where organization_id = ?`,
 		[organizationId],
 	);
 	return found
-		? { critical: found.critical_below, attention: found.attention_below }
+		? { critical: found.critical_from, attention: found.attention_from }
 		: defaultThresholds;
 }
 
@@ -125,7 +129,11 @@ export async function unitStates(organizationId: string, all = false): Promise<U
 			serial: unit.serial,
 			customer: unit.customer,
 			customerName: unit.customer_name,
-			score: unit.score,
+			score: currentScore(
+				unit.score,
+				own.map((part) => part.score),
+			),
+			ownScore: unit.score,
 			status,
 			concern,
 			components: own.map((part) => ({
