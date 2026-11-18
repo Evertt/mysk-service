@@ -1,16 +1,20 @@
 <!--
 	@component
 	What the customer's contact told about a breakdown they reported, on its page in the portal: the
-	kind of fault they chose and the photos they added. Nothing for an order without either (one
-	made in the office, or a report without them).
+	kind of fault they chose, and the order's photos (theirs, and those its engineer or the office
+	added later). Theirs they may delete while the order is still to be done. Nothing for an order
+	without either (one made in the office without photos, or a report without them).
 -->
 <script lang="ts">
 	import { label } from "#lib/i18n/index.ts";
 	import type { ReportFault } from "#lib/models.ts";
 	import { OrderPhotos } from "#lib/orders/components.ts";
 
-	let { order }: { order: { fault: ReportFault | null; photos: readonly { id: number }[] } } =
-		$props();
+	let {
+		order,
+	}: {
+		order: { fault: ReportFault | null; photos: readonly { id: number; deletable: boolean }[] };
+	} = $props();
 </script>
 
 {#if order.fault || order.photos.length}

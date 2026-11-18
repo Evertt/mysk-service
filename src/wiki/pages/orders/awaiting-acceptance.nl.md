@@ -27,8 +27,9 @@ schreef**.
 - Een badge bij **Opdrachten** in het menu en een kaart op het dashboard tellen de meldingen die
   wachten. De kaart opent de opdrachtenlijst, gefilterd op die meldingen. De bel geeft een melding
   voor elke nieuwe.
-- Op de pagina van de opdracht zegt een kaart wie hem meldde en wanneer, wat voor storing de klant
-  koos en welke foto's hij meestuurde (een klik opent een foto groot). De kaart heeft twee knoppen:
+- Op de pagina van de opdracht zegt een kaart wie hem meldde en wanneer, en wat voor storing de
+  klant koos; de foto's die hij meestuurde staan op de fotokaart van de pagina (zie
+  [Foto's bij een opdracht](/wiki/orders/photos)). De kaart heeft twee knoppen:
   - **Accepteren.** De opdracht krijgt de status Nieuw. Of vul een monteur, een dag en een tijd in,
     dan is hij meteen ingepland, alsof hij in dezelfde stap werd ingepland.
   - **Afwijzen.** Een reden is verplicht. De opdracht wordt geannuleerd en de klant leest de reden.
@@ -55,19 +56,14 @@ Een te accepteren opdracht blijft bewust buiten alles wat werk telt of plant:
 
 **Het aanmaken.** Het formulier `reportBreakdown` van het portaal controleert of het apparaat er een
 is dat het klantcontact ziet, en roept dan `reportOrder()` aan. Die zet eerst de foto's in de
-foto-opslag (`storeOrderPhotos()`: hoogstens vijf, JPEG, PNG of WebP naar hun bytes, elk tot 2 MB; de
-browser verkleint ze eerst tot 1600 pixels), buiten de transactie, want op Cloudflare houdt een
+foto-opslag (`withStoredPhotos()`, met de grenzen van
+[Foto's bij een opdracht](/wiki/orders/photos)), buiten de transactie, want op Cloudflare houdt een
 transactie elk ander verzoek op. Daarna roept hij in een transactie `requestOrder(tx, draft)` aan. Dat is
 `createOrders()` (gecontroleerd, genummerd, gelogd als aangemaakt, door het klantcontact) met de
 status `awaiting_acceptance`, plus een rij in `order_request` die bijhoudt wie hem meldde
 (`reporterName`) en het soort storing (`fault`) en, later, wie besliste, wanneer en waarom. Elke
 foto krijgt een rij in `order_photo`, gelogd als aangemaakt bij de opdracht. Mislukt de transactie,
-dan haalt hij de foto's weer weg.
-
-**De foto's tonen.** Een foto staat nooit op een openbare URL: `/photos/<id>` geeft hem alleen aan
-wie de opdracht mag lezen (`servePhoto()` vraagt het aan de toegangsregels: `order_photo` is een
-deel van `order`), en anders een 404, ook bij een ander id. Op Cloudflare staan ze in de R2-bucket
-`PHOTOS`, elders in een map (`PHOTOS_DIR`).
+dan verwijdert hij de opgeslagen foto's weer.
 
 **Geen open werk.** `openOrderStatuses` bevat `awaiting_acceptance` niet; `pendingOrderStatuses`,
 de klantweergave van wat nog gedaan moet worden, wel. `holdsStock()` van de materialenmodule en
@@ -88,12 +84,10 @@ al beslist is, wordt geweigerd.
 **De telling.** `awaitingAcceptance(organizationId)` telt de opdrachten voor de badge in het menu.
 
 - <SourceLink path="src/lib/orders/server/acceptance.ts" line={26}><code>requestOrder()</code></SourceLink>
-- <SourceLink path="src/routes/(customer)/portal/client.remote.ts" line={238}><code>reportBreakdown</code></SourceLink>
+- <SourceLink path="src/routes/(customer)/portal/client.remote.ts" line={240}><code>reportBreakdown</code></SourceLink>
 - <SourceLink path="src/lib/orders/detail/acceptance.remote.ts" line={35}><code>acceptReportedOrder</code></SourceLink>
   en <SourceLink path="src/lib/orders/detail/acceptance.remote.ts" line={61}><code>rejectReportedOrder</code></SourceLink>
 - <SourceLink path="src/lib/server/db/schema/orders.ts" line={169} symbol="orderRequest"><code>order_request</code></SourceLink>
 - <SourceLink path="src/lib/orders/server/acceptance.ts" line={58}><code>reportOrder()</code></SourceLink>
-  en <SourceLink path="src/lib/orders/server/photos.ts" line={162}><code>servePhoto()</code></SourceLink>
-- <SourceLink path="src/lib/server/db/schema/orders.ts" line={206} symbol="orderPhoto"><code>order_photo</code></SourceLink>
 
 <DocsPointer doc="docs/agents/orders.md" section="Orders awaiting acceptance" />

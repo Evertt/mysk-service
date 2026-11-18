@@ -1,10 +1,10 @@
 <!--
 	@component
 	An order a customer reported in the customer portal, on its page: who reported it and when, the
-	kind of fault they chose and the photos they added, and
-	while it awaits acceptance the planner's choice: accept it (as a quote, or planned at once with
-	an engineer, a day and a time) or reject it with a reason, which the customer reads. Once
-	decided, what was decided, by whom.
+	kind of fault they chose (their photos are on the page's photos card), and while it awaits
+	acceptance the planner's choice: accept it (as a quote, or planned at once with an engineer, a
+	day and a time) or reject it with a reason, which the customer reads. Once decided, what was
+	decided, by whom.
 -->
 <script lang="ts">
 	import CheckIcon from "@lucide/svelte/icons/check";
@@ -17,7 +17,6 @@
 	import { formatDate, formatDateTime, label } from "#lib/i18n/index.ts";
 	import { isAwaitingAcceptance, type OrderStatus, type ReportFault } from "#lib/models.ts";
 
-	import OrderPhotos from "../ui/order-photos.svelte";
 	import {
 		acceptReportedOrder,
 		getAcceptanceOptions,
@@ -35,7 +34,6 @@
 			decidedBy: string | null;
 			rejectionReason: string | null;
 			fault: ReportFault | null;
-			photos: readonly { id: number }[];
 		};
 	} = $props();
 
@@ -69,12 +67,6 @@
 				<span class="text-muted-foreground">{m.orders_acceptance_fault()}:</span>
 				{label("reportFault", request.fault)}
 			</p>
-		{/if}
-		{#if request.photos.length}
-			<div class="flex flex-col gap-2">
-				<p class="text-sm text-muted-foreground">{m.orders_acceptance_photos()}</p>
-				<OrderPhotos photos={request.photos} />
-			</div>
 		{/if}
 		{#if awaiting}
 			<div class="flex flex-wrap gap-2">

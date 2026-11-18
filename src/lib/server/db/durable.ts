@@ -33,6 +33,12 @@ export interface Bucket {
 	put(key: string, value: Uint8Array, options?: object): Promise<unknown>;
 	get(key: string): Promise<{ arrayBuffer(): Promise<ArrayBuffer> } | null>;
 	delete(key: string): Promise<unknown>;
+	/** A page of the objects whose keys start with `prefix`, and the cursor of the next, if any. */
+	list(options: { prefix?: string; cursor?: string }): Promise<{
+		objects: { key: string; uploaded: Date }[];
+		truncated: boolean;
+		cursor?: string;
+	}>;
 }
 
 /**

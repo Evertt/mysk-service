@@ -146,9 +146,43 @@
 	"orders_acceptance_accepted": "Geaccepteerd door {name} op {date}.",
 	"orders_acceptance_rejected": "Afgewezen door {name} op {date}. De klant leest waarom:",
 	"orders_acceptance_fault": "Storing",
-	"orders_acceptance_photos": "Foto's",
 	"orders_photo_alt": "Foto {number}",
 	"orders_photo_open": "Foto {number} groot openen",
+	"orders_photos": "Foto's",
+	"orders_photos_description": "Uit de melding van de klant, van de monteur ter plaatse en van kantoor.",
+	"orders_photos_none": "Nog geen foto's.",
+	"orders_photos_add": "Foto's toevoegen",
+	"orders_photos_to_add": "Foto's om toe te voegen",
+	"orders_photos_add_description": "Tot {max} tegelijk.",
+	"orders_photos_upload": "Foto's uploaden",
+	"orders_photos_added": "Foto's toegevoegd",
+	"orders_photos_none_chosen": "Kies eerst een of meer foto's.",
+	"orders_photo_remove": "Foto {number} weghalen",
+	"orders_photos_too_many": "Voeg hoogstens {max} foto's toe.",
+	"orders_photo_not_image": "Je kunt alleen foto's toevoegen (JPEG, PNG of WebP).",
+	"orders_photo_too_large": "Een foto mag hoogstens {size} zijn.",
+	"orders_photos_too_large": "De foto's mogen samen hoogstens {size} zijn.",
+	"orders_photos_order_full": "Een opdracht kan hoogstens {max} foto's hebben.",
+	"orders_photo_unreadable": "Een van de foto's kon niet worden gelezen. Probeer een andere.",
+	"orders_photo_delete": "Foto {number} verwijderen",
+	"orders_photo_delete_title": "Foto {number} verwijderen?",
+	"orders_photo_delete_description": "Hij verdwijnt van de opdracht, voor iedereen die hem ziet. Dit kan niet ongedaan worden gemaakt.",
+	"orders_photo_deleted": "Foto verwijderd",
+	"orders_photo_not_found": "Die foto bestaat niet.",
+	"orders_count_photos": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} foto",
+				"countPlural=*": "{countText} foto's"
+			}
+		}
+	],
 	"orders_accept": "Accepteren",
 	"orders_reject": "Afwijzen",
 	"orders_accept_title": "Opdracht {number} accepteren",

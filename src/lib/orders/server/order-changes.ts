@@ -15,12 +15,14 @@ import { Refused } from "#lib/server/refused.ts";
 
 import { acceptFirst, notEditable } from "../lifecycle.ts";
 import { refusedWhole, saveOrderParts } from "./hooks.ts";
+import { discardPhotoFiles, photoFilesOf } from "./photos.ts";
 
 /**
  * Deletes one of the current tenant's orders, after the modules have let go of it (e.g. what it
  * held goes back into stock). Refuses an invoiced order, one that a module refuses to let go of,
  * and one that an optional module's record (e.g. an invoice) still refers to; a 404 if there's no
- * such order. The order's page and the list's bulk delete share it.
+ * such order. Its photos' rows go with it; their files are deleted once it has committed. The
+ * order's page and the list's bulk delete share it.
  */
 export async function removeOrder(id: number) {
 	const deleting = db.transaction(async (tx) => {
@@ -35,6 +37,7 @@ export async function removeOrder(id: number) {
 		await saveOrderParts({ tx, order: found, from: found.status, status: null }).catch(
 			refusedWhole,
 		);
+		const photos = await photoFilesOf(tx, [found.id]);
 		await tx.delete(order).where(idInTenant(order, found.id));
 		await recordActivity(tx, {
 			action: "deleted",
@@ -45,9 +48,11 @@ export async function removeOrder(id: number) {
 				after: { engineerId: null },
 			}),
 		});
+		return photos;
 	});
 	// E.g. an optional module's record, such as an invoice, may still refer to it.
-	await refuseIfReferenced(() => deleting, m.orders_delete_referenced());
+	const photos = await refuseIfReferenced(() => deleting, m.orders_delete_referenced());
+	await discardPhotoFiles(photos);
 }
 
 /**

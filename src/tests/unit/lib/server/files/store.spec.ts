@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterAll, afterEach, expect, test, vi } from "vite-plus/test";
+import { afterAll, afterEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { DurableRequest } from "#lib/server/db/durable.ts";
 import { photoKey, photoStore } from "#lib/server/files/photos.ts";
@@ -71,6 +71,38 @@ test("on Cloudflare, the photos go to the bucket the Durable Object passes along
 	expect(readFileSync(join(settings.photosFolder, "org/orders/node.jpg"))).toEqual(
 		Buffer.from([2]),
 	);
+});
+
+describe.each([
+	["a folder", () => folderStore(mkdtempSync(join(folder, "list-")))],
+	// Two a page, so listing more takes R2's cursor.
+	["an R2 bucket", () => bucketStore(memoryBucket({ pageSize: 2 }).bucket)],
+])("lists %s's files by a prefix", (_, make) => {
+	test("every file under it, each with when it was stored, and no other", async () => {
+		const store = make();
+		const before = Temporal.Now.instant().subtract({ seconds: 5 });
+		const keys = [
+			"a/orders/1.jpg",
+			"a/orders/2.jpg",
+			"a/orders/3.png",
+			"a/other/4.jpg",
+			"b/orders/5.jpg",
+		];
+		for (const key of keys) await store.put(key, new Uint8Array([1]), "image/jpeg");
+		const listed = await store.list("a/orders/");
+		expect(listed.map((file) => file.key).sort()).toEqual(keys.slice(0, 3));
+		for (const file of listed) {
+			expect(Temporal.Instant.compare(file.storedAt, before)).toBeGreaterThan(0);
+		}
+		expect((await store.list("a/")).map((file) => file.key).sort()).toEqual(keys.slice(0, 4));
+		expect((await store.list("a/orders/3")).map((file) => file.key)).toEqual(["a/orders/3.png"]);
+		await store.delete("a/orders/1.jpg");
+		expect(await store.list("a/orders/")).toHaveLength(2);
+	});
+
+	test("nothing under a prefix nothing was stored under", async () => {
+		expect(await make().list("nobody/orders/")).toEqual([]);
+	});
 });
 
 test("keys a photo by its tenant, uniquely", () => {

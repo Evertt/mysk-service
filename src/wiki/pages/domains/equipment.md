@@ -33,7 +33,9 @@ how to find it. Locations let the site's units be found by where they are.
 A unit's page tells its story: a timeline of its installation, every order on it and the end of its
 warranty (which may still be ahead), and figures that sum it up: how many orders, how many open,
 what the work cost, and how long between repairs. The order that covers several units, such as a
-yearly inspection of fifteen doors, counts for a fifteenth in each.
+yearly inspection of fifteen doors, counts for a fifteenth in each. Each order shows its photos
+there, as small thumbnails; the engineer portal and the customer portal show a count per order on
+a unit's orders (see [Photos of an order](/wiki/orders/photos)).
 
 ## QR codes
 
@@ -93,6 +95,6 @@ access registry. See [The work record](/wiki/orders/work-record).
 - <SourceLink path="src/lib/equipment/server/qr.ts" line={63}><code>resolveQrCode()</code></SourceLink> and <SourceLink path="src/lib/equipment/server/qr.ts" line={84}><code>qrDestination()</code></SourceLink>
 - <SourceLink path="src/routes/q/[token]/+server.ts" line={17} symbol="GET">the <code>/q/[token]</code> route</SourceLink>
 - <SourceLink path="src/lib/equipment/labels/labels.remote.ts" line={18}><code>getLabelSheet</code></SourceLink>
-- <SourceLink path="src/lib/equipment/detail/service-history.ts" line={67}><code>buildTimeline()</code></SourceLink>
+- <SourceLink path="src/lib/equipment/detail/service-history.ts" line={69}><code>buildTimeline()</code></SourceLink>
 
 <DocsPointer doc="docs/agents/orders.md" section="Units and locations" />

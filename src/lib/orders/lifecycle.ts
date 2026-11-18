@@ -190,6 +190,8 @@ export function fieldActions(status: OrderStatus) {
 		work: can("complete", status),
 		/** Write a note, e.g. about access or what they found. */
 		note: can("start", status) || can("complete", status),
+		/** Add photos, e.g. of the type plate or what they found. */
+		photo: can("start", status) || can("complete", status),
 	};
 }
 

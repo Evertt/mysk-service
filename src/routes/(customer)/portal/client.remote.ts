@@ -212,7 +212,9 @@ export const getPortalUnit = forCustomers.query(v.string(), async (serialNumber)
 export const getPortalUnitHistory = forCustomers.query(v.string(), async (serialNumber) => {
 	const access = await currentCustomer();
 	const unit = await portalUnit(access, serialNumber);
-	return ordersWhere(access, onUnit(unit.id), 50);
+	const orders = await ordersWhere(access, onUnit(unit.id), 50);
+	const photos = await photosOf(orders.map((one) => one.id));
+	return orders.map((one) => ({ ...one, photos: photos.get(one.id) ?? [] }));
 });
 
 /** One of the customer's locations the contact sees (or a 404), its site and its units. */

@@ -12,7 +12,7 @@ import { isHttpError } from "@sveltejs/kit";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vite-plus/test";
 
 import { getOrder } from "#lib/orders/order.remote.ts";
-import { MAX_PHOTO_BYTES } from "#lib/orders/photos.ts";
+import { MAX_PHOTO_BYTES, MAX_PHOTOS_BYTES } from "#lib/orders/photos.ts";
 import { getPortalOrder, reportBreakdown } from "#routes/(customer)/portal/client.remote.ts";
 import { GET } from "#routes/photos/[id]/+server.ts";
 import type { Actor } from "#unit/lib/server/harness/actors.ts";
@@ -167,15 +167,14 @@ describe("a report with photos and a kind of fault", () => {
 
 	test("the portal and the office read the fault and the photos back", async () => {
 		const portal = await as(riedel, () => data(getPortalOrder, reported.number));
+		// The contact added them, to an order still to be done: theirs to delete; the office's too.
 		expect(portal.order).toMatchObject({
 			fault: "door_wont_close",
-			photos: photoIds.map((id) => ({ id: Number(id) })),
+			photos: photoIds.map((id) => ({ id: Number(id), deletable: true })),
 		});
 		const office = await as(shltr.member, () => data(getOrder, reported.number));
-		expect(office.request).toMatchObject({
-			fault: "door_wont_close",
-			photos: photoIds.map((id) => ({ id: Number(id) })),
-		});
+		expect(office.request).toMatchObject({ fault: "door_wont_close" });
+		expect(office.photos).toEqual(photoIds.map((id) => ({ id: Number(id), deletable: true })));
 	});
 
 	test("serves a photo to the contact and the office, as stored", async () => {
@@ -237,8 +236,26 @@ describe("the limits", () => {
 		await refusedOnPhotos([svg], "Only photos can be added (JPEG, PNG or WebP).");
 	});
 
-	test("each at most 2 MB", async () => {
-		await refusedOnPhotos([jpeg("groot.jpg", MAX_PHOTO_BYTES)], "A photo can be at most 2 MB.");
+	test("each at most 10 MB, as a phone takes it (a form sent without JavaScript)", async () => {
+		await refusedOnPhotos([jpeg("groot.jpg", MAX_PHOTO_BYTES)], "A photo can be at most 10 MB.");
+	});
+
+	test("at most 25 MB together", async () => {
+		const each = Math.ceil(MAX_PHOTOS_BYTES / 3);
+		await refusedOnPhotos(
+			Array.from({ length: 3 }, (_, i) => jpeg(`${i}.jpg`, each)),
+			"The photos can be at most 25 MB together.",
+		);
+	});
+
+	test("a photo as large as a phone takes it is kept", async () => {
+		expect(await report({ photos: [jpeg("telefoon.jpg", 9 * 1024 * 1024)] })).toMatchObject({
+			status: 303,
+		});
+		const { id } = await latest();
+		expect(await value(`select size from order_photo where order_id = ?`, [id])).toBe(
+			9 * 1024 * 1024 + 4,
+		);
 	});
 
 	test("a report without photos or a fault is still a report", async () => {

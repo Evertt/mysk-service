@@ -40,7 +40,7 @@ import { offeredOrderTypes } from "./types.ts";
 /**
  * Orders by number, each with everything on it: its work record (its units in their order, the
  * sites the work is at, the notes and the sign-off, see `readWorkRecord()`), its price, its modules'
- * tags and whether a customer reported it. What its page shows, and its hover card (`OrderLink`): a
+ * tags, whether a customer reported it, and its photos. What its page shows, and its hover card (`OrderLink`): a
  * batch query, so the cards of a page's links come in one request (priced and tagged together), and
  * a hover card and the page share their answer. An unknown number (or another tenant's) is a 404 for
  * that number. Other orders for the same units are `getOrderHistory`.
@@ -89,12 +89,7 @@ export const getOrder = forMembers.query.batch(v.string(), async (numbers) => {
 	]);
 	const notFound = (number: string) => m.orders_not_found({ number });
 	const find = byKey(found, (one) => one.number, notFound);
-	const requestOf = new Map(
-		requests.map(({ orderId, ...request }) => [
-			orderId,
-			{ ...request, photos: photos.get(orderId) ?? [] },
-		]),
-	);
+	const requestOf = new Map(requests.map(({ orderId, ...request }) => [orderId, request]));
 
 	return (number: string) => {
 		const one = find(number);
@@ -111,10 +106,12 @@ export const getOrder = forMembers.query.batch(v.string(), async (numbers) => {
 			/** From the tenant's modules, e.g. a response time about to be missed. */
 			tags: tags[i],
 			/**
-			 * If a customer reported it in the portal: who, the kind of fault and their photos, and the
+			 * If a customer reported it in the portal: who, the kind of fault they chose, and the
 			 * planner's decision.
 			 */
 			request: requestOf.get(one.id) ?? null,
+			/** Its photos (the report's, the engineer's and the office's), each deletable or not. */
+			photos: photos.get(one.id) ?? [],
 		};
 	};
 });

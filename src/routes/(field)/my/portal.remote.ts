@@ -14,6 +14,7 @@ import {
 	engineerWork,
 	findEngineerOrder,
 	orderCommitted,
+	photosOf,
 	readWorkRecord,
 	transitionOrder,
 } from "#lib/orders/server/index.ts";
@@ -71,7 +72,7 @@ export const getMyWork = forEngineers.query(async () => {
 /**
  * One of the engineer's orders, with what they need on site: its work record (its units in the
  * order they're worked on, the sites they're at, the notes and the sign-off, see
- * `readWorkRecord()`) and whom to ask at the customer. A 404 for anyone else's.
+ * `readWorkRecord()`), its photos, and whom to ask at the customer. A 404 for anyone else's.
  */
 export const getMyOrder = forEngineers.query(v.string(), async (number) => {
 	const scope = await engineerWork({ number });
@@ -88,7 +89,8 @@ export const getMyOrder = forEngineers.query(v.string(), async (number) => {
 	]);
 	if (!found || !record) engineerOrderNotFound({ number });
 	const { units, sites, notes, signoff } = record;
-	return { order: { ...found, units }, sites, notes, signoff };
+	const photos = (await photosOf([found.id])).get(found.id) ?? [];
+	return { order: { ...found, units }, sites, notes, signoff, photos };
 });
 
 /**

@@ -9,7 +9,7 @@ import * as v from "valibot";
 
 import { engineerUnits, readLocation, readUnits } from "#lib/equipment/server/index.ts";
 import { openOrderStatuses } from "#lib/models.ts";
-import { onAnyUnit } from "#lib/orders/server/index.ts";
+import { onAnyUnit, photosOf } from "#lib/orders/server/index.ts";
 import { id } from "#lib/schema.ts";
 import { engineerOrders, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -18,10 +18,10 @@ import { customer, equipment, order } from "#lib/server/db/schema.ts";
 import { orNotFound } from "#lib/server/records.ts";
 import { forEngineers } from "#lib/server/remote-functions.ts";
 
-/** The signed-in engineer's open orders on any of the units `ids`, the next first. */
+/** The signed-in engineer's open orders on any of the units `ids`, the next first, with their photos. */
 async function myOpenOrders(ids: number[]) {
 	if (!ids.length) return [];
-	return db
+	const orders = await db
 		.select({
 			id: order.id,
 			number: order.number,
@@ -35,6 +35,8 @@ async function myOpenOrders(ids: number[]) {
 		.innerJoin(...tenantJoin(customer, order.customerId))
 		.where(and(await engineerOrders(), inList(order.status, openOrderStatuses), onAnyUnit(ids)))
 		.orderBy(asc(order.scheduledFor), asc(order.id));
+	const photos = await photosOf(orders.map((one) => one.id));
+	return orders.map((one) => ({ ...one, photos: photos.get(one.id) ?? [] }));
 }
 
 /** One of the tenant's units by its serial number, at its site, and the engineer's open orders on it. */

@@ -28,6 +28,7 @@ function order(fields: Partial<HistoryOrder> = {}): HistoryOrder {
 		engineer: null,
 		units: 1,
 		cost: { costs: [], labor: 0, adjustments: [], total: 10_000 },
+		photos: [],
 		...fields,
 	};
 }

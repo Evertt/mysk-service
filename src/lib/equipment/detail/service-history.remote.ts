@@ -1,7 +1,7 @@
 import { and, desc } from "drizzle-orm";
 import * as v from "valibot";
 
-import { onUnit, priceOrders, withUnitIds } from "#lib/orders/server/index.ts";
+import { onUnit, photosOf, priceOrders, withUnitIds } from "#lib/orders/server/index.ts";
 import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { engineer, equipment, order } from "#lib/server/db/schema.ts";
@@ -10,7 +10,10 @@ import { forMembers } from "#lib/server/remote-functions.ts";
 import { unitBySerial } from "../server/lookup.ts";
 import { buildTimeline, type HistoryOrder, serviceStats } from "./service-history.ts";
 
-/** One of the tenant's units' service history: its timeline (newest first) and key figures. */
+/**
+ * One of the tenant's units' service history: its timeline (newest first, each order with its
+ * photos) and key figures.
+ */
 export const getServiceHistory = forMembers.query(v.string(), async (serialNumber) => {
 	const unit = await unitBySerial(serialNumber, {
 		id: equipment.id,
@@ -40,15 +43,19 @@ export const getServiceHistory = forMembers.query(v.string(), async (serialNumbe
 	// Priced like everywhere else, so a covered order costs here what it does on its own page, with
 	// what each cost is made of (e.g. the materials used).
 	const facts = await withUnitIds(orders);
-	const prices = await priceOrders(
-		facts.map((row) => ({ ...row, hourlyRate: row.engineer?.hourlyRate })),
-		{ items: true },
-	);
+	const [prices, photos] = await Promise.all([
+		priceOrders(
+			facts.map((row) => ({ ...row, hourlyRate: row.engineer?.hourlyRate })),
+			{ items: true },
+		),
+		photosOf(orders.map((row) => row.id)),
+	]);
 	const history = facts.map(({ engineer, equipmentIds, ...row }, i): HistoryOrder => ({
 		...row,
 		engineer: engineer && { id: engineer.id, name: engineer.name },
 		units: equipmentIds.length,
 		cost: prices[i],
+		photos: photos.get(row.id) ?? [],
 	}));
 	const now = Temporal.Now.instant();
 	return { events: buildTimeline(unit, history, now), stats: serviceStats(history, now) };

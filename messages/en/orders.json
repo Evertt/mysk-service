@@ -146,9 +146,43 @@
 	"orders_acceptance_accepted": "Accepted by {name} on {date}.",
 	"orders_acceptance_rejected": "Rejected by {name} on {date}. The customer reads why:",
 	"orders_acceptance_fault": "Fault",
-	"orders_acceptance_photos": "Photos",
 	"orders_photo_alt": "Photo {number}",
 	"orders_photo_open": "Open photo {number} in full",
+	"orders_photos": "Photos",
+	"orders_photos_description": "From the customer's report, the engineer on site and the office.",
+	"orders_photos_none": "No photos yet.",
+	"orders_photos_add": "Add photos",
+	"orders_photos_to_add": "Photos to add",
+	"orders_photos_add_description": "Up to {max} at a time.",
+	"orders_photos_upload": "Upload photos",
+	"orders_photos_added": "Photos added",
+	"orders_photos_none_chosen": "Choose one or more photos first.",
+	"orders_photo_remove": "Remove photo {number}",
+	"orders_photos_too_many": "Add at most {max} photos.",
+	"orders_photo_not_image": "Only photos can be added (JPEG, PNG or WebP).",
+	"orders_photo_too_large": "A photo can be at most {size}.",
+	"orders_photos_too_large": "The photos can be at most {size} together.",
+	"orders_photos_order_full": "An order can have at most {max} photos.",
+	"orders_photo_unreadable": "One of the photos couldn't be read. Try another one.",
+	"orders_photo_delete": "Delete photo {number}",
+	"orders_photo_delete_title": "Delete photo {number}?",
+	"orders_photo_delete_description": "It's removed from the order for everyone who sees it. This can't be undone.",
+	"orders_photo_deleted": "Photo deleted",
+	"orders_photo_not_found": "That photo doesn't exist.",
+	"orders_count_photos": [
+		{
+			"declarations": [
+				"input count",
+				"local countPlural = count: plural",
+				"local countText = count: number"
+			],
+			"selectors": ["countPlural"],
+			"match": {
+				"countPlural=one": "{countText} photo",
+				"countPlural=*": "{countText} photos"
+			}
+		}
+	],
 	"orders_accept": "Accept",
 	"orders_reject": "Reject",
 	"orders_accept_title": "Accept order {number}",

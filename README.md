@@ -198,7 +198,8 @@ Environment variables (see `.env.example` and `src/env.ts`). On Cloudflare `wran
 | `BUG_REPORT_EMAIL`    | no            | Gets a mail for each bug report (the headers' record button); otherwise it's logged          |
 | `DEVELOPER_EMAILS`    | no            | Comma-separated: the accounts that may open the bug reports at `/ops/bug-reports`            |
 | `BUG_REPORTS_DIR`     | no            | Where bug reports' recordings go (`.bug-reports`); on Cloudflare the `BUG_REPORTS` R2 bucket |
-| `PHOTOS_DIR`          | no            | Where the photos of customers' reports go (`.photos`); on Cloudflare the `PHOTOS` R2 bucket  |
+| `PHOTOS_DIR`          | no            | Where the orders' photos go (`.photos`); on Cloudflare the `PHOTOS` R2 bucket                |
+| `BODY_SIZE_LIMIT`     | with Node     | adapter-node's largest request, 512 KB unless set: set `26M` for photos sent without JS      |
 
 ### The first organization
 
@@ -229,10 +230,21 @@ on (Maintenance plans → Settings). On Cloudflare the Worker's Cron Trigger
 (`triggers.crons` in `wrangler.jsonc`) starts it inside the Durable Object, with `OPS_TOKEN`;
 anything else can with `POST /_ops/daily` (a JSON body, `{}`) and
 `Authorization: Bearer <OPS_TOKEN>`. Running it more than once a day does no harm. Without
-`OPS_TOKEN` set, nothing can start it.
+`OPS_TOKEN` set, nothing can start it. Each run also deletes the orders' photo files no photo
+points to any more (left by a failed upload or a delete whose file couldn't go), once they're a
+day old.
 
 The run's day is the server's (UTC on Cloudflare), and its mail (customer reminders) is
 in English: the cron's request has no user's time zone or language.
+
+### Photos and request sizes
+
+Photos of an order (a customer's report, the engineer on site, the office) are shrunk in the
+browser to a few hundred KB each. Without JavaScript a form sends them as the phone took them: the
+server takes up to 10 MB a photo and 25 MB a request (`src/lib/orders/photos.ts`). Workers take
+100 MB a request. On a Node server of your own (`adapter-node`) every request is held to
+`BODY_SIZE_LIMIT`, 512 KB unless set: set `BODY_SIZE_LIMIT=26M` there, or even shrunk photos may be
+refused.
 
 ### The demo's simulations
 

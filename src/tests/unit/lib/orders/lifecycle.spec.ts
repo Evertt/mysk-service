@@ -10,30 +10,33 @@ import {
 } from "#lib/orders/lifecycle.ts";
 
 describe("fieldActions", () => {
-	test("a scheduled job can be set out for, started and noted, not yet worked on", () => {
+	test("a scheduled job can be set out for, started, noted and photographed, not yet worked on", () => {
 		expect(fieldActions("scheduled")).toEqual({
 			depart: true,
 			start: true,
 			work: false,
 			note: true,
+			photo: true,
 		});
 	});
 
-	test("a job the engineer is on the way to can be started and noted, not set out for again", () => {
+	test("a job the engineer is on the way to can be started, noted and photographed, not set out for again", () => {
 		expect(fieldActions("on_the_way")).toEqual({
 			depart: false,
 			start: true,
 			work: false,
 			note: true,
+			photo: true,
 		});
 	});
 
-	test("a job in progress can be worked on and noted", () => {
+	test("a job in progress can be worked on, noted and photographed", () => {
 		expect(fieldActions("in_progress")).toEqual({
 			depart: false,
 			start: false,
 			work: true,
 			note: true,
+			photo: true,
 		});
 	});
 
@@ -45,6 +48,7 @@ describe("fieldActions", () => {
 				start: false,
 				work: false,
 				note: false,
+				photo: false,
 			});
 		}
 	});

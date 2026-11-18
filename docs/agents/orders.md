@@ -63,10 +63,8 @@ An order a customer's contact reports in the customer portal (a breakdown) is ma
 `requestOrder(tx, draft)` (`src/lib/orders/server/acceptance.ts`): through `createOrders()`, with the
 status `awaiting_acceptance` and an `order_request` (who reported it, and the kind of `fault` they
 chose, `reportFaults`, optional). The portal's form calls `reportOrder()`, which puts the contact's
-photos (`#lib/orders/photos.ts` for the limits) in the photo store first, outside the transaction,
-then makes the order and records them (`order_photo`, `src/lib/orders/server/photos.ts`); a photo
-is served at `/photos/<id>` to whoever may read its order (`servePhoto()`, the access registry's
-`order_photo`, a part of `order`), never at a public URL. Until a planner decides, it's
+photos in the photo store first, outside the transaction, then makes the order and records them
+(see "Photos" below). Until a planner decides, it's
 no open work (`openOrderStatuses` doesn't have it; `pendingOrderStatuses` is the customer's view of
 what's still to be done): it's off the planning board and its backlog, holds no stock (materials'
 `holdsStock()`), gets no checklists, can't be given a status by hand (`statusChoices()` is empty),
@@ -78,6 +76,29 @@ customer reads). A contract's response time counts from the report (the order's 
 from its acceptance: the contracts module counts an order awaiting acceptance as not responded to
 yet, like a quote (`waitingStatuses` in `src/modules/contracts/coverage.ts`). Orders made in the
 office start as quotes, past acceptance.
+
+## Photos
+
+An order's photos are `order_photo` rows (`src/lib/orders/server/photos.ts`), their files in the
+photo store (`photoStore()`, `#lib/server/files/photos.ts`: the `PHOTOS` R2 bucket, else
+`PHOTOS_DIR`), keyed `<tenant>/orders/<uuid>.<ext>`. A customer's contact adds them to a report
+(`reportOrder()`); the order's engineer (while `fieldActions()`'s `photo`) and the office (until it's
+invoiced) later with `addPhotos`, and anyone may try `deletePhoto` (both in `photos.remote.ts`,
+`forAnyRole`). The limits and `mayAddPhotos()` are in `#lib/orders/photos.ts`; the UI is
+`OrderPhotosCard`, `OrderPhotos`, `PhotoPicker` (it shrinks in the browser), `PhotoCount` and
+`PhotoThumbs` from `#lib/orders/components.ts`.
+
+- **Who:** the access registry's `order_photo` is a part of `order` for reading; its change is the
+  office's for all, and, through `partOf()`'s `changedBy`, the adder's own while the order is in
+  `pendingOrderStatuses`. `photosOf()` answers each photo's `deletable` for the viewer. Serving is
+  `/photos/<id>` (`servePhoto()`), a 404 for anyone else.
+- **Files and transactions:** never write the store in a transaction. Adding:
+  `withStoredPhotos(files, (photos) => db.transaction(… addOrderPhotos(tx, order, photos)))` stores
+  first and deletes the files if the transaction fails. Deleting a photo or an order: the
+  transaction answers the keys (`photoFilesOf()`), deleted after it commits (`discardPhotoFiles()`,
+  which logs a failure and leaves it to the sweep).
+- **Sweep:** `runDaily()` calls `sweepOrderPhotos()` per tenant: files under the tenant's prefix
+  (`FileStore.list()`) that no row points to and that are over a day old.
 
 ## The work record
 

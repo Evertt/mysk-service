@@ -43,7 +43,7 @@ heeft: de klus, de apparaten, de vestiging met de toegangsinstructies, en de con
 klant, met knoppen om te bellen en te mailen.
 
 Bij een ingeplande opdracht tikt de monteur op **Ik ben onderweg** als hij vertrekt; de klant leest
-dat in zijn portaal en krijgt het te horen. Daarna start hij de klus (of meteen), schrijft hij de uren, voegt hij notities toe en rondt hij de klus
+dat in zijn portaal en krijgt het te horen. Daarna start hij de klus (of meteen), schrijft hij de uren, voegt hij notities en foto's toe en rondt hij de klus
 af: de klant tekent op het scherm, en de monteur ook. Wie de QR-code van een apparaat of een plek
 scant, opent die in dit portaal, met de open opdrachten van de monteur ervoor.
 
@@ -71,7 +71,8 @@ te kiezen.
 Bij een storing melden vraagt het portaal wat er aan de hand is (deur sluit niet, schade, geluid of
 anders), wat er mis is en hoe dringend het is (de hoogste urgentie heet hier "stilstand", waar het
 kantoor "spoed" zegt), en het neemt tot vijf foto's mee, die de telefoon eerst verkleint. De pagina
-van de opdracht toont ze weer, aan het klantcontact en aan het kantoor.
+van de opdracht toont ze weer, aan het klantcontact en aan het kantoor, met de foto's die de monteur
+of het kantoor later toevoegen (zie [Foto's bij een opdracht](/wiki/orders/photos)).
 
 Een klantcontact ziet alleen de gegevens van zijn eigen klant, en als het kantoor hem voor slechts
 een paar vestigingen heeft uitgenodigd, alleen die van die vestigingen. De notities van de monteurs

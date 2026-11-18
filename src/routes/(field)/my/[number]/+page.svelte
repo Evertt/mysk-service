@@ -23,7 +23,7 @@
 	import { dayOf } from "#lib/dates.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatTime } from "#lib/i18n/index.ts";
-	import { SignOff, TypeLabel, WorkUnits } from "#lib/orders/components.ts";
+	import { OrderPhotosCard, SignOff, TypeLabel, WorkUnits } from "#lib/orders/components.ts";
 	import { fieldActions, orderPriorityDisplay, orderStatusDisplay } from "#lib/orders/index.ts";
 	import { order as orderParts } from "#lib/portal/extensions.ts";
 
@@ -218,6 +218,8 @@
 	point={orderParts}
 	props={{ number: order.number, id: order.id, changed: () => partsChanged++ }}
 />
+
+<OrderPhotosCard orderId={order.id} photos={data.photos} canAdd={actions.photo} size="lg" />
 
 <NotesCard orderId={order.id} notes={data.notes} canAdd={actions.note} />
 
