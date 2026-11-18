@@ -1,23 +1,24 @@
 <!--
 	@component
-	The customer portal's shell, like the office's: the portal's navigation in a sidebar (see
-	`portal-sidebar.svelte`), a header with the customer and who's signed in, the bell (their
-	orders' changes, `notification-bell.svelte`), the language, theme and mode, and signing out, and the page, which uses the width of a desk's screen. On a phone the sidebar is a sheet the header's button opens.
+	The customer portal's shell, a phone app like the engineer portal's: each page's app bar at the
+	top (`AppBar` from `#lib/client/app-bar.svelte`: its title, the way back, and the bell this shell
+	gives it, `notification-bell.svelte`), the page in one column, and the tab bar at the foot
+	(`tab-bar.svelte`: Home, Orders, Scan, Equipment and More, where the modules' pages, the language
+	and appearance, and signing out are). On a desk's screen (wide, with a mouse) it's shown in a
+	phone (`phone-frame.svelte`), as the customer's contact sees it; on a phone, a tablet or in a
+	narrow window it's the page itself.
 -->
 <script lang="ts">
-	import { getCurrentUser } from "#lib/auth/session.remote.ts";
+	import { provideAppBarActions } from "#lib/client/app-bar.ts";
 	import { provideChangeFeed } from "#lib/components/activity/change-feed.svelte.ts";
 
-	import AppearanceSwitchers from "../appearance-switchers.svelte";
-	import { getViewAs } from "../demo.remote.ts";
 	import NavigationSkeleton from "../navigation-skeleton.svelte";
-	import SignOutButton from "../sign-out-button.svelte";
+	import PhoneFrame from "../phone-frame.svelte";
 	import { useTenantOrderTypes } from "../tenant-order-types.ts";
-	import ViewAs from "../view-as.svelte";
 	import type { LayoutProps } from "./$types";
 	import NotificationBell from "./notification-bell.svelte";
-	import PortalSidebar from "./portal-sidebar.svelte";
 	import { watchPortalChanges } from "./portal/client.remote.ts";
+	import TabBar from "./tab-bar.svelte";
 
 	let { children }: LayoutProps = $props();
 
@@ -26,54 +27,45 @@
 
 	const orderTypes = useTenantOrderTypes();
 
-	// Together, not one after the other.
-	const [me, , viewAs] = $derived(await Promise.all([getCurrentUser(), orderTypes, getViewAs()]));
+	// Each page's app bar ends with the bell.
+	provideAppBarActions(bell);
+
+	await orderTypes;
 </script>
 
-<!-- On paper only the page (e.g. a work order to print): no navigation, no header, and no flex
-	layout, which would keep a sheet's named @page (`<PrintSheet>`) from applying. -->
-<Sidebar.Provider
-	data-customer-portal
-	class="print:block print:min-h-0 print:[&>[data-slot=sidebar]]:hidden"
->
-	<PortalSidebar organization={me.organization} />
-	<!-- min-w-0 lets wide tables scroll inside the page instead of widening it. -->
-	<Sidebar.Inset class="min-w-0 print:block">
-		<header
-			data-slot="portal-header"
-			class="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur print:hidden"
-		>
-			<Sidebar.Trigger class="-ml-1" />
-			<Separator orientation="vertical" class="mr-1 h-4! self-center" />
-			<span class="flex min-w-0 flex-col leading-tight">
-				<span class="truncate text-sm font-medium">{me.customer}</span>
-				<span class="truncate text-xs text-muted-foreground">
-					{m.client_signed_in_as({ name: me.name, organization: me.organization })}
-				</span>
-			</span>
-			<div class="ml-auto flex shrink-0 items-center gap-1">
-				<NotificationBell />
-				<AppearanceSwitchers />
-				{#if viewAs}
-					<ViewAs current={viewAs.current} />
-				{/if}
-				<SignOutButton />
-			</div>
-		</header>
-		<div
-			class="relative mx-auto flex w-full max-w-[1400px] min-w-0 flex-1 flex-col gap-6 p-4 pb-12 md:p-6 print:block"
-		>
+{#snippet bell()}
+	<NotificationBell />
+{/snippet}
+
+<PhoneFrame caption={m.client_frame_caption()} statusOn="primary">
+	<!-- On paper only the page (e.g. a work order to print): no bars, and no flex layout, which would
+		keep a sheet's named @page (`<PrintSheet>`) from applying. -->
+	<div
+		class="customer-shell mx-auto flex min-h-svh w-full max-w-xl flex-col bg-background [--tab-bar-height:calc(3.5rem+1px+var(--safe-area-bottom))] print:block print:min-h-0"
+		data-customer-portal
+	>
+		<main class="relative flex flex-1 flex-col gap-5 px-4 pb-8 print:block print:p-0">
 			{@render children()}
-			<NavigationSkeleton group="/(customer)" class="flex flex-col gap-4 p-4 md:p-6">
+			<NavigationSkeleton group="/(customer)" class="flex flex-col gap-4">
 				{#snippet skeleton()}
-					<Skeleton class="h-8 w-48" />
-					<div class="grid gap-4 lg:grid-cols-3">
-						<Skeleton class="h-40 lg:col-span-2" />
-						<Skeleton class="h-40" />
+					<div class="h-[calc(var(--safe-area-top)+3.5rem)] bg-primary"></div>
+					<div class="flex flex-col gap-4 px-4">
+						<Skeleton class="h-6 w-40" />
+						<Skeleton class="h-24 rounded-xl" />
+						<Skeleton class="h-40 rounded-xl" />
 					</div>
-					<Skeleton class="h-64" />
 				{/snippet}
 			</NavigationSkeleton>
-		</div>
-	</Sidebar.Inset>
-</Sidebar.Provider>
+		</main>
+		<TabBar />
+	</div>
+</PhoneFrame>
+
+<style>
+	/* In the phone (`phone-frame.svelte`), as high as its screen rather than the window. */
+	@media screen and (min-width: 1024px) and (pointer: fine) {
+		.customer-shell {
+			min-height: 100%;
+		}
+	}
+</style>

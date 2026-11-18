@@ -36,15 +36,18 @@ describe("reporting a breakdown with a photo", () => {
 			);
 		await unit.selectOption(choice);
 		await app.page.getByRole("button", { name: "Door won't close" }).click();
-		await app.page.getByLabel("What's wrong?").fill("De roldeur van dock 2 sluit niet.");
+		await app.page.getByLabel("Description").fill("De roldeur van dock 2 sluit niet.");
 		// The top urgency reads as a standstill in the portal.
-		await app.page.getByText("Standstill", { exact: true }).click();
+		await app.page
+			.getByRole("group", { name: "Urgency" })
+			.getByRole("button", { name: "Standstill" })
+			.click();
 		await app.page
 			.locator("[data-photo-picker] input[type=file]")
 			.setInputFiles({ name: "deur.png", mimeType: "image/png", buffer: png });
 		// Shrunk into a JPEG thumbnail before it's sent.
 		await app.page.getByRole("button", { name: "Remove photo 1" }).waitFor();
-		await app.page.getByRole("button", { name: "Report breakdown" }).click();
+		await app.page.getByRole("button", { name: "Send report" }).click();
 		await app.page.waitForURL((url) => url.pathname.startsWith("/portal/orders/"));
 		await app.page.locator("[data-reported]").waitFor();
 

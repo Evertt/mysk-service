@@ -2,16 +2,16 @@
 	One of the customer's orders in the portal: what it's about and where it stands (reported, not
 	accepted yet, accepted, planned for a day with the engineer's first name, done, or rejected with
 	the planner's reason), its units, the tenant's modules' cards (`client.order`, e.g. its
-	checklists' results and the work order to print) and, once done, the work order's sign-off. On
-	a wide screen the details are beside the rest.
+	checklists' results and the work order to print) and, once done, the work order's sign-off, one
+	under the other. The app bar names its type and number, and leads back to the orders.
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
 	import { page } from "$app/state";
-	import ArrowLeftIcon from "@lucide/svelte/icons/arrow-left";
 	import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
 	import CircleXIcon from "@lucide/svelte/icons/circle-x";
 
+	import AppBar from "#lib/client/app-bar.svelte";
 	import { order as orderParts } from "#lib/client/extensions.ts";
 	import { refreshOnRecordChange } from "#lib/components/activity/change-feed.svelte.ts";
 	import { refreshOnActivity } from "#lib/components/activity/live-activity.svelte.ts";
@@ -48,16 +48,11 @@
 	});
 </script>
 
-<svelte:head>
-	<title>{order.number} · {m.client_title()}</title>
-</svelte:head>
-
-<div>
-	<Button variant="ghost" size="sm" class="-ml-2" href={resolve("/(customer)/portal/orders")}>
-		<ArrowLeftIcon data-icon="inline-start" />
-		{m.client_nav_orders()}
-	</Button>
-</div>
+<AppBar
+	title={label("orderType", order.type)}
+	subtitle={order.number}
+	back={{ href: resolve("/(customer)/portal/orders"), label: m.client_nav_orders() }}
+/>
 
 {#if reported && status === "awaiting"}
 	<Callout
@@ -71,15 +66,9 @@
 	</Callout>
 {/if}
 
-<header class="flex flex-col gap-2">
-	<div class="flex flex-wrap items-center justify-between gap-2">
-		<h1 class="text-2xl font-semibold tracking-tight">
-			{label("orderType", order.type)}
-			<span class="text-muted-foreground tabular-nums">{order.number}</span>
-		</h1>
-		<EnumBadge display={clientStatusDisplay} value={status} data-client-status={status} />
-	</div>
-	<p class="whitespace-pre-line">{order.description}</p>
+<header class="flex flex-col items-start gap-2 rounded-xl border bg-card p-4">
+	<EnumBadge display={clientStatusDisplay} value={status} data-client-status={status} />
+	<p class="text-[0.9375rem] whitespace-pre-line">{order.description}</p>
 </header>
 
 {#if status === "rejected"}
@@ -88,11 +77,8 @@
 	</Callout>
 {/if}
 
-<!-- On a wide screen its details beside the rest. -->
-<div
-	class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_24rem]"
->
-	<Card.Root class="lg:sticky lg:top-20 lg:col-start-2 lg:row-start-1" data-order-details>
+<div class="flex flex-col gap-5">
+	<Card.Root class="rounded-xl" data-order-details>
 		<Card.Content>
 			<dl class="grid grid-cols-2 gap-4">
 				{#if order.reportedBy}
@@ -119,7 +105,7 @@
 		</Card.Content>
 	</Card.Root>
 
-	<div class="flex min-w-0 flex-col gap-6 lg:col-start-1 lg:row-start-1">
+	<div class="flex min-w-0 flex-col gap-5">
 		<OrderTimeline {order} />
 		{#if order.units.length}
 			<Card.Root>

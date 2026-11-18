@@ -79,7 +79,7 @@
 								<span class="truncate text-sm font-medium" data-document-title>
 									{document.title}
 								</span>
-								<span class="truncate text-xs text-muted-foreground">
+								<span class="truncate text-xs text-muted-foreground" data-document-meta>
 									{[
 										documentFormat(document.contentType),
 										formatFileSize(document.size),

@@ -339,5 +339,20 @@
 	"common_ingest_json": "The body must be JSON (application/json)",
 	"common_ingest_too_large": "The batch is larger than {size}",
 	"common_ingest_invalid": "The batch isn't in the feed's format",
-	"common_ingest_unknown_codes": "The batch names codes that aren't there"
+	"common_ingest_unknown_codes": "The batch names codes that aren't there",
+	"common_scan_tab": "Scan",
+	"common_scan_title": "Scan a QR code",
+	"common_scan_close": "Close the scanner",
+	"common_scan_hint": "Point the camera at the QR code on a unit or location.",
+	"common_scan_starting": "Starting the camera…",
+	"common_scan_foreign": "This code isn't one of ours. Scan the code on a unit or location.",
+	"common_scan_denied_title": "No access to the camera",
+	"common_scan_denied": "Allow the camera for this site in your browser's settings, or type the code below.",
+	"common_scan_unavailable_title": "No camera to scan with",
+	"common_scan_unavailable": "Type the serial number under the QR code instead.",
+	"common_scan_retry": "Try the camera again",
+	"common_scan_type": "Type the code",
+	"common_scan_code_label": "Serial number or code",
+	"common_scan_code_placeholder": "Under the QR code",
+	"common_scan_open": "Open"
 }

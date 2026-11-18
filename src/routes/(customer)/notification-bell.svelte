@@ -6,6 +6,7 @@
 	order's page in the portal.
 -->
 <script lang="ts">
+	import { browser } from "$app/env";
 	import { resolve } from "$app/paths";
 
 	import { refreshOnActivity } from "#lib/components/activity/live-activity.svelte.ts";
@@ -34,6 +35,7 @@
 	{load}
 	markSeen={(upToId) => markPortalNotificationsSeen(upToId)}
 	empty={m.common_notifications_none_customer()}
+	boundary={() => (browser ? document.querySelector(".customer-shell") : null)}
 	href={(_entry, link) =>
 		link.type === "order" && link.target
 			? resolve("/(customer)/portal/orders/[number]", { number: link.target.label })

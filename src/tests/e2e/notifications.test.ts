@@ -49,9 +49,12 @@ test("a breakdown reported in the customer portal puts a dot on the office's bel
 				options.slice(0, 1).map((option) => (option as HTMLOptionElement).value),
 			);
 		await unit.selectOption(choice);
-		await customer.getByLabel("What's wrong?").fill("De roldeur blijft hangen.");
-		await customer.getByText("It's at a standstill or unsafe.").click();
-		await customer.getByRole("button", { name: "Report breakdown" }).click();
+		await customer.getByLabel("Description").fill("De roldeur blijft hangen.");
+		await customer
+			.getByRole("group", { name: "Urgency" })
+			.getByRole("button", { name: "Standstill" })
+			.click();
+		await customer.getByRole("button", { name: "Send report" }).click();
 		await customer.waitForURL((url) => url.pathname.startsWith("/portal/orders/"));
 	} finally {
 		await customer.context().close();

@@ -206,7 +206,7 @@ describe("the customer portal", () => {
 					.count(),
 			)
 			.toBe(Math.min(50, unit.orders));
-		await app.page.locator("[data-unit-back]").click();
+		await app.page.locator("[data-app-bar-back]").click();
 		await app.page.waitForURL((url) => url.pathname === `/portal/equipment/${unit.serial_number}`);
 	});
 
@@ -267,9 +267,12 @@ describe("reporting a breakdown", () => {
 				options.slice(0, 1).map((option) => (option as HTMLOptionElement).value),
 			);
 		await unit.selectOption(choice);
-		await app.page.getByLabel("What's wrong?").fill("Roldeur dock 4 sluit niet meer.");
-		await app.page.getByText("It's at a standstill or unsafe.").click();
-		await app.page.getByRole("button", { name: "Report breakdown" }).click();
+		await app.page.getByLabel("Description").fill("Roldeur dock 4 sluit niet meer.");
+		await app.page
+			.getByRole("group", { name: "Urgency" })
+			.getByRole("button", { name: "Standstill" })
+			.click();
+		await app.page.getByRole("button", { name: "Send report" }).click();
 		await app.page.waitForURL((url) => url.pathname.startsWith("/portal/orders/"));
 		await app.page.locator("[data-reported]").waitFor();
 		const created = await latest();
@@ -295,7 +298,7 @@ describe("reporting a breakdown", () => {
 
 	test("asks for the unit and what's wrong", async () => {
 		await app.go("/portal/report");
-		await app.page.getByRole("button", { name: "Report breakdown" }).click();
+		await app.page.getByRole("button", { name: "Send report" }).click();
 		await expect.poll(() => app.issues()).toContain("Choose the unit that broke down.");
 		expect(await app.issues()).toContain("Describe what's wrong.");
 	});
@@ -317,8 +320,8 @@ describe("reporting a breakdown", () => {
 				url.pathname === "/portal/report" && url.searchParams.get("unit") === unit.serial_number,
 		);
 		await app.page.locator(`[data-scanned-unit="${unit.serial_number}"]`).waitFor();
-		await app.page.getByLabel("What's wrong?").fill("Lamp brandt niet.");
-		await app.page.getByRole("button", { name: "Report breakdown" }).click();
+		await app.page.getByLabel("Description").fill("Lamp brandt niet.");
+		await app.page.getByRole("button", { name: "Send report" }).click();
 		await app.page.locator("[data-reported]").waitFor();
 		expect(await latest()).toMatchObject({ unit: unit.id, priority: "normal" });
 	});

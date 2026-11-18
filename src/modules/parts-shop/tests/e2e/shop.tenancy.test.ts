@@ -8,7 +8,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { useApp, users } from "#e2e/app.ts";
-import { signedInPage } from "#e2e/portal-helpers.ts";
+import { openMoreTab, signedInPage } from "#e2e/portal-helpers.ts";
 
 const app = useApp({ user: users.shltrPlanner });
 
@@ -36,9 +36,8 @@ describe("a contact whose customer isn't a partner, in a tenant without the modu
 		const { page } = await signedInPage(app, users.northCustomer);
 		try {
 			await page.locator("[data-customer-portal]").waitFor();
-			expect(
-				await page.getByRole("navigation").getByRole("link", { name: "Parts shop" }).count(),
-			).toBe(0);
+			await openMoreTab(page);
+			expect(await page.locator('[data-more-page="parts-shop"]').count()).toBe(0);
 			const response = await app.expectingErrors(() =>
 				page.goto(new URL("/parts-shop/portal", page.url()).href),
 			);

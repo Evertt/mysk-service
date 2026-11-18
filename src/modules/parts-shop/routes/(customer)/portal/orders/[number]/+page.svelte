@@ -9,6 +9,7 @@
 	import type { RouteParams } from "$app/types";
 	import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
 
+	import AppBar from "#lib/client/app-bar.svelte";
 	import Callout from "#lib/components/callout.svelte";
 	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { formatCents, formatDateTime, formatNumber } from "#lib/i18n/index.ts";
@@ -24,9 +25,14 @@
 	const placed = $derived(page.url.searchParams.has("placed") && order.status === "placed");
 </script>
 
-<svelte:head>
-	<title>{order.number}</title>
-</svelte:head>
+<AppBar
+	title={order.number}
+	subtitle={m.shop_portal_title()}
+	back={{
+		href: resolve("/(customer)/(modules)/parts-shop/portal/orders"),
+		label: m.shop_client_orders_title(),
+	}}
+/>
 
 {#if placed}
 	<Callout
@@ -42,10 +48,9 @@
 	</Callout>
 {/if}
 
-<div class="flex flex-wrap items-center justify-between gap-3">
+<div class="flex flex-col items-start gap-2 px-1">
 	<div class="flex flex-col gap-1">
-		<h1 class="text-2xl font-semibold tracking-tight">{order.number}</h1>
-		<p class="text-sm text-muted-foreground">
+		<p class="text-[0.9375rem] text-muted-foreground">
 			{m.shop_client_order_placed({
 				date: formatDateTime(order.createdAt),
 				name: order.placedBy ?? m.shop_someone(),
@@ -59,14 +64,14 @@
 	/>
 </div>
 
-<Card.Root class="w-full max-w-3xl" data-client-order-lines>
+<Card.Root class="rounded-xl" data-client-order-lines>
 	<Card.Content class="flex flex-col gap-3">
-		<ul class="flex flex-col divide-y text-sm">
+		<ul class="flex flex-col divide-y text-[0.9375rem]">
 			{#each order.lines as line (line.id)}
-				<li class="flex items-center justify-between gap-3 py-2" data-shop-line={line.sku}>
+				<li class="flex items-center justify-between gap-3 py-3" data-shop-line={line.sku}>
 					<span class="flex min-w-0 flex-col">
 						<span class="truncate font-medium">{line.name}</span>
-						<span class="text-xs text-muted-foreground tabular-nums">
+						<span class="text-[0.8125rem] text-muted-foreground tabular-nums">
 							{line.sku} · {formatNumber(line.quantity)} × {formatCents(line.unitPrice)}
 						</span>
 					</span>
@@ -80,14 +85,6 @@
 			<span>{m.shop_paid_with_credit()}</span>
 			<span class="tabular-nums" data-shop-total>{formatCents(order.total)}</span>
 		</div>
-		<p class="text-xs text-muted-foreground">{m.shop_checkout_vat()}</p>
+		<p class="text-[0.8125rem] text-muted-foreground">{m.shop_checkout_vat()}</p>
 	</Card.Content>
 </Card.Root>
-
-<Button
-	variant="outline"
-	class="self-start"
-	href={resolve("/(customer)/(modules)/parts-shop/portal/orders")}
->
-	{m.shop_client_orders_title()}
-</Button>

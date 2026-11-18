@@ -1,14 +1,17 @@
 <!--
-	The customer portal's home: report a breakdown, the customer's open orders (also those not
-	accepted yet, and reports rejected lately), what the tenant's modules add (e.g. units needing
-	attention, `client.home`), and the latest completed work with its work orders. On a phone in
-	that order; on a wide screen the modules' cards come first, over the orders and the work.
+	The customer portal's home, the Home tab: report a breakdown (the page's main button), the
+	customer's open orders (also those not accepted yet, and reports rejected lately), what the
+	tenant's modules add (e.g. units needing attention, the partner's bonus, `client.home`), and the
+	latest completed work with its work orders, one under the other.
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
+	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 	import ClipboardCheckIcon from "@lucide/svelte/icons/clipboard-check";
 	import SirenIcon from "@lucide/svelte/icons/siren";
 
+	import { getCurrentUser } from "#lib/auth/session.remote.ts";
+	import AppBar from "#lib/client/app-bar.svelte";
 	import { home } from "#lib/client/extensions.ts";
 	import { refreshOnActivity } from "#lib/components/activity/live-activity.svelte.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
@@ -17,7 +20,7 @@
 	import { getPortalHome } from "./client.remote.ts";
 	import OrderList from "./order-list.svelte";
 
-	const data = $derived(await getPortalHome());
+	const [data, me] = $derived(await Promise.all([getPortalHome(), getCurrentUser()]));
 
 	// Live: a planner accepting, rejecting or planning a report shows without a reload.
 	refreshOnActivity(() => getPortalHome().refresh(), {
@@ -25,61 +28,45 @@
 	});
 </script>
 
-<svelte:head>
-	<title>{m.client_title()}</title>
-</svelte:head>
+<AppBar title={me.customer ?? m.client_title()} subtitle={m.client_title()} />
 
-<div class="flex flex-wrap items-center justify-between gap-3">
-	<h1 class="text-2xl font-semibold tracking-tight">{m.client_title()}</h1>
-	<Button href={resolve("/(customer)/portal/report")} size="lg">
-		<SirenIcon data-icon="inline-start" />
-		{m.client_report_title()}
-	</Button>
-</div>
+<Button href={resolve("/(customer)/portal/report")} class="primary-action" data-report-button>
+	<SirenIcon data-icon="inline-start" />
+	{m.client_report_title()}
+</Button>
 
-<!-- On a wide screen a dashboard: what the tenant's modules add (e.g. the partner's bonus and
-	wallet side by side) on top, then the open orders and the latest completed work as tables, side
-	by side on a very wide one. -->
-<div class="grid items-start gap-6 2xl:grid-cols-3">
-	<section
-		class={["flex min-w-0 flex-col gap-3", data.done.length ? "2xl:col-span-2" : "2xl:col-span-3"]}
-		aria-label={m.client_open_orders()}
-	>
-		<h2 class="text-sm font-medium text-muted-foreground">
-			{m.client_open_orders()}
-			<span class="tabular-nums">· {formatNumber(data.open.length)}</span>
-		</h2>
-		{#if data.open.length}
-			<OrderList orders={data.open} />
-		{:else}
-			<Empty.Root class="border">
-				<Empty.Header>
-					<Empty.Media variant="icon"><ClipboardCheckIcon /></Empty.Media>
-					<Empty.Title>{m.client_no_open_orders()}</Empty.Title>
-					<Empty.Description>{m.client_no_open_orders_description()}</Empty.Description>
-				</Empty.Header>
-			</Empty.Root>
-		{/if}
-	</section>
-
-	<ExtensionSlot
-		point={home}
-		props={{}}
-		class="flex min-w-0 flex-col gap-6 lg:order-first 2xl:col-span-3"
-	/>
-
-	{#if data.done.length}
-		<section class="flex min-w-0 flex-col gap-3" aria-label={m.client_recent_work()}>
-			<div class="flex items-center justify-between gap-2">
-				<h2 class="text-sm font-medium text-muted-foreground">{m.client_recent_work()}</h2>
-				<a
-					href={resolve("/(customer)/portal/orders")}
-					class="text-sm text-muted-foreground underline-offset-4 hover:underline"
-				>
-					{m.client_all_orders()}
-				</a>
-			</div>
-			<OrderList orders={data.done} />
-		</section>
+<section class="flex flex-col gap-2" aria-label={m.client_open_orders()}>
+	<h2 class="section-label px-1">
+		{m.client_open_orders()}
+		<span class="tabular-nums">· {formatNumber(data.open.length)}</span>
+	</h2>
+	{#if data.open.length}
+		<OrderList orders={data.open} />
+	{:else}
+		<Empty.Root class="rounded-xl border bg-card">
+			<Empty.Header>
+				<Empty.Media variant="icon"><ClipboardCheckIcon /></Empty.Media>
+				<Empty.Title>{m.client_no_open_orders()}</Empty.Title>
+				<Empty.Description>{m.client_no_open_orders_description()}</Empty.Description>
+			</Empty.Header>
+		</Empty.Root>
 	{/if}
-</div>
+</section>
+
+<ExtensionSlot point={home} props={{}} class="flex flex-col gap-5" />
+
+{#if data.done.length}
+	<section class="flex flex-col gap-2" aria-label={m.client_recent_work()}>
+		<div class="flex items-center justify-between gap-2 px-1">
+			<h2 class="section-label">{m.client_recent_work()}</h2>
+			<a
+				href={resolve("/(customer)/portal/orders")}
+				class="-my-3 inline-flex min-h-11 items-center gap-0.5 text-[0.9375rem] font-medium text-primary"
+			>
+				{m.client_all_orders()}
+				<ChevronRightIcon class="size-4" aria-hidden="true" />
+			</a>
+		</div>
+		<OrderList orders={data.done} />
+	</section>
+{/if}

@@ -64,9 +64,12 @@ describe("following a reported breakdown", () => {
 				options.slice(0, 1).map((option) => (option as HTMLOptionElement).value),
 			);
 		await unit.selectOption(choice);
-		await app.page.getByLabel("What's wrong?").fill("Overheaddeur dock 2 piept bij het openen.");
-		await app.page.getByText("It's at a standstill or unsafe.").click();
-		await app.page.getByRole("button", { name: "Report breakdown" }).click();
+		await app.page.getByLabel("Description").fill("Overheaddeur dock 2 piept bij het openen.");
+		await app.page
+			.getByRole("group", { name: "Urgency" })
+			.getByRole("button", { name: "Standstill" })
+			.click();
+		await app.page.getByRole("button", { name: "Send report" }).click();
 		await app.page.waitForURL((url) => url.pathname.startsWith("/portal/orders/"));
 		[order] = await rows<{ id: number; number: string }>(
 			`select id, number from "order" where organization_id = ? order by id desc limit 1`,

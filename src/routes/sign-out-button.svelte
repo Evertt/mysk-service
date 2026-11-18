@@ -1,7 +1,6 @@
 <!--
 	@component
-	Signs out, back to the login page (`signOut`): an icon button, as in the customer portal's
-	header, or with `menuItem` the last item of a dropdown menu (the office's user menu, the engineer
+	Signs out, back to the login page (`signOut`): a row of a phone app's list (the customer portal's More tab), or with `menuItem` the last item of a dropdown menu (the office's user menu, the engineer
 	portal's header menu).
 
 	A plain form submission, not enhanced: the page's queries and live queries belong to the session
@@ -30,8 +29,12 @@
 			</DropdownMenu.Item>
 		</DropdownMenu.Group>
 	{:else}
-		<Button type="submit" variant="ghost" size="icon-sm" aria-label={m.common_sign_out()}>
-			<LogOutIcon />
-		</Button>
+		<button
+			type="submit"
+			class="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left text-[0.9375rem] font-medium text-destructive transition-colors outline-none hover:bg-muted/60 focus-visible:bg-muted active:bg-muted"
+		>
+			<LogOutIcon class="size-5 shrink-0" aria-hidden="true" />
+			{m.common_sign_out()}
+		</button>
 	{/if}
 </form>
