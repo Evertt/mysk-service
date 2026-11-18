@@ -156,6 +156,12 @@ interface Removal<Row extends { id: number }> {
 	/** What goes with it first, e.g. a contract's coverage. */
 	before?: (row: Row, tx: Transaction) => Promise<void>;
 	/**
+	 * What it holds outside the database, e.g. its documents' stored files: asked in the deletion's
+	 * transaction, before the delete (their rows go with it), it answers what lets go of them, which
+	 * runs once the transaction has committed (never inside one: `#lib/server/files/stored.ts`).
+	 */
+	afterwards?: (row: Row, tx: Transaction) => Promise<() => Promise<void>>;
+	/**
 	 * The refusal when other rows (also optional modules') still refer to it; none for a record
 	 * nothing refers to.
 	 */
@@ -165,7 +171,8 @@ interface Removal<Row extends { id: number }> {
 /**
  * A section's `removeX(id)`, which its page's delete and the list's bulk delete share: finds the
  * tenant's record (a 404 if there's none), refuses (`Refused`) while `blockers` name something that
- * still needs it, then deletes and logs it (`deleteAndLog()`), all in one transaction.
+ * still needs it, then deletes and logs it (`deleteAndLog()`), all in one transaction; then lets go
+ * of what it held outside the database (`afterwards`).
  *
  * ```ts
  * export const removeEngineer = defineRemoval({
@@ -179,14 +186,18 @@ interface Removal<Row extends { id: number }> {
  * ```
  */
 export function defineRemoval<Row extends { id: number }>(rule: Removal<Row>) {
-	const remove = (id: number) =>
-		db.transaction(async (tx) => {
+	const remove = async (id: number) => {
+		const release = await db.transaction(async (tx) => {
 			const row = orNotFound(await rule.find(tx, id), rule.notFound());
 			const blocked = await rule.blockers?.(row, tx);
 			if (blocked) throw new Refused(blocked);
 			await rule.before?.(row, tx);
+			const then = await rule.afterwards?.(row, tx);
 			await deleteAndLog(rule.table, { tx, subject: rule.subject(row) });
+			return then;
 		});
+		await release?.();
+	};
 	const { referenced } = rule;
 	return (id: number): Promise<void> =>
 		referenced ? refuseIfReferenced(() => remove(id), referenced()) : remove(id);

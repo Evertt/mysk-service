@@ -5,6 +5,7 @@
 	import RecordPage from "#lib/components/record-page.svelte";
 	import { CustomerCard, SiteCard } from "#lib/customers/components.ts";
 	import {
+		DocumentsCard,
 		QrCard,
 		ServiceStats,
 		ServiceTimeline,
@@ -57,6 +58,7 @@
 
 	{#snippet side()}
 		<SpecificationsCard {unit} />
+		<DocumentsCard serial={unit.serialNumber} />
 		<CustomerCard customer={unit.customer} title={m.equipment_owner()} />
 		<SiteCard site={unit.site} title={m.equipment_detail_site()} />
 		<QrCard

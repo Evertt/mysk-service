@@ -5,9 +5,12 @@ import { idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { equipment, orderUnit } from "#lib/server/db/schema.ts";
 import { defineRemoval } from "#lib/server/records.ts";
 
+import { documentFilesOf } from "./documents.ts";
+
 /**
  * Deletes one of the tenant's units; refuses one that orders (or an optional module's records)
- * refer to. A 404 if there's no such unit. The unit's page and the list's bulk delete share it.
+ * refer to. A 404 if there's no such unit. Its documents' rows go with it; their files are deleted
+ * once it has committed. The unit's page and the list's bulk delete share it.
  */
 export const removeEquipment = defineRemoval({
 	table: equipment,
@@ -25,5 +28,6 @@ export const removeEquipment = defineRemoval({
 			.where(and(eq(orderUnit.equipmentId, id), inTenant(orderUnit)));
 		if (total) return m.equipment_delete_refused({ count: total });
 	},
+	afterwards: ({ id }, tx) => documentFilesOf(tx, id),
 	referenced: m.equipment_delete_referenced,
 });

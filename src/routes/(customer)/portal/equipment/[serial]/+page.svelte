@@ -3,11 +3,13 @@
 	opens. A card of what it is and where, its status and the badges the tenant's modules add
 	(`client.unit.badges`, e.g. its condition), and their facts in a grid (`client.unit.facts`, e.g.
 	its inspection status and last maintenance); then "report a breakdown" of it, the page's main
-	button; then links to more about it (its service history, a page of its own); then the modules'
-	cards (`client.unit`, e.g. its completed inspections).
+	button; then links to more about it (its service history, its manuals and documents with how
+	many there are, a page each); then the modules' cards (`client.unit`, e.g. its completed
+	inspections).
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
+	import BookOpenIcon from "@lucide/svelte/icons/book-open";
 	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 	import HistoryIcon from "@lucide/svelte/icons/history";
 	import SirenIcon from "@lucide/svelte/icons/siren";
@@ -17,20 +19,27 @@
 	import { refreshOnActivity } from "#lib/components/activity/live-activity.svelte.ts";
 	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import { unitLine, unitTitle, equipmentStatusDisplay } from "#lib/equipment/index.ts";
+	import { getUnitDocuments } from "#lib/equipment/remotes.ts";
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
+	import { formatNumber } from "#lib/i18n/index.ts";
 
 	import { getPortalUnit } from "../../client.remote.ts";
 	import type { PageProps } from "./$types";
 
 	let { params }: PageProps = $props();
 
-	const unit = $derived(await getPortalUnit(params.serial));
+	const [unit, documents] = $derived(
+		await Promise.all([getPortalUnit(params.serial), getUnitDocuments(params.serial)]),
+	);
 	const parts = $derived({ serialNumber: unit.serialNumber });
 
 	// Live: the unit and its place (its history is its own page's).
 	refreshOnRecordChange(
 		() => ({ type: "equipment", id: unit.id }),
-		() => getPortalUnit(params.serial).refresh(),
+		() => {
+			void getPortalUnit(params.serial).refresh();
+			void getUnitDocuments(params.serial).refresh();
+		},
 	);
 	refreshOnActivity(() => getPortalUnit(params.serial).refresh(), {
 		types: ["site", "location"],
@@ -76,7 +85,7 @@
 		{m.client_report_this()}
 	</Button>
 
-	<!-- Links to more about the unit, a page each: room for its manuals and documents. -->
+	<!-- Links to more about the unit, a page each. -->
 	<nav aria-label={m.client_unit_more()}>
 		<Card.Root class="py-0">
 			<ul class="flex flex-col divide-y">
@@ -95,6 +104,27 @@
 								{m.client_unit_history_description()}
 							</span>
 						</span>
+						<ChevronRightIcon class="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+					</a>
+				</li>
+				<li>
+					<a
+						href={resolve("/(customer)/portal/equipment/[serial]/documents", {
+							serial: unit.serialNumber,
+						})}
+						class="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent"
+						data-unit-link="documents"
+					>
+						<BookOpenIcon class="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+						<span class="flex min-w-0 flex-1 flex-col">
+							<span class="text-sm font-medium">{m.client_unit_documents_link()}</span>
+							<span class="truncate text-xs text-muted-foreground">
+								{m.client_unit_documents_description()}
+							</span>
+						</span>
+						<Badge variant="secondary" data-unit-documents-count>
+							{formatNumber(documents.documents.length)}
+						</Badge>
 						<ChevronRightIcon class="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
 					</a>
 				</li>

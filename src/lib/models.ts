@@ -29,6 +29,21 @@ export const equipmentStatuses = [
 export type EquipmentStatus = (typeof equipmentStatuses)[number];
 
 /**
+ * What a unit's document is (`equipment_document`): its manual, a certificate (an inspection's,
+ * say), a drawing, its declaration of performance or CE declaration, or something else.
+ *
+ * @labels equipmentDocumentKind
+ */
+export const equipmentDocumentKinds = [
+	"manual",
+	"certificate",
+	"drawing",
+	"declaration",
+	"other",
+] as const;
+export type EquipmentDocumentKind = (typeof equipmentDocumentKinds)[number];
+
+/**
  * In the order people pick them: breakdowns (SHLTR's "storing") are half the work, repairs a
  * quarter. An urgent breakdown ("storing prio") is a breakdown with priority `urgent`.
  * @labels orderType
