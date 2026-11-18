@@ -79,14 +79,15 @@ export async function resolveQrCode(
  * The page a code leads `viewer` to: the office's page of the unit or location, the engineer
  * portal's, with the engineer's open orders for it, or the customer portal's: the unit's page (what
  * it is, its state, "report a breakdown"), or "report a breakdown" with the location's units to
- * choose from.
+ * choose from. The customer's carry `via=qr`, which the report form keeps with a report made from
+ * there (`order_request.via`), so the unit's timeline can say it came in through the QR code.
  */
 export function qrDestination(target: QrTarget, viewer: QrViewer): string {
 	if (target.kind === "unit") {
 		const serial = encodeURIComponent(target.serialNumber);
-		if (viewer === "customer") return `/portal/equipment/${serial}`;
+		if (viewer === "customer") return `/portal/equipment/${serial}?via=qr`;
 		return viewer === "engineer" ? `/my/equipment/${serial}` : `/equipment/${serial}`;
 	}
-	if (viewer === "customer") return `/portal/report?location=${target.id}`;
+	if (viewer === "customer") return `/portal/report?location=${target.id}&via=qr`;
 	return viewer === "engineer" ? `/my/locations/${target.id}` : `/equipment/locations/${target.id}`;
 }

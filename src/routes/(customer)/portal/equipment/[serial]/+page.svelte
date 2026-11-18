@@ -9,6 +9,7 @@
 -->
 <script lang="ts">
 	import { resolve } from "$app/paths";
+	import { page } from "$app/state";
 	import BookOpenIcon from "@lucide/svelte/icons/book-open";
 	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 	import HistoryIcon from "@lucide/svelte/icons/history";
@@ -33,6 +34,8 @@
 		await Promise.all([getPortalUnit(params.serial), getUnitDocuments(params.serial)]),
 	);
 	const parts = $derived({ serialNumber: unit.serialNumber });
+	/** A scanned QR code led here (`qrDestination()`): a report made from the page says so. */
+	const scannedHere = $derived(page.url.searchParams.get("via") === "qr");
 
 	// Live: the unit and its place (its history is its own page's).
 	refreshOnRecordChange(
@@ -80,7 +83,7 @@
 
 	<Button
 		class="primary-action"
-		href={`${resolve("/(customer)/portal/report")}?unit=${encodeURIComponent(unit.serialNumber)}`}
+		href={`${resolve("/(customer)/portal/report")}?unit=${encodeURIComponent(unit.serialNumber)}${scannedHere ? "&via=qr" : ""}`}
 	>
 		<SirenIcon data-icon="inline-start" />
 		{m.client_report_this()}

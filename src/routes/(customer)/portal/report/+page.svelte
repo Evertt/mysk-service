@@ -33,6 +33,8 @@
 
 	const serial = $derived(page.url.searchParams.get("unit"));
 	const locationParam = $derived(page.url.searchParams.get("location"));
+	/** Whether a scanned QR code led here (`?via=qr`, `qrDestination()`): kept with the report. */
+	const via = $derived(page.url.searchParams.get("via") === "qr" ? "qr" : "portal");
 
 	// With a scanned unit's or location's: a 404 when it isn't the contact's to see.
 	const [sites, scanned, place] = $derived(
@@ -107,6 +109,7 @@
 		data-scanned-unit={scanned?.serialNumber}
 		data-scanned-location={location?.id}
 	>
+		<input {...fields.via.as("hidden", via)} />
 		{#if scanned}
 			<input {...fields.unitId.as("hidden", String(scanned.id))} />
 		{:else}
