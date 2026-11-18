@@ -8,8 +8,9 @@
  * - On Cloudflare: the Worker's Cron Trigger (`wrangler.jsonc`) has the Durable Object answer that
  *   same request (`scheduled()` in `cloudflare/entry.ts`), with the `OPS_TOKEN`.
  *
- * Besides the modules' jobs, the core's own: the orders' photo files no photo points to any more
- * are deleted (`sweepOrderPhotos()`).
+ * Besides the modules' jobs, the core's own: the stored files no record points to any more are
+ * deleted, the orders' photos' (`sweepOrderPhotos()`) and the units' documents'
+ * (`sweepUnitDocuments()`), each a `sweepFiles()` of its own prefix.
  *
  * Running it more than once a day does no harm: each job does nothing twice (maintenance, for
  * one, skips a plan whose last order is still open).
@@ -19,6 +20,7 @@ import { timingSafeEqual } from "node:crypto";
 import { OPS_TOKEN } from "$app/env/private";
 
 import { currentDay } from "#lib/dates.ts";
+import { sweepUnitDocuments } from "#lib/equipment/server/index.ts";
 import { daily, type DailyReport } from "#lib/jobs/extensions.ts";
 import { sweepOrderPhotos } from "#lib/orders/server/index.ts";
 import { asSystem, tenantOf } from "#lib/server/auth/index.ts";
@@ -60,18 +62,27 @@ export async function runDaily(today = currentDay()): Promise<DailyResult[]> {
 	return results;
 }
 
+/** The core's sweeps of stored files, by the key their count is reported under. */
+const sweeps = {
+	"orders.photos_swept": () => sweepOrderPhotos(),
+	"equipment.documents_swept": () => sweepUnitDocuments(),
+};
+
 /**
  * The core's daily jobs in the run's organization, as its modules' are (a count only when there
- * was something to do; one that fails is logged, and the run goes on).
+ * was something to do; one that fails is logged, and the others and the run go on).
  */
 async function coreJobs(): Promise<DailyReport> {
-	try {
-		const swept = await sweepOrderPhotos();
-		return swept ? { "orders.photos_swept": swept } : {};
-	} catch (error) {
-		console.error("The orders' photo sweep failed:", error);
-		return {};
+	const report: DailyReport = {};
+	for (const [key, sweep] of Object.entries(sweeps)) {
+		try {
+			const swept = await sweep();
+			if (swept) report[key] = swept;
+		} catch (error) {
+			console.error(`The sweep ${key} failed:`, error);
+		}
 	}
+	return report;
 }
 
 /**

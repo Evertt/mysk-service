@@ -5,6 +5,7 @@
 	import RecordPage from "#lib/components/record-page.svelte";
 	import { CustomerCard, SiteCard } from "#lib/customers/components.ts";
 	import {
+		DocumentsCard,
 		QrCard,
 		ServiceStats,
 		ServiceTimeline,
@@ -66,5 +67,6 @@
 				site: String(unit.site.id),
 			})}?unit={encodeURIComponent(unit.serialNumber)}"
 		/>
+		<DocumentsCard serial={unit.serialNumber} />
 	{/snippet}
 </RecordPage>

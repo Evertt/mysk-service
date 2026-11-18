@@ -6,7 +6,8 @@ import { join } from "node:path";
 import { afterAll, afterEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { DurableRequest } from "#lib/server/db/durable.ts";
-import { photoKey, photoStore } from "#lib/server/files/photos.ts";
+import { photoKey } from "#lib/server/files/keys.ts";
+import { photoStore } from "#lib/server/files/photos.ts";
 import { bucketStore, folderStore } from "#lib/server/files/store.ts";
 
 import { memoryBucket } from "./memory-bucket.ts";

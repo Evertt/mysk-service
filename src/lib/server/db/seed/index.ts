@@ -32,6 +32,7 @@ import { insertRows } from "../parameters.ts";
 import * as schema from "../schema.ts";
 import { seedCategories, shltrCategories } from "./categories.ts";
 import { addDays, now } from "./clock.ts";
+import { generateDemoDocuments, storeDemoFiles } from "./documents.ts";
 import { IdSpace } from "./ids.ts";
 import { generateLocations, seedQrToken } from "./locations.ts";
 import { runOrder, type SeedLogEntry, type SeedTenant, seedCollectors } from "./module-seed.ts";
@@ -131,6 +132,8 @@ const tenants = [
 
 /** Rows per table, for the summary. */
 const totals: Record<string, number> = {};
+/** The demo documents' files, put in the file store once the data is in (`storeDemoFiles()`). */
+const demoFiles: Parameters<typeof storeDemoFiles>[0][number][] = [];
 const count = (table: string, rows: unknown[]) =>
 	(totals[table] = (totals[table] ?? 0) + rows.length);
 
@@ -307,6 +310,16 @@ await db.transaction(async (tx) => {
 		await insertRows(tx, order, rows.orders);
 		await insertRows(tx, schema.orderUnit, rows.orderUnits);
 		await insertRows(tx, schema.orderSignoff, rows.signoffs);
+		// SHLTR's units' manuals and declarations; their files once the transaction has committed.
+		if (data.profile === "shltr") {
+			const unitIds = new Map(
+				data.equipments.flatMap((e) => (e.name ? [[e.name, rowId.equipment(e.id)] as const] : [])),
+			);
+			const documents = generateDemoDocuments(organizationId, unitIds);
+			await insertRows(tx, schema.equipmentDocument, documents.rows);
+			demoFiles.push(...documents.files);
+			count("equipmentDocuments", documents.rows);
+		}
 		// Who created the latest orders, so the activity log starts with some history: the office
 		// staff, not the field engineers.
 		const members = demoUsers.filter((u) =>
@@ -389,6 +402,7 @@ await db.transaction(async (tx) => {
 });
 
 await db.transaction(createDemoUsers);
+await storeDemoFiles(demoFiles);
 
 console.log(
 	`Seeded ${tenants.length} organizations (${tenants.map((t) => t.name).join(", ")}) with ` +

@@ -185,21 +185,21 @@ The app deploys to Cloudflare Workers: `ADAPTER=cloudflare` builds with `adapter
 Environment variables (see `.env.example` and `src/env.ts`). On Cloudflare `wrangler.jsonc`'s `vars`, or secrets
 (`wrangler secret put`); locally `.env` (`.dev.vars` for `pnpm dev:cloudflare`).
 
-| Variable              | Required      | What for                                                                                     |
-| --------------------- | ------------- | -------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`        | locally       | The database: a file, or a Turso database (`libsql://<name>.turso.io`); unused on Cloudflare |
-| `DATABASE_AUTH_TOKEN` | with Turso    | The Turso database's access token                                                            |
-| `ORIGIN`              | yes           | The public URL, e.g. `https://fieldworks.example.com`: sign-in and links in emails           |
-| `BETTER_AUTH_SECRET`  | yes           | Signs sessions; 32+ random characters, e.g. from `openssl rand -base64 32`                   |
-| `SMTP_URL`            | no            | Sends mail, e.g. `smtp://user:password@smtp.example.com:587`; otherwise it's logged          |
-| `MAIL_FROM`           | no            | The sender, e.g. `Fieldworks <noreply@example.com>`                                          |
-| `OPS_TOKEN`           | on Cloudflare | Also starts the daily jobs; on Cloudflare it also guards `/_ops/import`                      |
-| `DEMO_SIGN_IN`        | no            | `true` for the login page's demo buttons (see "Demo login"); never in production             |
-| `BUG_REPORT_EMAIL`    | no            | Gets a mail for each bug report (the headers' record button); otherwise it's logged          |
-| `DEVELOPER_EMAILS`    | no            | Comma-separated: the accounts that may open the bug reports at `/ops/bug-reports`            |
-| `BUG_REPORTS_DIR`     | no            | Where bug reports' recordings go (`.bug-reports`); on Cloudflare the `BUG_REPORTS` R2 bucket |
-| `PHOTOS_DIR`          | no            | Where the orders' photos go (`.photos`); on Cloudflare the `PHOTOS` R2 bucket                |
-| `BODY_SIZE_LIMIT`     | with Node     | adapter-node's largest request, 512 KB unless set: set `26M` for photos sent without JS      |
+| Variable              | Required      | What for                                                                                           |
+| --------------------- | ------------- | -------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`        | locally       | The database: a file, or a Turso database (`libsql://<name>.turso.io`); unused on Cloudflare       |
+| `DATABASE_AUTH_TOKEN` | with Turso    | The Turso database's access token                                                                  |
+| `ORIGIN`              | yes           | The public URL, e.g. `https://fieldworks.example.com`: sign-in and links in emails                 |
+| `BETTER_AUTH_SECRET`  | yes           | Signs sessions; 32+ random characters, e.g. from `openssl rand -base64 32`                         |
+| `SMTP_URL`            | no            | Sends mail, e.g. `smtp://user:password@smtp.example.com:587`; otherwise it's logged                |
+| `MAIL_FROM`           | no            | The sender, e.g. `Fieldworks <noreply@example.com>`                                                |
+| `OPS_TOKEN`           | on Cloudflare | Also starts the daily jobs; on Cloudflare it also guards `/_ops/import`                            |
+| `DEMO_SIGN_IN`        | no            | `true` for the login page's demo buttons (see "Demo login"); never in production                   |
+| `BUG_REPORT_EMAIL`    | no            | Gets a mail for each bug report (the headers' record button); otherwise it's logged                |
+| `DEVELOPER_EMAILS`    | no            | Comma-separated: the accounts that may open the bug reports at `/ops/bug-reports`                  |
+| `BUG_REPORTS_DIR`     | no            | Where bug reports' recordings go (`.bug-reports`); on Cloudflare the `BUG_REPORTS` R2 bucket       |
+| `PHOTOS_DIR`          | no            | Where the orders' photos and units' documents go (`.photos`); on Cloudflare the `PHOTOS` R2 bucket |
+| `BODY_SIZE_LIMIT`     | with Node     | adapter-node's largest request, 512 KB unless set: set `26M` for photos sent without JS            |
 
 ### The first organization
 

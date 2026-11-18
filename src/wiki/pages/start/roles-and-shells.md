@@ -47,7 +47,8 @@ site and its access notes, the customer's contact with call and email buttons.
 On a scheduled order the engineer taps **On my way** when they set out, which the customer reads
 in their portal and is told of; then they start the job (or start it at once), log the hours, adds notes and photos, and completes it: the customer
 signs on the screen, and so does the engineer. Scanning a unit's or a place's QR code opens it in
-this portal, with the engineer's open orders for it.
+this portal, with the engineer's open orders for it; a unit also with its manuals and documents,
+to open on the spot.
 
 An engineer sees only the orders assigned to them. The role is `engineer`, and the account is
 linked to an engineer's record by an owner or admin, on the engineer's page.
@@ -64,8 +65,9 @@ gets an email per change, in the language they reported it in.
 Scanning a unit's QR code opens the unit's page, made for a phone: a card with what it is and
 where, its status, and what the organization's modules add (its condition as a badge, its
 inspection status and the day of its last maintenance), then a big Report a breakdown button with
-the unit filled in, then a link to its service history. Scanning a location's code opens Report a
-breakdown with the location's units to choose from.
+the unit filled in, then links to its service history and to its manuals and documents, with how
+many there are (see [Manuals and documents](/wiki/domains/unit-documents)). Scanning a location's
+code opens Report a breakdown with the location's units to choose from.
 
 Reporting a breakdown asks what's going on (door won't close, damage, noise or other), what's
 wrong, how urgent it is (the top urgency reads "standstill" here, where the office says "urgent")
@@ -116,7 +118,7 @@ customer's contact.
 - <SourceLink path="src/lib/auth/shells.ts" line={28}><code>shells</code> and <code>shellOf()</code></SourceLink>
 - <SourceLink path="src/lib/auth/roles.ts">the roles</SourceLink>, with <code>isFieldEngineer()</code> and
   <code>isCustomerContact()</code>
-- <SourceLink path="src/hooks.server.ts" line={148}><code>handleGuard</code></SourceLink>
+- <SourceLink path="src/hooks.server.ts" line={150}><code>handleGuard</code></SourceLink>
 - <SourceLink path="src/wiki/widgets/role-switcher/roles.ts">the cards above</SourceLink>
 
 <DocsPointer doc="docs/agents/tenancy.md" section="Tenancy" />

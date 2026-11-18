@@ -7,28 +7,32 @@
  * one who added a photo theirs while the order is still to be done (`removeOrderPhoto()`, the same
  * rule's change).
  *
- * A store is never written inside a transaction (on Cloudflare one holds every other request):
- *
- * - adding: `withStoredPhotos()` puts the files first, outside it, then the transaction records them
- *   (`addOrderPhotos()`); should it fail, the stored files are deleted again;
- * - deleting a photo or an order: the transaction deletes the rows and answers their files' keys,
- *   which are deleted once it has committed (`discardPhotoFiles()`);
- * - whatever was missed (a server stopped between the two, a delete that failed, an order deleted
- *   with its customer) the daily run's `sweepOrderPhotos()` deletes: stored files no row points to.
+ * The files follow the records' files' one way (`#lib/server/files/stored.ts`): stored before the
+ * transaction that records them (`withStoredPhotos()`), deleted after the one that deletes them
+ * (`discardPhotoFiles()`), and swept daily (`sweepOrderPhotos()`).
  */
-import { error } from "@sveltejs/kit";
 import { and, asc, count, eq, sql } from "drizzle-orm";
 
 import { orderSubject } from "#lib/activity/index.ts";
 import { formatNumber, numberFormatter } from "#lib/i18n/format.ts";
-import { readOrNotFound, visible, visibleOrNone } from "#lib/server/access/index.ts";
+import { visible, visibleOrNone } from "#lib/server/access/index.ts";
 import { audienceOf } from "#lib/server/access/viewer.ts";
 import { recordActivity } from "#lib/server/activity/index.ts";
-import { currentTenant, idInTenant, inTenant, requireTenant } from "#lib/server/auth/index.ts";
+import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db, type Runner, type Transaction } from "#lib/server/db/index.ts";
 import { inList, insertBatches } from "#lib/server/db/parameters.ts";
 import { order, orderPhoto } from "#lib/server/db/schema.ts";
-import { photoKey, photoPrefix, photoStore } from "#lib/server/files/photos.ts";
+import { photoKey, photoPrefix } from "#lib/server/files/keys.ts";
+import { photoStore } from "#lib/server/files/photos.ts";
+import {
+	discardFiles,
+	serveStoredFile,
+	type StoredFile,
+	storeFiles,
+	sweepFiles,
+	withStoredFiles,
+} from "#lib/server/files/stored.ts";
+import { fileSignatures } from "#lib/server/files/types.ts";
 import { deleteAndLog, nextPosition, orNotFound } from "#lib/server/records.ts";
 import { Refused } from "#lib/server/refused.ts";
 
@@ -45,32 +49,16 @@ import {
 } from "../photos.ts";
 import { findEngineerOrder } from "./field.ts";
 
-/** A photo put in the store, not yet recorded on an order. */
-export interface StoredPhoto {
-	objectKey: string;
-	contentType: PhotoType;
-	size: number;
-}
-
 const megabytes = numberFormatter({ style: "unit", unit: "megabyte", maximumFractionDigits: 0 });
-
-/** Each kind's first bytes: a photo is what its bytes say, whatever type the browser gave it. */
-const signatures: Record<PhotoType, (bytes: Uint8Array) => boolean> = {
-	"image/jpeg": (bytes) => bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff,
-	"image/png": (bytes) =>
-		[0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].every((byte, i) => bytes[i] === byte),
-	"image/webp": (bytes) =>
-		String.fromCharCode(...bytes.subarray(0, 4)) === "RIFF" &&
-		String.fromCharCode(...bytes.subarray(8, 12)) === "WEBP",
-};
 
 /** A refusal on the form's `photos` field. */
 const onPhotos = (message: string) => new Refused({ path: ["photos"], message });
 
 /**
  * Checks `files` against the limits (at most `MAX_PHOTOS`, each a JPEG, PNG or WebP image of at
- * most `MAX_PHOTO_BYTES`, `MAX_PHOTOS_BYTES` together), and answers each one's bytes and type; a
- * `Refused` on `photos` if one isn't. Before anything is stored.
+ * most `MAX_PHOTO_BYTES`, `MAX_PHOTOS_BYTES` together, as its bytes say), and answers each one
+ * to store under a new key of the tenant's; a `Refused` on `photos` if one isn't. Before anything
+ * is stored.
  */
 async function readPhotos(files: readonly File[]) {
 	if (files.length > MAX_PHOTOS)
@@ -83,76 +71,43 @@ async function readPhotos(files: readonly File[]) {
 	if (files.reduce((sum, file) => sum + file.size, 0) > MAX_PHOTOS_BYTES) {
 		throw onPhotos(m.orders_photos_too_large({ size: megabytes(MAX_PHOTOS_BYTES / 2 ** 20) }));
 	}
+	const { organizationId } = currentTenant();
 	return Promise.all(
 		files.map(async (file) => {
 			const bytes = new Uint8Array(await file.arrayBuffer());
 			const type = isPhotoType(file.type) ? file.type : undefined;
-			if (!type || !signatures[type](bytes)) throw onPhotos(m.orders_photo_not_image());
-			return { bytes, type };
+			if (!type || !fileSignatures[type](bytes)) throw onPhotos(m.orders_photo_not_image());
+			return { objectKey: photoKey(organizationId, photoTypes[type]), bytes, contentType: type };
 		}),
 	);
 }
 
 /**
  * Deletes the files `keys` from the photo store (`store`, the request's by default), once nothing
- * points to them any more: after the transaction that deleted their rows committed, or when the
- * one that was to record them failed. A file that can't be deleted now is logged and left to the
- * daily sweep (`sweepOrderPhotos()`), so it never fails what came before.
+ * points to them any more (`discardFiles()`: a failure is left to the sweep).
  */
-export async function discardPhotoFiles(keys: readonly string[], store = photoStore()) {
-	const results = await Promise.allSettled(keys.map((key) => store.delete(key)));
-	results.forEach((result, i) => {
-		if (result.status === "rejected") {
-			console.error(`Couldn't delete the photo ${keys[i]}; the daily sweep will:`, result.reason);
-		}
-	});
-}
+export const discardPhotoFiles = (keys: readonly string[], store = photoStore()) =>
+	discardFiles(store, keys);
 
 /**
  * Puts `files` in the photo store under the tenant's keys, outside any transaction, once all pass
  * the checks (`readPhotos()`: else a `Refused` on `photos`, and nothing is stored). Should one fail
- * to be stored, those that were are deleted again.
+ * to be stored, those that were are deleted again (`storeFiles()`).
  */
-export async function storeOrderPhotos(files: readonly File[]): Promise<StoredPhoto[]> {
-	const photos = await readPhotos(files);
-	const { organizationId } = currentTenant();
-	const store = photoStore();
-	const results = await Promise.allSettled(
-		photos.map(async ({ bytes, type }) => {
-			const objectKey = photoKey(organizationId, photoTypes[type]);
-			await store.put(objectKey, bytes, type);
-			return { objectKey, contentType: type, size: bytes.byteLength };
-		}),
-	);
-	const stored = results.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
-	const failed = results.find((result) => result.status === "rejected");
-	if (failed) {
-		await discardPhotoFiles(stored.map((photo) => photo.objectKey));
-		throw failed.reason;
-	}
-	return stored;
+export async function storeOrderPhotos(files: readonly File[]): Promise<StoredFile[]> {
+	return storeFiles(photoStore(), await readPhotos(files));
 }
 
-/** Deletes stored photos again, when the order they were for wasn't made or changed. */
-const discardOrderPhotos = (photos: readonly StoredPhoto[]) =>
-	discardPhotoFiles(photos.map((photo) => photo.objectKey));
-
 /**
- * Stores `files` (`storeOrderPhotos()`, outside any transaction), then runs `record` with them,
- * which records them in a transaction of its own (`addOrderPhotos()`); should it fail, the stored
- * files are deleted again and its error thrown.
+ * Checks `files` (`readPhotos()`), stores them (outside any transaction), then runs `record` with
+ * them, which records them in a transaction of its own (`addOrderPhotos()`); should it fail, the
+ * stored files are deleted again and its error thrown (`withStoredFiles()`).
  */
 export async function withStoredPhotos<T>(
 	files: readonly File[],
-	record: (photos: StoredPhoto[]) => Promise<T>,
+	record: (photos: StoredFile[]) => Promise<T>,
 ): Promise<T> {
-	const photos = await storeOrderPhotos(files);
-	try {
-		return await record(photos);
-	} catch (thrown) {
-		await discardOrderPhotos(photos);
-		throw thrown;
-	}
+	return withStoredFiles(photoStore(), await readPhotos(files), record);
 }
 
 /**
@@ -163,7 +118,7 @@ export async function withStoredPhotos<T>(
 export async function addOrderPhotos(
 	tx: Transaction,
 	of: { id: number; number: string },
-	photos: readonly StoredPhoto[],
+	photos: readonly StoredFile[],
 ) {
 	if (!photos.length) return;
 	const [{ has }] = await tx
@@ -327,54 +282,41 @@ export async function photosOf(orderIds: readonly number[]): Promise<Map<number,
 	return byOrder;
 }
 
-/** How old a stored file must be before the sweep may delete it: a day, past any form in flight. */
-const SWEEP_AFTER = { hours: 24 };
-
 /**
  * Deletes the tenant's stored photo files (in `store`, the request's by default) that no
- * `order_photo` row points to and that were stored more than a day before `now`: those a deletion
- * or a failed form left behind (see the top of this file). A younger one may belong to a form still
- * being recorded, so it stays. For the daily run (`runDaily()`), as the system. Answers how many it
- * deleted.
+ * `order_photo` row points to and that were stored more than a day before `now` (`sweepFiles()`).
+ * For the daily run (`runDaily()`), as the system. Answers how many it deleted.
  */
-export async function sweepOrderPhotos(now = Temporal.Now.instant(), store = photoStore()) {
-	const { organizationId } = currentTenant();
-	const before = now.subtract(SWEEP_AFTER);
-	const old = (await store.list(photoPrefix(organizationId)))
-		.filter((file) => Temporal.Instant.compare(file.storedAt, before) < 0)
-		.map((file) => file.key);
-	if (!old.length) return 0;
-	const kept = await db
-		.select({ objectKey: orderPhoto.objectKey })
-		.from(orderPhoto)
-		.where(and(inList(orderPhoto.objectKey, old), inTenant(orderPhoto)));
-	const pointedTo = new Set(kept.map((row) => row.objectKey));
-	const orphans = old.filter((key) => !pointedTo.has(key));
-	await discardPhotoFiles(orphans, store);
-	return orphans.length;
-}
+export const sweepOrderPhotos = (now = Temporal.Now.instant(), store = photoStore()) =>
+	sweepFiles(
+		{
+			store,
+			prefix: photoPrefix,
+			referenced: async (keys) =>
+				(
+					await db
+						.select({ objectKey: orderPhoto.objectKey })
+						.from(orderPhoto)
+						.where(and(inList(orderPhoto.objectKey, keys), inTenant(orderPhoto)))
+				).map((row) => row.objectKey),
+		},
+		now,
+	);
 
 /**
  * The photo `id`, for a signed-in member who may read its order (the office, its engineer, the
  * customer's contact who sees it; a 401 signed out); a 404 for anyone else, also another tenant's.
- * Served as stored, cached by their browser only.
+ * Served as stored (`serveStoredFile()`).
  */
-export async function servePhoto(id: string): Promise<Response> {
-	requireTenant();
-	if (!/^[1-9]\d{0,14}$/.test(id)) error(404, m.common_error_not_found());
-	await readOrNotFound({ type: "order_photo", id });
-	const [row] = await db
-		.select({ objectKey: orderPhoto.objectKey, contentType: orderPhoto.contentType })
-		.from(orderPhoto)
-		.where(idInTenant(orderPhoto, Number(id)));
-	const found = orNotFound(row, m.common_error_not_found());
-	const bytes = orNotFound(await photoStore().get(found.objectKey), m.common_error_not_found());
-	return new Response(bytes, {
-		headers: {
-			"content-type": found.contentType,
-			"content-length": String(bytes.byteLength),
-			"cache-control": "private, max-age=86400",
-			"x-content-type-options": "nosniff",
-		},
-	});
-}
+export const servePhoto = (id: string): Promise<Response> =>
+	serveStoredFile(
+		{ type: "order_photo", id },
+		async (photoId) =>
+			(
+				await db
+					.select({ objectKey: orderPhoto.objectKey, contentType: orderPhoto.contentType })
+					.from(orderPhoto)
+					.where(idInTenant(orderPhoto, photoId))
+			)[0],
+		photoStore(),
+	);

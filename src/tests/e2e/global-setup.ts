@@ -16,7 +16,7 @@
  */
 import { type ChildProcess, execFileSync, spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { copyFileSync, mkdtempSync, rmSync } from "node:fs";
+import { copyFileSync, cpSync, mkdtempSync, rmSync } from "node:fs";
 import { createServer } from "node:net";
 import { constants, tmpdir } from "node:os";
 import { join } from "node:path";
@@ -203,9 +203,11 @@ export default async function setup(project: TestProject) {
 	for (const signal of signals) process.on(signal, exitOnSignal);
 
 	const template = join(folder, "seeded.db");
+	// The seed's files (the units' demo documents), which each lane's store gets a copy of.
+	const seededFiles = join(folder, "seeded-files");
 	const run = (command: string, args: string[]) =>
 		execFileSync(command, args, {
-			env: { ...process.env, DATABASE_URL: `file:${template}` },
+			env: { ...process.env, DATABASE_URL: `file:${template}`, PHOTOS_DIR: seededFiles },
 			stdio: ["ignore", "pipe", "pipe"],
 		});
 	run("node_modules/.bin/drizzle-kit", ["migrate"]);
@@ -237,6 +239,7 @@ export default async function setup(project: TestProject) {
 			copyFileSync(template, database);
 			const databaseURL = `file:${database}`;
 			const outbox = join(folder, `lane-${i + 1}-outbox.jsonl`);
+			cpSync(seededFiles, `${outbox}-photos`, { recursive: true });
 			const server = await startServer(databaseURL, outbox, { BETTER_AUTH_SECRET: authSecret });
 			return { databaseURL, outbox, ...server };
 		}),

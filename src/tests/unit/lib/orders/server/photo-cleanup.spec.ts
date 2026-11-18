@@ -13,7 +13,7 @@ import { afterAll, beforeEach, describe, expect, test, vi } from "vite-plus/test
 import { deleteOrder } from "#lib/orders/order.remote.ts";
 import { reportOrder } from "#lib/orders/server/acceptance.ts";
 import { storeOrderPhotos, sweepOrderPhotos, withStoredPhotos } from "#lib/orders/server/photos.ts";
-import { photoKey } from "#lib/server/files/photos.ts";
+import { photoKey } from "#lib/server/files/keys.ts";
 import { bucketStore, type FileStore, folderStore } from "#lib/server/files/store.ts";
 import { runDaily } from "#lib/server/jobs/daily.ts";
 import { reportBreakdown } from "#routes/(customer)/portal/client.remote.ts";

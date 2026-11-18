@@ -1,8 +1,9 @@
 import { sql } from "drizzle-orm";
 import { foreignKey, index, integer, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-import { engineerSpecialties, equipmentStatuses } from "#lib/models.ts";
+import { engineerSpecialties, equipmentDocumentKinds, equipmentStatuses } from "#lib/models.ts";
 
+import { user } from "../auth.schema.ts";
 import { createdAt, day, tenantRef, tenantTable } from "../columns.ts";
 import { customer, customerSite } from "./customers.ts";
 
@@ -131,4 +132,38 @@ export const equipment = tenantTable(
 		}),
 	],
 	{ referenced: true },
+);
+
+/**
+ * A unit's document: its manual, a certificate, a drawing, its declaration of performance or CE
+ * declaration (`kind`), which the office uploads and its engineers and the customer's contacts who
+ * see the unit read (`#lib/equipment/server/documents.ts`). The file is in the file store under
+ * `objectKey` (`<tenant>/equipment/…`, `documentKey()`), as uploaded: its type as its bytes say,
+ * its size and the name it had. Deleted with its unit; its file once that has committed.
+ */
+export const equipmentDocument = tenantTable(
+	"equipment_document",
+	{
+		equipmentId: integer("equipment_id").notNull(),
+		title: text("title").notNull(),
+		kind: text("kind", { enum: equipmentDocumentKinds }).notNull(),
+		objectKey: text("object_key").notNull(),
+		contentType: text("content_type").notNull(),
+		/** In bytes. */
+		size: integer("size").notNull(),
+		/** The file's name as it was uploaded, which a download gets again. */
+		filename: text("filename").notNull(),
+		/** Who uploaded it; empty once their account is deleted. */
+		userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
+		createdAt: createdAt(),
+	},
+	(table) => [
+		index("equipment_document_organization_equipment").on(
+			table.organizationId,
+			table.equipmentId,
+			table.kind,
+		),
+		index("equipment_document_user").on(table.userId),
+		tenantRef(table, table.equipmentId, equipment, { onDelete: "cascade" }),
+	],
 );

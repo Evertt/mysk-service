@@ -14,6 +14,7 @@
  * - A saved view is its owner's, or shared with the office (managers change those).
  * - An order's photo is seen by whoever reads the order, and deleted by the office, or by whoever
  *   added it (its engineer, the customer's contact) while the order is still to be done.
+ * - A unit's document is read by whoever reads the unit, and changed by the office.
  */
 import { and, eq, or, type SQL, sql } from "drizzle-orm";
 
@@ -37,6 +38,7 @@ import {
 	engineer,
 	equipment,
 	equipmentCategory,
+	equipmentDocument,
 	equipmentLocation,
 	integrationToken,
 	invitation,
@@ -125,6 +127,9 @@ export const coreRules = {
 		{},
 		{ engineer: ownWhilePending, customer: ownWhilePending },
 	),
+	// Whoever reads the unit reads its documents: the office, every engineer, the customer's contacts
+	// who see its site. The office, which changes the unit, adds, renames and deletes them.
+	equipment_document: partOf("equipment", equipmentDocument, equipmentDocument.equipmentId),
 	module: tenantWide({ office: true }, { change: "manager" }),
 	simulation: tenantWide({ office: true }, { change: "manager" }),
 	member: rows(member, member.id, { office: "manager" }),

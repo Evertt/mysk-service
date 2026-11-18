@@ -124,12 +124,14 @@ const isIntegration = (routeId: string | null) => routeId?.startsWith("/(api)/")
 /**
  * Pages of every signed-in role, each with a gate of its own: the bug reports' upload (`/bug-reports`,
  * the office's and the engineer portal's record button), the orders' photos (`/photos/<id>`, for
- * whoever may read the order, in every shell: `servePhoto()`) and the developers' pages (`/ops/…`,
- * `forDevelopers`, a 404 for everyone else). The guard leaves them to it.
+ * whoever may read the order, in every shell: `servePhoto()`), the units' documents
+ * (`/documents/<id>`, for whoever may read the unit: `serveUnitDocument()`) and the developers'
+ * pages (`/ops/…`, `forDevelopers`, a 404 for everyone else). The guard leaves them to it.
  */
 const isForAnyRole = (routeId: string | null) =>
 	routeId === "/bug-reports" ||
 	routeId === "/photos/[id]" ||
+	routeId === "/documents/[id]" ||
 	(routeId?.startsWith("/(ops)/") ?? false);
 
 /**

@@ -37,6 +37,12 @@ yearly inspection of fifteen doors, counts for a fifteenth in each. Each order s
 there, as small thumbnails; the engineer portal and the customer portal show a count per order on
 a unit's orders (see [Photos of an order](/wiki/orders/photos)).
 
+## Manuals and documents
+
+A unit keeps its manuals, certificates, drawings and declarations of performance (CE). The office
+uploads them on the unit's page; the engineers open them on the unit in their portal, and the
+customer's contacts in theirs (see [Manuals and documents](/wiki/domains/unit-documents)).
+
 ## QR codes
 
 Every unit and every location has a QR code of its own, printed on a label and stuck on. What it
@@ -91,7 +97,7 @@ the engineer the site's contact and access details, the customer's contact only 
 The scopes (`officeUnits()`, `engineerUnits()`, `customerUnits(access)`) take their rows from the
 access registry. See [The work record](/wiki/orders/work-record).
 
-- <SourceLink path="src/lib/server/db/schema/equipment.ts" line={81}><code>equipment</code></SourceLink>, <SourceLink path="src/lib/server/db/schema/equipment.ts" line={51} symbol="equipmentLocation"><code>equipment_location</code></SourceLink>
+- <SourceLink path="src/lib/server/db/schema/equipment.ts" line={82}><code>equipment</code></SourceLink>, <SourceLink path="src/lib/server/db/schema/equipment.ts" line={52} symbol="equipmentLocation"><code>equipment_location</code></SourceLink>
 - <SourceLink path="src/lib/equipment/server/qr.ts" line={63}><code>resolveQrCode()</code></SourceLink> and <SourceLink path="src/lib/equipment/server/qr.ts" line={84}><code>qrDestination()</code></SourceLink>
 - <SourceLink path="src/routes/q/[token]/+server.ts" line={17} symbol="GET">the <code>/q/[token]</code> route</SourceLink>
 - <SourceLink path="src/lib/equipment/labels/labels.remote.ts" line={18}><code>getLabelSheet</code></SourceLink>

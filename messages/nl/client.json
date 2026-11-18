@@ -117,5 +117,8 @@
 	"client_detail_fault": "Storing",
 	"client_report_card_title": "Je melding",
 	"client_detail_created": "Aangemaakt",
-	"client_created_on": "Aangemaakt {date}"
+	"client_created_on": "Aangemaakt {date}",
+	"client_unit_documents_link": "Handleidingen en documenten",
+	"client_unit_documents_description": "Handleidingen, certificaten en tekeningen",
+	"client_unit_documents_none": "Er zijn nog geen documenten van dit apparaat."
 }

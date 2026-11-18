@@ -267,6 +267,13 @@
       "when": 1794998945661,
       "tag": "0037_condition-nen2767",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "6",
+      "when": 1795002201477,
+      "tag": "0038_add-equipment-documents",
+      "breakpoints": true
     }
   ]
 }

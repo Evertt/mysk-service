@@ -3,12 +3,12 @@
  * `cloudflare/entry.ts` passes along with each request in `durableRequests`, since every request
  * runs inside the one Durable Object and SvelteKit's adapter passes no `platform`), elsewhere a
  * folder. One small interface over both, so the code that stores and serves a file doesn't care
- * which. The bug reports' recordings (`#lib/server/bug-reports/storage.ts`) and the orders' photos
- * (`./photos.ts`) are kept in one each.
+ * which. The bug reports' recordings (`#lib/server/bug-reports/storage.ts`) are kept in one, the
+ * orders' photos and the units' documents in another (`./photos.ts`), each under its own prefix.
  *
  * Never write to a store inside a database transaction: on Cloudflare a transaction holds every
  * other request until it's done. Store the file first, then record its row; delete a file once the
- * transaction that let go of its row has committed.
+ * transaction that let go of its row has committed (`./stored.ts` does both for a record's files).
  */
 import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";

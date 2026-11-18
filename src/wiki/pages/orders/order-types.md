@@ -83,7 +83,7 @@ ignores a hidden flag on a needed type, also if it was set before the module was
 `saveOrderType` (`src/lib/orders/type-settings/type-settings.remote.ts`) calls. `orderTypeProblems()` finds what is wrong (a needed type hidden, a name already
 taken), the transaction replaces or deletes the row, and the change is logged.
 
-- <SourceLink path="src/lib/models.ts" line={36}><code>orderTypes</code> and corrective work</SourceLink>
+- <SourceLink path="src/lib/models.ts" line={51}><code>orderTypes</code> and corrective work</SourceLink>
 - <SourceLink path="src/lib/orders/types.ts" line={58}><code>offeredOrderTypes()</code></SourceLink> and <SourceLink path="src/lib/orders/types.ts" line={91}><code>orderTypeProblems()</code></SourceLink>
 - <SourceLink path="src/lib/orders/server/types.ts" line={32}><code>requiredOrderTypes()</code></SourceLink>
 - <SourceLink path="src/lib/server/db/schema/orders.ts" line={102} symbol="orderTypeSetting"><code>order_type_setting</code></SourceLink>
