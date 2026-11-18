@@ -7,7 +7,7 @@ import { type BadgeDisplay, formatNumber } from "#lib/i18n/index.ts";
 
 import { conditionLabels } from "./labels.ts";
 import { PLAN_WITHIN_WORKING_DAYS, type Thresholds, type UnitStatus } from "./model.ts";
-import type { ConditionScore, DefectExtent } from "./nen2767.ts";
+import { type ConditionScore, extentClass, type ExtentClass } from "./nen2767.ts";
 
 /** Each status's translated `label` and badge tone. */
 export const unitStatusDisplay = conditionLabels.withLabels("unitStatus", {
@@ -69,17 +69,21 @@ export const scoreColours: Record<ConditionScore, string> = {
 	6: "bg-destructive text-white",
 };
 
-/** A defect's extent class as NEN names it: "<2%", "2–10%", … "≥70%". */
-export function extentLabel(extent: number): string {
-	const labels: Record<DefectExtent, () => string> = {
+/** An extent class as NEN names it: "<2%", "2–10%", … "≥70%". */
+export function extentLabel(extent: ExtentClass): string {
+	const labels: Record<ExtentClass, () => string> = {
 		1: m.condition_extent_1,
 		2: m.condition_extent_2,
 		3: m.condition_extent_3,
 		4: m.condition_extent_4,
 		5: m.condition_extent_5,
 	};
-	return (labels[extent as DefectExtent] ?? labels[5])();
+	return labels[extent]();
 }
+
+/** A defect's extent in percent, with its class: "20% (10–30%)". */
+export const extentText = (percent: number) =>
+	`${formatNumber(percent)}% (${extentLabel(extentClass(percent))})`;
 
 /** What a status means and asks for, as the legend says it ("Wat betekenen de statussen?"). */
 export function statusMeaning(status: UnitStatus, thresholds: Thresholds): string {

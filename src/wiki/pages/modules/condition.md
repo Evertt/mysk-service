@@ -24,11 +24,15 @@ attention, and how soon?
 - **A condition on the NEN 2767 scale.** A condition is scored from 1 to 6: 1 Excellent (as new,
   no defects), 2 Good, 3 Fair, 4 Moderate, 5 Poor and 6 Very poor (technically ready for
   replacement). It is made of **defects**: what is wrong, the element it is on (the unit itself or
-  one of its components), its **severity** (slight, serious, severe), its **extent** (NEN's classes:
-  below 2%, 2–10%, 10–30%, 30–70%, 70% or more of the element) and its **intensity** (initial,
-  advanced or final stage), with photos if you like. NEN 2767's tables give each defect a score, and
-  the worst defect wins: a condition without defects is 1. A unit's score is the worst of its own
-  latest condition and its components'.
+  one of its components), its **severity** (slight, serious, severe), its **extent** (the percentage
+  of the element it covers; NEN's classes are below 2%, 2–10%, 10–30%, 30–70% and 70% or more, and
+  each class's chip sets a typical value) and its **intensity** (initial, advanced or final stage),
+  with photos if you like. An element's defects are scored by **NEN 2767-1's method**: severity and
+  intensity give each defect a category (1 to 5), the extents of the defects in one category add
+  up, each category gets points by the class of its total, and all the points together give the
+  score. So several small defects can score worse than each one alone, and one defect alone scores
+  as the norm's tables have it. A condition without defects is 1. A condition's score is its worst
+  element's, and a unit's score is the worst of its own latest condition and its components'.
 - **From the checklists.** When an engineer rejects a point in the engineer portal, the portal asks
   for its defect: severity, extent, intensity and photos, with the score they give shown as they
   pick. When the checklist is completed, its rejected points are the defects of the unit's new
@@ -107,9 +111,10 @@ computed in SQL (`server/status-sql.ts`) with correlated subqueries, and the sam
 code (`rolledUpStatus()` in `model.ts`) for single records. A statement binds at most 100 values, so
 that SQL is written with literal constants, not parameters.
 
-The NEN 2767 tables are in one file, `nen2767.ts`, with a spec that checks every cell. A condition's
-score, and each defect's, is worked out on the server and kept on the record, so the lists' SQL only
-takes the worst of the latest ones. Photos of defects are in the photo store, served at
+The NEN 2767 method is in one file, `nen2767.ts`, with a spec that checks every cell of the norm's
+single-defect tables against it, and the norm's own example (a window frame at 32.6 points, so 5).
+A condition's score, and each defect's alone, is worked out on the server and kept on the record, so
+the lists' SQL only takes the worst of the latest ones. Photos of defects are in the photo store, served at
 `/condition/photos/<id>` to whoever may read the unit's conditions (the access registry's
 `conditionPhoto`).
 
@@ -123,11 +128,11 @@ modules they refer to are optional. The service history is a view of the activit
 (`server/history.ts`), not a table.
 
 - <SourceLink path="src/modules/condition/module.ts">module.ts</SourceLink>: the manifest, and <SourceLink path="src/modules/condition">the module's folder</SourceLink>.
-- <SourceLink path="src/modules/condition/nen2767.ts" line={85}>defectScore()</SourceLink>: a
-  defect's score from NEN 2767's tables.
-- <SourceLink path="src/modules/condition/model.ts" line={192}>rolledUpStatus()</SourceLink>: a
+- <SourceLink path="src/modules/condition/nen2767.ts" line={128}>elementScoreOf()</SourceLink>: an
+  element's score from its defects, by NEN 2767-1's method.
+- <SourceLink path="src/modules/condition/model.ts" line={191}>rolledUpStatus()</SourceLink>: a
   unit's status with its components'.
-- <SourceLink path="src/modules/condition/server/conditions.ts" line={297}>recordChecklistConditions()</SourceLink>:
+- <SourceLink path="src/modules/condition/server/conditions.ts" line={298}>recordChecklistConditions()</SourceLink>:
   a completed checklist's conditions and defects.
 - <SourceLink path="src/modules/condition/server/status-sql.ts">status-sql.ts</SourceLink>: the same
   rules in SQL.

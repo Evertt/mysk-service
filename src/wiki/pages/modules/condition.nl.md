@@ -21,10 +21,15 @@ hebben aandacht nodig, en hoe snel?
   (nieuwbouwkwaliteit, geen gebreken), 2 Goed, 3 Redelijk, 4 Matig, 5 Slecht en 6 Zeer slecht
   (technisch rijp voor vervanging). Ze bestaat uit **gebreken**: wat er mis is, het element waarop
   het zit (het apparaat zelf of een van zijn onderdelen), de **ernst** (gering, serieus, ernstig),
-  de **omvang** (de klassen van NEN: minder dan 2%, 2–10%, 10–30%, 30–70%, 70% of meer van het
-  element) en de **intensiteit** (begin-, gevorderd of eindstadium), met foto's als je wilt. De
-  tabellen van NEN 2767 geven elk gebrek een score, en het ernstigste gebrek telt: een conditie
-  zonder gebreken is 1. De score van een apparaat is de slechtste van zijn eigen laatste conditie
+  de **omvang** (het percentage van het element; de klassen van NEN zijn minder dan 2%, 2–10%,
+  10–30%, 30–70% en 70% of meer, en de chip van elke klasse zet een gangbare waarde) en de
+  **intensiteit** (begin-, gevorderd of eindstadium), met foto's als je wilt. De gebreken van een
+  element krijgen hun score volgens **de methode van NEN 2767-1**: ernst en intensiteit geven elk
+  gebrek een categorie (1 tot 5), de omvang van gebreken in één categorie telt op, elke categorie
+  krijgt punten naar de klasse van dat totaal, en alle punten samen geven de score. Zo kunnen
+  meerdere kleine gebreken slechter scoren dan elk apart, en scoort één gebrek zoals de tabellen
+  van de norm het zeggen. Een conditie zonder gebreken is 1. De score van een conditie is die van
+  het slechtste element, en de score van een apparaat de slechtste van zijn eigen laatste conditie
   en die van zijn onderdelen.
 - **Uit de checklists.** Als een monteur in het monteursportaal een punt afkeurt, vraagt het portaal
   om het gebrek: ernst, omvang, intensiteit en foto's, met de score die daaruit volgt zichtbaar
@@ -111,9 +116,11 @@ gecorreleerde subqueries, en staan dezelfde regels in code (`rolledUpStatus()` i
 losse records. Een statement bindt hoogstens 100 waarden, dus die SQL is geschreven met letterlijke
 constanten, niet met parameters.
 
-De tabellen van NEN 2767 staan in één bestand, `nen2767.ts`, met een spec die elke cel controleert.
-De score van een conditie, en die van elk gebrek, wordt op de server berekend en bij het record
-bewaard, zodat de SQL van de lijsten alleen de slechtste van de laatste neemt. Foto's van gebreken
+De methode van NEN 2767 staat in één bestand, `nen2767.ts`, met een spec die elke cel van de
+tabellen voor één gebrek ermee vergelijkt, en het voorbeeld uit de norm zelf (een kozijn met 32,6
+punten, dus 5). De score van een conditie, en die van elk gebrek apart, wordt op de server
+berekend en bij het record bewaard, zodat de SQL van de lijsten alleen de slechtste van de laatste
+neemt. Foto's van gebreken
 staan in de fotoopslag en worden geserveerd op `/condition/photos/<id>` aan wie de condities van het
 apparaat mag lezen (`conditionPhoto` in het toegangsregister).
 
@@ -128,11 +135,11 @@ optioneel zijn. De servicegeschiedenis is een weergave van het activiteitenlog
 (`server/history.ts`), geen tabel.
 
 - <SourceLink path="src/modules/condition/module.ts">module.ts</SourceLink>: het manifest, en <SourceLink path="src/modules/condition">de map van de module</SourceLink>.
-- <SourceLink path="src/modules/condition/nen2767.ts" line={85}>defectScore()</SourceLink>: de
-  score van een gebrek uit de tabellen van NEN 2767.
-- <SourceLink path="src/modules/condition/model.ts" line={192}>rolledUpStatus()</SourceLink>: de
+- <SourceLink path="src/modules/condition/nen2767.ts" line={128}>elementScoreOf()</SourceLink>: de
+  score van een element uit zijn gebreken, volgens de methode van NEN 2767-1.
+- <SourceLink path="src/modules/condition/model.ts" line={191}>rolledUpStatus()</SourceLink>: de
   status van een apparaat, met die van zijn onderdelen.
-- <SourceLink path="src/modules/condition/server/conditions.ts" line={297}>recordChecklistConditions()</SourceLink>:
+- <SourceLink path="src/modules/condition/server/conditions.ts" line={298}>recordChecklistConditions()</SourceLink>:
   de condities en gebreken van een afgeronde checklist.
 - <SourceLink path="src/modules/condition/server/status-sql.ts">status-sql.ts</SourceLink>: dezelfde
   regels in SQL.
