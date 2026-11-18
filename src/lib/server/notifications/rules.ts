@@ -4,11 +4,11 @@
  * the query (`./notifications.ts`) has already kept to the tenant's, the window's and other
  * people's. Constants are written in (`literal()`), so a statement with every rule binds little.
  */
-import { and, eq, isNull, type SQL, sql } from "drizzle-orm";
+import { and, eq, isNull, or, type SQL, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 
 import type { LoggedType } from "#lib/activity/index.ts";
-import type { ActivityAction } from "#lib/models.ts";
+import { type ActivityAction, doneOrderStatuses } from "#lib/models.ts";
 import type { NotificationRule } from "#lib/notifications/extensions.ts";
 import { sameTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
@@ -83,6 +83,15 @@ const statusBecame = (status: string) =>
 /** An entry recording when the order is planned for (`changes.scheduledFor`). */
 const replanned = sql`json_type(${activity.changes}, '$.scheduledFor') is not null`;
 
+/** An entry giving the order a time it's planned for (not taking it off the planning). */
+const plannedFor = sql`json_extract(${activity.changes}, '$.scheduledFor[1]') is not null`;
+
+/** An order's change whose status was one of the done ones before (invoicing's moves). */
+const wasDone = sql`coalesce(json_extract(${activity.changes}, '$.status[0]'), '') in (${sql.join(
+	doneOrderStatuses.map((status) => literal(status)),
+	sql`, `,
+)})`;
+
 /**
  * The core's rules, in the order the tray picks an entry's category by: the first that matches.
  * The modules add theirs (`notificationRules`) after the core's of the same audience.
@@ -143,5 +152,47 @@ export const coreNotificationRules: readonly NotificationRule[] = [
 		audience: "engineer",
 		category: "planned",
 		where: ({ engineer }) => sql`(${engineer!.aboutTheirOrder} and ${replanned})`,
+	},
+	// The customer portal: the changes to the orders the contact reads that they follow, as the
+	// reporter's mail tells them (`customerUpdate()` in `#lib/orders/server/reporter-mail.ts`).
+	// Rejected before cancelled: a rejected report is cancelled too.
+	{
+		id: "orders.customerAccepted",
+		audience: "customer",
+		category: "accepted",
+		where: ({ customer }) => and(customer!.aboutTheirOrder, entryAbout("order", ["accepted"]))!,
+	},
+	{
+		id: "orders.customerRejected",
+		audience: "customer",
+		category: "rejected",
+		where: ({ customer }) => and(customer!.aboutTheirOrder, entryAbout("order", ["rejected"]))!,
+	},
+	{
+		id: "orders.customerCancelled",
+		audience: "customer",
+		category: "cancelled",
+		where: ({ customer }) => and(customer!.aboutTheirOrder, statusBecame("cancelled"))!,
+	},
+	{
+		id: "orders.onTheWay",
+		audience: "customer",
+		category: "on_the_way",
+		where: ({ customer }) => and(customer!.aboutTheirOrder, statusBecame("on_the_way"))!,
+	},
+	{
+		// Done, not invoicing's moves between done statuses (voiding makes it completed again).
+		id: "orders.resolved",
+		audience: "customer",
+		category: "resolved",
+		where: ({ customer }) =>
+			and(customer!.aboutTheirOrder, statusBecame("completed"), sql`not ${wasDone}`)!,
+	},
+	{
+		id: "orders.customerPlanned",
+		audience: "customer",
+		category: "planned",
+		where: ({ customer }) =>
+			and(customer!.aboutTheirOrder, or(statusBecame("scheduled"), plannedFor))!,
 	},
 ];

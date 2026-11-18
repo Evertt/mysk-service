@@ -5,6 +5,7 @@
 	import MailIcon from "@lucide/svelte/icons/mail";
 	import PhoneIcon from "@lucide/svelte/icons/phone";
 	import PlayIcon from "@lucide/svelte/icons/play";
+	import TruckIcon from "@lucide/svelte/icons/truck";
 	import { toast } from "svelte-sonner";
 
 	import { ACCESS_REVOKED } from "#lib/activity/index.ts";
@@ -26,7 +27,7 @@
 	import { fieldActions, orderPriorityDisplay, orderStatusDisplay } from "#lib/orders/index.ts";
 	import { order as orderParts } from "#lib/portal/extensions.ts";
 
-	import { getMyOrder, startWork } from "../portal.remote.ts";
+	import { getMyOrder, setOut, startWork } from "../portal.remote.ts";
 	import { dayLabel } from "../work.ts";
 	import type { PageProps } from "./$types";
 	import CompleteForm from "./complete-form.svelte";
@@ -110,6 +111,28 @@
 	</div>
 </div>
 
+<!-- A scheduled job: on the way first (the customer reads it), or started at once; one on the way is
+	started. -->
+{#if actions.depart}
+	<form
+		{...setOut.enhance(async ({ submit }) => {
+			if (await submitted(submit)) toast.success(m.portal_on_my_way_sent());
+		})}
+	>
+		<input {...setOut.fields.id.as("hidden", String(order.id))} />
+		<SubmitButton
+			size="lg"
+			class="h-12 w-full text-base"
+			icon={TruckIcon}
+			pending={setOut.pending}
+			data-set-out
+		>
+			{m.portal_on_my_way()}
+		</SubmitButton>
+		<Field.FieldError errors={setOut.fields.allIssues()} class="mt-2" />
+	</form>
+{/if}
+
 {#if actions.start}
 	<form
 		{...startWork.enhance(async ({ submit }) => {
@@ -119,6 +142,7 @@
 		<input {...startWork.fields.id.as("hidden", String(order.id))} />
 		<SubmitButton
 			size="lg"
+			variant={actions.depart ? "outline" : "default"}
 			class="h-12 w-full text-base"
 			icon={PlayIcon}
 			pending={startWork.pending}

@@ -17,6 +17,7 @@ import ShieldAlertIcon from "@lucide/svelte/icons/shield-alert";
 import SirenIcon from "@lucide/svelte/icons/siren";
 import TimerIcon from "@lucide/svelte/icons/timer";
 import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
+import TruckIcon from "@lucide/svelte/icons/truck";
 import WrenchIcon from "@lucide/svelte/icons/wrench";
 import type { Component } from "svelte";
 
@@ -44,6 +45,12 @@ const statusDetails: Record<OrderStatus, StatusDisplay> = {
 	awaiting_acceptance: { icon: InboxIcon, tone: "warning", color: "var(--muted-foreground)" },
 	quote: { icon: FileTextIcon, tone: "info", color: "var(--chart-1)" },
 	scheduled: { icon: CalendarClockIcon, tone: "info", color: "var(--chart-2)" },
+	// Between scheduled and under way: a mix of their colours.
+	on_the_way: {
+		icon: TruckIcon,
+		tone: "info",
+		color: "color-mix(in oklab, var(--chart-2), var(--chart-3))",
+	},
 	in_progress: { icon: TimerIcon, tone: "warning", color: "var(--chart-3)" },
 	completed: { icon: CircleCheckIcon, tone: "success", color: "var(--chart-4)" },
 	invoiced: { icon: ReceiptIcon, tone: "neutral", color: "var(--chart-5)" },

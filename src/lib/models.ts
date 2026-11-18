@@ -61,13 +61,16 @@ export const isCorrectiveWork = (type: OrderType) => isOneOf(correctiveOrderType
  * they plan it at once) or reject it (cancelled, with the reason shown to the customer). Until then
  * it's no open work: off the planning board and its backlog, holding no stock, and changed by
  * nothing but accepting, rejecting or deleting it (`acceptance.ts` in `#lib/orders/server/`).
- * Orders made in the office start as quotes, past acceptance.
+ * Orders made in the office start as quotes, past acceptance. A scheduled order's engineer tells
+ * the customer they're `on_the_way` (from the engineer portal) before they start it, or starts it
+ * at once.
  * @labels orderStatus
  */
 export const orderStatuses = [
 	"awaiting_acceptance",
 	"quote",
 	"scheduled",
+	"on_the_way",
 	"in_progress",
 	"completed",
 	"invoiced",
@@ -75,10 +78,14 @@ export const orderStatuses = [
 ] as const;
 export type OrderStatus = (typeof orderStatuses)[number];
 
-/** Orders still to be done: quoted, scheduled or under way (accepted, so not awaiting acceptance). */
+/**
+ * Orders still to be done: quoted, scheduled, the engineer on the way or under way (accepted, so
+ * not awaiting acceptance).
+ */
 export const openOrderStatuses = [
 	"quote",
 	"scheduled",
+	"on_the_way",
 	"in_progress",
 ] as const satisfies OrderStatus[];
 
@@ -88,7 +95,11 @@ export const openOrderStatuses = [
  * place list). A view, not a permission: an engineer reads their orders in any status (the access
  * registry's `order` rule), a cancelled one their bell told them about included.
  */
-export const engineerWorkStatuses = ["scheduled", "in_progress"] as const satisfies OrderStatus[];
+export const engineerWorkStatuses = [
+	"scheduled",
+	"on_the_way",
+	"in_progress",
+] as const satisfies OrderStatus[];
 
 /** Orders whose work is done, and which count towards revenue. */
 export const doneOrderStatuses = ["completed", "invoiced"] as const satisfies OrderStatus[];
@@ -116,6 +127,7 @@ export const isDoneOrder = (status: OrderStatus) => isOneOf(doneOrderStatuses, s
 export const manualOrderStatuses = [
 	"quote",
 	"scheduled",
+	"on_the_way",
 	"in_progress",
 	"completed",
 	"cancelled",
@@ -164,7 +176,8 @@ export const activityActions = [
 	"scheduled",
 	"module_enabled",
 	"module_disabled",
-	// The engineer portal.
+	// The engineer portal (`departed`: on the way to a scheduled order).
+	"departed",
 	"work_started",
 	"note_added",
 	"completed",

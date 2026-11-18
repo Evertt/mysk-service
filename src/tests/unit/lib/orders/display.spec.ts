@@ -17,6 +17,7 @@ describeBadges("order status badges", orderStatusDisplay, [
 	["awaiting_acceptance", "Awaiting acceptance", "warning"],
 	["quote", "Quote", "info"],
 	["scheduled", "Scheduled", "info"],
+	["on_the_way", "On the way", "info"],
 	["in_progress", "In progress", "warning"],
 	["completed", "Completed", "success"],
 	["invoiced", "Invoiced", "neutral"],

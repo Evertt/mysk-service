@@ -253,6 +253,13 @@
       "when": 1794994861557,
       "tag": "0035_order-photos-and-report-fault",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1794997011221,
+      "tag": "0036_add-reporter-locale",
+      "breakpoints": true
     }
   ]
 }

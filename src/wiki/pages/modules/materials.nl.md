@@ -79,7 +79,7 @@ keer dat hij wordt opgeslagen. Voor modules die Materialen nodig hebben (Onderde
 transactie van de aanroeper.
 
 - <SourceLink path="src/modules/materials/module.ts">module.ts</SourceLink>: het manifest, en <SourceLink path="src/modules/materials">de map van de module</SourceLink>.
-- <SourceLink path="src/modules/materials/model.ts" line={63}>holdsStock()</SourceLink>: welke statussen
+- <SourceLink path="src/modules/materials/model.ts" line={64}>holdsStock()</SourceLink>: welke statussen
   voorraad vasthouden.
 - <SourceLink path="src/modules/materials/server/stock.ts" line={179}>moveOrderStock()</SourceLink>:
   het voorraadboek volgt de opdracht.

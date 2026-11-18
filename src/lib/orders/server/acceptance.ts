@@ -10,6 +10,7 @@
 import { and, count, eq } from "drizzle-orm";
 
 import type { ReportFault } from "#lib/models.ts";
+import { getLocale } from "#lib/paraglide/runtime.js";
 import { currentTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { order, orderRequest } from "#lib/server/db/schema.ts";
@@ -39,6 +40,8 @@ export async function requestOrder(
 		userId: user.id,
 		reporterName: user.name,
 		fault,
+		// The mails about its progress are in this language (`./reporter-mail.ts`).
+		reporterLocale: getLocale(),
 	});
 	return created;
 }

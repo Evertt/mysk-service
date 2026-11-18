@@ -48,6 +48,7 @@ const labels: Record<string, Record<string, string>> = {
 	status: {
 		quote: "Quote",
 		scheduled: "Scheduled",
+		on_the_way: "On the way",
 		in_progress: "In progress",
 		completed: "Completed",
 		invoiced: "Invoiced",

@@ -1,8 +1,8 @@
 /**
  * Where an order stands as the customer reads it in their portal, in SHLTR's words: a report not
  * accepted yet ("Opdracht nog niet geaccepteerd"), accepted ("Opdracht geaccepteerd", a quote to
- * the office), planned, under way, done; or rejected ("Afgewezen", with the planner's reason) or
- * cancelled. Pure, for the portal's pages.
+ * the office), planned, the engineer on the way ("Monteur onderweg"), under way, done; or rejected
+ * ("Afgewezen", with the planner's reason) or cancelled. Pure, for the portal's pages.
  */
 import CalendarClockIcon from "@lucide/svelte/icons/calendar-clock";
 import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
@@ -11,6 +11,7 @@ import CircleXIcon from "@lucide/svelte/icons/circle-x";
 import HourglassIcon from "@lucide/svelte/icons/hourglass";
 import ThumbsUpIcon from "@lucide/svelte/icons/thumbs-up";
 import TimerIcon from "@lucide/svelte/icons/timer";
+import TruckIcon from "@lucide/svelte/icons/truck";
 
 import { type BadgeDisplay, labelled } from "#lib/i18n/index.ts";
 import type { OrderStatus } from "#lib/models.ts";
@@ -19,6 +20,7 @@ export const clientStatuses = [
 	"awaiting",
 	"accepted",
 	"scheduled",
+	"on_the_way",
 	"in_progress",
 	"done",
 	"rejected",
@@ -37,6 +39,7 @@ export function clientStatus(status: OrderStatus, rejectionReason: string | null
 		case "quote":
 			return "accepted";
 		case "scheduled":
+		case "on_the_way":
 		case "in_progress":
 			return status;
 		case "completed":
@@ -52,6 +55,7 @@ export const clientStatusDisplay = labelled({
 	awaiting: { label: m.client_status_awaiting, icon: HourglassIcon, tone: "warning" },
 	accepted: { label: m.client_status_accepted, icon: ThumbsUpIcon, tone: "info" },
 	scheduled: { label: m.client_status_scheduled, icon: CalendarClockIcon, tone: "info" },
+	on_the_way: { label: m.client_status_on_the_way, icon: TruckIcon, tone: "info" },
 	in_progress: { label: m.client_status_in_progress, icon: TimerIcon, tone: "warning" },
 	done: { label: m.client_status_done, icon: CircleCheckIcon, tone: "success" },
 	rejected: { label: m.client_status_rejected, icon: CircleXIcon, tone: "danger" },

@@ -42,7 +42,8 @@ zijn ingepland, per dag, en de recente. Een opdracht opent met wat de monteur op
 heeft: de klus, de apparaten, de vestiging met de toegangsinstructies, en de contactpersoon van de
 klant, met knoppen om te bellen en te mailen.
 
-Daar start de monteur de klus, schrijft hij de uren, voegt hij notities toe en rondt hij de klus
+Bij een ingeplande opdracht tikt de monteur op **Ik ben onderweg** als hij vertrekt; de klant leest
+dat in zijn portaal en krijgt het te horen. Daarna start hij de klus (of meteen), schrijft hij de uren, voegt hij notities toe en rondt hij de klus
 af: de klant tekent op het scherm, en de monteur ook. Wie de QR-code van een apparaat of een plek
 scant, opent die in dit portaal, met de open opdrachten van de monteur ervoor.
 
@@ -54,7 +55,11 @@ monteur.
 
 Voor de klantcontacten, de eigen contactpersonen van de klant. Het begint op `/portal`: een knop om een storing te
 melden, de open opdrachten van de klant (ook die nog niet geaccepteerd zijn) en het laatst afgeronde
-werk. Daarnaast zijn er pagina's voor hun opdrachten, apparaten en locaties.
+werk. Daarnaast zijn er pagina's voor hun opdrachten, apparaten en locaties. De pagina van een
+opdracht volgt hem op een tijdlijn: ontvangen, monteur ingepland, monteur onderweg, opgelost (of
+afgewezen, met de reden). De bel in de kop meldt elke wijziging van hun opdrachten, en het
+klantcontact dat een storing meldde, krijgt ook een e-mail per wijziging, in de taal waarin hij
+hem meldde.
 
 Wie de QR-code van een apparaat scant, komt op de pagina van dat apparaat, gemaakt voor een
 telefoon: een kaart met wat het is en waar het staat, de status en wat de modules van de organisatie

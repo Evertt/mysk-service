@@ -50,6 +50,7 @@
 	"activity_action_module_enabled": "{user} heeft {subject} ingeschakeld",
 	"activity_action_module_disabled": "{user} heeft {subject} uitgeschakeld",
 	"activity_action_work_started": "{user} is begonnen aan {subject}",
+	"activity_action_departed": "{user} is onderweg naar {subject}",
 	"activity_action_note_added": "{user} heeft een notitie toegevoegd aan {subject}",
 	"activity_action_completed": "{user} heeft {subject} afgerond",
 	"activity_action_removed": "{user} heeft {subject} verwijderd",

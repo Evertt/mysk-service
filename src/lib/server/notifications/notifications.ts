@@ -5,12 +5,14 @@
  * system). Nothing is stored per user but how far they've read (`notification_seen`): the entries
  * after it are unread. A rule added later covers past entries too.
  *
- * The office's bell (`forMembers`) and the engineer portal's (`forEngineers`, whose rules read the
- * engineer's orders through `engineerActivity()`) share these.
+ * The office's bell (`forMembers`), the engineer portal's (`forEngineers`, whose rules read the
+ * engineer's orders through `engineerActivity()`) and the customer portal's (`forCustomers`, whose
+ * rules read the contact's orders through `customerActivity()`) share these.
  */
 import { and, desc, eq, gt, gte, isNotNull, isNull, ne, or, sql } from "drizzle-orm";
 
 import {
+	type CustomerActivity,
 	type NotificationAudience,
 	type NotificationCategory,
 	type NotificationRule,
@@ -22,11 +24,11 @@ import { type ActivityEntry, present } from "#lib/server/activity/index.ts";
 import { currentTenant, engineerActivity, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList, literal } from "#lib/server/db/parameters.ts";
-import { activity, notificationSeen } from "#lib/server/db/schema.ts";
+import { activity, notificationSeen, order } from "#lib/server/db/schema.ts";
 import { collectNow } from "#lib/server/extensions.ts";
 import { orNotFound } from "#lib/server/records.ts";
 
-import { coreNotificationRules } from "./rules.ts";
+import { coreNotificationRules, subjectNumber } from "./rules.ts";
 
 /** How far back the bell looks. */
 const NOTIFICATION_DAYS = 30;
@@ -78,6 +80,20 @@ async function theirOrders() {
 }
 
 /**
+ * The orders the signed-in customer's contact reads (the access registry's `order` rule for them:
+ * their customer's, at their sites), as a condition on an `activity` entry.
+ */
+async function customerActivity(): Promise<CustomerActivity> {
+	const theirs = db
+		.select({ id: order.id })
+		.from(order)
+		.where(and(eq(order.id, subjectNumber), await visibleOrNone("order")));
+	return {
+		aboutTheirOrder: sql`(${activity.subjectType} = ${literal("order")} and exists ${theirs})`,
+	};
+}
+
+/**
  * The signed-in user's notifications in the current tenant, of `audience`. Everything it needs from
  * the request (the tenant, the user, the modules, the rules' conditions) is read here, once, so a
  * live query can ask again after each change, outside the request's own context. The rules'
@@ -89,6 +105,7 @@ export async function notificationsFor(audience: NotificationAudience): Promise<
 	const context = {
 		userId: user.id,
 		engineer: audience === "engineer" ? await engineerActivity(await theirOrders()) : null,
+		customer: audience === "customer" ? await customerActivity() : null,
 	};
 	const category = sql<NotificationCategory | null>`case ${sql.join(
 		rules.map((rule) => sql`when ${rule.where(context)} then ${literal(rule.category)}`),
@@ -145,6 +162,30 @@ export async function notificationsFor(audience: NotificationAudience): Promise<
 	};
 }
 
+/** The fields of an order's change a customer's contact reads in their tray. */
+const customerFields = ["status", "scheduledFor"];
+
+/**
+ * An entry as a customer's contact reads it: made by the tenant (not by whom in it: the portal
+ * names the engineer by first name only, and no planner), with only its changes of status and of
+ * when it's planned for (no prices, engineers or notes), and its note only when it's a rejection's
+ * reason, which the portal shows them anyway.
+ */
+function asCustomerReads(row: typeof activity.$inferSelect): typeof activity.$inferSelect {
+	const changes = row.changes
+		? Object.fromEntries(
+				Object.entries(row.changes).filter(([field]) => customerFields.includes(field)),
+			)
+		: null;
+	return {
+		...row,
+		userId: null,
+		userName: currentTenant().name,
+		changes,
+		note: row.action === "rejected" ? row.note : null,
+	};
+}
+
 /**
  * The tray: the newest notifications for the signed-in user (at most `TRAY_SIZE`), as the feed
  * presents them, each with its category and whether it's unread, and how far they had read.
@@ -173,7 +214,7 @@ export async function notificationTray(audience: NotificationAudience): Promise<
 		)
 		.orderBy(desc(activity.id));
 	const categories = new Map(found.map((each) => [each.id, each.category]));
-	const entries = await present(rows);
+	const entries = await present(audience === "customer" ? rows.map(asCustomerReads) : rows);
 	return {
 		entries: entries.map((entry) => ({
 			...entry,

@@ -10,6 +10,7 @@ const data = [
 		awaiting_acceptance: 0,
 		quote: 1,
 		scheduled: 2,
+		on_the_way: 0,
 		in_progress: 0,
 		completed: 3,
 		invoiced: 4,
@@ -20,6 +21,7 @@ const data = [
 		awaiting_acceptance: 3,
 		quote: 11,
 		scheduled: 17,
+		on_the_way: 2,
 		in_progress: 1,
 		completed: 0,
 		invoiced: 0,
@@ -34,6 +36,7 @@ test("renders a legend of the statuses and the weeks' numbers as a visually hidd
 		"Awaiting acceptance",
 		"Quote",
 		"Scheduled",
+		"On the way",
 		"In progress",
 		"Completed",
 		"Invoiced",
@@ -46,6 +49,7 @@ test("renders a legend of the statuses and the weeks' numbers as a visually hidd
 		"Awaiting acceptance",
 		"Quote",
 		"Scheduled",
+		"On the way",
 		"In progress",
 		"Completed",
 		"Invoiced",
@@ -56,8 +60,8 @@ test("renders a legend of the statuses and the weeks' numbers as a visually hidd
 			[...row.children].map((cell) => cell.textContent?.trim()),
 		),
 	).toEqual([
-		["28 Sept – 4 Oct 2026", "0", "1", "2", "0", "3", "4", "0"],
-		["5 – 11 Oct 2026", "3", "11", "17", "1", "0", "0", "2"],
+		["28 Sept – 4 Oct 2026", "0", "1", "2", "0", "0", "3", "4", "0"],
+		["5 – 11 Oct 2026", "3", "11", "17", "2", "1", "0", "0", "2"],
 	]);
 });
 
@@ -65,5 +69,5 @@ test("stacks a segment per status with orders, per week", async () => {
 	const { container } = await render(OrdersPerWeekChart, { data });
 
 	// Every status is a series; the chart draws once it has measured its box.
-	await expect.poll(() => container.querySelectorAll(".lc-bars-bar").length).toBe(14);
+	await expect.poll(() => container.querySelectorAll(".lc-bars-bar").length).toBe(16);
 });

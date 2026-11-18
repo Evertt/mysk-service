@@ -26,6 +26,7 @@
 	import { getPortalOrder } from "../../client.remote.ts";
 	import { portalPriority } from "../../urgency.ts";
 	import type { PageProps } from "./$types";
+	import OrderTimeline from "./order-timeline.svelte";
 	import ReportCard from "./report-card.svelte";
 
 	let { params }: PageProps = $props();
@@ -119,6 +120,7 @@
 	</Card.Root>
 
 	<div class="flex min-w-0 flex-col gap-6 lg:col-start-1 lg:row-start-1">
+		<OrderTimeline {order} />
 		{#if order.units.length}
 			<Card.Root>
 				<Card.Header>

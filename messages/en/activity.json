@@ -50,6 +50,7 @@
 	"activity_action_module_enabled": "{user} enabled {subject}",
 	"activity_action_module_disabled": "{user} disabled {subject}",
 	"activity_action_work_started": "{user} started work on {subject}",
+	"activity_action_departed": "{user} is on the way to {subject}",
 	"activity_action_note_added": "{user} added a note to {subject}",
 	"activity_action_completed": "{user} completed {subject}",
 	"activity_action_removed": "{user} removed {subject}",

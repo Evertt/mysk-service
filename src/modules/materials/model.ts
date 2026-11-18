@@ -54,6 +54,7 @@ export const roundQuantity = (quantity: number) => Math.round(quantity * 100) / 
  */
 const stockHoldingStatuses = [
 	"scheduled",
+	"on_the_way",
 	"in_progress",
 	"completed",
 	"invoiced",

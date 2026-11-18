@@ -1,8 +1,8 @@
 <!--
 	@component
 	The customer portal's shell, like the office's: the portal's navigation in a sidebar (see
-	`portal-sidebar.svelte`), a header with the customer and who's signed in, the language, theme and
-	mode, and signing out, and the page, which uses the width of a desk's screen. On a phone the sidebar is a sheet the header's button opens.
+	`portal-sidebar.svelte`), a header with the customer and who's signed in, the bell (their
+	orders' changes, `notification-bell.svelte`), the language, theme and mode, and signing out, and the page, which uses the width of a desk's screen. On a phone the sidebar is a sheet the header's button opens.
 -->
 <script lang="ts">
 	import { getCurrentUser } from "#lib/auth/session.remote.ts";
@@ -15,6 +15,7 @@
 	import { useTenantOrderTypes } from "../tenant-order-types.ts";
 	import ViewAs from "../view-as.svelte";
 	import type { LayoutProps } from "./$types";
+	import NotificationBell from "./notification-bell.svelte";
 	import PortalSidebar from "./portal-sidebar.svelte";
 	import { watchPortalChanges } from "./portal/client.remote.ts";
 
@@ -51,6 +52,7 @@
 				</span>
 			</span>
 			<div class="ml-auto flex shrink-0 items-center gap-1">
+				<NotificationBell />
 				<AppearanceSwitchers />
 				{#if viewAs}
 					<ViewAs current={viewAs.current} />

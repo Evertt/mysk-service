@@ -75,7 +75,7 @@ saved. For modules that require materials (the parts shop), `api/stock.server.ts
 `reserveStock()` and `releaseStock()` to set stock aside inside the caller's transaction.
 
 - <SourceLink path="src/modules/materials/module.ts">module.ts</SourceLink>: the manifest, and <SourceLink path="src/modules/materials">the module's folder</SourceLink>.
-- <SourceLink path="src/modules/materials/model.ts" line={63}>holdsStock()</SourceLink>: which statuses
+- <SourceLink path="src/modules/materials/model.ts" line={64}>holdsStock()</SourceLink>: which statuses
   hold stock.
 - <SourceLink path="src/modules/materials/server/stock.ts" line={179}>moveOrderStock()</SourceLink>:
   the ledger follows the order.

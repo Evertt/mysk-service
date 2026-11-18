@@ -16,8 +16,8 @@ import type { SQL } from "drizzle-orm";
 
 import { defineCollector } from "#lib/extensions/define.ts";
 
-/** Whose bell a rule rings: the office's, or the engineer portal's. */
-export type NotificationAudience = "office" | "engineer";
+/** Whose bell a rule rings: the office's, the engineer portal's, or the customer portal's. */
+export type NotificationAudience = "office" | "engineer" | "customer";
 
 /** What an office notification is about: its icon in the tray. */
 export const officeCategories = ["reports", "alerts", "field", "mine"] as const;
@@ -25,9 +25,23 @@ export const officeCategories = ["reports", "alerts", "field", "mine"] as const;
 /** What an engineer's notification is about: its icon in the tray. */
 export const engineerCategories = ["assigned", "planned", "unassigned", "cancelled"] as const;
 
+/**
+ * What a customer's contact's notification is about: their orders accepted or rejected, planned or
+ * moved, the engineer on the way, resolved, or cancelled.
+ */
+export const customerCategories = [
+	"accepted",
+	"rejected",
+	"planned",
+	"on_the_way",
+	"resolved",
+	"cancelled",
+] as const;
+
 type OfficeCategory = (typeof officeCategories)[number];
 type EngineerCategory = (typeof engineerCategories)[number];
-export type NotificationCategory = OfficeCategory | EngineerCategory;
+type CustomerCategory = (typeof customerCategories)[number];
+export type NotificationCategory = OfficeCategory | EngineerCategory | CustomerCategory;
 
 /**
  * The signed-in engineer's orders, as conditions on an `activity` entry, built by
@@ -42,12 +56,23 @@ export interface EngineerActivity {
 	aboutTheirOrder: SQL;
 }
 
+/**
+ * The orders a customer's contact reads, as a condition on an `activity` entry, built by
+ * `notificationsFor("customer")` from the access registry's `order` rule for them.
+ */
+export interface CustomerActivity {
+	/** An entry about an order the contact may read now (their customer's, at their sites). */
+	aboutTheirOrder: SQL;
+}
+
 /** What a rule's condition is built with, per request. */
 interface RuleContext {
 	/** The signed-in user's id: whose records are "mine". */
 	userId: string;
-	/** The engineer's orders, for the engineer's rules (`null` for the office's). */
+	/** The engineer's orders, for the engineer's rules (`null` for the other audiences'). */
 	engineer: EngineerActivity | null;
+	/** The contact's orders, for the customer's rules (`null` for the other audiences'). */
+	customer: CustomerActivity | null;
 }
 
 /**

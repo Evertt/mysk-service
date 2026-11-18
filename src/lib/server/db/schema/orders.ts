@@ -173,6 +173,11 @@ export const orderRequest = tenantTable(
 		/** Who reported it; empty once their account is deleted (`reporterName` keeps who it was). */
 		userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
 		reporterName: text("reporter_name").notNull(),
+		/**
+		 * The language they reported it in (`en`, `nl`), which the mails about its progress are
+		 * written in; none for reports made before it was kept (they get the default language's).
+		 */
+		reporterLocale: text("reporter_locale"),
 		decidedAt: moment("decided_at"),
 		/** Who accepted or rejected it; empty once their account is deleted. */
 		decidedBy: text("decided_by").references(() => user.id, { onDelete: "set null" }),

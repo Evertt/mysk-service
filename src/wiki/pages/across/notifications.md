@@ -1,6 +1,6 @@
 ---
 title: Notifications
-summary: The bell in the office's and the engineer portal's header shows the few log entries you should act on or know about.
+summary: The bell in the header of the office, the engineer portal and the customer portal shows the few log entries you should act on or know about.
 section: across
 order: 4
 status: built
@@ -31,6 +31,11 @@ an icon for its category and the log's own sentence.
 **In the engineer portal** the bell tells an engineer when an order is assigned to them, taken off
 them, planned for another time, or cancelled while theirs.
 
+**In the customer portal** the bell tells a customer's contact about the orders they may read
+(their customer's, at their sites): accepted or rejected, planned or moved, the engineer on the
+way, resolved, or cancelled. It names the company, not who in it, and shows only the order's
+status and planned time. The contact who reported the order also gets an email for each of these.
+
 Your own changes never ring your own bell. Opening the tray marks what it shows as seen, up to the
 newest entry in it, so something that arrives while it is open stays unread. A tab that is already
 open updates the dot by itself ([live updates](/wiki/across/live-updates)).
@@ -47,14 +52,14 @@ entry their tray showed). The rules are values, `{ id, audience, category, where
 is a condition on the `activity` table, built for each request. A rule added later covers past
 entries too, because nothing was stored when they happened.
 
-1. **The core's rules** are in <SourceLink path="src/lib/server/notifications/rules.ts" line={90}>coreNotificationRules</SourceLink>,
+1. **The core's rules** are in <SourceLink path="src/lib/server/notifications/rules.ts" line={99}>coreNotificationRules</SourceLink>,
    in the order that decides a category: the first rule that matches gives an entry its category.
 2. **A module adds its own** with `contribute(notificationRules, () => [...])` in its
    `server/index.ts`. Docks adds `docks.doorAlerts`, checklists `checklists.rejected`. The kernel
-   asks only modules a tenant has on, so a module that is off adds none. See <SourceLink path="src/lib/notifications/extensions.ts" line={72}>notificationRules</SourceLink>.
+   asks only modules a tenant has on, so a module that is off adds none. See <SourceLink path="src/lib/notifications/extensions.ts" line={97}>notificationRules</SourceLink>.
 3. **The query** keeps entries of the tenant, other people's (or the system's), newer than 30 days,
    and newer than `lastSeen` for the dot, then picks the category with one `case` over all the
-   rules. See <SourceLink path="src/lib/server/notifications/notifications.ts" line={54}>rulesFor</SourceLink>.
+   rules. See <SourceLink path="src/lib/server/notifications/notifications.ts" line={56}>rulesFor</SourceLink>.
 4. **The dot is live.** The office shell's live query (`watchShell`) answers again after every
    logged change, and the bell reads the new count from it.
 

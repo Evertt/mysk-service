@@ -62,7 +62,7 @@ export const actorLabels: Record<OrderActor, () => string> = {
  * The drawing's size, in its own units. Narrow and tall, so its text stays legible on a phone: the
  * lifecycle runs down a column, and cancelled stands beside it.
  */
-export const lifecycleDrawing = { width: 360, height: 420, nodeHeight: 40 } as const;
+export const lifecycleDrawing = { width: 360, height: 492, nodeHeight: 40 } as const;
 
 const column = { x: 150, width: 150 };
 const aside = { x: 312, width: 88 };
@@ -70,17 +70,18 @@ const row = (index: number) => 28 + index * 72;
 
 /**
  * Where each status is drawn (its centre): the lifecycle's steps one below the other in their
- * order (awaiting_acceptance, quote, scheduled, in_progress, completed, invoiced), cancelled beside
- * them, level with the open work it ends.
+ * order (awaiting_acceptance, quote, scheduled, on_the_way, in_progress, completed, invoiced),
+ * cancelled beside them, level with the open work it ends.
  */
 export const statusLayout: Record<OrderStatus, { x: number; y: number }> = {
 	awaiting_acceptance: { x: column.x, y: row(0) },
 	quote: { x: column.x, y: row(1) },
 	scheduled: { x: column.x, y: row(2) },
-	in_progress: { x: column.x, y: row(3) },
-	completed: { x: column.x, y: row(4) },
-	invoiced: { x: column.x, y: row(5) },
-	cancelled: { x: aside.x, y: (row(2) + row(3)) / 2 },
+	on_the_way: { x: column.x, y: row(3) },
+	in_progress: { x: column.x, y: row(4) },
+	completed: { x: column.x, y: row(5) },
+	invoiced: { x: column.x, y: row(6) },
+	cancelled: { x: aside.x, y: (row(2) + row(4)) / 2 },
 };
 
 /** How wide a status is drawn. */
@@ -112,7 +113,7 @@ export function edgeShape(edge: LifecycleEdge, edges: LifecycleEdge[]): EdgeShap
 	if (!inColumn(edge.from) || !inColumn(edge.to)) {
 		const toAside = inColumn(edge.from);
 		const main = toAside ? edge.from : edge.to;
-		const spread = (rowOf(main) - 2.5) * 6 + (toAside ? -2 : 2);
+		const spread = (rowOf(main) - 3) * 6 + (toAside ? -2 : 2);
 		const start = toAside
 			? { x: column.x + column.width / 2, y: from.y - 5 }
 			: { x: aside.x - aside.width / 2, y: from.y + spread };

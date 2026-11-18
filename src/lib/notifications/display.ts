@@ -4,10 +4,14 @@
  */
 import BanIcon from "@lucide/svelte/icons/ban";
 import CalendarClockIcon from "@lucide/svelte/icons/calendar-clock";
+import CircleCheckIcon from "@lucide/svelte/icons/circle-check";
+import CircleXIcon from "@lucide/svelte/icons/circle-x";
 import FilePenIcon from "@lucide/svelte/icons/file-pen";
 import HardHatIcon from "@lucide/svelte/icons/hard-hat";
 import MessageSquareWarningIcon from "@lucide/svelte/icons/message-square-warning";
+import ThumbsUpIcon from "@lucide/svelte/icons/thumbs-up";
 import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
+import TruckIcon from "@lucide/svelte/icons/truck";
 import UserMinusIcon from "@lucide/svelte/icons/user-minus";
 import UserPlusIcon from "@lucide/svelte/icons/user-plus";
 import type { Component } from "svelte";
@@ -27,6 +31,10 @@ export const notificationCategories: Record<
 	planned: { icon: CalendarClockIcon, label: m.common_notifications_category_planned },
 	unassigned: { icon: UserMinusIcon, label: m.common_notifications_category_unassigned },
 	cancelled: { icon: BanIcon, label: m.common_notifications_category_cancelled },
+	accepted: { icon: ThumbsUpIcon, label: m.common_notifications_category_accepted },
+	rejected: { icon: CircleXIcon, label: m.common_notifications_category_rejected },
+	on_the_way: { icon: TruckIcon, label: m.common_notifications_category_on_the_way },
+	resolved: { icon: CircleCheckIcon, label: m.common_notifications_category_resolved },
 };
 
 /** The dot's count: up to `cap`, then "9+" (for a cap of 9); none without any. */

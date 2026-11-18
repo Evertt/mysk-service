@@ -113,7 +113,18 @@ function refreshMyOrder(number: string) {
 	orderCommitted({ number });
 }
 
-/** Starts a scheduled job: it's then in progress. */
+/**
+ * Sets out for a scheduled job: it's then on the way, which the customer reads in their portal
+ * (and is told of, see `tellReporter()`).
+ */
+export const setOut = forEngineers.form(v.object({ id: id() }), async (input) => {
+	const { number } = await db.transaction((tx) =>
+		transitionOrder(tx, { verb: "depart", id: input.id }),
+	);
+	refreshMyOrder(number);
+});
+
+/** Starts a scheduled job (on the way to it or not): it's then in progress. */
 export const startWork = forEngineers.form(v.object({ id: id() }), async (input) => {
 	const { number } = await db.transaction((tx) =>
 		transitionOrder(tx, { verb: "start", id: input.id }),

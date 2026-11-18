@@ -53,6 +53,7 @@ export const actionVerbs: Record<CoreActivityAction, Sentence> = {
 	scheduled: m.activity_action_scheduled,
 	module_enabled: m.activity_action_module_enabled,
 	module_disabled: m.activity_action_module_disabled,
+	departed: m.activity_action_departed,
 	work_started: m.activity_action_work_started,
 	note_added: m.activity_action_note_added,
 	completed: m.activity_action_completed,

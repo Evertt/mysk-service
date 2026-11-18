@@ -27,6 +27,7 @@ import type { OrderFormParts } from "../extensions.ts";
 import { can, orderTransitions, type TransitionRule } from "../lifecycle.ts";
 import { refusedWhole, saveOrderParts } from "./hooks.ts";
 import { assigneeProblem } from "./order-changes.ts";
+import { customerUpdate, type OrderMove, tellReporter } from "./reporter-mail.ts";
 
 /** A move of an order, by its verb, with what that verb needs. */
 export type OrderTransition =
@@ -34,6 +35,7 @@ export type OrderTransition =
 	| ({ verb: "plan" } & OrderPlan)
 	| { verb: "accept"; id: number; plan?: Omit<OrderPlan, "id"> }
 	| { verb: "reject"; id: number; reason: string }
+	| { verb: "depart"; id: number }
 	| { verb: "start"; id: number }
 	| {
 			verb: "complete";
@@ -114,10 +116,20 @@ export async function transitionOrder(
 		// Stored, in the language of whoever writes it, and shown to the customer.
 		...(transition.verb === "reject" && { note: transition.reason }),
 	});
-	// Accepted and planned in one step: planned as the planner would, in the same transaction.
+	// Accepted and planned in one step: planned as the planner would, in the same transaction; the
+	// reporter hears of it once, that it's planned.
 	if (transition.verb === "accept" && transition.plan) {
 		await transitionOrder(tx, { verb: "plan", id: found.id, ...transition.plan });
+		return moved;
 	}
+	// The planner's move gives it a time; the others keep the one it has.
+	const scheduledFor = ("scheduledFor" in columns && columns.scheduledFor) || found.scheduledFor;
+	tellCustomer(found.id, {
+		verb: transition.verb,
+		from: found.status,
+		to: status,
+		replanned: replanned(found.scheduledFor, scheduledFor),
+	});
 	return moved;
 }
 
@@ -131,6 +143,7 @@ async function target(tx: Transaction, transition: SingleTransition, from: Order
 			return { status: transition.to, columns: {} };
 		case "accept":
 		case "reject":
+		case "depart":
 		case "start":
 		case "complete":
 			return { status: orderTransitions[transition.verb].to[0], columns: {} };
@@ -200,6 +213,13 @@ export async function beginOrderChange(
 				after,
 				// The completion date follows from the status.
 				ignore: ["completedAt"],
+			});
+			const planned = (after as { scheduledFor?: Temporal.Instant | null }).scheduledFor;
+			tellCustomer(before.id, {
+				verb: "form",
+				from: before.status,
+				to,
+				replanned: planned !== undefined && replanned(before.scheduledFor, planned),
 			});
 		},
 	};
@@ -288,6 +308,16 @@ async function scope(transition: SingleTransition) {
 	if (orderTransitions[transition.verb].by === "engineer")
 		return engineerOrder({ id: transition.id });
 	return idInTenant(order, transition.id);
+}
+
+/** Whether an order planned for `was` is now planned for another time, not none. */
+const replanned = (was: Temporal.Instant | null, now: Temporal.Instant | null) =>
+	now !== null && (was === null || !was.equals(now));
+
+/** Mails the contact who reported the order of what `move` tells them, if anything. */
+function tellCustomer(orderId: number, move: OrderMove) {
+	const update = customerUpdate(move);
+	if (update) tellReporter(orderId, update);
 }
 
 /** Notes on the order's request who decided, and when (and why, for a rejection). */

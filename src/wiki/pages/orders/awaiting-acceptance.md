@@ -87,8 +87,8 @@ They are `acceptReportedOrder` and `rejectReportedOrder`, gated for any office m
 
 **The count.** `awaitingAcceptance(organizationId)` counts the orders for the menu's badge.
 
-- <SourceLink path="src/lib/orders/server/acceptance.ts" line={25}><code>requestOrder()</code></SourceLink>
-- <SourceLink path="src/routes/(customer)/portal/client.remote.ts" line={197}><code>reportBreakdown</code></SourceLink>
+- <SourceLink path="src/lib/orders/server/acceptance.ts" line={26}><code>requestOrder()</code></SourceLink>
+- <SourceLink path="src/routes/(customer)/portal/client.remote.ts" line={226}><code>reportBreakdown</code></SourceLink>
 - <SourceLink path="src/lib/orders/detail/acceptance.remote.ts" line={35}><code>acceptReportedOrder</code></SourceLink>
   and <SourceLink path="src/lib/orders/detail/acceptance.remote.ts" line={61}><code>rejectReportedOrder</code></SourceLink>
 - <SourceLink path="src/lib/server/db/schema/orders.ts" line={169} symbol="orderRequest"><code>order_request</code></SourceLink>

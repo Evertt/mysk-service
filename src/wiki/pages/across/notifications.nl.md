@@ -1,6 +1,6 @@
 ---
 title: Meldingen
-summary: De bel in de kopbalk van kantoor en van het monteursportaal toont de paar logregels waar je iets mee moet of van moet weten.
+summary: De bel in de kopbalk van kantoor, het monteursportaal en het klantportaal toont de paar logregels waar je iets mee moet of van moet weten.
 ---
 
 <script>
@@ -31,6 +31,12 @@ dagen, per dag, elk met een icoon voor de categorie en de zin uit het log.
 van hem wordt afgehaald, op een ander moment wordt ingepland, of wordt geannuleerd terwijl de
 opdracht nog van hem is.
 
+**In het klantportaal** meldt de bel een klantcontact wat er gebeurt met de opdrachten die hij mag
+lezen (die van zijn klant, op zijn vestigingen): geaccepteerd of afgewezen, ingepland of
+verplaatst, de monteur onderweg, opgelost of geannuleerd. Hij noemt het bedrijf, niet wie daar, en
+toont alleen de status en het geplande moment. Het klantcontact dat de opdracht meldde, krijgt van
+elk hiervan ook een e-mail.
+
 Je eigen wijzigingen laten nooit je eigen bel gaan. Open je het paneel, dan telt wat het toont als
 gezien, tot en met de nieuwste logregel erin, dus iets wat binnenkomt terwijl het openstaat, blijft
 ongelezen. Een tabblad dat al openstaat, werkt de stip zelf bij
@@ -49,16 +55,16 @@ waarden, `{ id, audience, category, where }`, waarin `where` een voorwaarde is o
 `activity`, voor elk request opnieuw gebouwd. Een regel die later bijkomt, geldt ook voor oude
 logregels, omdat er niets werd opgeslagen toen die gebeurden.
 
-1. **De regels van de kern** staan in <SourceLink path="src/lib/server/notifications/rules.ts" line={90}>coreNotificationRules</SourceLink>,
+1. **De regels van de kern** staan in <SourceLink path="src/lib/server/notifications/rules.ts" line={99}>coreNotificationRules</SourceLink>,
    in de volgorde die de categorie bepaalt: de eerste regel die past, geeft een logregel zijn
    categorie.
 2. **Een module voegt zijn eigen toe** met `contribute(notificationRules, () => [...])` in zijn
    `server/index.ts`. Docks voegt `docks.doorAlerts` toe, Werkbonnen `checklists.rejected`. De
    kernel (het deel dat de modules aanroept) vraagt het alleen aan modules die een tenant (een
-   organisatie in de app) aan heeft staan, dus een module die uit staat, voegt er geen toe. Zie <SourceLink path="src/lib/notifications/extensions.ts" line={72}>notificationRules</SourceLink>.
+   organisatie in de app) aan heeft staan, dus een module die uit staat, voegt er geen toe. Zie <SourceLink path="src/lib/notifications/extensions.ts" line={97}>notificationRules</SourceLink>.
 3. **De query** houdt de logregels van de tenant over, die van anderen (of van het systeem), nieuwer
    dan 30 dagen, en voor de stip nieuwer dan `lastSeen`, en kiest dan de categorie met één `case`
-   over alle regels. Zie <SourceLink path="src/lib/server/notifications/notifications.ts" line={54}>rulesFor</SourceLink>.
+   over alle regels. Zie <SourceLink path="src/lib/server/notifications/notifications.ts" line={56}>rulesFor</SourceLink>.
 4. **De stip is live.** De live query van de kantoorapp (`watchShell`) antwoordt opnieuw na elke
    gelogde wijziging, en de bel leest daaruit het nieuwe aantal.
 

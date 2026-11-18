@@ -105,7 +105,13 @@ export const getDashboard = forMembers.query(async () => {
 		.from(order)
 		.innerJoin(...tenantJoin(customer, order.customerId))
 		.leftJoin(...tenantJoin(engineer, order.engineerId))
-		.where(and(inTenant(order), eq(order.status, "scheduled"), gte(order.scheduledFor, now)))
+		.where(
+			and(
+				inTenant(order),
+				inList(order.status, ["scheduled", "on_the_way"]),
+				gte(order.scheduledFor, now),
+			),
+		)
 		.orderBy(asc(order.scheduledFor))
 		.limit(6)
 		.then(withFirstUnit);

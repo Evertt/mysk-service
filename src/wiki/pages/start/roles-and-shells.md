@@ -44,7 +44,8 @@ For field engineers, on a phone. It starts at `/my`: the orders planned for the 
 and the recent ones. An order opens to what the engineer needs on site: the job, the units, the
 site and its access notes, the customer's contact with call and email buttons.
 
-There the engineer starts the job, logs the hours, adds notes, and completes it: the customer
+On a scheduled order the engineer taps **On my way** when they set out, which the customer reads
+in their portal and is told of; then they start the job (or start it at once), log the hours, adds notes, and completes it: the customer
 signs on the screen, and so does the engineer. Scanning a unit's or a place's QR code opens it in
 this portal, with the engineer's open orders for it.
 
@@ -55,7 +56,10 @@ linked to an engineer's record by an owner or admin, on the engineer's page.
 
 For the customer's own contacts. It starts at `/portal`: a button to report a breakdown, the
 customer's open orders (also those not accepted yet) and their latest finished work. Besides that,
-pages for their orders, units and locations.
+pages for their orders, units and locations. An order's page follows it on a timeline: received,
+an engineer scheduled, the engineer on the way, resolved (or rejected, with the reason). The bell
+in the header tells each change of their orders, and the contact who reported a breakdown also
+gets an email per change, in the language they reported it in.
 
 Scanning a unit's QR code opens the unit's page, made for a phone: a card with what it is and
 where, its status, and what the organization's modules add (its condition as a badge, its
