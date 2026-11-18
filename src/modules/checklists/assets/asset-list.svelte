@@ -17,7 +17,7 @@
 	import FilterChips from "#lib/components/filter-chips.svelte";
 	import { unitTitle } from "#lib/equipment/index.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
-	import { scoreText } from "#modules/condition/api/scale.ts";
+	import { scoreText } from "#modules/condition/api/extensions.ts";
 
 	import { checklistLabels } from "../labels.ts";
 	import { yearStates } from "../model.ts";

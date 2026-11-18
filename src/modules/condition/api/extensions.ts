@@ -7,6 +7,58 @@
 import type { SQL } from "drizzle-orm";
 
 import { defineCollector, defineListColumns } from "#lib/extensions/define.ts";
+import type { db, Transaction } from "#lib/server/db/index.ts";
+
+import { REJECTED_POINT_GRADE } from "../model.ts";
+import { defectScore } from "../nen2767.ts";
+
+/**
+ * A score with its name, as the condition module shows it ("3 · Redelijk"): for the checklists
+ * module's work orders page, which shows its components' scores.
+ */
+export { scoreText } from "../display.ts";
+
+/**
+ * The score a checklist's points give a unit or component when the office fills it in (its rejected
+ * points without a grade of their own, `REJECTED_POINT_GRADE`): 1 without a rejected point, that
+ * grade's score with one, none while no point counts (all not applicable or unanswered). For the
+ * checklists module's work orders page, as the office fills a checklist in. Isomorphic.
+ */
+export function pointsScore(results: readonly { result: string | null }[]): number | null {
+	if (!results.some((each) => each.result === "ok" || each.result === "nok")) return null;
+	return results.some((each) => each.result === "nok") ? defectScore(REJECTED_POINT_GRADE) : 1;
+}
+
+/** Which point of a checklist the signed-in engineer is filling in, asked about in `tx`. */
+export interface FieldPointQuery {
+	tx: Transaction | typeof db;
+	/** The engineer's order, by number. */
+	number: string;
+	/** The unit whose checklist it is. */
+	equipmentId: number;
+	/** The point, by its own id (`checklists.field.rejected`'s `pointId`). */
+	pointId: number;
+}
+
+/** A point of the engineer's checklist, as its defect is about it. */
+export interface FieldPoint {
+	id: number;
+	text: string;
+	result: "ok" | "nok" | "na" | null;
+	/** Whether they can still change it: the checklist a draft, its order in progress. */
+	canChange: boolean;
+}
+
+/**
+ * The point asked about, when it's a point of the checklist of that unit on the signed-in engineer's
+ * own order (none otherwise: another engineer's, unit's, order's or tenant's): what the condition
+ * module checks before it keeps or shows a rejected point's defect. The checklists module answers,
+ * as the owner of the points; without it there are none. A module that fails fails the request.
+ */
+export const fieldPoints = defineCollector<FieldPointQuery, FieldPoint | undefined>(
+	"condition.fieldPoints",
+	{ onError: "fail" },
+);
 
 /**
  * What a module knows of a unit, as SQL over the `equipment` row of the query it goes in

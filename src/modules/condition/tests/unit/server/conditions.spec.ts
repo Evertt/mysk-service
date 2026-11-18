@@ -18,7 +18,6 @@ import { isHttpError } from "@sveltejs/kit";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vite-plus/test";
 
 import { db } from "#lib/server/db/index.ts";
-import { answer, complete, remarkOn } from "#modules/checklists/portal/field-checklists.remote.ts";
 import { getUnitCondition, recordCondition } from "#modules/condition/condition.remote.ts";
 import {
 	adviseFieldConditionForm,
@@ -190,7 +189,7 @@ describe("a member recording a unit's condition, in North", () => {
 			 and not exists (select 1 from checklist k where k.equipment_id = e.id)
 			 and not exists (select 1 from unit_condition u where u.equipment_id = e.id)
 			 and not exists (select 1 from order_unit ou join "order" o on o.id = ou.order_id
-				where ou.equipment_id = e.id and o.status in ('scheduled', 'in_progress'))
+				where ou.equipment_id = e.id and o.status in ('scheduled', 'on_the_way', 'in_progress'))
 			 order by e.id limit 1`,
 			[northId],
 		);
@@ -809,20 +808,42 @@ describe("the engineer, in the portal", () => {
 	});
 
 	test("their completed checklist records the rejected point's defect, with its grade and photo", async () => {
-		const points = await rows<{ id: number }>(
-			`select id from checklist_result where checklist_id = ? order by position`,
+		// Answered and completed as the checklists module does (its own tests drive its commands): the
+		// point rejected with its remark, the rest OK, then its completion hook in a transaction.
+		await rows(
+			`update checklist_result set result = case when id = ? then 'nok' else 'ok' end,
+				remark = case when id = ? then 'Veer gebroken' else remark end where checklist_id = ?`,
+			[job.point, job.point, job.checklist],
+		);
+		const points = await rows<{
+			id: number;
+			template_item_id: number | null;
+			text: string;
+			result: "ok" | "nok";
+			remark: string | null;
+		}>(
+			`select id, template_item_id, text, result, remark from checklist_result
+			 where checklist_id = ? order by position`,
 			[job.checklist],
 		);
-		await as(lev, async () => {
-			for (const point of points) {
-				const result = point.id === job.point ? "nok" : "ok";
-				expect(await call(answer, { id: point.id, result })).toMatchObject({ status: 200 });
-			}
-			expect(await call(remarkOn, { id: job.point, remark: "Veer gebroken" })).toMatchObject({
-				status: 200,
-			});
-			expect(await call(complete, { id: job.checklist })).toMatchObject({ status: 200 });
-		});
+		await as(lev, () =>
+			db.transaction((tx) =>
+				recordChecklistConditions({
+					tx,
+					checklist: {
+						id: job.checklist,
+						kind: "inspection",
+						orderId: job.id,
+						equipmentId: job.equipment_id,
+						engineerId: levId,
+					},
+					points: points.map(({ template_item_id, ...point }) => ({
+						...point,
+						templateItemId: template_item_id,
+					})),
+				}),
+			),
+		);
 		const shown = await as(lev, () => data(getFieldCondition, unitOnJob()));
 		expect(shown).toMatchObject({ recorded: { score: 6, advice: null }, canChange: true });
 		expect(shown.recorded!.defects).toMatchObject([

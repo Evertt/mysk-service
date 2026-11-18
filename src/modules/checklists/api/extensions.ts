@@ -65,8 +65,8 @@ export const clientRejected = defineSlot<{ number: string; rejected: RejectedPoi
  * Below a rejected point of a unit's checklist on the engineer portal, while it's a draft, under the
  * remark: e.g. the condition module's defect (its severity, extent and intensity, and photos). They
  * get the order's number, the unit's id and the point's id (`checklist_result`'s, by which they
- * keep what they ask, checking it with `rejectedFieldPoint()` in `points.server.ts`), and render
- * nothing when they have nothing to ask.
+ * keep what they ask; this module tells the condition module whose a point is, answering its
+ * `condition.fieldPoints`), and render nothing when they have nothing to ask.
  */
 export const fieldRejected = defineSlot<{
 	number: string;
