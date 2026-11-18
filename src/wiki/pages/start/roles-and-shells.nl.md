@@ -47,7 +47,8 @@ Bij een ingeplande opdracht tikt de monteur op **Ik ben onderweg** als hij vertr
 dat in zijn portaal en krijgt het te horen. Daarna start hij de klus (of meteen), schrijft hij de uren, voegt hij notities en foto's toe en rondt hij de klus
 af: de klant tekent op het scherm, en de monteur ook. Wie de QR-code van een apparaat of een plek
 scant, opent die in dit portaal, met de open opdrachten van de monteur ervoor, een apparaat ook
-met zijn handleidingen en documenten om ter plekke te openen: met de camera van de telefoon, of met
+met zijn handleidingen en documenten om ter plekke te openen en zijn tijdlijn (zie
+[De tijdlijn van een apparaat](/wiki/domains/unit-timeline)): met de camera van de telefoon, of met
 de scanknop in de kop van het portaal, die de code in de app leest.
 
 Een monteur ziet alleen de opdrachten die aan hem zijn toegewezen. De rol is `engineer`, en een
@@ -74,9 +75,10 @@ hem meldde.
 Wie de QR-code van een apparaat scant, met de camera van de telefoon of met de tab Scannen, komt op
 de pagina van dat apparaat: een kaart met wat het is en waar het staat, de status en wat de modules van de organisatie
 toevoegen (de conditie als badge, de keuringsstatus en de dag van het laatste onderhoud), dan een
-grote knop Storing melden met het apparaat al ingevuld, en dan links naar de servicehistorie en
-naar de handleidingen en documenten, met hoeveel het er zijn (zie
-[Handleidingen en documenten](/wiki/domains/unit-documents)). Wie de code van een locatie scant,
+grote knop Storing melden met het apparaat al ingevuld, dan een link naar de handleidingen en
+documenten, met hoeveel het er zijn (zie [Handleidingen en documenten](/wiki/domains/unit-documents)),
+en dan wat er met het apparaat gebeurt: de cijfers van vandaag en de tijdlijn (zie
+[De tijdlijn van een apparaat](/wiki/domains/unit-timeline)). Wie de code van een locatie scant,
 komt bij Storing melden, met de apparaten op die locatie om uit te kiezen. De tab Scannen opent
 alleen de codes van deze app; van een andere code zegt hij dat die niet van ons is. Zonder camera,
 of als de camera geweigerd is, kun je in plaats daarvan het serienummer onder de code typen.

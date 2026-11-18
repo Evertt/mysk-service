@@ -49,7 +49,7 @@ On a scheduled order the engineer taps **On my way** when they set out, which th
 in their portal and is told of; then they start the job (or start it at once), log the hours, adds notes and photos, and completes it: the customer
 signs on the screen, and so does the engineer. Scanning a unit's or a place's QR code opens it in
 this portal, with the engineer's open orders for it, a unit also with its manuals and documents
-to open on the spot: with the phone's camera, or with the scan button in the portal's header,
+to open on the spot and its timeline (see [A unit's timeline](/wiki/domains/unit-timeline)): with the phone's camera, or with the scan button in the portal's header,
 which reads the code in the app.
 
 An engineer sees only the orders assigned to them. The role is `engineer`, and the account is
@@ -73,8 +73,9 @@ gets an email per change, in the language they reported it in.
 Scanning a unit's QR code, with the phone's camera or the Scan tab, opens the unit's page: a card
 with what it is and where, its status, and what the organization's modules add (its condition as a badge, its
 inspection status and the day of its last maintenance), then a big Report a breakdown button with
-the unit filled in, then links to its service history and to its manuals and documents, with how
-many there are (see [Manuals and documents](/wiki/domains/unit-documents)). Scanning a location's
+the unit filled in, then a link to its manuals and documents, with how many there are (see
+[Manuals and documents](/wiki/domains/unit-documents)), then what's happening with it: today's
+figures and its timeline (see [A unit's timeline](/wiki/domains/unit-timeline)). Scanning a location's
 code opens Report a breakdown with the location's units to choose from. The Scan tab opens only
 the codes of this app; another code, it says, isn't one of ours. Without a camera, or with the
 camera refused, it offers to type the serial number under the code instead.

@@ -50,6 +50,11 @@ be made into an order with one click, which is how monitoring turns into work fo
 Energy requires and enhances nothing. **Docks** enhance it: a door that is also a dock's door shows
 the dock's state on the energy door card. See [Docks](/wiki/modules/docks).
 
+A door that is one of the customer's units has its openings on the unit's timeline: an opening as
+long as its threshold or longer on its own ("14 min open — energy loss measured"), the shorter ones
+counted per hour, and for the office its alerts; above it, today's times opened and energy lost.
+See [A unit's timeline](/wiki/domains/unit-timeline).
+
 <TryIt as="planner" />
 
 <HowItWorks />
@@ -74,6 +79,7 @@ slot that docks fills.
 
 - <SourceLink path="src/modules/energy/module.ts">module.ts</SourceLink>: the manifest, and <SourceLink path="src/modules/energy">the module's folder</SourceLink>.
 - <SourceLink path="src/modules/energy/docs/ingest.md">ingest.md</SourceLink>: the feed's contract.
+- <SourceLink path="src/modules/energy/server/timeline.ts" line={229}>doorTimeline()</SourceLink>: a door's part of its unit's timeline.
 - <SourceLink path="src/modules/energy/server/evaluate.ts">evaluate.ts</SourceLink>: readings
   against thresholds.
 - <SourceLink path="src/modules/energy/server/alerts.ts" line={92}>orderAlert()</SourceLink>: an alert

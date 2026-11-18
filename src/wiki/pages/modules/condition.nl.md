@@ -91,6 +91,11 @@ hebben aandacht nodig, en hoe snel?
 
 Onderdelenbeheer heeft geen module nodig.
 
+De tijdlijn van een apparaat toont elke gemeten conditie ("Conditie gemeten: 3 · Redelijk,
+2 gebreken"), met de status die dat geeft en, voor het kantoor en de monteurs van het apparaat, de
+foto's van de gebreken (nooit voor een klantcontact); de huidige score is een van de cijfers van
+vandaag erboven. Zie [De tijdlijn van een apparaat](/wiki/domains/unit-timeline).
+
 <TryIt as="planner" />
 
 <HowItWorks />
@@ -135,6 +140,7 @@ optioneel zijn. De servicegeschiedenis is een weergave van het activiteitenlog
 (`server/history.ts`), geen tabel.
 
 - <SourceLink path="src/modules/condition/module.ts">module.ts</SourceLink>: het manifest, en <SourceLink path="src/modules/condition">de map van de module</SourceLink>.
+- <SourceLink path="src/modules/condition/server/timeline.ts" line={47}>conditionTimeline()</SourceLink>: de condities op de tijdlijn van een apparaat.
 - <SourceLink path="src/modules/condition/nen2767.ts" line={128}>elementScoreOf()</SourceLink>: de
   score van een element uit zijn gebreken, volgens de methode van NEN 2767-1.
 - <SourceLink path="src/modules/condition/model.ts" line={191}>rolledUpStatus()</SourceLink>: de
