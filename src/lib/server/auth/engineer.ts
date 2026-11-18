@@ -42,6 +42,20 @@ export async function engineerOrders(): Promise<SQL> {
 	return and(inTenant(order), eq(order.engineerId, engineer.id))!;
 }
 
+/**
+ * For a query on a table with a unit's id (`equipmentId`): that unit is on one of the signed-in
+ * engineer's orders. Narrower than the units every engineer reads (the QR pages): a module's
+ * records of a unit (its door's openings) are theirs only where they work on it.
+ */
+export async function onEngineerOrders(equipmentId: SQLiteColumn): Promise<SQL> {
+	const [, orderOfLink] = tenantJoin(order, orderUnit.orderId);
+	return sql`exists (select 1 from ${orderUnit} inner join ${order} on ${orderOfLink} where ${and(
+		eq(orderUnit.equipmentId, equipmentId),
+		inTenant(orderUnit),
+		await engineerOrders(),
+	)})`;
+}
+
 /** For a query on `engineer`: the signed-in engineer's own record, which is all of them they read. */
 export async function engineerSelf(): Promise<SQL> {
 	const { engineer: self } = await requireEngineer();

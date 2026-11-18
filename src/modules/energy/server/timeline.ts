@@ -4,8 +4,8 @@
  * grouped so a busy door doesn't flood the list (an opening as long as its threshold or longer is
  * an entry of its own, "14 min open — energy loss measured"; the shorter ones roll up per hour,
  * "12× opened · 0.4 kWh lost"), its alerts (the office's, as the access registry has it), and
- * today's times opened and energy lost. Who reads the door (the office, the contacts at its site)
- * gets them; anyone else, nothing.
+ * today's times opened and energy lost. Who reads the door (the office, the contacts at its site,
+ * an engineer with the unit on one of their orders) gets them; anyone else, nothing.
  */
 import { and, desc, eq, lt, lte, sql } from "drizzle-orm";
 
