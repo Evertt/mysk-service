@@ -7,11 +7,14 @@
 import { eq } from "drizzle-orm";
 import * as v from "valibot";
 
-import { customerByCode, siteOverview, sitePage, siteReport } from "#lib/customers/server/index.ts";
 import { officeUnits } from "#lib/equipment/server/index.ts";
 import { customerCode, id } from "#lib/schema.ts";
 import { customer as customerTable, customerSite } from "#lib/server/db/schema.ts";
 import { forMembers } from "#lib/server/remote-functions.ts";
+
+import { customerByCode } from "../server/lookup.ts";
+import { sitePage, siteReport } from "../server/site-report.ts";
+import { siteOverview } from "../server/site-summary.ts";
 
 /** A day in a report's URL, `yyyy-mm-dd`. */
 const day = () => v.optional(v.pipe(v.string(), v.isoDate()));

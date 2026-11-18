@@ -6,6 +6,7 @@
 	import { resolve } from "$app/paths";
 	import { untrack } from "svelte";
 
+	import AppBar from "#lib/client/app-bar.svelte";
 	import { refreshOnActivity } from "#lib/components/activity/live-activity.svelte.ts";
 	import { SitesOverview } from "#lib/customers/components.ts";
 
@@ -19,21 +20,16 @@
 	});
 </script>
 
-<svelte:head>
-	<title>{m.customers_overview_title()} · {m.client_title()}</title>
-</svelte:head>
+<AppBar
+	title={m.customers_overview_title()}
+	subtitle={m.customers_overview_portal_description()}
+	back={{ href: resolve("/(customer)/portal"), label: m.client_nav_home() }}
+/>
 
-<div class="mx-auto flex w-full max-w-2xl flex-col gap-4">
-	<header class="flex flex-col gap-1">
-		<h1 class="text-2xl font-semibold tracking-tight">{m.customers_overview_title()}</h1>
-		<p class="text-sm text-muted-foreground">{m.customers_overview_portal_description()}</p>
-	</header>
-
-	<SitesOverview
-		layout="stack"
-		sites={data.sites}
-		href={resolve("/(customer)/portal/sites")}
-		siteHref={(site) => resolve("/(customer)/portal/sites/[id]", { id: String(site.id) })}
-		reportHref={(site) => resolve("/(customer)/portal/sites/[id]/report", { id: String(site.id) })}
-	/>
-</div>
+<SitesOverview
+	layout="stack"
+	sites={data.sites}
+	href={resolve("/(customer)/portal/sites")}
+	siteHref={(site) => resolve("/(customer)/portal/sites/[id]", { id: String(site.id) })}
+	reportHref={(site) => resolve("/(customer)/portal/sites/[id]/report", { id: String(site.id) })}
+/>
