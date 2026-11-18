@@ -10,6 +10,7 @@ import { error, invalid, redirect } from "@sveltejs/kit";
 import { and, asc, desc, eq, gte, isNotNull, type SQL } from "drizzle-orm";
 import * as v from "valibot";
 
+import { everyLoggedType } from "#lib/activity/index.ts";
 import { siteColumns } from "#lib/customers/server/index.ts";
 import {
 	customerUnits,
@@ -270,10 +271,12 @@ export const reportBreakdown = forCustomers.form(
  * The changes to what the portal shows, for the one live query a portal tab shares
  * (`provideChangeFeed()` in its layout), which tells the pages and cards that follow a record
  * (`refreshOnRecordChange()`, the lists `refreshOnActivity()`) when a planner accepts, rejects or
- * plans an order, or a unit moves. What it tells is what the contact may read (`feedFor()`: their
- * customer's records, at their sites if limited to some), without who made it; see `liveFeed()`
- * for its answers.
+ * plans an order, or a unit moves, and the modules' records the sites overview follows (an energy
+ * site's alerts, a completed checklist, a unit's maintenance plan). It watches every logged type,
+ * as the office's feed does: what it tells is only what the contact may read (`feedFor()`: their
+ * customer's records, at their sites if limited to some; a type they read none of is never told),
+ * without who made it; see `liveFeed()` for its answers.
  */
 export const watchPortalChanges = forCustomers.query.live(() =>
-	liveFeed(["order", "customer", "site", "equipment", "location"], feedFor()),
+	liveFeed(everyLoggedType(), feedFor()),
 );

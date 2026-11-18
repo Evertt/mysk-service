@@ -7,11 +7,13 @@
  * points are what its components can be checked by (`condition.checkpoints`), and it says whether a
  * point is the signed-in engineer's, before that module keeps its defect (`condition.fieldPoints`). With the parts shop
  * on, its products are linked to the templates' points (`parts-shop.checkpoints`). A checklist
- * completed with rejected points rings the office's bell (`notifications.rules`). Its records' access
+ * completed with rejected points rings the office's bell (`notifications.rules`). Its units'
+ * inspections are figures of customers' sites (`customers.siteSummary`). Its records' access
  * rules are `access.ts`'s (`access.rules`). A unit's timeline shows its checklists completed, with
  * their outcome (`equipment.timeline`, `timeline.ts`).
  */
 import { accessRules } from "#lib/access/extensions.ts";
+import { siteSummary } from "#lib/customers/extensions.ts";
 import { timeline } from "#lib/equipment/extensions.ts";
 import { notificationRules } from "#lib/notifications/extensions.ts";
 import { saving, units } from "#lib/orders/extensions.ts";
@@ -29,10 +31,12 @@ import { rejectedFieldPoint } from "./field-points.ts";
 import { inspectionSignal } from "./inspection-sql.ts";
 import { checklistNotificationRules } from "./notifications.ts";
 import { shopCheckpoints, unitCheckpoints } from "./shop.ts";
+import { checklistSiteSummary } from "./site-summary.ts";
 import { checklistTimeline } from "./timeline.ts";
 
 export default defineServerModule("checklists", [
 	contribute(accessRules, () => checklistAccess),
+	contribute(siteSummary, checklistSiteSummary),
 	contribute(units, saveUnitChecklists),
 	contribute(saving, saveOrderChecklists),
 	contribute(unitSignals, inspectionSignal),

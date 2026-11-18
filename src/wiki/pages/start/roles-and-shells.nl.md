@@ -72,6 +72,13 @@ afgewezen, met de reden). De bel in de kop meldt elke wijziging van hun opdracht
 klantcontact dat een storing meldde, krijgt ook een e-mail per wijziging, in de taal waarin hij
 hem meldde.
 
+Een rij op Start, **Alle vestigingen**, opent `/portal/sites`: alle vestigingen die het
+klantcontact volgt in één beeld, live, de slechtste bovenaan, zodat een hoofdkantoor in één
+oogopslag ziet waar een storing openstaat, een monteur onderweg is of een apparaat kritiek is (zie
+[Alle vestigingen](/wiki/domains/sites-overview)). Elke vestiging heeft een eigen pagina met haar
+apparaten en openstaand werk, en een onderhoudsrapportage om af te drukken (zie
+[Rapportage per vestiging](/wiki/domains/site-report)).
+
 Wie de QR-code van een apparaat scant, met de camera van de telefoon of met de tab Scannen, komt op
 de pagina van dat apparaat: een kaart met wat het is en waar het staat, de status en wat de modules van de organisatie
 toevoegen (de conditie als badge, de keuringsstatus en de dag van het laatste onderhoud), dan een

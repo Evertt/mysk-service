@@ -340,5 +340,13 @@
 				"countPlural=*": "{countText} points rejected"
 			}
 		}
-	]
+	],
+	"checklists_site_section": "Inspections",
+	"checklists_site_done": "Inspections done",
+	"checklists_site_valid": "Valid",
+	"checklists_site_due": "Inspection due",
+	"checklists_site_expired": "Inspection expired",
+	"checklists_site_rejected": "Rejected",
+	"checklists_site_last": "Last inspection",
+	"checklists_site_next": "Next inspection"
 }

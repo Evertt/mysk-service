@@ -13,7 +13,7 @@ const app = useApp();
 
 const openOrders = (organizationId: string) =>
 	value<number>(
-		`select count(*) from "order" where organization_id = ? and status in ('quote', 'scheduled', 'in_progress')`,
+		`select count(*) from "order" where organization_id = ? and status in ('quote', 'scheduled', 'on_the_way', 'in_progress')`,
 		[organizationId],
 	);
 const header = () => app.page.locator('[data-sidebar="header"]').innerText();

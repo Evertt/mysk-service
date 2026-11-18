@@ -70,6 +70,12 @@ an engineer scheduled, the engineer on the way, resolved (or rejected, with the 
 in the header tells each change of their orders, and the contact who reported a breakdown also
 gets an email per change, in the language they reported it in.
 
+A row on Home, **All sites**, opens `/portal/sites`: every site the contact follows in one view,
+live, worst first, so a head office sees at a glance where a fault is open, an engineer is on the
+way or a unit is critical (see [All sites](/wiki/domains/sites-overview)). Each site has its page
+with its units and open work, and its printable maintenance report (see
+[Site report](/wiki/domains/site-report)).
+
 Scanning a unit's QR code, with the phone's camera or the Scan tab, opens the unit's page: a card
 with what it is and where, its status, and what the organization's modules add (its condition as a badge, its
 inspection status and the day of its last maintenance), then a big Report a breakdown button with

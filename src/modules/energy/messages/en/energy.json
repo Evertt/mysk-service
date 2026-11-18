@@ -383,5 +383,9 @@
 	"energy_timeline_alert_done": "Dealt with",
 	"energy_timeline_opened_today": "Opened today",
 	"energy_timeline_lost_today": "Energy lost today",
-	"energy_timeline_kwh": "{kwh} kWh"
+	"energy_timeline_kwh": "{kwh} kWh",
+	"energy_site_section": "Energy",
+	"energy_site_lost_today": "Lost through doors today",
+	"energy_site_lost_period": "Lost through doors in the period",
+	"energy_site_alerts": "Open energy alerts"
 }

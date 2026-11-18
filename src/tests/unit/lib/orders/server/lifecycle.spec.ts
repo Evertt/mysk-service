@@ -76,7 +76,7 @@ vi.mock("#lib/server/db/index.ts", async () => {
 		create table order_request (
 			order_id integer primary key, organization_id text not null, user_id text,
 			reporter_name text not null, reporter_locale text, decided_at integer, decided_by text,
-			rejection_reason text, fault text
+			rejection_reason text, fault text, via text
 		);
 		create table order_signoff (
 			order_id integer primary key, organization_id text not null, signer_name text not null,

@@ -142,5 +142,11 @@
 	"maintenance_reminder_mail_subject": "Maintenance coming up for unit {serial}",
 	"maintenance_reminder_mail_greeting": "Dear {contact},",
 	"maintenance_reminder_mail_body": "{organization} has planned “{description}” for your unit {serial}. We'll contact you to agree on a date.",
-	"maintenance_reminder_mail_reference": "Reference: order {number}"
+	"maintenance_reminder_mail_reference": "Reference: order {number}",
+	"maintenance_site_section": "Maintenance",
+	"maintenance_site_done": "Done in the period",
+	"maintenance_site_due": "Due",
+	"maintenance_site_overdue": "Overdue",
+	"maintenance_site_last": "Last maintenance",
+	"maintenance_site_next": "Next maintenance"
 }

@@ -340,5 +340,13 @@
 				"countPlural=*": "{countText} punten afgekeurd"
 			}
 		}
-	]
+	],
+	"checklists_site_section": "Keuringen",
+	"checklists_site_done": "Keuringen uitgevoerd",
+	"checklists_site_valid": "Geldig",
+	"checklists_site_due": "Keuring binnenkort",
+	"checklists_site_expired": "Keuring verlopen",
+	"checklists_site_rejected": "Afgekeurd",
+	"checklists_site_last": "Laatste keuring",
+	"checklists_site_next": "Volgende keuring"
 }

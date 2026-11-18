@@ -32,7 +32,10 @@ import {
 } from "#modules/checklists/server/templates.ts";
 
 const locals: { user?: { id: string; name: string }; tenant?: Tenant } = {};
-vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals }) }));
+vi.mock("$app/server", async (importOriginal) => ({
+	...(await importOriginal<object>()),
+	getRequestEvent: () => ({ locals }),
+}));
 // The work record's scopes ask the registry, which these templates don't.
 vi.mock("#lib/server/access/index.ts", () => ({}));
 

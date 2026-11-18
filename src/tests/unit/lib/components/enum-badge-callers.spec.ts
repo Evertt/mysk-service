@@ -17,6 +17,8 @@ const allowed = new Set([
 	"src/lib/components/enum-badge.svelte",
 	// A select of values that looks like their badges; its options come from a display map.
 	"src/lib/components/badge-select.svelte",
+	// A site's figures as chips: a count and the module's own label, toned by what it asks for.
+	"src/lib/customers/sites/site-chips.svelte",
 	// The modules' tags on an order: a label and detail of their own, not an enum's.
 	"src/lib/orders/ui/order-tags.svelte",
 	// A checklist's outcome: a count of rejected points, not a value.

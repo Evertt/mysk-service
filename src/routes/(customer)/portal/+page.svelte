@@ -8,6 +8,7 @@
 	import { resolve } from "$app/paths";
 	import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 	import ClipboardCheckIcon from "@lucide/svelte/icons/clipboard-check";
+	import MapPinnedIcon from "@lucide/svelte/icons/map-pinned";
 	import SirenIcon from "@lucide/svelte/icons/siren";
 
 	import { getCurrentUser } from "#lib/auth/session.remote.ts";
@@ -34,6 +35,20 @@
 	<SirenIcon data-icon="inline-start" />
 	{m.client_report_title()}
 </Button>
+
+<a
+	href={resolve("/(customer)/portal/sites")}
+	class="flex min-h-14 items-center gap-3 rounded-xl border bg-card px-4 py-3 transition-colors hover:bg-muted/60 active:bg-muted"
+	data-sites-link
+>
+	<span
+		class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+	>
+		<MapPinnedIcon class="size-5" aria-hidden="true" />
+	</span>
+	<span class="min-w-0 flex-1 truncate text-[0.9375rem] font-medium">{m.client_nav_sites()}</span>
+	<ChevronRightIcon class="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+</a>
 
 <section class="flex flex-col gap-2" aria-label={m.client_open_orders()}>
 	<h2 class="section-label px-1">

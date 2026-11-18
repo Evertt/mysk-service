@@ -383,5 +383,9 @@
 	"energy_timeline_alert_done": "Afgehandeld",
 	"energy_timeline_opened_today": "Vandaag geopend",
 	"energy_timeline_lost_today": "Energieverlies vandaag",
-	"energy_timeline_kwh": "{kwh} kWh"
+	"energy_timeline_kwh": "{kwh} kWh",
+	"energy_site_section": "Energie",
+	"energy_site_lost_today": "Deurverlies vandaag",
+	"energy_site_lost_period": "Deurverlies in de periode",
+	"energy_site_alerts": "Open energie-alerts"
 }

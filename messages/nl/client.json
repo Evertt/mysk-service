@@ -116,5 +116,6 @@
 	"client_report_what_placeholder": "Wat gebeurt er, en sinds wanneer?",
 	"client_unit_documents_link": "Handleidingen en documenten",
 	"client_unit_documents_description": "Handleidingen, certificaten en tekeningen",
-	"client_unit_documents_none": "Er zijn nog geen documenten van dit apparaat."
+	"client_unit_documents_none": "Er zijn nog geen documenten van dit apparaat.",
+	"client_nav_sites": "Alle vestigingen"
 }
