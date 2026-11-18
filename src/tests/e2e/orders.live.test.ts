@@ -142,8 +142,12 @@ describe("going from record to record", () => {
 		try {
 			await anouk.go(`/orders/${walk[0].number}`);
 			expect(streams.sort()).toEqual(["watchShell", "watchTenantChanges"]);
-			// At most one, for the records read before the feed was watching: the first load's.
-			expect(catchUps.length).toBeLessThanOrEqual(1);
+			// One, for the records read before the feed was watching (the page's parts that say when
+			// they read: the checklists' and the contracts' cards). It's asked once the feed answers,
+			// which on a busy machine came after go() (which waits for hydration), and was counted as
+			// the walk's.
+			await expect.poll(() => catchUps.length).toBe(1);
+			await quiet(page);
 			streams.length = 0;
 			catchUps.length = 0;
 			// (Not to the page it's on: a link to it refreshes everything, the shell's streams too.)
