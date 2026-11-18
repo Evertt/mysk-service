@@ -3,7 +3,10 @@ import { code, defineList, oneOf } from "#lib/components/data-table/list-definit
 import { listColumns } from "../api/extensions.ts";
 import { unitStatuses } from "../model.ts";
 
-/** A score's band in a filter: below the critical threshold, below attention, fine, or none yet. */
+/**
+ * A score's band in a filter: from the critical threshold on (`low`), from the attention one
+ * (`fair`), better (`good`), or none yet (`scoreBand()`).
+ */
 export const scoreBands = ["low", "fair", "good", "none"] as const;
 export type ScoreFilter = (typeof scoreBands)[number];
 

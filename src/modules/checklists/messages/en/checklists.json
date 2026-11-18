@@ -291,7 +291,6 @@
 	"checklists_assets_pick_title": "Pick an asset",
 	"checklists_assets_pick_description": "Its checklist of this year shows here, with its history below.",
 	"checklists_assets_components": "Components of {unit}",
-	"checklists_score": "{score}%",
 	"checklists_no_score": "No score",
 	"checklists_start_created": "{number} made: plan it in the schedule.",
 	"checklists_start_opened": "{number} is open already: here's its checklist.",

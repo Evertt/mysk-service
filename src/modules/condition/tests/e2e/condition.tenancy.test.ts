@@ -45,7 +45,7 @@ describe("in North, which has the module", () => {
 		);
 		await app.go(`/equipment/${own.serial_number}`);
 		await card().getByRole("button", { name: "Record condition" }).click();
-		await dialog().getByLabel("Condition (%)").fill("10");
+		await dialog().getByLabel("Advice").fill("Gemanipuleerd.");
 		const before = await conditionCount();
 		const result = await app.expectingErrors(async () => {
 			await page.evaluate((serial) => {

@@ -2,7 +2,8 @@
 	@component
 	One unit's checklist on the engineer portal, filled in on a phone: its points under their groups,
 	three big buttons each (Goed, Afkeur, N.v.t.), the remark a rejection needs, the general remark for
-	the customer, and "Complete" once every point is answered. Each answer is saved as it's given, in
+	the customer, and "Complete" once every point is answered. Below a rejection, what the modules ask
+	about it (`checklists.field.rejected`), e.g. its defect's grade and photos. Each answer is saved as it's given, in
 	the order given; one that fails to save is taken back and said so (`checklistDraft()`). Completed,
 	or when the order isn't in progress, it shows what was found. Below it, what the modules that
 	enhance checklists ask about the unit (`checklists.field.checklist`), e.g. its condition once the
@@ -18,7 +19,7 @@
 	import ExtensionSlot from "#lib/extensions/extension-slot.svelte";
 	import { formatDateTime, formatNumber } from "#lib/i18n/index.ts";
 
-	import { fieldChecklist } from "../api/extensions.ts";
+	import { fieldChecklist, fieldRejected } from "../api/extensions.ts";
 	import { checklistDraft } from "../detail/checklist-draft.svelte.ts";
 	import ChecklistPoints from "../detail/checklist-points.svelte";
 	import { completerName, pickedResultClasses } from "../display.ts";
@@ -162,6 +163,14 @@
 								{#if missing}
 									<p class="text-sm text-destructive">{m.checklists_remark_required()}</p>
 								{/if}
+								<ExtensionSlot
+									point={fieldRejected}
+									props={{
+										number: checklist.order.number,
+										equipmentId: checklist.unit.id,
+										pointId: point.id,
+									}}
+								/>
 							{/if}
 						</div>
 					{/each}

@@ -2,8 +2,9 @@
 	@component
 	Below a unit's checklist on the engineer portal (`checklists.field.checklist`, the checklists
 	module's `api/extensions.ts`): once the checklist is completed, the condition score it gave the
-	unit (worked out from its points) and the engineer's advice on it, while the order is in
-	progress. Nothing while the checklist is a draft.
+	unit on NEN 2767's scale (its worst rejected point's defect), the defects and its components'
+	scores, and the engineer's advice on it, while the order is in progress. Nothing while the
+	checklist is a draft.
 -->
 <script lang="ts">
 	import GaugeIcon from "@lucide/svelte/icons/gauge";
@@ -12,12 +13,11 @@
 	import { refreshOnRecordChange } from "#lib/components/activity/change-feed.svelte.ts";
 	import { submitted } from "#lib/components/form/submitted.ts";
 
-	import { scoreBand } from "../../model.ts";
 	import {
 		adviseFieldConditionForm,
 		getFieldCondition,
 	} from "../../portal/field-condition.remote.ts";
-	import ConditionBar from "../../ui/condition-bar.svelte";
+	import ScoreBadge from "../../ui/score-badge.svelte";
 
 	let {
 		number,
@@ -46,11 +46,22 @@
 		</h3>
 		{#if data.recorded}
 			<div class="flex flex-col gap-1" data-recorded={data.recorded.score}>
-				<ConditionBar
-					score={data.recorded.score}
-					band={scoreBand(data.recorded.score, data.thresholds)}
-				/>
+				<ScoreBadge score={data.recorded.score} />
 				<p class="text-xs text-muted-foreground">{m.condition_portal_computed()}</p>
+				{#if data.recorded.defects.length}
+					<ul
+						class="flex flex-col gap-1 pt-1"
+						aria-label={m.condition_defects()}
+						data-field-defects
+					>
+						{#each data.recorded.defects as defect (defect.id)}
+							<li class="flex items-center justify-between gap-2 text-sm">
+								<span class="min-w-0 truncate">{defect.description}</span>
+								<ScoreBadge score={defect.score} compact />
+							</li>
+						{/each}
+					</ul>
+				{/if}
 				{#if data.components.length}
 					<ul
 						class="flex flex-col gap-1.5 pt-1"
@@ -60,7 +71,7 @@
 						{#each data.components as part (part.id)}
 							<li class="flex items-center justify-between gap-2" data-component={part.number}>
 								<span class="truncate text-sm">{part.name}</span>
-								<ConditionBar score={part.score} band={scoreBand(part.score, data.thresholds)} />
+								<ScoreBadge score={part.score} />
 							</li>
 						{/each}
 					</ul>

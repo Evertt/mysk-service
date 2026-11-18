@@ -1,6 +1,6 @@
 ---
 title: Onderdelenbeheer
-summary: De conditie van elk apparaat en zijn onderdelen door de tijd, berekend uit de checklists, met een status die zegt wat aandacht nodig heeft.
+summary: De conditie van elk apparaat en zijn onderdelen door de tijd, op de NEN 2767-schaal uit de gebreken die de checklists vinden, met een status die zegt wat aandacht nodig heeft.
 ---
 
 <script>
@@ -17,45 +17,61 @@ hebben aandacht nodig, en hoe snel?
 
 ## Wat de module toevoegt
 
-- **Een conditiescore.** Als een monteur een checklist afrondt, krijgt het apparaat een score van 0
-  tot 100: het deel van de punten dat Goed is bevonden. Punten op N.v.t. tellen niet mee. De
-  onderdelen die de punten van de checklist controleren, krijgen op dezelfde manier een eigen
-  score. De monteur kan daarna advies over het apparaat toevoegen. Elke score is een nieuw record,
-  dus het apparaat bouwt een historie op, en de laatste is zijn conditie.
+- **Een conditie op de NEN 2767-schaal.** Een conditie krijgt een score van 1 tot 6: 1 Uitstekend
+  (nieuwbouwkwaliteit, geen gebreken), 2 Goed, 3 Redelijk, 4 Matig, 5 Slecht en 6 Zeer slecht
+  (technisch rijp voor vervanging). Ze bestaat uit **gebreken**: wat er mis is, het element waarop
+  het zit (het apparaat zelf of een van zijn onderdelen), de **ernst** (gering, serieus, ernstig),
+  de **omvang** (de klassen van NEN: minder dan 2%, 2–10%, 10–30%, 30–70%, 70% of meer van het
+  element) en de **intensiteit** (begin-, gevorderd of eindstadium), met foto's als je wilt. De
+  tabellen van NEN 2767 geven elk gebrek een score, en het ernstigste gebrek telt: een conditie
+  zonder gebreken is 1. De score van een apparaat is de slechtste van zijn eigen laatste conditie
+  en die van zijn onderdelen.
+- **Uit de checklists.** Als een monteur in het monteursportaal een punt afkeurt, vraagt het portaal
+  om het gebrek: ernst, omvang, intensiteit en foto's, met de score die daaruit volgt zichtbaar
+  terwijl hij kiest. Bij het afronden van de checklist zijn de afgekeurde punten de gebreken van de
+  nieuwe conditie van het apparaat, en krijgt elk onderdeel er een uit zijn eigen punten. Goede en
+  N.v.t.-punten voegen geen gebreken toe, dus een checklist zonder afkeuringen legt 1 vast. De
+  monteur kan daarna advies over het apparaat toevoegen. Elke conditie is een nieuw record, dus het
+  apparaat bouwt een historie op, en de laatste is zijn conditie.
 - **Een status.** Elk apparaat is **Kritiek**, **Aandacht**, **Gepland** of **In orde**:
-  - Kritiek: de conditie ligt onder de kritieke drempel, of de keuring is verlopen. Plan het binnen
-    5 werkdagen in.
-  - Aandacht: de conditie ligt onder de aandachtsdrempel, een punt van de keuring is afgekeurd, of
-    er staat advies open. Neem het mee bij het volgende bezoek.
+  - Kritiek: de conditie is de kritieke drempel of slechter, of de keuring is verlopen. Plan het
+    binnen 5 werkdagen in.
+  - Aandacht: de conditie is de aandachtsdrempel, een punt van de keuring is afgekeurd, of er staat
+    advies open. Neem het mee bij het volgende bezoek.
   - Gepland: er is werk aan ingepland.
   - In orde: binnen het interval en de keuring is geldig.
 
   Een apparaat krijgt de status van zijn slechtste onderdeel.
 
-- **De pagina Onderdelenbeheer.** Een lijst van apparaten met hun scorebalk en status, een legenda
-  die de statussen uitlegt, het activiteitenlog van de apparaten, en uitleg over de vier stappen:
+- **De pagina Onderdelenbeheer.** Een lijst van apparaten met hun score en status, een legenda
+  die de statussen en de NEN 2767-schaal uitlegt, het activiteitenlog van de apparaten, en uitleg over de vier stappen:
   koppelen, monitoren, plannen, uitvoeren en vastleggen. Het kantoor kan als correctie met de hand een
-  conditie vastleggen, die geldt tot er een nieuwere is, zoals die van de volgende afgeronde
-  checklist.
+  conditie vastleggen, met gebreken en foto's en de score direct zichtbaar, die geldt tot er een
+  nieuwere is, zoals die van de volgende afgeronde checklist. Condities die vóór NEN 2767 als
+  percentage zijn vastgelegd, zijn per band omgezet (90% of meer is 1, 80–89% 2, 70–79% 3, 40–69%
+  4, 20–39% 5, onder 20% 6), en de historie zegt van welk percentage.
 - **Onderdelen.** Op de pagina van een apparaat voegt het kantoor onderdelen toe: een naam, het
   **artikel** in de shop dat het is (een materiaal), en de checklistpunten die het
   controleren. Een afgekeurd punt van een onderdeel stelt eerst het artikel ervan voor.
-- **Instellingen.** Een manager stelt de twee drempels in (kritiek onder, aandacht onder) en of
+- **Instellingen.** Een manager stelt de twee drempels in (kritiek vanaf, standaard 5, en aandacht
+  vanaf, standaard 4, allebei tussen 2 en 6) en of
   kritieke apparaten **automatisch worden ingepland**. Staat dat aan, dan krijgt elk kritiek
   apparaat zonder open opdracht elke dag een onderhoudsopdracht: een nieuwe opdracht met prioriteit
   Hoog, die het kantoor nog moet inplannen en die binnen 5 werkdagen moet gebeuren.
 
 ### Waar je het ziet
 
-- De apparatenlijst krijgt twee kolommen, de laatste conditie en de status, allebei te sorteren en
+- De apparatenlijst krijgt twee kolommen, de conditiescore en de status, allebei te sorteren en
   te filteren.
 - De pagina van een apparaat toont zijn conditie en zijn onderdelen. De pagina van een klant toont
   de servicegeschiedenis van zijn apparaten: de afgeronde opdrachten en checklists en de
   vastgelegde condities.
 - Het dashboard heeft een tegel voor de apparaten die kritiek zijn of aandacht nodig hebben.
-- Het monteursportaal vraagt om advies zodra een checklist is afgerond.
+- Het monteursportaal vraagt om het gebrek van een afgekeurd punt, en om advies zodra een checklist
+  is afgerond.
 - In het klantportaal toont de startpagina de apparaten van de klant die aandacht nodig hebben, en
-  toont de pagina van een apparaat zijn status als badge (niet zijn score of advies).
+  toont de pagina van een apparaat zijn score ("3 · Redelijk") en status als badge (niet zijn
+  gebreken of advies).
 
 ### Werkt samen met
 
@@ -95,9 +111,16 @@ gecorreleerde subqueries, en staan dezelfde regels in code (`rolledUpStatus()` i
 losse records. Een statement bindt hoogstens 100 waarden, dus die SQL is geschreven met letterlijke
 constanten, niet met parameters.
 
+De tabellen van NEN 2767 staan in één bestand, `nen2767.ts`, met een spec die elke cel controleert.
+De score van een conditie, en die van elk gebrek, wordt op de server berekend en bij het record
+bewaard, zodat de SQL van de lijsten alleen de slechtste van de laatste neemt. Foto's van gebreken
+staan in de fotoopslag en worden geserveerd op `/condition/photos/<id>` aan wie de condities van het
+apparaat mag lezen (`conditionPhoto` in het toegangsregister).
+
 In de andere richting haakt Onderdelenbeheer in op de modules die het verrijkt, in
-`server/index.ts`. Met Werkbonnen aan legt `checklists.completed` de condities van het apparaat en
-de onderdelen vast op het moment dat een checklist wordt afgerond. De dagelijkse taak (`jobs.daily`)
+`server/index.ts`. Met Werkbonnen aan vraagt het slot `checklists.field.rejected` om het gebrek van
+een afgekeurd punt, en legt `checklists.completed` de condities van het apparaat en de onderdelen
+vast, met die gebreken, op het moment dat een checklist wordt afgerond. De dagelijkse taak (`jobs.daily`)
 plant kritieke apparaten in voor tenants die dat willen, als het systeem via `createOrders()` van de
 kern, zodat de opdracht een nummer krijgt en gelogd wordt zoals elke andere. Onderdelen bewaren hun
 artikel en punten als gewone id's, zonder foreign key, omdat de modules waarnaar ze verwijzen
@@ -105,11 +128,15 @@ optioneel zijn. De servicegeschiedenis is een weergave van het activiteitenlog
 (`server/history.ts`), geen tabel.
 
 - <SourceLink path="src/modules/condition/module.ts">module.ts</SourceLink>: het manifest, en <SourceLink path="src/modules/condition">de map van de module</SourceLink>.
-- <SourceLink path="src/modules/condition/model.ts" line={114}>rolledUpStatus()</SourceLink>: de
+- <SourceLink path="src/modules/condition/nen2767.ts" line={85}>defectScore()</SourceLink>: de
+  score van een gebrek uit de tabellen van NEN 2767.
+- <SourceLink path="src/modules/condition/model.ts" line={195}>rolledUpStatus()</SourceLink>: de
   status van een apparaat, met die van zijn onderdelen.
+- <SourceLink path="src/modules/condition/server/conditions.ts" line={297}>recordChecklistConditions()</SourceLink>:
+  de condities en gebreken van een afgeronde checklist.
 - <SourceLink path="src/modules/condition/server/status-sql.ts">status-sql.ts</SourceLink>: dezelfde
   regels in SQL.
-- <SourceLink path="src/modules/condition/server/automatic.ts" line={122}>planCriticalUnits()</SourceLink>:
+- <SourceLink path="src/modules/condition/server/automatic.ts" line={123}>planCriticalUnits()</SourceLink>:
   de dagelijkse taak.
 - <SourceLink path="src/modules/condition/api/extensions.ts">api/extensions.ts</SourceLink>: de
   punten waaraan anderen bijdragen.

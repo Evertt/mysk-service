@@ -15,6 +15,12 @@ import {
 	type UnitStatus,
 } from "#modules/condition/model.ts";
 
+/** A real PNG of 8×4 pixels, which the browser can decode and shrink, for a defect's photo. */
+export const png = Buffer.from(
+	"iVBORw0KGgoAAAANSUhEUgAAAAgAAAAECAIAAAA8r+mnAAAAEUlEQVR4nGM4EaCBFTFQTwIA5M0oATp8j7wAAAAASUVORK5CYII=",
+	"base64",
+);
+
 /** Today, the machine's (which is the test server's). */
 const today = () => Temporal.Now.plainDateISO();
 
@@ -48,12 +54,12 @@ export interface UnitState {
 
 /** The tenant's thresholds, as stored (the defaults until its settings are first read). */
 async function thresholdsOf(organizationId: string): Promise<Thresholds> {
-	const [found] = await rows<{ critical_below: number; attention_below: number }>(
-		`select critical_below, attention_below from condition_settings where organization_id = ?`,
+	const [found] = await rows<{ critical_from: number; attention_from: number }>(
+		`select critical_from, attention_from from condition_settings where organization_id = ?`,
 		[organizationId],
 	);
 	return found
-		? { critical: found.critical_below, attention: found.attention_below }
+		? { critical: found.critical_from, attention: found.attention_from }
 		: defaultThresholds;
 }
 

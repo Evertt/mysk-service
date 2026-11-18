@@ -86,6 +86,5 @@
 		bind:open={() => recording !== null, (open) => !open && (recording = null)}
 		unit={data.unit}
 		component={recorded}
-		score={recorded.score}
 	/>
 {/if}

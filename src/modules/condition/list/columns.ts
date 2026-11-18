@@ -8,8 +8,8 @@ import { EquipmentLink } from "#lib/equipment/components.ts";
 import { unitTitle } from "#lib/equipment/index.ts";
 
 import { unitStatusDisplay } from "../display.ts";
-import { type Concern, type ScoreBand, unitStatuses } from "../model.ts";
-import ConditionBar from "../ui/condition-bar.svelte";
+import { type Concern, unitStatuses } from "../model.ts";
+import ScoreBadge from "../ui/score-badge.svelte";
 import StatusBadge from "../ui/status-badge.svelte";
 import type { getConditionUnits } from "./units-list.remote.ts";
 import { conditionList } from "./units-list.ts";
@@ -64,11 +64,7 @@ export const columns = withListColumns(conditionList, {
 	}),
 	condition: column.accessor("score", {
 		id: "condition",
-		cell: ({ getValue, row }) =>
-			renderComponent(ConditionBar, {
-				score: getValue(),
-				band: row.original.band === "none" ? null : (row.original.band as ScoreBand),
-			}),
+		cell: ({ getValue }) => renderComponent(ScoreBadge, { score: getValue() }),
 		sortUndefined: "last",
 		enableGlobalFilter: false,
 		// By its band, e.g. `?condition=low,fair`.

@@ -16,8 +16,8 @@
 	import { submitted } from "#lib/components/form/submitted.ts";
 
 	import { moveComponent, removeComponent } from "../components.remote.ts";
-	import type { Concern, ScoreBand, UnitStatus } from "../model.ts";
-	import ConditionBar from "../ui/condition-bar.svelte";
+	import type { Concern, UnitStatus } from "../model.ts";
+	import ScoreBadge from "../ui/score-badge.svelte";
 	import StatusBadge from "../ui/status-badge.svelte";
 
 	let {
@@ -132,10 +132,7 @@
 		</div>
 	</div>
 	<div class="flex flex-wrap items-center justify-between gap-2">
-		<ConditionBar
-			score={part.score}
-			band={part.band === "none" ? null : (part.band as ScoreBand)}
-		/>
+		<ScoreBadge score={part.score} />
 		<StatusBadge status={part.status} concern={part.concern} />
 	</div>
 	{#if part.advice}

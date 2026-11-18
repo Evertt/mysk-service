@@ -17,6 +17,7 @@
 	import FilterChips from "#lib/components/filter-chips.svelte";
 	import { unitTitle } from "#lib/equipment/index.ts";
 	import { formatNumber } from "#lib/i18n/index.ts";
+	import { scoreText } from "#modules/condition/api/scale.ts";
 
 	import { checklistLabels } from "../labels.ts";
 	import { yearStates } from "../model.ts";
@@ -178,9 +179,7 @@
 												{part.name}
 											</span>
 											<span class="shrink-0 text-muted-foreground tabular-nums" data-score>
-												{part.score === null
-													? m.checklists_no_score()
-													: m.checklists_score({ score: formatNumber(part.score) })}
+												{part.score === null ? m.checklists_no_score() : scoreText(part.score)}
 											</span>
 										</a>
 									</li>

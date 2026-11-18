@@ -3,7 +3,7 @@
  * on by a manager, back to the Connect page; after the daily run, the page says when it last ran
  * and how many orders it made. What the settings store and log, and what the daily run plans
  * (each critical unit in care without an open order, once, nothing in South), is
- * `automatic.spec.ts`'s; that critical stays below attention is `schemas.spec.ts`'s.
+ * `automatic.spec.ts`'s; that attention stays below critical is `schemas.spec.ts`'s.
  */
 import { describe, expect, test } from "vite-plus/test";
 
@@ -23,8 +23,8 @@ describe("the settings", () => {
 		await page.getByRole("link", { name: "Settings" }).click();
 		await page.waitForURL((url) => url.pathname === "/condition/settings");
 		expect(await autoPlan().isChecked()).toBe(false);
-		expect(await page.getByLabel("Critical below (%)").inputValue()).toBe("40");
-		expect(await page.getByLabel("Attention below (%)").inputValue()).toBe("70");
+		expect(await page.getByLabel("Critical from").inputValue()).toBe("5");
+		expect(await page.getByLabel("Attention from").inputValue()).toBe("4");
 		await autoPlan().click();
 		await app.submit(save());
 		await page.waitForURL((url) => url.pathname === "/condition");
