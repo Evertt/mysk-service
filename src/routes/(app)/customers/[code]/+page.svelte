@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { resolve } from "$app/paths";
+	import MapPinnedIcon from "@lucide/svelte/icons/map-pinned";
 
 	import EnumBadge from "#lib/components/enum-badge.svelte";
 	import RecordPage from "#lib/components/record-page.svelte";
@@ -50,6 +51,18 @@
 >
 	{#snippet badges()}
 		<EnumBadge display={customerSegmentDisplay} value={customer.segment} />
+	{/snippet}
+
+	{#snippet actions()}
+		<Button
+			variant="outline"
+			size="sm"
+			href={resolve("/(app)/customers/[code]/sites", { code: customer.code })}
+			data-sites-overview-link
+		>
+			<MapPinnedIcon data-icon="inline-start" />
+			{m.customers_overview_link()}
+		</Button>
 	{/snippet}
 
 	{#snippet summary()}
