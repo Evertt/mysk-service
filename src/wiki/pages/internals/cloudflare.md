@@ -25,15 +25,15 @@ What that means for someone using the app:
 - **Daily jobs run themselves.** At 04:00 UTC a cron trigger starts the daily jobs, such as the
   maintenance plans that become orders. Every 15 minutes another ticks the demo's simulations, so
   the docks and energy modules have live-looking data.
-- **Recordings and mail have a home.** Bug-report recordings go to an R2 bucket, invitations and
-  reminders go out through SMTP.
+- **Files and mail have a home.** Bug-report recordings and the photos people add go to R2
+  buckets, invitations and reminders go out through SMTP.
 - **A safety net.** Cloudflare keeps 30 days of the database's history, so it can be restored to a
   moment in time.
 - **Staging is real but disposable.** Every push to `develop` deploys a Worker of its own, with its
   own database, which is filled with the demo data again on every deploy. Its login page has the
   one-click demo sign-in; production's has not.
 
-<Diagram viewBox="0 0 440 180" label="A request reaches the Worker, which sends it to the one Durable Object. Inside it SvelteKit and the SQLite database run together. Cron triggers also call the object. Bug-report recordings go to an R2 bucket.">
+<Diagram viewBox="0 0 440 180" label="A request reaches the Worker, which sends it to the one Durable Object. Inside it SvelteKit and the SQLite database run together. Cron triggers also call the object. Bug-report recordings and photos go to R2 buckets.">
 	<g font-size="12" text-anchor="middle">
 		<rect x="4" y="60" width="86" height="44" rx="8" fill="none" stroke="var(--border)" stroke-width="1.5" />
 		<text x="47" y="86" fill="var(--foreground)">Worker</text>
@@ -84,6 +84,12 @@ What follows from that:
 (the simulations' tick). The Worker's `scheduled()` tells them apart by `controller.cron` and has
 the object answer `POST /_ops/daily` or `POST /_ops/tick` with the `OPS_TOKEN`, like a request from
 outside, so the jobs run inside it with its database.
+
+**Files.** Two R2 buckets, bound in `wrangler.jsonc` and made once with
+`wrangler r2 bucket create <name>`: `BUG_REPORTS` (`fieldworks-bug-reports`) holds the bug reports'
+recordings, and `PHOTOS` (`fieldworks-photos`) the photos. Staging has its own,
+`fieldworks-staging-bug-reports` and `fieldworks-staging-photos`. On Node the photos go to a folder
+instead (`PHOTOS_DIR`).
 
 **Moving data in.** A new object starts empty. `POST /_ops/import` (with the `OPS_TOKEN`) replaces
 the data of every table in an export of a libsql database, to start with the demo data or to move
