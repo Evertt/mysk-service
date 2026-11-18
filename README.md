@@ -289,12 +289,16 @@ simulations"); `scheduled()` tells them apart by `controller.cron`, and has the 
 A new object starts empty. Its data comes from a libsql database, through
 `POST /_ops/import`, which replaces the data of every table in the export: to start, make the
 first organization (or the demo data) in a local file and import that; to move from Turso, export
-Turso's.
+Turso's. Name the file store's folder after the database (`PHOTOS_DIR`, `.photos` by default) and
+the export carries its files too (the orders' photos, the units' documents, the defects' photos),
+which the import puts in the `PHOTOS` bucket under the same keys; files already there stay, and the
+daily sweep deletes those no row points to. CI imports the demo data into staging so, with the
+documents and photos the seed stores (`cloudflare/import.ts`).
 
 ```sh
 DATABASE_URL=file:start.db pnpm db:migrate
 DATABASE_URL=file:start.db pnpm run org:create -- --org "Acme Service" --slug acme --owner-email ada@acme.example --owner-name "Ada Lovelace"
-node cloudflare/export-database.ts file:start.db > export.json
+node cloudflare/export-database.ts file:start.db .photos > export.json   # .photos: its files too, if any
 curl -X POST https://<worker>/_ops/import -H "Authorization: Bearer $OPS_TOKEN" --data-binary @export.json
 ```
 

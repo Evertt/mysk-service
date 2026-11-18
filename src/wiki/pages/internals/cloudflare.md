@@ -60,7 +60,7 @@ request to the app's single Durable Object, `AppDatabase`. Static files never re
 Cloudflare serves them first. The object migrates its SQLite database when it starts
 (`blockConcurrencyWhile`), then answers each request by running SvelteKit inside itself, with its
 storage handed along in an `AsyncLocalStorage` (`durableRequests`). `db` finds it there, so the app's
-code is the same on Node and on Cloudflare. See <SourceLink path="cloudflare/entry.ts" line={49}>AppDatabase</SourceLink> and <SourceLink path="src/lib/server/db/durable.ts" line={62}>drizzleDurable</SourceLink>.
+code is the same on Node and on Cloudflare. See <SourceLink path="cloudflare/entry.ts" line={45}>AppDatabase</SourceLink> and <SourceLink path="src/lib/server/db/durable.ts" line={62}>drizzleDurable</SourceLink>.
 
 What follows from that:
 
@@ -93,7 +93,10 @@ instead (`PHOTOS_DIR`).
 
 **Moving data in.** A new object starts empty. `POST /_ops/import` (with the `OPS_TOKEN`) replaces
 the data of every table in an export of a libsql database, to start with the demo data or to move
-from Turso.
+from Turso. Given the photo folder too, the export carries its files, which the import puts in the
+`PHOTOS` bucket under the same keys before the rows that point to them: that's how staging gets the
+demo's unit documents and photos, which the seed makes locally. See
+<SourceLink path="cloudflare/import.ts">import.ts</SourceLink>.
 
 **Deploying.** `pnpm deploy:cloudflare` builds with `ADAPTER=cloudflare` and deploys. CI deploys
 `main` to production and `develop` to staging once the checks and tests pass. Secrets
