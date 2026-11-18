@@ -38,7 +38,7 @@ async function toPlan(organization: string) {
 		(
 			await rows<{ equipment_id: number }>(
 				`select distinct ou.equipment_id from order_unit ou join "order" o on o.id = ou.order_id
-				 where o.organization_id = ? and o.status in ('quote', 'scheduled', 'in_progress')`,
+				 where o.organization_id = ? and o.status in ('quote', 'scheduled', 'on_the_way', 'in_progress')`,
 				[organization],
 			)
 		).map((row) => row.equipment_id),
@@ -102,7 +102,7 @@ describe("the daily run, with automatic planning on", () => {
 			`select e.id, e.serial_number from equipment e where e.organization_id = ?
 			 and e.status = 'operational'
 			 and not exists (select 1 from order_unit ou join "order" o on o.id = ou.order_id
-				where ou.equipment_id = e.id and o.status in ('quote', 'scheduled', 'in_progress'))
+				where ou.equipment_id = e.id and o.status in ('quote', 'scheduled', 'on_the_way', 'in_progress'))
 			 order by e.id desc limit 1`,
 			[northId],
 		);

@@ -434,7 +434,7 @@ visit, as SQL over `equipment`, `condition.signals`, for the status; checklists 
 column in the list, `condition.list.columns`; checklists a unit's template points,
 `condition.checkpoints`;
 materials the articles, `condition.articles`; the parts shop the points an article's product fixes,
-`condition.articleCheckpoints`), for records that refer to another module's by id without a key (a
+`condition.articleCheckpoints`; checklists whether a checklist point is the signed-in engineer's, before condition keeps its defect, `condition.fieldPoints`), for records that refer to another module's by id without a key (a
 component's article and points, as it only enhances materials and checklists), for a view of the
 activity log (the service history, `server/history.ts`: the entries of orders and checklists
 completed and conditions recorded, of a customer's through their subjects' parents, which the seeds

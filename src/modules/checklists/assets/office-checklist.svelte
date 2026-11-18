@@ -20,7 +20,7 @@
 	import { formatDateTime, formatNumber, label } from "#lib/i18n/index.ts";
 	import { isOpenOrder, type OrderStatus } from "#lib/models.ts";
 	import { OrderLink } from "#lib/orders/components.ts";
-	import { pointsScore, scoreText } from "#modules/condition/api/scale.ts";
+	import { pointsScore, scoreText } from "#modules/condition/api/extensions.ts";
 
 	import type { UnitComponent } from "../api/extensions.ts";
 	import { checklistDraft } from "../detail/checklist-draft.svelte.ts";

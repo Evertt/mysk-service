@@ -7,7 +7,7 @@
 	import { getTimeZone } from "#lib/dates.ts";
 	import { formatDate } from "#lib/i18n/index.ts";
 	import { OrderLink } from "#lib/orders/components.ts";
-	import { scoreText } from "#modules/condition/api/scale.ts";
+	import { scoreText } from "#modules/condition/api/extensions.ts";
 
 	import { getComponentScores } from "./assets.remote.ts";
 

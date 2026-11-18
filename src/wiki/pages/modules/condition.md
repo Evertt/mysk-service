@@ -125,7 +125,7 @@ modules they refer to are optional. The service history is a view of the activit
 - <SourceLink path="src/modules/condition/module.ts">module.ts</SourceLink>: the manifest, and <SourceLink path="src/modules/condition">the module's folder</SourceLink>.
 - <SourceLink path="src/modules/condition/nen2767.ts" line={85}>defectScore()</SourceLink>: a
   defect's score from NEN 2767's tables.
-- <SourceLink path="src/modules/condition/model.ts" line={195}>rolledUpStatus()</SourceLink>: a
+- <SourceLink path="src/modules/condition/model.ts" line={192}>rolledUpStatus()</SourceLink>: a
   unit's status with its components'.
 - <SourceLink path="src/modules/condition/server/conditions.ts" line={297}>recordChecklistConditions()</SourceLink>:
   a completed checklist's conditions and defects.

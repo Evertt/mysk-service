@@ -87,7 +87,7 @@ export async function unitStates(organizationId: string, all = false): Promise<U
 			(select advice from unit_condition u where u.equipment_id = e.id and u.component_id is null
 			 order by u.recorded_at desc, u.id desc limit 1) as advice,
 			exists (select 1 from order_unit ou join "order" o on o.id = ou.order_id
-			 where ou.equipment_id = e.id and o.status in ('scheduled', 'in_progress')) as planned,
+			 where ou.equipment_id = e.id and o.status in ('scheduled', 'on_the_way', 'in_progress')) as planned,
 			(select k.valid_until from checklist k where k.equipment_id = e.id and k.kind = 'inspection'
 			 and k.status = 'completed' and k.valid_until is not null
 			 order by k.completed_at desc, k.id desc limit 1) as valid_until,

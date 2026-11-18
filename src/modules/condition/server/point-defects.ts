@@ -1,8 +1,8 @@
 /**
  * The defect an engineer gives a rejected point of a unit's checklist in the portal, while it's a
  * draft (`condition_point_defect`, `checklists.field.rejected`): its severity, extent and
- * intensity, and photos of it. Kept by the point's id, which the checklists module's
- * `rejectedFieldPoint()` checks is a point of the engineer's own checklist (another engineer's, or
+ * intensity, and photos of it. Kept by the point's id, which the checklists module says is a point
+ * of the engineer's own checklist (`condition.fieldPoints`, which it answers; another engineer's, or
  * tenant's, is a 404, also by a tampered id), changed while the checklist is a draft and its order
  * in progress. When the checklist is completed, it becomes a defect of the conditions it records
  * (`recordChecklistConditions()`).
@@ -14,9 +14,10 @@ import { currentTenant, idInTenant, inTenant } from "#lib/server/auth/index.ts";
 import { db, type Transaction } from "#lib/server/db/index.ts";
 import { insertRows } from "#lib/server/db/parameters.ts";
 import { afterCommit } from "#lib/server/db/serialize.ts";
+import { collect } from "#lib/server/extensions.ts";
 import { orNotFound } from "#lib/server/records.ts";
-import { rejectedFieldPoint } from "#modules/checklists/api/points.server.ts";
 
+import { fieldPoints } from "../api/extensions.ts";
 import type { DefectGrade } from "../nen2767.ts";
 import { discardDefectPhotos, storeDefectPhotos } from "./photos.ts";
 import { conditionDefectPhoto, conditionPointDefect } from "./schema.ts";
@@ -30,7 +31,8 @@ export interface FieldPointRef {
 
 /** The engineer's point `ref`, in `tx`: a 404 when it isn't theirs. */
 async function pointOf(tx: Transaction | typeof db, ref: FieldPointRef) {
-	return orNotFound(await rejectedFieldPoint(tx, ref), m.condition_point_not_found());
+	const [found] = (await collect(fieldPoints, { tx, ...ref })).filter((point) => !!point);
+	return orNotFound(found, m.condition_point_not_found());
 }
 
 /** The draft of the point `pointId` of the unit, in `tx`, if it has one. */

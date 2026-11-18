@@ -185,6 +185,16 @@ describe("Lev's planned inspection", () => {
 				first.equipment_id,
 			]),
 		);
+		// The defect Lev gave the rejected point in the portal (the condition module's draft, kept by the
+		// point's id): severe, 30–70%, final stage.
+		const [nok] = (await resultsOf(first.id)).filter((point) => point.result === "nok");
+		expect(nok, "one point is rejected").toBeDefined();
+		await rows(
+			`insert into condition_point_defect
+				(organization_id, checklist_point_id, equipment_id, severity, extent, intensity, updated_at)
+			 values ((select organization_id from checklist where id = ?), ?, ?, 'severe', 4, 'final', 0)`,
+			[id, nok.id, first.equipment_id],
+		);
 		expect(await as(lev, () => call(complete, { id }))).toMatchObject({
 			status: 200,
 		});
@@ -204,17 +214,30 @@ describe("Lev's planned inspection", () => {
 				[String(id), String(job.id)],
 			),
 		).toEqual([{ action: "completed", note: "1 point rejected", user_id: levUser }]);
-		// The condition module's hook: the unit's condition from its rejected points (on NEN 2767's
-		// scale, the worst defect's; one without a grade of the engineer's is 3), on the order, by Lev.
-		const answers = await resultsOf(first.id);
-		const rejected = answers.some((point) => point.result === "nok");
-		const [score] = await rows(
-			`select score, source, order_id, engineer_id from unit_condition
+		// The condition module's hook: the unit's condition from its rejected point, the defect Lev gave
+		// it (6 on NEN 2767's scale), on the order, by Lev; the draft gone.
+		const [score] = await rows<{ id: number }>(
+			`select id, score, source, order_id, engineer_id from unit_condition
 			 where equipment_id = ? and component_id is null order by id desc limit 1`,
 			[first.equipment_id],
 		);
+		expect(
+			await rows(
+				`select checklist_point_id, severity, extent, intensity, score from condition_defect
+				 where condition_id = ?`,
+				[score.id],
+			),
+		).toEqual([
+			{ checklist_point_id: nok.id, severity: "severe", extent: 4, intensity: "final", score: 6 },
+		]);
+		expect(
+			await value(`select count(*) from condition_point_defect where checklist_point_id = ?`, [
+				nok.id,
+			]),
+		).toBe(0);
 		expect(score).toEqual({
-			score: rejected ? 3 : 1,
+			id: score.id,
+			score: 6,
 			source: "checklist",
 			order_id: job.id,
 			engineer_id: levId,

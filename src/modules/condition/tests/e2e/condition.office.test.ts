@@ -41,7 +41,7 @@ describe("a unit's card", () => {
 			 and not exists (select 1 from checklist k where k.equipment_id = e.id)
 			 and not exists (select 1 from unit_condition u where u.equipment_id = e.id)
 			 and not exists (select 1 from order_unit ou join "order" o on o.id = ou.order_id
-				where ou.equipment_id = e.id and o.status in ('scheduled', 'in_progress'))
+				where ou.equipment_id = e.id and o.status in ('scheduled', 'on_the_way', 'in_progress'))
 			 order by e.id limit 1`,
 			[north.id],
 		);
