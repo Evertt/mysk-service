@@ -17,8 +17,14 @@ import {
 
 const logged = vi.spyOn(console, "error");
 
-beforeEach(() => logged.mockImplementation(() => {}));
-afterEach(() => logged.mockReset());
+// In braces: a function a hook returns is run when the test ends, and the spy is one (it was
+// called with nothing once its implementation was reset, which printed an empty line).
+beforeEach(() => {
+	logged.mockImplementation(() => {});
+});
+afterEach(() => {
+	logged.mockReset();
+});
 
 /** The client error lines logged, parsed. */
 const lines = () =>

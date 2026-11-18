@@ -24,8 +24,8 @@ an icon for its category and the log's own sentence.
 - **Reports.** A customer reported a breakdown in their portal and it waits for acceptance.
 - **Alerts.** The system made an order by itself: a maintenance plan came due, a unit's condition
   went critical, a dock door stayed open too long. A door alert from the docks module counts too.
-- **Field.** An engineer started or completed an order, or a checklist was completed with a point
-  that failed.
+- **Field.** An engineer set out for, started or completed an order, or a checklist was completed
+  with a point that failed.
 - **Mine.** Someone changed a record that you created or last changed.
 
 **In the engineer portal** the bell tells an engineer when an order is assigned to them, taken off

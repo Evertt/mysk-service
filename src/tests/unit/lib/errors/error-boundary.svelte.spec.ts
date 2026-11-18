@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, test, vi } from "vite-plus/test";
+import { afterAll, afterEach, beforeEach, expect, onTestFinished, test, vi } from "vite-plus/test";
 import { page } from "vite-plus/test/browser";
 import { render } from "vitest-browser-svelte";
 
@@ -17,18 +17,23 @@ vi.mock("#lib/errors/report.ts", () => ({ report: vi.fn() }));
 const toast = vi.hoisted(() => ({ info: vi.fn() }));
 vi.mock("svelte-sonner", () => ({ toast }));
 
-const logged = vi.spyOn(console, "error");
+// The boundary logs each failure. Silenced for the whole file, not per test: a failure can come from
+// a timer after its test ended. Cleared, not reset, between tests: `mockReset()` and
+// `vi.restoreAllMocks()` would give a spy back its own implementation, which prints.
+const logged = vi.spyOn(console, "error").mockImplementation(() => {});
 
 beforeEach(() => {
-	logged.mockImplementation(() => {});
 	control.error = () => new Error("The part failed");
 });
 
 afterEach(() => {
-	logged.mockReset();
+	logged.mockClear();
 	toast.info.mockReset();
 	vi.useRealTimers();
-	vi.restoreAllMocks();
+});
+
+afterAll(() => {
+	logged.mockRestore();
 });
 
 const works = () => page.getByText("The part works");
@@ -81,10 +86,15 @@ test("a refusal never resets by itself, and says what was refused", async () => 
 	await expect.element(page.getByText("Order ORD-1 not found")).toBeVisible();
 	expect(toast.info).not.toHaveBeenCalled();
 	await expect.element(page.getByText("The part works")).not.toBeInTheDocument();
+	expect(logged).toHaveBeenCalledWith(
+		"test failed",
+		expect.objectContaining({ message: "Order ORD-1 not found" }),
+	);
 });
 
 test("offline, it tries again once the browser is back online", async () => {
 	const online = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+	onTestFinished(() => online.mockRestore());
 	control.error = () => new TypeError("Failed to fetch");
 	control.failures = 1;
 	render(Harness);
@@ -93,6 +103,10 @@ test("offline, it tries again once the browser is back online", async () => {
 		.element(page.getByText("This tries again by itself once you're back online."))
 		.toBeVisible();
 	expect(toast.info).not.toHaveBeenCalled();
+	expect(logged).toHaveBeenCalledWith(
+		"test failed",
+		expect.objectContaining({ message: "Failed to fetch" }),
+	);
 
 	online.mockReturnValue(true);
 	window.dispatchEvent(new Event("online"));

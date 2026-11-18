@@ -147,24 +147,28 @@ describe("the office's rules", () => {
 		expect(await officeTray(north.member, made.number)).toEqual(["alerts"]);
 	});
 
-	test("the engineer starting and completing work is field progress; the office's change isn't", async () => {
+	test("the engineer setting out, starting and completing work is field progress; the office's change isn't", async () => {
 		const made = await makeOrder(north.owner, {
 			engineerId: erikId,
 			status: "scheduled",
 			scheduledFor: Temporal.Now.instant(),
 		});
 		await as(erik, () =>
-			db.transaction((tx) => transitionOrder(tx, { verb: "start", id: made.id })),
+			db.transaction((tx) => transitionOrder(tx, { verb: "depart", id: made.id })),
 		);
 		expect(await officeTray(north.member, made.number)).toEqual(["field"]);
+		await as(erik, () =>
+			db.transaction((tx) => transitionOrder(tx, { verb: "start", id: made.id })),
+		);
+		expect(await officeTray(north.member, made.number)).toEqual(["field", "field"]);
 		// The owner made it: their own entries never ring, the engineer's change of their record does.
-		expect(await officeTray(north.owner, made.number)).toEqual(["field"]);
+		expect(await officeTray(north.owner, made.number)).toEqual(["field", "field"]);
 		await as(north.admin, () =>
 			db.transaction((tx) => transitionOrder(tx, { verb: "set", id: made.id, to: "scheduled" })),
 		);
 		// The admin's change is the owner's record's (they made it), not field progress for the member.
-		expect(await officeTray(north.member, made.number)).toEqual(["field"]);
-		expect(await officeTray(north.owner, made.number)).toEqual(["mine", "field"]);
+		expect(await officeTray(north.member, made.number)).toEqual(["field", "field"]);
+		expect(await officeTray(north.owner, made.number)).toEqual(["mine", "field", "field"]);
 	});
 
 	test("changes to my records: one I created, and one I changed last", async () => {

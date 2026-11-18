@@ -10,21 +10,22 @@
 	import { refreshOnActivity } from "#lib/components/activity/live-activity.svelte.ts";
 	import { unitTitle } from "#lib/equipment/index.ts";
 
-	import { getPortalUnit } from "../../../client.remote.ts";
+	import { getPortalUnit, getPortalUnitHistory } from "../../../client.remote.ts";
 	import OrderList from "../../../order-list.svelte";
 	import type { PageProps } from "./$types";
 
 	let { params }: PageProps = $props();
 
-	const data = $derived(await getPortalUnit(params.serial));
-	const unit = $derived(data.unit);
+	const [unit, orders] = $derived(
+		await Promise.all([getPortalUnit(params.serial), getPortalUnitHistory(params.serial)]),
+	);
 
 	// Live: the unit, and the orders at it.
 	refreshOnRecordChange(
 		() => ({ type: "equipment", id: unit.id }),
 		() => getPortalUnit(params.serial).refresh(),
 	);
-	refreshOnActivity(() => getPortalUnit(params.serial).refresh(), { types: ["order"] });
+	refreshOnActivity(() => getPortalUnitHistory(params.serial).refresh(), { types: ["order"] });
 </script>
 
 <svelte:head>
@@ -45,8 +46,8 @@
 	</header>
 
 	<section class="flex flex-col gap-3" aria-label={m.client_unit_history()}>
-		{#if data.orders.length}
-			<OrderList orders={data.orders} />
+		{#if orders.length}
+			<OrderList {orders} />
 		{:else}
 			<p class="text-sm text-muted-foreground">{m.client_unit_no_orders()}</p>
 		{/if}

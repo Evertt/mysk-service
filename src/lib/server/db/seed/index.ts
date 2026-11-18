@@ -35,6 +35,7 @@ import { addDays, now } from "./clock.ts";
 import { IdSpace } from "./ids.ts";
 import { generateLocations, seedQrToken } from "./locations.ts";
 import { runOrder, type SeedLogEntry, type SeedTenant, seedCollectors } from "./module-seed.ts";
+import { departToday } from "./orders.ts";
 import { generateShltrTenant, shltrSignoffs } from "./shltr/index.ts";
 import { generateSites } from "./sites.ts";
 import { toDay, toMoment, toMomentOrNull } from "./temporal.ts";
@@ -191,6 +192,13 @@ await db.transaction(async (tx) => {
 			tenant.modules.includes(id) && seed.during ? [seed.during] : [],
 		);
 		const { data, placed } = tenant.generate(faker, steps);
+		// Two engineers on their way to today's next jobs; the demo engineer (the first active one,
+		// `createDemoUsers()`) keeps the work of their specialty.
+		const departures = departToday(
+			data.orders,
+			data.engineers,
+			data.engineers.find((e) => e.active)!.specialty,
+		);
 		// The modules' data follows from the core's, with the same faker, and may add to it.
 		const generated: Record<string, unknown> = {};
 		for (const { id, seed } of moduleSeeds) {
@@ -319,9 +327,22 @@ await db.transaction(async (tx) => {
 				createdAt: row.createdAt,
 			}));
 		log(created);
+		const engineerName = new Map(rows.engineers.map((e) => [e.id, e.name]));
+		// The engineers who set out today, as the engineer portal logs it (`transitionOrder()`).
+		log(
+			departures.map(({ order: departed, departedAt }) => ({
+				organizationId,
+				userName: engineerName.get(rowId.engineer(departed.engineerId!)) ?? "",
+				action: "departed" as const,
+				subjectType: "order",
+				subjectId: String(rowId.order(departed.id)),
+				subjectLabel: departed.number,
+				changes: { status: ["scheduled", "on_the_way"] },
+				createdAt: toMoment(departedAt),
+			})),
+		);
 		// The done orders' completions, by their engineers in the field: logged after the modules'
 		// entries, so one at the same moment (a checklist completed on it) comes first, as in the field.
-		const engineerName = new Map(rows.engineers.map((e) => [e.id, e.name]));
 		completions.push(
 			...rows.orders.flatMap((row): SeedLogEntry[] =>
 				row.completedAt && isDoneOrder(row.status)

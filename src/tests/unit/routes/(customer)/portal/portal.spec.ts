@@ -17,6 +17,7 @@ import {
 	getPortalLocation,
 	getPortalOrder,
 	getPortalUnit,
+	getPortalUnitHistory,
 	reportBreakdown,
 } from "#routes/(customer)/portal/client.remote.ts";
 import {
@@ -93,6 +94,9 @@ describe("another customer's records", () => {
 			});
 			expect(await call(getPortalOrder, southern)).toMatchObject({ status: 404 });
 			expect(await call(getPortalUnit, other.serial_number)).toMatchObject({ status: 404 });
+			expect(await call(getPortalUnitHistory, other.serial_number)).toMatchObject({
+				status: 404,
+			});
 			// Ids as the page's URL has them.
 			expect(await call(getPortalLocation, String(other.location_id) as never)).toMatchObject({
 				status: 404,
@@ -202,6 +206,33 @@ describe("a contact in two organizations", () => {
 			expect(await resolveQrCode(await tokenAt(pair.second), contact)).toBeUndefined();
 			expect(await resolveQrCode(await locationAt(pair.second), contact)).toBeUndefined();
 			expect(await resolveQrCode(other.qr_token, contact)).toBeUndefined();
+		});
+	});
+});
+
+describe("a unit in the portal", () => {
+	test("is what it is and where, and its history is its orders, newest first", async () => {
+		// Riedel's unit with the most orders.
+		const [busiest] = await rows<{ id: number; serial_number: string }>(
+			`select e.id, e.serial_number from equipment e join customer c on c.id = e.customer_id
+			 join order_unit u on u.equipment_id = e.id where c.name = 'Riedel B.V.'
+			 group by e.id order by count(*) desc, e.id limit 1`,
+			[],
+		);
+		const numbers = (
+			await rows<{ number: string }>(
+				`select o.number from "order" o join order_unit u on u.order_id = o.id
+				 where u.equipment_id = ? order by o.created_at desc, o.id desc limit 50`,
+				[busiest.id],
+			)
+		).map((row) => row.number);
+		expect(numbers.length).toBeGreaterThan(1);
+		await as(riedel, async () => {
+			const unit = await data(getPortalUnit, busiest.serial_number);
+			expect(unit).toMatchObject({ id: busiest.id, serialNumber: busiest.serial_number });
+			expect(unit).not.toHaveProperty("orders");
+			const history = await data(getPortalUnitHistory, busiest.serial_number);
+			expect(history.map((order) => order.number)).toEqual(numbers);
 		});
 	});
 });

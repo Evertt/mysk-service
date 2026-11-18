@@ -23,15 +23,15 @@ Wat dat betekent voor wie de app gebruikt:
   de dagelijkse taken, zoals de onderhoudsplannen die opdrachten worden. Elke 15 minuten laat een
   andere de simulaties van de demo een stap zetten, zodat de modules Docks en Energie gegevens hebben
   die live lijken.
-- **Opnames en mail hebben een plek.** De opnames van de bugmelder gaan naar een R2-bucket,
-  uitnodigingen en herinneringen gaan via SMTP de deur uit.
+- **Bestanden en mail hebben een plek.** De opnames van de bugmelder en de foto's die mensen
+  toevoegen gaan naar R2-buckets, uitnodigingen en herinneringen gaan via SMTP de deur uit.
 - **Een vangnet.** Cloudflare bewaart 30 dagen geschiedenis van de database, zodat die terug te
   zetten is naar een moment in de tijd.
 - **Staging is echt, maar wegwerp.** Elke push naar `develop` zet een eigen Worker neer, met een
   eigen database, die bij elke deploy opnieuw met de demogegevens wordt gevuld. De inlogpagina daar
   heeft het inloggen met één klik voor de demo; die van productie niet.
 
-<Diagram viewBox="0 0 440 180" label="Een request komt bij de Worker, die het naar het ene Durable Object stuurt. Daarin draaien SvelteKit en de SQLite-database samen. Cron triggers roepen het object ook aan. Opnames van de bugmelder gaan naar een R2-bucket.">
+<Diagram viewBox="0 0 440 180" label="Een request komt bij de Worker, die het naar het ene Durable Object stuurt. Daarin draaien SvelteKit en de SQLite-database samen. Cron triggers roepen het object ook aan. Opnames van de bugmelder en foto's gaan naar R2-buckets.">
 	<g font-size="12" text-anchor="middle">
 		<rect x="4" y="60" width="86" height="44" rx="8" fill="none" stroke="var(--border)" stroke-width="1.5" />
 		<text x="47" y="86" fill="var(--foreground)">Worker</text>
@@ -84,6 +84,12 @@ Wat daaruit volgt:
 `*/15 * * * *` (de stap van de simulaties). De `scheduled()` van de Worker houdt ze uit elkaar met
 `controller.cron` en laat het object `POST /_ops/daily` of `POST /_ops/tick` beantwoorden met de
 `OPS_TOKEN`, als een request van buiten, zodat de taken erin draaien, met zijn database.
+
+**Bestanden.** Twee R2-buckets, gekoppeld in `wrangler.jsonc` en eenmalig gemaakt met
+`wrangler r2 bucket create <name>`: `BUG_REPORTS` (`fieldworks-bug-reports`) bewaart de opnames
+van de bugmeldingen, en `PHOTOS` (`fieldworks-photos`) de foto's. Staging heeft zijn eigen,
+`fieldworks-staging-bug-reports` en `fieldworks-staging-photos`. Op Node gaan de foto's in plaats
+daarvan naar een map (`PHOTOS_DIR`).
 
 **Gegevens binnenhalen.** Een nieuw object begint leeg. `POST /_ops/import` (met de `OPS_TOKEN`)
 vervangt de gegevens van elke tabel door die in een export van een libsql-database, om te beginnen
