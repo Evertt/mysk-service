@@ -76,15 +76,23 @@ de dagelijkse run op: bestanden van de tenant waar geen rij naar wijst, zodra ze
 zodat een formulier dat nog verstuurd wordt zijn bestanden houdt. Zowel de map als de bucket kunnen
 daarvoor hun bestanden op een voorvoegsel opsommen.
 
+**Gedeeld met de documenten van apparaten.** Wegzetten voor de transactie, verwijderen erna, het
+opruimen en een bestand geven zijn één set hulpfuncties, `#lib/server/files/stored.ts`, die de
+[documenten](/wiki/domains/unit-documents) van apparaten ook gebruiken: `withStoredFiles()`,
+`discardFiles()`, `sweepFiles()` (op een sleutelvoorvoegsel en een query van de sleutels waar rijen
+naar wijzen) en `serveStoredFile()`. De sleutels van foto's beginnen met `<tenant>/orders/`, die van
+documenten met `<tenant>/equipment/`, dus de ene opruimronde ziet de bestanden van de andere nooit.
+
 **Verzoekgroottes.** Workers nemen 100 MB per verzoek. Een eigen Node-server (`adapter-node`) neemt
 `BODY_SIZE_LIMIT`, 512 KB tenzij ingesteld: zet die op `26M` (README.md).
 
-- <SourceLink path="src/lib/orders/server/photos.ts" line={235}><code>addPhotosLater()</code></SourceLink>
-  en <SourceLink path="src/lib/orders/server/photos.ts" line={253}><code>removeOrderPhoto()</code></SourceLink>
-- <SourceLink path="src/lib/orders/server/photos.ts" line={145}><code>withStoredPhotos()</code></SourceLink>
-- <SourceLink path="src/lib/orders/server/photos.ts" line={340}><code>sweepOrderPhotos()</code></SourceLink>
-- <SourceLink path="src/lib/orders/server/photos.ts" line={362}><code>servePhoto()</code></SourceLink>
-- <SourceLink path="src/lib/server/access/core.ts" line={121}><code>order_photo</code></SourceLink>
+- <SourceLink path="src/lib/orders/server/photos.ts" line={190}><code>addPhotosLater()</code></SourceLink>
+  en <SourceLink path="src/lib/orders/server/photos.ts" line={208}><code>removeOrderPhoto()</code></SourceLink>
+- <SourceLink path="src/lib/orders/server/photos.ts" line={106}><code>withStoredPhotos()</code></SourceLink>
+- <SourceLink path="src/lib/server/files/stored.ts" line={87}><code>withStoredFiles()</code></SourceLink>
+- <SourceLink path="src/lib/orders/server/photos.ts" line={290}><code>sweepOrderPhotos()</code></SourceLink>
+- <SourceLink path="src/lib/orders/server/photos.ts" line={311}><code>servePhoto()</code></SourceLink>
+- <SourceLink path="src/lib/server/access/core.ts" line={123}><code>order_photo</code></SourceLink>
 - <SourceLink path="src/lib/orders/photos.remote.ts" line={21}><code>addPhotos</code></SourceLink>
   en <SourceLink path="src/lib/orders/photos.remote.ts" line={29}><code>deletePhoto</code></SourceLink>
 - <SourceLink path="src/lib/server/db/schema/orders.ts" line={206} symbol="orderPhoto"><code>order_photo</code></SourceLink>

@@ -83,7 +83,7 @@ formulier dat direct een functie op de server aanroept) alleen voor managers.
 `orderTypeProblems()` vindt wat er mis is (een type dat nodig is maar verborgen, een naam die al
 bezet is), de transactie vervangt of verwijdert de rij, en de wijziging wordt gelogd.
 
-- <SourceLink path="src/lib/models.ts" line={36}><code>orderTypes</code> en correctief werk</SourceLink>
+- <SourceLink path="src/lib/models.ts" line={51}><code>orderTypes</code> en correctief werk</SourceLink>
 - <SourceLink path="src/lib/orders/types.ts" line={58}><code>offeredOrderTypes()</code></SourceLink> en <SourceLink path="src/lib/orders/types.ts" line={91}><code>orderTypeProblems()</code></SourceLink>
 - <SourceLink path="src/lib/orders/server/types.ts" line={32}><code>requiredOrderTypes()</code></SourceLink>
 - <SourceLink path="src/lib/server/db/schema/orders.ts" line={102} symbol="orderTypeSetting"><code>order_type_setting</code></SourceLink>

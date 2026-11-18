@@ -63,7 +63,7 @@ export const variables = defineEnvVars({
 	},
 	PHOTOS_DIR: {
 		description:
-			"Optional, not on Cloudflare (whose photos go to the `PHOTOS` R2 bucket). The folder the orders' photos (customers' reports, engineers on site, the office) are stored in; `.photos` by default.",
+			"Optional, not on Cloudflare (whose photos go to the `PHOTOS` R2 bucket). The folder the orders' photos (customers' reports, engineers on site, the office) and the units' documents are stored in; `.photos` by default.",
 		schema: (value) => value || ".photos",
 	},
 	TIMING_LOGS: {
