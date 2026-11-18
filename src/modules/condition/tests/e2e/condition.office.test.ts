@@ -1,15 +1,16 @@
 /**
  * The condition in North's office: the equipment list's condition and status columns, filtered by
- * status; a unit's card, where a member records its condition (its status following, a newer one
- * in its place); and the parts used on a unit, from its orders' materials. The columns' other
- * filters and their sort, and what recording a condition stores and logs, are `connect.spec.ts`'s
- * and `conditions.spec.ts`'s.
+ * status; a unit's card, where a member records its condition as its defects on NEN 2767's scales
+ * (the score shown as they're graded, its status following, a newer one in its place, the defects
+ * and photo in its history); and the parts used on a unit, from its orders' materials. The columns'
+ * other filters and their sort, and what recording a condition stores and logs, are
+ * `connect.spec.ts`'s and `conditions.spec.ts`'s.
  */
 import { describe, expect, test } from "vite-plus/test";
 
 import { organizations, rows, useApp } from "#e2e/app.ts";
 
-import { pageLocators, unitStates } from "./helpers.ts";
+import { pageLocators, png, unitStates } from "./helpers.ts";
 
 const { north } = organizations;
 const app = useApp();
@@ -33,14 +34,14 @@ describe("the equipment list", () => {
 });
 
 describe("a unit's card", () => {
-	test("records a condition, which makes the unit critical, and a newer one in its place", async () => {
+	test("records a condition from its defects, which makes the unit critical, and a newer one in its place", async () => {
 		const [unit] = await rows<{ id: number; serial_number: string }>(
 			`select e.id, e.serial_number from equipment e where e.organization_id = ?
 			 and e.status = 'operational'
 			 and not exists (select 1 from checklist k where k.equipment_id = e.id)
 			 and not exists (select 1 from unit_condition u where u.equipment_id = e.id)
 			 and not exists (select 1 from order_unit ou join "order" o on o.id = ou.order_id
-				where ou.equipment_id = e.id and o.status in ('scheduled', 'in_progress'))
+				where ou.equipment_id = e.id and o.status in ('scheduled', 'on_the_way', 'in_progress'))
 			 order by e.id limit 1`,
 			[north.id],
 		);
@@ -49,19 +50,36 @@ describe("a unit's card", () => {
 		await card().getByText("No condition recorded yet.").waitFor();
 
 		await card().getByRole("button", { name: "Record condition" }).click();
-		// The browser holds the input to 0–100 (the server too: `schemas.spec.ts`).
-		expect(await dialog().getByLabel("Condition (%)").getAttribute("max")).toBe("100");
-		await dialog().getByLabel("Condition (%)").fill("30");
+		// No defects yet: 1. Each one graded shows the worst so far.
+		await dialog().locator('[data-live-score="1"]').waitFor();
+		await dialog().getByRole("button", { name: "Add defect" }).click();
+		const defect = dialog().locator('[data-defect="0"]');
+		await defect.getByLabel("Defect", { exact: true }).fill("Onderste torsieveer gebroken");
+		await defect.getByLabel("Severity").selectOption("severe");
+		await defect.getByLabel("Extent").selectOption("4");
+		await defect.getByLabel("Intensity").selectOption("advanced");
+		await dialog().locator('[data-live-score="5"]').waitFor();
+		await defect
+			.locator('input[type="file"]:not([name])')
+			.setInputFiles({ name: "veer.png", mimeType: "image/png", buffer: png });
+		await defect.locator("[data-defect-photos] img").waitFor();
 		await dialog().getByLabel("Advice").fill("Veerpakket vervangen (SD-001).");
 		await dialog().getByRole("button", { name: "Save condition" }).click();
 		await app.toast("Condition recorded");
-		await card().locator('[data-condition="30"]').first().waitFor();
+		await card().locator('[data-condition="5"]').first().waitFor();
 		expect(await card().locator("[data-status]").getAttribute("data-status")).toBe("critical");
-		expect(await card().innerText()).toContain("Veerpakket vervangen (SD-001).");
+		const text = await card().innerText();
+		expect(text).toContain("Veerpakket vervangen (SD-001).");
+		expect(text).toContain("Onderste torsieveer gebroken");
+		// Its photo, served to the office.
+		const shot = card().locator("[data-defect-photo]").first();
+		await shot.scrollIntoViewIfNeeded();
+		await expect
+			.poll(() => shot.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth))
+			.toBeGreaterThan(0);
 
-		// A newer one takes its place; the older one stays in its history.
+		// A newer one, without defects, takes its place; the older one stays in its history.
 		await card().getByRole("button", { name: "Record condition" }).click();
-		await dialog().getByLabel("Condition (%)").fill("85");
 		await dialog().getByRole("button", { name: "Save condition" }).click();
 		await app.toast("Condition recorded");
 		await expect.poll(() => card().locator("[data-condition-entry]").count()).toBe(2);

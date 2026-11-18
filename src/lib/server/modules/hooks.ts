@@ -18,15 +18,21 @@ import { integrationTenant } from "#lib/server/auth/integrations.ts";
  * `(modules)` group (`#lib/modules/route-guard.ts`), which doesn't run before those; and no route
  * guards the module's remote functions: they refuse tenants without the module through the set
  * they're made with (`moduleRemote()` in `#lib/server/remote-functions.ts`).
+ *
+ * In the office's groups only office members get through. In a portal's (`(field)`, `(customer)`),
+ * whose shell the guard in `hooks.server.ts` already keeps to its own (and the office), any role
+ * does: the module's handler checks what it serves itself, e.g. the condition module's photos of
+ * defects with the access registry.
  */
-function guardModule(id: ModuleId) {
-	requireModule(id);
+function guardModule(id: ModuleId, routeId: string | null | undefined) {
+	const portal = !!routeId && /^\/\((?:field|customer)\)\//.test(routeId);
+	requireModule(id, { anyRole: portal });
 }
 
 /** A server `load` or request handler of module `id`'s route that refuses tenants without it first. */
 export function guarded<Event, Result>(id: ModuleId, handler: (event: Event) => Result) {
 	return (event: Event): Result => {
-		guardModule(id);
+		guardModule(id, (event as { route?: { id: string | null } }).route?.id);
 		return handler(event);
 	};
 }

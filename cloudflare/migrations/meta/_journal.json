@@ -204,6 +204,20 @@
       "when": 1794997011772,
       "tag": "0028_add-reporter-locale",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1794998946278,
+      "tag": "0029_condition-nen2767",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1795002202129,
+      "tag": "0030_add-equipment-documents",
+      "breakpoints": true
     }
   ]
 }

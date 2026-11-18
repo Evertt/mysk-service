@@ -100,16 +100,22 @@ export const getClientAttention = forCustomers.query(async () => {
 });
 
 /**
- * The customer's unit `serialNumber`'s status by its condition (or a 404), with what its state asks
- * for behind a planned one (`concern`), as the badge on the office's unit shows them: not its
- * scores, advice or thresholds, which the office keeps.
+ * The customer's unit `serialNumber`'s current score on NEN 2767's scale ("3 · Redelijk") and its
+ * status by its condition (or a 404), with what its state asks for behind a planned one
+ * (`concern`), as the badge on the office's unit shows them: not its defects, advice or thresholds,
+ * which the office keeps.
  */
 export const getClientUnitCondition = forCustomers.query(v.string(), async (serialNumber) => {
 	const access = await currentCustomer();
 	const condition = conditionSql();
 	return orNotFound(
 		await db
-			.select({ unitId: equipment.id, status: condition.status, concern: condition.concern })
+			.select({
+				unitId: equipment.id,
+				score: condition.score,
+				status: condition.status,
+				concern: condition.concern,
+			})
 			.from(equipment)
 			.where(and(eq(equipment.serialNumber, serialNumber), customerEquipment(access))),
 		m.client_unit_not_found({ serial: serialNumber }),

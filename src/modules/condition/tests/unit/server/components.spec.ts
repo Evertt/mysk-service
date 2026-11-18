@@ -106,7 +106,7 @@ describe("a unit's components, in SHLTR's office", () => {
 		expect(card.components[0]).toMatchObject({
 			name: "Torsieveerpakket",
 			article: { sku: "SD-001" },
-			score: 22,
+			score: 5,
 			status: "critical",
 		});
 		expect(card.components[0].checkpointIds).toHaveLength(2);
@@ -242,7 +242,14 @@ describe("a unit's components, in SHLTR's office", () => {
 			submit(recordCondition, {
 				serialNumber: unit.serial_number,
 				componentId: String(made.id),
-				score: 35,
+				defects: [
+					{
+						description: "Draadbreuk bij de trommel",
+						severity: "severe",
+						extent: "4",
+						intensity: "advanced",
+					},
+				],
 				advice: "Kabelset vervangen (SD-002).",
 			}),
 		);
@@ -258,7 +265,7 @@ describe("a unit's components, in SHLTR's office", () => {
 			),
 		).toEqual([
 			{
-				score: 35,
+				score: 5,
 				advice: "Kabelset vervangen (SD-002).",
 				source: "office",
 				order_id: null,
@@ -272,7 +279,7 @@ describe("a unit's components, in SHLTR's office", () => {
 		expect(state.concern).toBe("critical");
 		const card = await as(jan, () => data(getUnitComponents, unit.serial_number));
 		expect(card.components.find((each) => each.id === made.id)).toMatchObject({
-			score: 35,
+			score: 5,
 			status: part.status,
 			concern: "critical",
 		});
@@ -340,7 +347,7 @@ describe("a unit's components, in SHLTR's office", () => {
 		expect(shown.components.map((part) => part.number)).toEqual(["OC-1041", "OC-1042"]);
 		expect(shown.components[0]).toMatchObject({
 			name: "Torsieveerpakket",
-			score: 22,
+			score: 5,
 			advice: "Veerpakket vervangen (SD-001) — cyclusteller boven 90%.",
 		});
 	});

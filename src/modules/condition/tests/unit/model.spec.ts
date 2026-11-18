@@ -6,7 +6,11 @@ import {
 	componentNumber,
 	componentStatus,
 	concernOf,
+	currentScore,
 	defaultThresholds,
+	elementScore,
+	elementScores,
+	recordScore,
 	rolledUpStatus,
 	isWorkingDay,
 	scoreBand,
@@ -35,40 +39,39 @@ describe("a unit's status", () => {
 		expect(unitStatus(facts({ inspection: "expiring" }), thresholds).status).toBe("ok");
 	});
 
-	test("is critical below the critical threshold, attention below the attention one", () => {
-		expect(concernOf(facts({ score: 0 }), thresholds)).toBe("critical");
-		expect(concernOf(facts({ score: 39 }), thresholds)).toBe("critical");
-		expect(concernOf(facts({ score: 40 }), thresholds)).toBe("attention");
-		expect(concernOf(facts({ score: 69 }), thresholds)).toBe("attention");
-		expect(concernOf(facts({ score: 70 }), thresholds)).toBe("ok");
-		expect(concernOf(facts({ score: 100 }), thresholds)).toBe("ok");
+	test("is critical from the critical threshold, attention from the attention one", () => {
+		expect(concernOf(facts({ score: 6 }), thresholds)).toBe("critical");
+		expect(concernOf(facts({ score: 5 }), thresholds)).toBe("critical");
+		expect(concernOf(facts({ score: 4 }), thresholds)).toBe("attention");
+		expect(concernOf(facts({ score: 3 }), thresholds)).toBe("ok");
+		expect(concernOf(facts({ score: 1 }), thresholds)).toBe("ok");
 	});
 
 	test("follows the tenant's thresholds", () => {
-		const strict = { critical: 50, attention: 80 };
-		expect(concernOf(facts({ score: 45 }), strict)).toBe("critical");
-		expect(concernOf(facts({ score: 75 }), strict)).toBe("attention");
-		expect(concernOf(facts({ score: 80 }), strict)).toBe("ok");
+		const strict = { critical: 4, attention: 3 };
+		expect(concernOf(facts({ score: 4 }), strict)).toBe("critical");
+		expect(concernOf(facts({ score: 3 }), strict)).toBe("attention");
+		expect(concernOf(facts({ score: 2 }), strict)).toBe("ok");
 	});
 
 	test("is critical when the inspection has expired, whatever the score", () => {
-		expect(concernOf(facts({ score: 95, inspection: "expired" }), thresholds)).toBe("critical");
+		expect(concernOf(facts({ score: 1, inspection: "expired" }), thresholds)).toBe("critical");
 		expect(concernOf(facts({ inspection: "expired" }), thresholds)).toBe("critical");
 	});
 
 	test("needs attention after a rejected inspection, or with open advice", () => {
-		expect(concernOf(facts({ score: 95, inspection: "rejected" }), thresholds)).toBe("attention");
-		expect(concernOf(facts({ score: 95, advice: "Rollen vervangen." }), thresholds)).toBe(
+		expect(concernOf(facts({ score: 1, inspection: "rejected" }), thresholds)).toBe("attention");
+		expect(concernOf(facts({ score: 1, advice: "Rollen vervangen." }), thresholds)).toBe(
 			"attention",
 		);
 		// Blank advice is none.
-		expect(concernOf(facts({ score: 95, advice: "  " }), thresholds)).toBe("ok");
+		expect(concernOf(facts({ score: 1, advice: "  " }), thresholds)).toBe("ok");
 		// A low score is worse than a rejection.
-		expect(concernOf(facts({ score: 20, inspection: "rejected" }), thresholds)).toBe("critical");
+		expect(concernOf(facts({ score: 6, inspection: "rejected" }), thresholds)).toBe("critical");
 	});
 
 	test("is planned while an open order on it is scheduled, keeping what it's for", () => {
-		expect(unitStatus(facts({ score: 22, planned: true }), thresholds)).toEqual({
+		expect(unitStatus(facts({ score: 5, planned: true }), thresholds)).toEqual({
 			status: "planned",
 			concern: "critical",
 		});
@@ -76,7 +79,7 @@ describe("a unit's status", () => {
 			status: "planned",
 			concern: "attention",
 		});
-		expect(unitStatus(facts({ score: 90, planned: true }), thresholds)).toEqual({
+		expect(unitStatus(facts({ score: 1, planned: true }), thresholds)).toEqual({
 			status: "planned",
 			concern: "ok",
 		});
@@ -85,73 +88,117 @@ describe("a unit's status", () => {
 
 describe("a score's band", () => {
 	test("is low, fair or good by the thresholds", () => {
-		expect(scoreBand(22, thresholds)).toBe("low");
-		expect(scoreBand(40, thresholds)).toBe("fair");
-		expect(scoreBand(69, thresholds)).toBe("fair");
-		expect(scoreBand(70, thresholds)).toBe("good");
+		expect(scoreBand(6, thresholds)).toBe("low");
+		expect(scoreBand(5, thresholds)).toBe("low");
+		expect(scoreBand(4, thresholds)).toBe("fair");
+		expect(scoreBand(3, thresholds)).toBe("good");
+		expect(scoreBand(1, thresholds)).toBe("good");
 	});
 });
 
-test("thresholds are whole percentages, critical below attention", () => {
-	expect(validThresholds({ critical: 40, attention: 70 })).toBe(true);
-	expect(validThresholds({ critical: 1, attention: 100 })).toBe(true);
-	expect(validThresholds({ critical: 70, attention: 70 })).toBe(false);
-	expect(validThresholds({ critical: 80, attention: 70 })).toBe(false);
-	expect(validThresholds({ critical: 0, attention: 70 })).toBe(false);
-	expect(validThresholds({ critical: 40, attention: 101 })).toBe(false);
-	expect(validThresholds({ critical: 40.5, attention: 70 })).toBe(false);
+test("thresholds are scores from 2 to 6, attention below critical", () => {
+	expect(validThresholds({ critical: 5, attention: 4 })).toBe(true);
+	expect(validThresholds({ critical: 6, attention: 2 })).toBe(true);
+	expect(validThresholds({ critical: 3, attention: 2 })).toBe(true);
+	expect(validThresholds({ critical: 4, attention: 4 })).toBe(false);
+	expect(validThresholds({ critical: 4, attention: 5 })).toBe(false);
+	expect(validThresholds({ critical: 5, attention: 1 })).toBe(false);
+	expect(validThresholds({ critical: 7, attention: 4 })).toBe(false);
+	expect(validThresholds({ critical: 4.5, attention: 3 })).toBe(false);
+});
+
+describe("defects and scores (worst defect wins)", () => {
+	const spring = { severity: "severe", extent: 3, intensity: "advanced" } as const; // 4
+	const seal = { severity: "slight", extent: 2, intensity: "initial" } as const; // 1
+	const cable = { severity: "serious", extent: 5, intensity: "final" } as const; // 6
+
+	test("a condition without defects scores 1, with them its worst defect's", () => {
+		expect(recordScore([])).toBe(1);
+		expect(recordScore([seal])).toBe(1);
+		expect(recordScore([seal, spring])).toBe(4);
+		expect(recordScore([spring, cable, seal])).toBe(6);
+	});
+
+	test("an element's score is its worst defect's, or 1 without defects", () => {
+		const defects = [
+			{ ...spring, componentId: 1 },
+			{ ...seal, componentId: null },
+			{ ...cable, componentId: 2 },
+			{ ...seal, componentId: 1 },
+		];
+		expect(elementScore(defects, 1)).toBe(4);
+		expect(elementScore(defects, 2)).toBe(6);
+		expect(elementScore(defects, null)).toBe(1);
+		expect(elementScore(defects, 3)).toBe(1);
+		expect(elementScores(defects)).toEqual(
+			new Map([
+				[1, 4],
+				[null, 1],
+				[2, 6],
+			]),
+		);
+	});
+
+	test("a unit's current score is the worst of its own and its components' latest", () => {
+		expect(currentScore(null, [])).toBeNull();
+		expect(currentScore(null, [null])).toBeNull();
+		expect(currentScore(2, [])).toBe(2);
+		expect(currentScore(2, [5, null, 3])).toBe(5);
+		expect(currentScore(null, [3])).toBe(3);
+		expect(currentScore(6, [1])).toBe(6);
+	});
 });
 
 describe("a component's status and its unit's", () => {
 	const part = (score: number | null, advice: string | null = null) => ({ score, advice });
 
 	test("a component's follows the unit's rules from its own condition", () => {
-		expect(componentStatus(part(22), facts({ score: 90 }), thresholds)).toEqual({
+		expect(componentStatus(part(5), facts({ score: 1 }), thresholds)).toEqual({
 			status: "critical",
 			concern: "critical",
 		});
-		expect(componentStatus(part(55), facts(), thresholds).status).toBe("attention");
-		expect(componentStatus(part(90, "Kabelset meenemen."), facts(), thresholds).status).toBe(
+		expect(componentStatus(part(4), facts(), thresholds).status).toBe("attention");
+		expect(componentStatus(part(1, "Kabelset meenemen."), facts(), thresholds).status).toBe(
 			"attention",
 		);
 		// Not the unit's own score or advice.
-		expect(
-			componentStatus(part(90), facts({ score: 10, advice: "Kapot" }), thresholds).status,
-		).toBe("ok");
+		expect(componentStatus(part(1), facts({ score: 6, advice: "Kapot" }), thresholds).status).toBe(
+			"ok",
+		);
 		expect(componentStatus(part(null), facts(), thresholds).status).toBe("ok");
 	});
 
 	test("a component's takes its unit's inspection and planned work", () => {
-		expect(componentStatus(part(95), facts({ inspection: "expired" }), thresholds).status).toBe(
+		expect(componentStatus(part(1), facts({ inspection: "expired" }), thresholds).status).toBe(
 			"critical",
 		);
-		expect(componentStatus(part(95), facts({ inspection: "rejected" }), thresholds).status).toBe(
+		expect(componentStatus(part(1), facts({ inspection: "rejected" }), thresholds).status).toBe(
 			"attention",
 		);
-		expect(componentStatus(part(22), facts({ planned: true }), thresholds)).toEqual({
+		expect(componentStatus(part(5), facts({ planned: true }), thresholds)).toEqual({
 			status: "planned",
 			concern: "critical",
 		});
 	});
 
 	test("a unit's is the worst of its own and its components'", () => {
-		expect(rolledUpStatus(facts({ score: 90 }), [], thresholds)).toEqual(
-			unitStatus(facts({ score: 90 }), thresholds),
+		expect(rolledUpStatus(facts({ score: 1 }), [], thresholds)).toEqual(
+			unitStatus(facts({ score: 1 }), thresholds),
 		);
-		expect(rolledUpStatus(facts({ score: 90 }), [part(84), part(22)], thresholds)).toEqual({
+		expect(rolledUpStatus(facts({ score: 1 }), [part(2), part(5)], thresholds)).toEqual({
 			status: "critical",
 			concern: "critical",
 		});
-		expect(rolledUpStatus(facts({ score: 30 }), [part(84), part(95)], thresholds).status).toBe(
+		expect(rolledUpStatus(facts({ score: 5 }), [part(2), part(1)], thresholds).status).toBe(
 			"critical",
 		);
-		expect(rolledUpStatus(facts({ score: 90 }), [part(60), part(95)], thresholds).status).toBe(
+		expect(rolledUpStatus(facts({ score: 1 }), [part(4), part(1)], thresholds).status).toBe(
 			"attention",
 		);
 		expect(rolledUpStatus(facts(), [part(null)], thresholds).status).toBe("ok");
 		// Planned while its work is in hand, keeping what's worst behind it.
 		expect(
-			rolledUpStatus(facts({ score: 90, planned: true }), [part(60), part(22)], thresholds),
+			rolledUpStatus(facts({ score: 1, planned: true }), [part(4), part(5)], thresholds),
 		).toEqual({ status: "planned", concern: "critical" });
 	});
 

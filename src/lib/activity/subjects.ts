@@ -276,6 +276,18 @@ export const coreSubjectTypes = {
 	 * place among the order's photos (`#1`); logged with its order as its parent, on whose page it is.
 	 */
 	order_photo: { noun: m.activity_subject_order_photo, onParentPage: true },
+	/**
+	 * A unit's document (`equipment_document`), by its title; logged with its unit as its parent, on
+	 * whose page it is.
+	 */
+	equipment_document: {
+		noun: m.activity_subject_equipment_document,
+		onParentPage: true,
+		fields: {
+			title: { label: m.activity_field_title },
+			kind: { label: m.activity_field_kind, format: labelled("equipmentDocumentKind") },
+		},
+	},
 	/** An optional module (`#lib/modules/manifests.ts`), by its id; shown by its name. */
 	module: {
 		noun: m.activity_subject_module,

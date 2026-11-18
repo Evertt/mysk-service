@@ -171,6 +171,13 @@ Read `docs/agents/tenancy.md`, "One way"; `hand-written.spec.ts` refuses the res
 These live in `src/lib/server/records.ts`. A lookup done once per request is `perRequest(find)`
 (`#lib/server/per-request.ts`).
 
+**A record's stored files** (an order's photos, a unit's documents) go through
+`#lib/server/files/stored.ts`: `withStoredFiles()` stores before the transaction that records them,
+`discardFiles()` deletes after the one that lets go of them (a removal's `afterwards`),
+`sweepFiles()` is the daily sweep of a kind's prefix, and `serveStoredFile()` serves one to whoever
+may read its record. A file's type is what its bytes say (`sniffType()`, `files/types.ts`). See
+`docs/agents/orders.md`, "Photos".
+
 **A tenant's table** is declared with `tenantTable()`, its references with `tenantRef()` or
 `optionalTenantRef()`, and their relations with `tenantOne()` (`#lib/server/db/columns.ts`). The
 references are composite foreign keys that include the tenant.

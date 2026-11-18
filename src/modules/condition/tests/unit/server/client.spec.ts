@@ -33,7 +33,7 @@ const weggemans = demoAccount("rob@weggemans.example");
 const serialOf = (name: string) =>
 	value<string>(
 		`select e.serial_number from equipment e join customer c on c.id = e.customer_id
-		 where c.name = ? order by (select min(score) from unit_condition u where u.equipment_id = e.id),
+		 where c.name = ? order by (select max(score) from unit_condition u where u.equipment_id = e.id) desc,
 		 e.id limit 1`,
 		[name],
 	);
@@ -47,14 +47,27 @@ const serialIn = (organization: string, not = 0) =>
 	);
 
 describe("a unit's condition in the customer portal", () => {
-	test("is its status as the office has it, and nothing more", async () => {
+	test("is its score and status as the office has them, and nothing more", async () => {
 		const serial = await serialOf("Riedel B.V.");
 		const office = await as(shltr.member, () => data(getUnitCondition, serial));
 		const answer = await as(riedel, () => data(getClientUnitCondition, serial));
 		expect(answer).toEqual({
 			unitId: office.unit.id,
+			score: office.score,
 			status: office.status,
 			concern: office.concern,
+		});
+		// Riedel's worst, the dock 07 door with its broken torsion spring: 5 (Slecht).
+		expect(answer.score).toBe(5);
+	});
+
+	test("of the unit at 3 · Redelijk, as the mockup's slide 6 has it", async () => {
+		const serial = await value<string>(
+			`select e.serial_number from equipment e join customer c on c.id = e.customer_id
+			 where c.name = 'Riedel B.V.' and e.name = 'Sectionaaldeur D-09'`,
+		);
+		expect(await as(riedel, () => data(getClientUnitCondition, serial))).toMatchObject({
+			score: 3,
 		});
 	});
 

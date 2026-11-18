@@ -1,4 +1,6 @@
 export { default as CategoriesCard } from "./categories/categories-card.svelte";
+export { default as DocumentList } from "./documents/document-list.svelte";
+export { default as DocumentsCard } from "./documents/documents-card.svelte";
 export { default as ServiceStats } from "./detail/service-stats.svelte";
 export { default as ServiceTimeline } from "./detail/service-timeline.svelte";
 export { default as SpecificationsCard } from "./detail/specifications-card.svelte";

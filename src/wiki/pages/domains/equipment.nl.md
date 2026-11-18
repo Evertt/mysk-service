@@ -36,6 +36,13 @@ voor een vijftiende. Elke opdracht toont daar zijn foto's, als kleine miniaturen
 monteursportaal en het klantportaal tonen een aantal per opdracht bij de opdrachten van een
 apparaat (zie [Foto's bij een opdracht](/wiki/orders/photos)).
 
+## Handleidingen en documenten
+
+Een apparaat bewaart zijn handleidingen, certificaten, tekeningen en prestatieverklaringen (CE).
+Het kantoor uploadt ze op de pagina van het apparaat; de monteurs openen ze bij het apparaat in hun
+portaal, en de klantcontacten in het hunne (zie
+[Handleidingen en documenten](/wiki/domains/unit-documents)).
+
 ## QR-codes
 
 Elk apparaat en elke locatie heeft een eigen QR-code, op een label gedrukt en erop geplakt. Wat de
@@ -101,7 +108,7 @@ alleen het adres van de vestiging. De scopes (`officeUnits()`, `engineerUnits()`
 `customerUnits(access)`) halen hun rijen uit het access registry. Zie
 [wat er van het werk aan een opdracht wordt bijgehouden](/wiki/orders/work-record).
 
-- <SourceLink path="src/lib/server/db/schema/equipment.ts" line={81}><code>equipment</code></SourceLink>, <SourceLink path="src/lib/server/db/schema/equipment.ts" line={51} symbol="equipmentLocation"><code>equipment_location</code></SourceLink>
+- <SourceLink path="src/lib/server/db/schema/equipment.ts" line={82}><code>equipment</code></SourceLink>, <SourceLink path="src/lib/server/db/schema/equipment.ts" line={52} symbol="equipmentLocation"><code>equipment_location</code></SourceLink>
 - <SourceLink path="src/lib/equipment/server/qr.ts" line={63}><code>resolveQrCode()</code></SourceLink> en <SourceLink path="src/lib/equipment/server/qr.ts" line={84}><code>qrDestination()</code></SourceLink>
 - <SourceLink path="src/routes/q/[token]/+server.ts" line={17} symbol="GET">de route <code>/q/[token]</code></SourceLink>
 - <SourceLink path="src/lib/equipment/labels/labels.remote.ts" line={18}><code>getLabelSheet</code></SourceLink>

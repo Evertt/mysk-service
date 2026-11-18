@@ -10,14 +10,11 @@ import { guarded, guardedActions, guardedIntegration } from "#lib/server/modules
 vi.mock("#lib/server/db/index.ts", () => ({ db: {} }));
 // An integration endpoint's token is looked up in the database: answered here.
 vi.mock("#lib/server/auth/integrations.ts", () => ({ integrationTenant: vi.fn() }));
-vi.mock("$app/server", () => ({
-	getRequestEvent: () => ({
-		locals: {
-			user: { id: "u1" },
-			tenant: { organizationId: "north", roles: ["member"], modules: ["widgets"] },
-		},
-	}),
+const locals = vi.hoisted(() => ({
+	user: { id: "u1" },
+	tenant: { organizationId: "north", roles: ["member"], modules: ["widgets"] },
 }));
+vi.mock("$app/server", () => ({ getRequestEvent: () => ({ locals }) }));
 
 /** The status a call fails with, or `undefined` when it doesn't. */
 function statusOf(call: () => unknown) {
@@ -43,6 +40,20 @@ test("a module route's loads, handlers and actions refuse the tenants without it
 	expect(statusOf(() => guardedActions(lacks, actions).save("save"))).toBe(404);
 	guardedActions(has, actions).default("default");
 	expect(ran).toEqual(["load", "default"]);
+});
+
+test("in a portal's group, any role gets through (the handler checks what it serves); in the office's, only office members", () => {
+	const handler = () => "served";
+	const at = (id: string) => ({ route: { id } });
+	locals.tenant.roles = ["engineer"];
+	try {
+		expect(guarded(has, handler)(at("/(field)/(modules)/widgets/photos/[id]"))).toBe("served");
+		expect(guarded(has, handler)(at("/(customer)/(modules)/widgets/portal"))).toBe("served");
+		expect(statusOf(() => guarded(has, handler)(at("/(app)/(modules)/widgets")))).toBe(403);
+		expect(statusOf(() => guarded(lacks, handler)(at("/(field)/(modules)/gadgets/x")))).toBe(404);
+	} finally {
+		locals.tenant.roles = ["member"];
+	}
 });
 
 test("an integration endpoint runs as the system in its token's tenant, and not without one", async () => {

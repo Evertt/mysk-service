@@ -163,6 +163,20 @@ describe("the customer portal", () => {
 		await app.page.waitForURL((url) => url.pathname === `/portal/equipment/${unit.serial_number}`);
 		const card = app.page.locator(`[data-client-unit="${unit.serial_number}"]`);
 		await card.locator("[data-client-condition] [data-status]").waitFor();
+		// Its score on NEN 2767's scale, as the office has it, beside it.
+		const [current] = await rows<{ score: number | null }>(
+			`select max(u.score) as score from equipment e
+			 left join unit_condition u on u.id = (
+				select l.id from unit_condition l where l.equipment_id = e.id and l.component_id is null
+				order by l.recorded_at desc, l.id desc limit 1)
+			 or u.id in (select (select l.id from unit_condition l where l.component_id = c.id
+				order by l.recorded_at desc, l.id desc limit 1) from component c where c.equipment_id = e.id)
+			 where e.serial_number = ?`,
+			[unit.serial_number],
+		);
+		if (current.score !== null) {
+			await card.locator(`[data-client-condition] [data-condition="${current.score}"]`).waitFor();
+		}
 		await card.locator("[data-client-inspection-fact]").waitFor();
 		const last = await card
 			.locator("[data-client-last-maintenance]")

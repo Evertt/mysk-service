@@ -30,7 +30,12 @@ export default async function setup(project: TestProject) {
 	try {
 		const run = (command: string, args: string[]) =>
 			execFileSync(command, args, {
-				env: { ...process.env, DATABASE_URL: `file:${template}` },
+				// The seed's files (the units' demo documents) beside it, not in the checkout.
+				env: {
+					...process.env,
+					DATABASE_URL: `file:${template}`,
+					PHOTOS_DIR: join(folder, "files"),
+				},
 				stdio: ["ignore", "pipe", "pipe"],
 			});
 		run("node_modules/.bin/drizzle-kit", ["migrate"]);

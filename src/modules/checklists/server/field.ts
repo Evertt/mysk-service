@@ -154,7 +154,9 @@ export function completeChecklist(by: Filler, id: number) {
 		const found = await findFieldChecklist(tx, by, id);
 		const answers = await tx
 			.select({
+				id: checklistResult.id,
 				templateItemId: checklistResult.templateItemId,
+				text: checklistResult.text,
 				result: checklistResult.result,
 				remark: checklistResult.remark,
 			})
@@ -195,7 +197,13 @@ export function completeChecklist(by: Filler, id: number) {
 				equipmentId: found.equipmentId,
 				engineerId,
 			},
-			points: answers.map(({ templateItemId, result }) => ({ templateItemId, result })),
+			points: answers.map(({ id, templateItemId, text, result, remark }) => ({
+				id,
+				templateItemId,
+				text,
+				result,
+				remark,
+			})),
 		});
 		if (problems.length) error(400, problems[0].message);
 		return found.order.number;

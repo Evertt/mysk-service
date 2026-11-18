@@ -1,7 +1,8 @@
 /**
- * A unit's condition and status in SQL, as `rolledUpStatus()` in `../model.ts` has them: correlated
- * subqueries over the `equipment` row of the query they go in. Its latest condition as a whole, its
- * thresholds (the tenant's settings, read in SQL so the equipment list's columns, which are built
+ * A unit's condition and status in SQL, as `rolledUpStatus()` and `currentScore()` in `../model.ts`
+ * have them: correlated subqueries over the `equipment` row of the query they go in. Its latest
+ * condition as a whole, its current score (the worst of that one's and its components' latest, on
+ * NEN 2767's scale: higher is worse), its thresholds (the tenant's settings, read in SQL so the equipment list's columns, which are built
  * at once, can have them), whether an open order on it is scheduled, what the other modules know
  * (`condition.signals`: checklists' inspection status, maintenance's next visit; null without
  * them), and its components' latest conditions, the worst of which its status takes in. A
@@ -77,6 +78,12 @@ const asScore = (score: SQL) =>
  */
 export const componentScoreSql = () => asScore(latestOfComponent(sql`${unitCondition.score}`));
 
+/**
+ * A score's place in a sort, worst first: the highest first, none last (`-coalesce(score, 0)`
+ * ascending).
+ */
+const worstFirst = (score: SQL) => sql`-coalesce(${score}, 0)`;
+
 /** The SQL of a unit's condition and status (see above). */
 export function conditionSql() {
 	const signals = collectNow(unitSignals, undefined);
@@ -89,7 +96,17 @@ export function conditionSql() {
 			and(eq(unitCondition.equipmentId, equipment.id), isNull(unitCondition.componentId)),
 			what,
 		);
-	const score = asScore(latest(sql`${unitCondition.score}`));
+	/** Its own latest condition's score, as a whole. */
+	const ownScore = asScore(latest(sql`${unitCondition.score}`));
+	/** The worst of its components' latest scores, null without one. */
+	const componentsScore = sql`(select max(${latestOfComponent(sql`${unitCondition.score}`)}) from ${component} where ${and(
+		eq(component.equipmentId, equipment.id),
+		sameTenant(component, equipment),
+	)})`;
+	/** Its current score: the worst of its own and its components' latest; null without any. */
+	const score = asScore(
+		sql`nullif(max(coalesce(${ownScore}, 0), coalesce(${componentsScore}, 0)), 0)`,
+	);
 	const advice = latest(sql`${unitCondition.advice}`) as SQL<string | null>;
 	const recordedAt = latest(sql`${unitCondition.recordedAt}`).mapWith(unitCondition.recordedAt);
 
@@ -98,8 +115,8 @@ export function conditionSql() {
 			conditionSettings,
 			equipment,
 		)}), ${literal(fallback)})`;
-	const critical = setting(conditionSettings.criticalBelow, defaultThresholds.critical);
-	const attention = setting(conditionSettings.attentionBelow, defaultThresholds.attention);
+	const critical = setting(conditionSettings.criticalFrom, defaultThresholds.critical);
+	const attention = setting(conditionSettings.attentionFrom, defaultThresholds.attention);
 
 	const onUnit = and(
 		eq(orderUnit.equipmentId, equipment.id),
@@ -124,9 +141,9 @@ export function conditionSql() {
 	 * or without the unit's inspection (`concernOf()`).
 	 */
 	const rankFor = (of: { score: SQL; advice: SQL }, withInspection: boolean) =>
-		sql<number>`(case when ${of.score} < ${critical}${
+		sql<number>`(case when ${of.score} >= ${critical}${
 			withInspection ? sql` or ${expired}` : sql``
-		} then 0 when ${of.score} < ${attention}${
+		} then 0 when ${of.score} >= ${attention}${
 			withInspection ? sql` or ${rejected}` : sql``
 		} or trim(coalesce(${of.advice}, '')) <> '' then 1 else 3 end)`;
 
@@ -147,27 +164,29 @@ export function conditionSql() {
 
 	/** What its state and its components' ask for, the worst (`rolledUpStatus()`). */
 	const concern = concernAt(
-		sql`min(${rankFor({ score, advice }, true)}, coalesce(${componentsRank}, 3))`,
+		sql`min(${rankFor({ score: ownScore, advice }, true)}, coalesce(${componentsRank}, 3))`,
 	);
 	/** Its status: planned while its work is in hand. */
 	const status = sql<UnitStatus>`(case when ${planned} then 'planned' else ${concern} end)`;
 	/** A score's band (`scoreBand()`), `none` without one. */
 	const bandOf = (of: SQL) =>
-		sql<string>`(case when ${of} is null then 'none' when ${of} < ${critical} then 'low' when ${of} < ${attention} then 'fair' else 'good' end)`;
+		sql<string>`(case when ${of} is null then 'none' when ${of} >= ${critical} then 'low' when ${of} >= ${attention} then 'fair' else 'good' end)`;
 
 	return {
 		score,
+		ownScore,
 		advice,
 		recordedAt,
 		band: bandOf(score),
+		ownBand: bandOf(ownScore),
 		inspection: inspection as SQL<string> | null,
 		nextDue,
 		planned,
 		lastService,
 		concern,
 		status,
-		/** Worst first: by status, then (for planned ones) what's behind it, then the lowest score. */
-		sort: [rankOf(status), rankOf(concern), sql`coalesce(${score}, 101)`],
+		/** Worst first: by status, then (for planned ones) what's behind it, then the worst score. */
+		sort: [rankOf(status), rankOf(concern), worstFirst(score)],
 		/** For `componentSql()`. */
 		parts: { critical, attention, expired, rejected, planned, rankFor, bandOf },
 	};
@@ -195,11 +214,11 @@ export function componentSql(unit: ConditionSql = conditionSql()) {
 		band: bandOf(score),
 		concern,
 		status,
-		sort: [rankOf(status), rankOf(concern), sql`coalesce(${score}, 101)`],
+		sort: [rankOf(status), rankOf(concern), worstFirst(score)],
 	};
 }
 
 export type ComponentSql = ReturnType<typeof componentSql>;
 
-/** `rankOf()`, for the lists that sort by a status of their own making. */
-export { rankOf as statusRankSql };
+/** `rankOf()` and `worstFirst()`, for the lists that sort by a status of their own making. */
+export { rankOf as statusRankSql, worstFirst as worstFirstSql };

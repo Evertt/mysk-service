@@ -222,12 +222,13 @@ describe("the unit's cards", () => {
 		const boxes = await packedBoxes(cards());
 		const titles = boxes.map((box) => box.title);
 		// In the page's order: the timeline, the unit's own cards, the modules' and the activity.
-		expect(titles.slice(0, 5)).toEqual([
+		expect(titles.slice(0, 6)).toEqual([
 			"Service history",
 			"Specifications",
 			"Owner",
 			"Site",
 			"QR code",
+			"Documents",
 		]);
 		expect(titles.at(-1)).toBe("Activity");
 		expect(titles).toEqual(expect.arrayContaining(moduleCards));

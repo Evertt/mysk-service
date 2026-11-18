@@ -1,21 +1,24 @@
 /**
- * The demo tenants' unit conditions. SHLTR's are the Connect page's (`docs/plans/shltr-domain.md`
- * §2.3): Riedel's dock 07 door with its torsion springs worn to 22%, D-11's cable set at 41%, L-03's
- * hydraulics at 55%, Pakhuis 7's AC-02 with its filters at 28%, and a few more that need attention,
- * each with a history that got worse; most others healthy, recorded on their last visit. North gets
- * a few, so its pages show every status too; South doesn't have the module. A faker of its own,
- * seeded per tenant, so the rest of the demo data is the same with or without the module.
+ * The demo tenants' unit conditions, on NEN 2767's scale from their defects (the worst wins). SHLTR's
+ * are the Connect page's (`docs/plans/shltr-domain.md` §2.3): Riedel's dock 07 door with a broken
+ * torsion spring at 5 (Slecht), D-11's cable set and L-03's hydraulics at 4 (Matig), Pakhuis 7's
+ * AC-02 with its filters at 5, D-09 at 3 (Redelijk) like the mockup's slide 6, and a few more that
+ * need attention, each with a history that got worse; most others healthy, recorded on their last
+ * visit. North gets a few, so its pages show every status too; South doesn't have the module. A
+ * faker of its own, seeded per tenant, so the rest of the demo data is the same with or without the
+ * module.
  *
  * SHLTR's units also get the mockup's 14 components (`shltrComponents`, the `onderdelen` of its
  * database), each with its article where the shop sells one like it, the points of the unit's
- * template that check it, and the mockup's condition and advice from the office.
+ * template that check it, and the mockup's condition (as its defects) and advice from the office.
  *
- * With checklists on, each completed checklist gives its unit the condition its points work out to
- * (`checklistScore()`), and each of the unit's components the same over its own points, on its
- * order, when it was completed, as completing it does at runtime (`checklists.completed`). The
- * conditions above stay the latest, as corrections from the office, where the unit has a newer
- * checklist than they'd be: so the demo keeps its 22%. Each is logged as recording it is (against
- * its unit, with its advice), by its engineer or an office member: the service history reads them.
+ * With checklists on, each completed checklist gives its unit a condition whose defects are its
+ * rejected points (each with a grade the engineer could have given it), and each of the unit's
+ * components the same over its own points, on its order, when it was completed, as completing it
+ * does at runtime (`checklists.completed`). The conditions above stay the latest, as corrections
+ * from the office, where the unit has a newer checklist than they'd be: so the demo keeps its 5.
+ * Each is logged as recording it is (against its unit, with its advice), by its engineer or an
+ * office member: the service history reads them.
  */
 import { en, Faker, nl } from "@faker-js/faker";
 import { and, asc, desc, eq, ne } from "drizzle-orm";
@@ -39,16 +42,44 @@ import {
 	type TenantDraft,
 } from "#lib/server/db/seed/module-seed.ts";
 import { toMoment } from "#lib/server/db/seed/temporal.ts";
-import { checklistScore } from "#modules/checklists/api/extensions.ts";
 
-import { component, componentCheckpoint, unitCondition } from "./schema.ts";
+import { recordScore } from "../model.ts";
+import { type DefectGrade, defectScore } from "../nen2767.ts";
+import { component, componentCheckpoint, conditionDefect, unitCondition } from "./schema.ts";
+
+/** A defect a seeded condition found: what, its grade, and the component it's on (by number). */
+interface SeedDefect extends DefectGrade {
+	text: string;
+	/** The component's number (`OC-1041`); none for the unit itself. */
+	on?: string;
+}
+
+/** Shorthands for the grades the demo's defects have, with the score NEN 2767 gives each. */
+const grade = {
+	/** 1: slight, initial, 10–30%. */
+	trace: { severity: "slight", intensity: "initial", extent: 3 },
+	/** 2: slight, advanced, 10–30%. */
+	slight: { severity: "slight", intensity: "advanced", extent: 3 },
+	/** 2: serious, initial, 10–30%. */
+	starting: { severity: "serious", intensity: "initial", extent: 3 },
+	/** 3: serious, advanced, 10–30%. */
+	fair: { severity: "serious", intensity: "advanced", extent: 3 },
+	/** 4: serious, advanced, 30–70%. */
+	moderate: { severity: "serious", intensity: "advanced", extent: 4 },
+	/** 4: serious, final, 10–30%. */
+	moderateFinal: { severity: "serious", intensity: "final", extent: 3 },
+	/** 5: severe, advanced, 30–70%. */
+	poor: { severity: "severe", intensity: "advanced", extent: 4 },
+	/** 5: severe, final, 10–30%. */
+	poorFinal: { severity: "severe", intensity: "final", extent: 3 },
+} satisfies Record<string, DefectGrade>;
 
 /** A unit the mockup names, with how its condition went: oldest first, the last one now. */
 interface FixedCondition {
 	customer: string;
 	unit: string;
-	/** Scores, oldest first, with how many days ago each was recorded. */
-	history: [score: number, daysAgo: number][];
+	/** Its conditions, oldest first: how many days ago each was recorded, and its defects. */
+	history: { daysAgo: number; defects: SeedDefect[] }[];
 	advice: string;
 }
 
@@ -57,9 +88,20 @@ const shltrConditions: FixedCondition[] = [
 		customer: "Riedel B.V.",
 		unit: "Sectionaaldeur laaddok 07",
 		history: [
-			[71, 330],
-			[48, 150],
-			[22, 2],
+			{ daysAgo: 330, defects: [{ text: "Spanning torsieveren loopt terug", ...grade.fair }] },
+			{
+				daysAgo: 150,
+				defects: [
+					{ text: "Torsieveren vermoeid, deur zakt bij openen", on: "OC-1041", ...grade.moderate },
+				],
+			},
+			{
+				daysAgo: 2,
+				defects: [
+					{ text: "Onderste torsieveer gebroken", on: "OC-1041", ...grade.poor },
+					{ text: "Kabels beginnen te rafelen bij de trommel", on: "OC-1042", ...grade.starting },
+				],
+			},
 		],
 		advice: "Veerpakket vervangen (SD-001) — cyclusteller boven 90%.",
 	},
@@ -67,8 +109,11 @@ const shltrConditions: FixedCondition[] = [
 		customer: "Riedel B.V.",
 		unit: "Sectionaaldeur D-11",
 		history: [
-			[68, 200],
-			[41, 25],
+			{ daysAgo: 200, defects: [{ text: "Kabelset licht gerafeld", ...grade.fair }] },
+			{
+				daysAgo: 25,
+				defects: [{ text: "Draadbreuk zichtbaar bij de trommel", ...grade.moderate }],
+			},
 		],
 		advice: "Kabelset vervangen (SD-002) — draadbreuk zichtbaar bij de trommel.",
 	},
@@ -76,8 +121,8 @@ const shltrConditions: FixedCondition[] = [
 		customer: "Riedel B.V.",
 		unit: "Leveller L-03",
 		history: [
-			[74, 240],
-			[55, 30],
+			{ daysAgo: 240, defects: [{ text: "Olienevel bij de hoofdcilinder", ...grade.fair }] },
+			{ daysAgo: 30, defects: [{ text: "Olielekkage bij de hoofdcilinder", ...grade.moderate }] },
 		],
 		advice: "Lichte olielekkage bij de hoofdcilinder — afdichtset bestellen.",
 	},
@@ -85,8 +130,14 @@ const shltrConditions: FixedCondition[] = [
 		customer: "Pakhuis 7",
 		unit: "Airco AC-02",
 		history: [
-			[62, 180],
-			[28, 4],
+			{ daysAgo: 180, defects: [{ text: "Filters vervuild", ...grade.fair }] },
+			{
+				daysAgo: 4,
+				defects: [
+					{ text: "Filters sterk vervuild", ...grade.poor },
+					{ text: "Condensafvoer verstopt", ...grade.moderate },
+				],
+			},
 		],
 		advice:
 			"Filters sterk vervuild en condensafvoer verstopt — filters vervangen, afvoer reinigen.",
@@ -95,8 +146,11 @@ const shltrConditions: FixedCondition[] = [
 		customer: "Riedel B.V.",
 		unit: "Sectionaaldeur laaddok 08",
 		history: [
-			[80, 210],
-			[52, 40],
+			{ daysAgo: 210, defects: [{ text: "Looprollen licht droog", ...grade.slight }] },
+			{
+				daysAgo: 40,
+				defects: [{ text: "Twee looprollen versleten, deur loopt stroef", ...grade.moderate }],
+			},
 		],
 		advice: "Twee looprollen versleten, deur loopt stroef — rollen vervangen bij volgend bezoek.",
 	},
@@ -104,8 +158,11 @@ const shltrConditions: FixedCondition[] = [
 		customer: "Weggemans Logistiek",
 		unit: "Sectionaaldeur D-21",
 		history: [
-			[85, 190],
-			[66, 20],
+			{ daysAgo: 190, defects: [{ text: "Bodemrubber verweerd", ...grade.slight }] },
+			{
+				daysAgo: 20,
+				defects: [{ text: "Bodemrubber over 1 m gescheurd", ...grade.moderateFinal }],
+			},
 		],
 		advice: "Bodemrubber over 1 m gescheurd — afdichtingsrubber meenemen.",
 	},
@@ -113,8 +170,14 @@ const shltrConditions: FixedCondition[] = [
 		customer: "Riedel B.V.",
 		unit: "Sectionaaldeur D-09",
 		history: [
-			[88, 260],
-			[76, 35],
+			{ daysAgo: 260, defects: [{ text: "Panelen licht bekrast", ...grade.trace }] },
+			{
+				daysAgo: 35,
+				defects: [
+					{ text: "Fotocel wijkt af, deur keert soms onnodig", ...grade.fair },
+					{ text: "Lichte roestvorming onderste paneel", ...grade.slight },
+				],
+			},
 		],
 		advice: "",
 	},
@@ -122,8 +185,8 @@ const shltrConditions: FixedCondition[] = [
 		customer: "Weggemans Logistiek",
 		unit: "Sectionaaldeur D-24",
 		history: [
-			[90, 300],
-			[94, 18],
+			{ daysAgo: 300, defects: [{ text: "Rubber afdichting licht verweerd", ...grade.slight }] },
+			{ daysAgo: 18, defects: [] },
 		],
 		advice: "",
 	},
@@ -147,7 +210,8 @@ interface SeedComponent {
 	name: string;
 	sku: string | null;
 	points: string[];
-	score: number;
+	/** Its defects, on itself, as the office last found them (none: 1). */
+	defects: SeedDefect[];
 	advice: string;
 }
 
@@ -162,7 +226,7 @@ const shltrComponents: SeedComponent[] = [
 			"Torsieveren op spanning en breuk gecontroleerd",
 			"Veerbreukbeveiliging en kabelbreukbeveiliging getest",
 		],
-		score: 22,
+		defects: [{ text: "Onderste torsieveer gebroken", ...grade.poor }],
 		advice: "Veerpakket vervangen (SD-001) — cyclusteller boven 90%.",
 	},
 	{
@@ -172,7 +236,7 @@ const shltrComponents: SeedComponent[] = [
 		name: "Staaldraadkabels",
 		sku: "SD-002",
 		points: ["Staaldraadkabels vrij van rafels en corrosie"],
-		score: 41,
+		defects: [{ text: "Draadbreuk zichtbaar bij de trommel", ...grade.moderate }],
 		advice: "Draadbreuk zichtbaar bij trommel — kabelset meenemen.",
 	},
 	{
@@ -185,7 +249,7 @@ const shltrComponents: SeedComponent[] = [
 			"Fotocel / lichtscherm stopt en keert deur",
 			"Onderloopbeveiliging (sluitkantbeveiliging) getest",
 		],
-		score: 68,
+		defects: [{ text: "Fotocel niet goed uitgelijnd", ...grade.fair }],
 		advice: "Uitlijning controleren tijdens periodiek onderhoud.",
 	},
 	{
@@ -195,7 +259,7 @@ const shltrComponents: SeedComponent[] = [
 		name: "Dockleveller hydrauliek",
 		sku: "LV-001",
 		points: ["Oliepeil en slangen zonder lekkage", "Cilinders en veiligheidsventiel getest"],
-		score: 55,
+		defects: [{ text: "Lekkage bij de cilinder", ...grade.moderate }],
 		advice: "Lekkage bij cilinder — afdichtset plannen.",
 	},
 	{
@@ -205,7 +269,7 @@ const shltrComponents: SeedComponent[] = [
 		name: "Bodemafdichting",
 		sku: "SD-004",
 		points: ["Bodem-, zij- en bovenafdichting intact"],
-		score: 84,
+		defects: [{ text: "Bodemrubber licht verweerd", ...grade.slight }],
 		advice: "",
 	},
 	{
@@ -215,7 +279,7 @@ const shltrComponents: SeedComponent[] = [
 		name: "Antislip treden",
 		sku: null,
 		points: ["Antislip treden in goede staat"],
-		score: 34,
+		defects: [{ text: "Antislip op 3 treden versleten", ...grade.poor }],
 		advice: "3 treden vervangen (TR-001) + keuring opnieuw uitvoeren.",
 	},
 	{
@@ -225,7 +289,7 @@ const shltrComponents: SeedComponent[] = [
 		name: "Leuningbevestiging",
 		sku: null,
 		points: ["Leuningen en kniesloten stevig", "Boutverbindingen en verankering vast"],
-		score: 62,
+		defects: [{ text: "2 muurbeugels los", ...grade.moderate }],
 		advice: "Muurbeugels natrekken, 2 stuks los.",
 	},
 	{
@@ -235,7 +299,7 @@ const shltrComponents: SeedComponent[] = [
 		name: "Kickplate bordes",
 		sku: null,
 		points: ["Kickplates aanwezig en onbeschadigd"],
-		score: 91,
+		defects: [],
 		advice: "",
 	},
 	{
@@ -246,7 +310,7 @@ const shltrComponents: SeedComponent[] = [
 		name: "HEPA-filterset",
 		sku: null,
 		points: ["Filters gereinigd of vervangen"],
-		score: 28,
+		defects: [{ text: "Filters dicht, drukval boven norm", ...grade.poorFinal }],
 		advice: "Filters dicht — drukval boven norm, direct vervangen (AC-001).",
 	},
 	{
@@ -257,7 +321,7 @@ const shltrComponents: SeedComponent[] = [
 		name: "Condensaatpomp",
 		sku: null,
 		points: ["Verdamper en condensafvoer schoon, pomp werkt"],
-		score: 59,
+		defects: [{ text: "Pomp maakt geluid", ...grade.moderate }],
 		advice: "Meenemen bij filterbeurt, pomp maakt geluid.",
 	},
 	{
@@ -267,7 +331,7 @@ const shltrComponents: SeedComponent[] = [
 		name: "Koudemiddelcircuit R32",
 		sku: null,
 		points: ["Lekdichtheidscontrole uitgevoerd (F-gassen)", "Drukken en oververhitting gemeten"],
-		score: 47,
+		defects: [{ text: "Lekdichtheidscontrole verlopen", ...grade.moderateFinal }],
 		advice: "Lekdichtheidscontrole verplicht — F-gassen registratie bijwerken.",
 	},
 	{
@@ -277,7 +341,7 @@ const shltrComponents: SeedComponent[] = [
 		name: "Aandrijving 24V",
 		sku: "SD-008",
 		points: ["Aandrijving, eindschakelaars en noodstop werkend"],
-		score: 73,
+		defects: [{ text: "Noodontgrendeling gaat stroef", ...grade.fair }],
 		advice: "Noodontgrendeling testen bij volgende beurt.",
 	},
 	{
@@ -287,7 +351,7 @@ const shltrComponents: SeedComponent[] = [
 		name: "Wielblokkering (chock)",
 		sku: null,
 		points: ["Wheel-Lok / chock vergrendeling getest"],
-		score: 38,
+		defects: [{ text: "Vergrendelsensor geeft intermitterend signaal", ...grade.poor }],
 		advice: "Vergrendelsensor geeft intermitterend signaal — sensor vervangen.",
 	},
 	{
@@ -297,17 +361,45 @@ const shltrComponents: SeedComponent[] = [
 		name: "Rolscharnieren set",
 		sku: "SD-003",
 		points: ["Rollen, scharnieren en geleiderails gesmeerd"],
-		score: 88,
+		defects: [{ text: "Rollen licht droog", ...grade.slight }],
 		advice: "",
 	},
 ];
 
-/** Advice that comes with a fair score, for the made-up ones that need attention. */
+/** Advice that comes with a moderate score, for the made-up ones that need attention. */
 const wear = [
 	"Lichte slijtage aan de geleiders; meenemen bij de eerstvolgende beurt.",
 	"Aandrijving maakt geluid — lagers controleren bij het volgende onderhoud.",
 	"Afdichting begint te verweren; vervangen binnen een half jaar.",
 ];
+
+/** Defects a healthy unit may have, for the made-up conditions: graded 1 to 3. */
+const healthyDefects = [
+	{ text: "Lichte gebruikssporen", ...grade.trace },
+	{ text: "Afdichting begint te verweren", ...grade.slight },
+	{ text: "Geleiders licht droog", ...grade.starting },
+	{ text: "Lichte slijtage aan de aandrijving", ...grade.fair },
+];
+
+/** The defects of a made-up condition: worn (4), critical (5), or healthy (none, or one up to 3). */
+function madeUpDefects(random: Faker, state: "critical" | "worn" | "healthy"): SeedDefect[] {
+	if (state === "critical") {
+		return [{ text: "Ernstige slijtage, onderdeel aan vervanging toe", ...grade.poor }];
+	}
+	if (state === "worn") return [{ text: "Slijtage over het geheel zichtbaar", ...grade.moderate }];
+	return random.datatype.boolean(0.5) ? [] : [random.helpers.arrayElement(healthyDefects)];
+}
+
+/**
+ * The grade of a rejected point of a seeded checklist, as an engineer could have given it: mostly
+ * serious and advanced over 2–30% (2 or 3), now and then severe (4).
+ */
+function rejectedGrade(random: Faker): DefectGrade {
+	const roll = random.number.float({ min: 0, max: 1 });
+	if (roll < 0.6) return { severity: "serious", intensity: "advanced", extent: 2 };
+	if (roll < 0.9) return grade.fair;
+	return { severity: "severe", intensity: "advanced", extent: 3 };
+}
 
 /** How many of North's units get conditions: the first critical, the next needing attention. */
 const NORTH = { critical: 2, attention: 3, healthy: 10 };
@@ -361,7 +453,11 @@ async function completedChecklists(tx: SeedTransaction, tenant: { id: string; mo
 				eq(checklist.status, "completed"),
 				isNotNull(checklist.completedAt),
 			),
-		with: { results: { columns: { templateItemId: true, result: true } } },
+		with: {
+			results: {
+				columns: { id: true, templateItemId: true, text: true, result: true, remark: true },
+			},
+		},
 	});
 	return found.toSorted(
 		(a, b) => Temporal.Instant.compare(a.completedAt!, b.completedAt!) || a.id - b.id,
@@ -474,7 +570,7 @@ async function recordedEntries(tx: SeedTransaction, organizationIds: string[]) {
 		action: "recorded" as const,
 		subjectType: "unitCondition",
 		subjectId: String(row.id),
-		subjectLabel: [row.serialNumber, row.component, `${row.score}%`].filter(Boolean).join(" · "),
+		subjectLabel: [row.serialNumber, row.component, `${row.score}/6`].filter(Boolean).join(" · "),
 		parentType: "equipment",
 		parentId: String(row.unitId),
 		parentLabel: row.serialNumber,
@@ -491,16 +587,33 @@ export default defineSeed<TenantDraft["profile"]>({
 	generate: ({ profile }) => profile,
 
 	async run({ tx, tenants, count, log }) {
-		const rows: (typeof unitCondition.$inferInsert)[] = [];
+		/** A condition to insert, with its defects (by component id). */
+		const rows: {
+			values: Omit<typeof unitCondition.$inferInsert, "score">;
+			defects: (DefectGrade & {
+				description: string;
+				componentId: number | null;
+				checklistPointId?: number;
+			})[];
+		}[] = [];
 		for (const tenant of tenants) {
 			const organizationId = tenant.id;
 			const random = new Faker({ locale: [nl, en] });
 			random.seed(tenant.seed + 21);
 			const { units, lastDone } = await unitsOf(tx, organizationId);
 			const parts = tenant.data === "shltr" ? await seedComponents(tx, tenant, units, count) : [];
+			const partByNumber = new Map(parts.map((part) => [part.seed.number, part.id]));
+			/** A seeded defect as it's inserted, on its component (if it's on one the unit has). */
+			const asDefect = (defect: SeedDefect, componentId: number | null = null) => ({
+				description: defect.text,
+				severity: defect.severity,
+				extent: defect.extent,
+				intensity: defect.intensity,
+				componentId: componentId ?? (defect.on ? (partByNumber.get(defect.on) ?? null) : null),
+			});
 
-			// What the completed checklists found, of the units and their components, and when each
-			// unit's last one was.
+			// What the completed checklists found, of the units and their components (their rejected
+			// points, each with a grade), and when each unit's last one was.
 			const lastChecklist = new Map<number, Temporal.Instant>();
 			for (const found of await completedChecklists(tx, tenant)) {
 				lastChecklist.set(found.equipmentId, found.completedAt!);
@@ -513,25 +626,51 @@ export default defineSeed<TenantDraft["profile"]>({
 					engineerId: found.completedBy,
 					recordedAt: found.completedAt!,
 				};
-				const score = checklistScore(found.results);
-				if (score !== null) rows.push({ ...recorded, score });
-				for (const part of parts.filter((each) => each.equipmentId === found.equipmentId)) {
-					const own = checklistScore(
-						found.results.filter(
-							(result) => result.templateItemId !== null && part.items.has(result.templateItemId),
+				const own = parts.filter((each) => each.equipmentId === found.equipmentId);
+				const isPart = (part: (typeof own)[number], point: (typeof found.results)[number]) =>
+					point.templateItemId !== null && part.items.has(point.templateItemId);
+				const counts = (point: (typeof found.results)[number]) =>
+					point.result === "ok" || point.result === "nok";
+				const grades = new Map(
+					found.results.flatMap((point) =>
+						point.result === "nok" ? [[point.id, rejectedGrade(random)] as const] : [],
+					),
+				);
+				const defectOf = (point: (typeof found.results)[number], componentId: number | null) => ({
+					...grades.get(point.id)!,
+					description: point.remark ? `${point.text}: ${point.remark}` : point.text,
+					componentId,
+					checklistPointId: point.id,
+				});
+				const rejected = found.results.filter((point) => point.result === "nok");
+				if (found.results.some(counts)) {
+					rows.push({
+						values: recorded,
+						defects: rejected.map((point) =>
+							defectOf(point, own.find((part) => isPart(part, point))?.id ?? null),
 						),
-					);
-					if (own !== null) rows.push({ ...recorded, componentId: part.id, score: own });
+					});
+				}
+				for (const part of own) {
+					const points = found.results.filter((point) => isPart(part, point));
+					if (!points.some(counts)) continue;
+					rows.push({
+						values: { ...recorded, componentId: part.id },
+						defects: points
+							.filter((point) => point.result === "nok")
+							.map((point) => defectOf(point, part.id)),
+					});
 				}
 			}
 
 			/**
-			 * A condition of `unit`, recorded `daysAgo`: on its last done order then, if it had one and
-			 * no checklist on it; the latest (`last`) after the unit's last checklist, from the office.
+			 * A condition of `unit` with `defects`, recorded `daysAgo`: on its last done order then, if it
+			 * had one and no checklist on it; the latest (`last`) after the unit's last checklist, from the
+			 * office.
 			 */
 			const add = (
 				unitId: number,
-				score: number,
+				defects: ReturnType<typeof asDefect>[],
 				daysAgo: number,
 				advice: string,
 				last = daysAgo === 0,
@@ -547,15 +686,17 @@ export default defineSeed<TenantDraft["profile"]>({
 					);
 				}
 				rows.push({
-					organizationId,
-					equipmentId: unitId,
-					componentId,
-					score,
-					advice: advice || null,
-					source: onVisit ? "checklist" : "office",
-					...withTenantRefs(organizationId, { orderId: onVisit?.orderId ?? null }),
-					engineerId: onVisit?.engineerId ?? null,
-					recordedAt,
+					values: {
+						organizationId,
+						equipmentId: unitId,
+						componentId,
+						advice: advice || null,
+						source: onVisit ? "checklist" : "office",
+						...withTenantRefs(organizationId, { orderId: onVisit?.orderId ?? null }),
+						engineerId: onVisit?.engineerId ?? null,
+						recordedAt,
+					},
+					defects,
 				});
 			};
 
@@ -567,15 +708,28 @@ export default defineSeed<TenantDraft["profile"]>({
 					);
 					if (!unit) continue;
 					fixed.add(unit.id);
-					named.history.forEach(([score, daysAgo], i) => {
+					named.history.forEach(({ daysAgo, defects }, i) => {
 						const last = i === named.history.length - 1;
-						add(unit.id, score, daysAgo, last ? named.advice : "", last);
+						add(
+							unit.id,
+							defects.map((defect) => asDefect(defect)),
+							daysAgo,
+							last ? named.advice : "",
+							last,
+						);
 					});
 				}
 				// The components' conditions as the mockup has them, from the office a day ago (or
 				// after their unit's last checklist).
 				for (const part of parts) {
-					add(part.equipmentId, part.seed.score, 1, part.seed.advice, true, part.id);
+					add(
+						part.equipmentId,
+						part.seed.defects.map((defect) => asDefect(defect, part.id)),
+						1,
+						part.seed.advice,
+						true,
+						part.id,
+					);
 				}
 				// Most of the others are healthy, recorded on their last visit; a few show some wear.
 				// One with a completed checklist has what its checklists found.
@@ -586,7 +740,7 @@ export default defineSeed<TenantDraft["profile"]>({
 					if (random.datatype.boolean(0.4)) {
 						add(
 							unit.id,
-							random.number.int({ min: 80, max: 98 }),
+							madeUpDefects(random, "healthy").map((defect) => asDefect(defect)),
 							random.number.int({ min: 200, max: 400 }),
 							"",
 						);
@@ -594,9 +748,7 @@ export default defineSeed<TenantDraft["profile"]>({
 					const worn = random.datatype.boolean(0.06);
 					add(
 						unit.id,
-						worn
-							? random.number.int({ min: 58, max: 69 })
-							: random.number.int({ min: 72, max: 99 }),
+						madeUpDefects(random, worn ? "worn" : "healthy").map((defect) => asDefect(defect)),
 						0,
 						worn ? random.helpers.arrayElement(wear) : "",
 					);
@@ -604,28 +756,53 @@ export default defineSeed<TenantDraft["profile"]>({
 			} else {
 				const picked = units.slice(0, NORTH.critical + NORTH.attention + NORTH.healthy);
 				picked.forEach((unit, i) => {
-					const score =
+					const state =
 						i < NORTH.critical
-							? random.number.int({ min: 15, max: 35 })
+							? "critical"
 							: i < NORTH.critical + NORTH.attention
-								? random.number.int({ min: 45, max: 65 })
-								: random.number.int({ min: 75, max: 98 });
+								? "worn"
+								: "healthy";
 					// The one before, half a year before the latest: on the unit's last visit, which may
-					// be longer ago than that.
+					// be longer ago than that. Better than now, but for a healthy one.
 					const visit = lastDone.get(unit.id)?.completedAt;
 					const since = visit ? Math.floor((now.getTime() - visit.epochMilliseconds) / DAY) : 0;
 					add(
 						unit.id,
-						Math.min(100, score + random.number.int({ min: 10, max: 25 })),
+						madeUpDefects(random, state === "critical" ? "worn" : "healthy").map((defect) =>
+							asDefect(defect),
+						),
 						since + 180,
 						"",
 					);
-					add(unit.id, score, 0, i < NORTH.critical ? random.helpers.arrayElement(wear) : "");
+					add(
+						unit.id,
+						madeUpDefects(random, state).map((defect) => asDefect(defect)),
+						0,
+						i < NORTH.critical ? random.helpers.arrayElement(wear) : "",
+					);
 				});
 			}
 		}
-		await insertRows(tx, unitCondition, rows);
+		// One at a time, for its id, which its defects refer to; in the order made, which the log keeps.
+		const defects: (typeof conditionDefect.$inferInsert)[] = [];
+		for (const { values, defects: found } of rows) {
+			const [made] = await tx
+				.insert(unitCondition)
+				.values({ ...values, score: recordScore(found) })
+				.returning({ id: unitCondition.id });
+			defects.push(
+				...found.map((defect, position) => ({
+					...defect,
+					organizationId: values.organizationId,
+					conditionId: made.id,
+					score: defectScore(defect),
+					position,
+				})),
+			);
+		}
+		await insertRows(tx, conditionDefect, defects);
 		count("unitConditions", rows);
+		count("conditionDefects", defects);
 		log(
 			await recordedEntries(
 				tx,

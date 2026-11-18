@@ -80,7 +80,8 @@ describe("the Connect page", () => {
 		expect(await app.rowCount()).toBe(theirs.length);
 		// Dock 07's door's torsion spring set, worn: the mockup's row, with its article.
 		const springs = page.locator("tbody tr", { hasText: "Torsieveerpakket" });
-		expect(await springs.locator("[data-condition]").getAttribute("data-condition")).toBe("22");
+		expect(await springs.locator("[data-condition]").getAttribute("data-condition")).toBe("5");
+		expect(await springs.locator("[data-condition]").innerText()).toContain("Poor");
 		const text = await springs.innerText();
 		expect(text).toContain("OC-1041 · art. SD-001");
 		expect(text).toContain("Sectionaaldeur laaddok 07");
@@ -95,7 +96,7 @@ describe("the Connect page", () => {
 		// The log's entry of dock 07's door's latest condition.
 		await log
 			.locator("[data-activity]", { hasText: "recorded the condition" })
-			.filter({ hasText: "· 22%" })
+			.filter({ hasText: "· 5/6" })
 			.first()
 			.waitFor();
 		await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
@@ -121,9 +122,13 @@ describe("the Connect page", () => {
 		await page.getByText("What do the statuses mean?").click();
 		const legend = page.locator("[data-status-legend]");
 		await legend
-			.getByText("Condition below 40% or inspection expired — plan within 5 working days.")
+			.getByText("Condition 5 · Poor or worse, or inspection expired — plan within 5 working days.")
 			.waitFor();
 		expect(await legend.innerText()).toContain("Within interval and inspection valid — no action.");
+		// And NEN 2767's scale, each score with what it means.
+		const scale = legend.locator("[data-score-legend]");
+		expect(await scale.locator("[data-condition]").count()).toBe(6);
+		expect(await scale.innerText()).toContain("Technically ready for replacement.");
 	});
 
 	test("with a single row, the table doesn't scroll inside itself", async () => {

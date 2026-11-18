@@ -99,6 +99,17 @@ invoiced) later with `addPhotos`, and anyone may try `deletePhoto` (both in `pho
   which logs a failure and leaves it to the sweep).
 - **Sweep:** `runDaily()` calls `sweepOrderPhotos()` per tenant: files under the tenant's prefix
   (`FileStore.list()`) that no row points to and that are over a day old.
+- **Shared helpers:** these are the photos' uses of the records' files' one way,
+  `#lib/server/files/stored.ts`, which a unit's documents (`equipment_document`,
+  `src/lib/equipment/server/documents.ts`) use too: `withStoredFiles(store, files, record)` (store,
+  then record; discard on failure), `storeFiles()`, `discardFiles(store, keys)` (after the commit),
+  `sweepFiles({ store, prefix, referenced })` (the day-old files under a kind's prefix that the
+  `referenced(keys)` query doesn't answer) and `serveStoredFile(subject, find, store)` (the access
+  registry's 404, `nosniff`, and a `Content-Disposition` with the file's name when the row gives
+  one). A file is what its bytes say (`fileSignatures`, `sniffType()` in `files/types.ts`); keys are
+  `files/keys.ts`'s, each kind under its own prefix (`<tenant>/orders/`, `<tenant>/equipment/`), so
+  one kind's sweep never lists another's. A record whose deletion lets go of files is a
+  `defineRemoval()` with `afterwards` (the unit's documents: `documentFilesOf()`).
 
 ## The work record
 

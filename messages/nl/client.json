@@ -117,5 +117,8 @@
 	"client_more_services": "Diensten",
 	"client_more_settings": "Instellingen",
 	"client_more_appearance": "Taal en weergave",
-	"client_report_what_placeholder": "Wat gebeurt er, en sinds wanneer?"
+	"client_report_what_placeholder": "Wat gebeurt er, en sinds wanneer?",
+	"client_unit_documents_link": "Handleidingen en documenten",
+	"client_unit_documents_description": "Handleidingen, certificaten en tekeningen",
+	"client_unit_documents_none": "Er zijn nog geen documenten van dit apparaat."
 }

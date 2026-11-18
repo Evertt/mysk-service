@@ -434,7 +434,7 @@ visit, as SQL over `equipment`, `condition.signals`, for the status; checklists 
 column in the list, `condition.list.columns`; checklists a unit's template points,
 `condition.checkpoints`;
 materials the articles, `condition.articles`; the parts shop the points an article's product fixes,
-`condition.articleCheckpoints`), for records that refer to another module's by id without a key (a
+`condition.articleCheckpoints`; checklists whether a checklist point is the signed-in engineer's, before condition keeps its defect, `condition.fieldPoints`), for records that refer to another module's by id without a key (a
 component's article and points, as it only enhances materials and checklists), for a view of the
 activity log (the service history, `server/history.ts`: the entries of orders and checklists
 completed and conditions recorded, of a customer's through their subjects' parents, which the seeds
@@ -443,8 +443,13 @@ one statement that binds no parameters (`literal()`, `inLiterals()` in
 `#lib/server/db/parameters.ts`, and subqueries correlated on the unit's own tenant), for a
 server-side list whose rows are a left join (a row per component, and per unit without), and for a
 contribution to a slot and a save hook of a module it enhances (the advice below a completed
-checklist in the portal, `slots/checklists.field.checklist/`; the scores a completed checklist gives
-the unit and its components, `checklists.completed`, with checklists' `checklistScore()`). Its seed
+checklist in the portal, `slots/checklists.field.checklist/`; a rejected point's defect, asked in
+the portal, `slots/checklists.field.rejected/`; the conditions a completed checklist gives the unit
+and its components, its rejected points their defects, `checklists.completed`). Its conditions are
+on NEN 2767's scale (1–6, the worst defect wins), its tables in one file, `nen2767.ts`; a defect's
+photos are served by a route in the engineer portal's group, which the office's shell owns too
+(`routes/(field)/photos/[id]/+server.ts`; `guarded()` lets any role through in a portal's group,
+the handler asking the access registry). Its seed
 reads the tables of the modules it enhances through the seed's transaction (`tx.query`), and comes
 `after` materials (`ModuleSeed.after`). Checklists and condition enhance each other: each adds to
 the other where the other is on.

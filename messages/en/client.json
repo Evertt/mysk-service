@@ -117,5 +117,8 @@
 	"client_more_services": "Services",
 	"client_more_settings": "Settings",
 	"client_more_appearance": "Language and appearance",
-	"client_report_what_placeholder": "What happens, and since when?"
+	"client_report_what_placeholder": "What happens, and since when?",
+	"client_unit_documents_link": "Manuals & documents",
+	"client_unit_documents_description": "Its manuals, certificates and drawings",
+	"client_unit_documents_none": "There are no documents of this unit yet."
 }

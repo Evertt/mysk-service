@@ -38,7 +38,7 @@ async function toPlan(organization: string) {
 		(
 			await rows<{ equipment_id: number }>(
 				`select distinct ou.equipment_id from order_unit ou join "order" o on o.id = ou.order_id
-				 where o.organization_id = ? and o.status in ('quote', 'scheduled', 'in_progress')`,
+				 where o.organization_id = ? and o.status in ('quote', 'scheduled', 'on_the_way', 'in_progress')`,
 				[organization],
 			)
 		).map((row) => row.equipment_id),
@@ -52,14 +52,14 @@ describe("the condition settings, in North", () => {
 	test("are the defaults at first, read by a member who can't change them", async () => {
 		const settings = await as(north.member, () => data(getConditionSettings));
 		expect(settings).toMatchObject({
-			criticalBelow: 40,
-			attentionBelow: 70,
+			criticalFrom: 5,
+			attentionFrom: 4,
 			autoPlan: false,
 			lastRunAt: null,
 		});
 		expect(
 			await as(north.member, () =>
-				submit(saveConditionSettings, { criticalBelow: 40, attentionBelow: 70, autoPlan: true }),
+				submit(saveConditionSettings, { criticalFrom: 5, attentionFrom: 4, autoPlan: true }),
 			),
 		).toMatchObject({ status: 403 });
 	});
@@ -71,7 +71,7 @@ describe("the condition settings, in North", () => {
 
 	test("a manager turns automatic planning on: stored and logged with what changed", async () => {
 		const answer = await as(north.owner, () =>
-			submit(saveConditionSettings, { criticalBelow: 40, attentionBelow: 70, autoPlan: true }),
+			submit(saveConditionSettings, { criticalFrom: 5, attentionFrom: 4, autoPlan: true }),
 		);
 		expect(answer).toMatchObject({
 			status: 303,
@@ -80,11 +80,11 @@ describe("the condition settings, in North", () => {
 		});
 		expect(
 			await rows(
-				`select critical_below, attention_below, auto_plan from condition_settings
+				`select critical_from, attention_from, auto_plan from condition_settings
 				 where organization_id = ?`,
 				[northId],
 			),
-		).toEqual([{ critical_below: 40, attention_below: 70, auto_plan: 1 }]);
+		).toEqual([{ critical_from: 5, attention_from: 4, auto_plan: 1 }]);
 		const [entry] = await rows<{ action: string; changes: string }>(
 			`select action, changes from activity where organization_id = ?
 			 and subject_type = 'condition_settings' order by id desc limit 1`,
@@ -102,12 +102,23 @@ describe("the daily run, with automatic planning on", () => {
 			`select e.id, e.serial_number from equipment e where e.organization_id = ?
 			 and e.status = 'operational'
 			 and not exists (select 1 from order_unit ou join "order" o on o.id = ou.order_id
-				where ou.equipment_id = e.id and o.status in ('quote', 'scheduled', 'in_progress'))
+				where ou.equipment_id = e.id and o.status in ('quote', 'scheduled', 'on_the_way', 'in_progress'))
 			 order by e.id desc limit 1`,
 			[northId],
 		);
 		await as(north.owner, () =>
-			submit(recordCondition, { serialNumber: unit.serial_number, score: 15, advice: "" }),
+			submit(recordCondition, {
+				serialNumber: unit.serial_number,
+				defects: [
+					{
+						description: "Aandrijving defect",
+						severity: "severe",
+						extent: "5",
+						intensity: "final",
+					},
+				],
+				advice: "",
+			}),
 		);
 		const planned = (await toPlan(northId)).map((each) => each.id).toSorted((a, b) => a - b);
 		expect(planned).toContain(unit.id);
@@ -131,7 +142,7 @@ describe("the daily run, with automatic planning on", () => {
 		expect(made.map((order) => order.equipment_id).toSorted((a, b) => a - b)).toEqual(planned);
 		const ours = made.find((order) => order.equipment_id === unit.id)!;
 		expect(ours).toMatchObject({ status: "quote", engineer_id: null });
-		expect(ours.description).toMatch(/15%/);
+		expect(ours.description).toMatch(/6 · Very poor/);
 		// Logged as the system's: no user.
 		expect(
 			await rows(

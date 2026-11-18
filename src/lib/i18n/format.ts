@@ -184,5 +184,14 @@ export function formatStopwatch(milliseconds: number, { hours = false } = {}) {
  */
 export const formatNumber = numberFormatter({ maximumFractionDigits: 2 });
 
+const kilobytes = numberFormatter({ style: "unit", unit: "kilobyte", maximumFractionDigits: 0 });
+const megabytes = numberFormatter({ style: "unit", unit: "megabyte", maximumFractionDigits: 1 });
+
+/** A file's size in bytes, e.g. `840 kB` or `2.4 MB`; in Dutch `840 kB` or `2,4 MB`. */
+export const formatFileSize = (bytes: number, locale?: Locale) =>
+	bytes < 2 ** 20
+		? kilobytes(Math.max(1, Math.round(bytes / 1024)), locale)
+		: megabytes(bytes / 2 ** 20, locale);
+
 /** A setting that's on or off: "On" or "Off" (a stored value in the log, too). */
 export const formatOnOff = (value: unknown) => (value ? m.common_on() : m.common_off());

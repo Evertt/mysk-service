@@ -1,7 +1,7 @@
 /**
  * The condition module's columns in the equipment list (`equipment.list`,
- * `#lib/equipment/extensions.ts`): each unit's latest condition (a bar, filtered by its band) and
- * its status (worst first, filtered by status). Their SQL is in `../server/columns/`.
+ * `#lib/equipment/extensions.ts`): each unit's current condition (its score on NEN 2767's scale,
+ * filtered by its band against the thresholds) and its status (worst first, filtered by status). Their SQL is in `../server/columns/`.
  */
 import { oneOf } from "#lib/components/data-table/list-definition.ts";
 import { listColumn } from "#lib/components/data-table/module-columns.ts";
@@ -12,7 +12,7 @@ import { type UnitStatus, unitStatuses } from "../model.ts";
 import ScoreCell from "../ui/score-cell.svelte";
 import StatusCell from "../ui/status-cell.svelte";
 
-/** A unit's latest score and its band, as the column shows it; none without one. */
+/** A unit's current score (1–6) and its band, as the column shows it; none without one. */
 export type ScoreValue = { score: number; band: "low" | "fair" | "good" } | null;
 
 /** A unit's status and what's behind it, as the column shows it. */

@@ -46,8 +46,9 @@ klant, met knoppen om te bellen en te mailen.
 Bij een ingeplande opdracht tikt de monteur op **Ik ben onderweg** als hij vertrekt; de klant leest
 dat in zijn portaal en krijgt het te horen. Daarna start hij de klus (of meteen), schrijft hij de uren, voegt hij notities en foto's toe en rondt hij de klus
 af: de klant tekent op het scherm, en de monteur ook. Wie de QR-code van een apparaat of een plek
-scant, opent die in dit portaal, met de open opdrachten van de monteur ervoor: met de camera van de
-telefoon, of met de scanknop in de kop van het portaal, die de code in de app leest.
+scant, opent die in dit portaal, met de open opdrachten van de monteur ervoor, een apparaat ook
+met zijn handleidingen en documenten om ter plekke te openen: met de camera van de telefoon, of met
+de scanknop in de kop van het portaal, die de code in de app leest.
 
 Een monteur ziet alleen de opdrachten die aan hem zijn toegewezen. De rol is `engineer`, en een
 eigenaar of beheerder koppelt het account aan de gegevens van een monteur, op de pagina van die
@@ -73,11 +74,12 @@ hem meldde.
 Wie de QR-code van een apparaat scant, met de camera van de telefoon of met de tab Scannen, komt op
 de pagina van dat apparaat: een kaart met wat het is en waar het staat, de status en wat de modules van de organisatie
 toevoegen (de conditie als badge, de keuringsstatus en de dag van het laatste onderhoud), dan een
-grote knop Storing melden met het apparaat al ingevuld, en dan een link naar de servicehistorie.
-Wie de code van een locatie scant, komt bij Storing melden, met de apparaten op die locatie om uit
-te kiezen. De tab Scannen opent alleen de codes van deze app; van een andere code zegt hij dat die
-niet van ons is. Zonder camera, of als de camera geweigerd is, kun je in plaats daarvan het
-serienummer onder de code typen.
+grote knop Storing melden met het apparaat al ingevuld, en dan links naar de servicehistorie en
+naar de handleidingen en documenten, met hoeveel het er zijn (zie
+[Handleidingen en documenten](/wiki/domains/unit-documents)). Wie de code van een locatie scant,
+komt bij Storing melden, met de apparaten op die locatie om uit te kiezen. De tab Scannen opent
+alleen de codes van deze app; van een andere code zegt hij dat die niet van ons is. Zonder camera,
+of als de camera geweigerd is, kun je in plaats daarvan het serienummer onder de code typen.
 
 Bij een storing melden vraagt het portaal wat er aan de hand is (deur sluit niet, schade, geluid of
 anders), wat er mis is en hoe dringend het is (de hoogste urgentie heet hier "stilstand", waar het
@@ -147,7 +149,7 @@ klantcontact.
 - <SourceLink path="src/lib/auth/shells.ts" line={28}><code>shells</code> en <code>shellOf()</code></SourceLink>
 - <SourceLink path="src/lib/auth/roles.ts">de rollen</SourceLink>, met <code>isFieldEngineer()</code> en
   <code>isCustomerContact()</code>
-- <SourceLink path="src/hooks.server.ts" line={148}><code>handleGuard</code></SourceLink>
+- <SourceLink path="src/hooks.server.ts" line={150}><code>handleGuard</code></SourceLink>
 - <SourceLink path="src/wiki/widgets/role-switcher/roles.ts">de kaarten hierboven</SourceLink>
 - <SourceLink path="src/routes/phone-frame.svelte">het telefoonkader</SourceLink> en
   <SourceLink path="src/lib/themes/touch.css">de tikmaten</SourceLink>

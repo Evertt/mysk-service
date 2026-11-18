@@ -23,6 +23,7 @@ import {
 	type ConditionSql,
 	conditionSql,
 	statusRankSql,
+	worstFirstSql,
 } from "./status-sql.ts";
 
 /** The list's joins: the unit's owner, site and location (if any), each in the tenant. */
@@ -59,7 +60,7 @@ function rowSql(unit: ConditionSql = conditionSql(), part: ComponentSql = compon
 		band: either(part.band, unit.band),
 		status,
 		concern,
-		sort: [statusRankSql(status), statusRankSql(concern), sql`coalesce(${score}, 101)`],
+		sort: [statusRankSql(status), statusRankSql(concern), worstFirstSql(score)],
 	};
 }
 

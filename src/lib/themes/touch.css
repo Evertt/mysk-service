@@ -152,6 +152,22 @@
 	line-height: 1.125rem;
 }
 
+/* A unit's documents (`DocumentList`): rows as tall as a tap on a white card, their text readable. */
+[data-touch] [data-documents] ul {
+	border-radius: var(--touch-radius);
+	background-color: var(--card);
+}
+[data-touch] [data-document] > a {
+	min-height: 3.5rem;
+}
+[data-touch] [data-document-title] {
+	font-size: 0.9375rem;
+}
+[data-touch] [data-document-meta] {
+	font-size: 0.8125rem;
+	line-height: 1.125rem;
+}
+
 /* A section's label in a portal's page: small capitals over its list or card. (Plain classes rather
    than utilities, since they must win over the rules above, which win over every utility.) */
 .section-label {

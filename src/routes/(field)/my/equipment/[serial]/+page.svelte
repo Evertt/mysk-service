@@ -1,10 +1,13 @@
 <!--
 	A unit in the engineer portal, where its QR code leads an engineer (`/q/<token>`): what it is,
-	where, and their open orders on it.
+	where, their open orders on it, and its manuals and documents to open on the spot.
 -->
 <script lang="ts">
+	import { refreshOnRecordChange } from "#lib/components/activity/change-feed.svelte.ts";
 	import EnumBadge from "#lib/components/enum-badge.svelte";
+	import { DocumentList } from "#lib/equipment/components.ts";
 	import { unitLine, unitTitle, equipmentStatusDisplay } from "#lib/equipment/index.ts";
+	import { getUnitDocuments } from "#lib/equipment/remotes.ts";
 
 	import PlaceCard from "../../place-card.svelte";
 	import { getMyUnit } from "../../places.remote.ts";
@@ -13,8 +16,16 @@
 
 	let { params }: PageProps = $props();
 
-	const data = $derived(await getMyUnit(params.serial));
+	const [data, documents] = $derived(
+		await Promise.all([getMyUnit(params.serial), getUnitDocuments(params.serial)]),
+	);
 	const unit = $derived(data.unit);
+
+	// Live: its documents, which the office adds, renames and deletes (logged on the unit).
+	refreshOnRecordChange(
+		() => ({ type: "equipment", id: unit.id }),
+		() => getUnitDocuments(params.serial).refresh(),
+	);
 </script>
 
 <svelte:head>
@@ -34,3 +45,16 @@
 <ScannedOrders orders={data.orders} />
 
 <PlaceCard site={unit.site} location={unit.location} />
+
+<Card.Root class="rounded-xl" data-unit-documents>
+	<Card.Header>
+		<Card.Title>{m.portal_unit_documents()}</Card.Title>
+	</Card.Header>
+	<Card.Content>
+		{#if documents.documents.length}
+			<DocumentList documents={documents.documents} size="lg" />
+		{:else}
+			<p class="text-sm text-muted-foreground">{m.portal_unit_documents_none()}</p>
+		{/if}
+	</Card.Content>
+</Card.Root>
