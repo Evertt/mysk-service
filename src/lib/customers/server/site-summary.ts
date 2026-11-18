@@ -48,7 +48,7 @@ import { worstFirst } from "../sites/figures.ts";
 import { siteColumns } from "./site-columns.ts";
 
 /** The longest period a report covers, in days. */
-export const MAX_PERIOD_DAYS = 366;
+const MAX_PERIOD_DAYS = 366;
 
 /**
  * The period of days `from` to `to` (`yyyy-mm-dd`, as the report's URL has them): this month so far

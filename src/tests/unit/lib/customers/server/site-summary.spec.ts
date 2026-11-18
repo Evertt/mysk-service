@@ -195,7 +195,7 @@ describe("the office", () => {
 		const { code, siteIds } = await zutphen();
 		const overview = await as(shltr.member, () => data(getCustomerSites, code));
 		expect(overview.customer.code).toBe(code);
-		expect(overview.sites.map((site) => site.id).toSorted()).toEqual(siteIds);
+		expect(overview.sites.map((site) => site.id).toSorted((a, b) => a - b)).toEqual(siteIds);
 		expect(overview.sites.map((site) => site.name)).toEqual(
 			worstFirst(overview.sites).map((site) => site.name),
 		);
@@ -224,10 +224,12 @@ describe("the office", () => {
 		const { code, siteIds } = await zutphen();
 		const riedelSite = String(await siteOf("Riedel B.V."));
 		// Riedel's site under Zutphen's code: tampered.
-		for (const ask of [getCustomerSite, getCustomerSiteReport]) {
-			expect(await as(shltr.member, () => call(ask, { code, id: riedelSite }))).toMatchObject({
-				status: 404,
-			});
+		const tampered: (() => Promise<{ status: number }>)[] = [
+			() => call(getCustomerSite, { code, id: riedelSite }),
+			() => call(getCustomerSiteReport, { code, id: riedelSite }),
+		];
+		for (const ask of tampered) {
+			expect(await as(shltr.member, ask)).toMatchObject({ status: 404 });
 		}
 		// Codes are per tenant: South's customer of the same code has South's sites, never SHLTR's.
 		const southIds = (
@@ -280,10 +282,11 @@ describe("the customer portal", () => {
 		expect(await as(shltr.customer, () => call(getPortalSite, String(riedelSite)))).toMatchObject({
 			status: 200,
 		});
-		for (const ask of [
+		const others: (() => Promise<{ status: number }>)[] = [
 			() => call(getPortalSite, String(weggemansSite)),
 			() => call(getPortalSiteReport, { id: String(weggemansSite) }),
-		]) {
+		];
+		for (const ask of others) {
 			expect(await as(shltr.customer, ask)).toMatchObject({ status: 404 });
 		}
 		expect(

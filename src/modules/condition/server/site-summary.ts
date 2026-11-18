@@ -30,7 +30,7 @@ import { conditionSql } from "./status-sql.ts";
 const PLACE = 10;
 
 /** A score's band as a cell's tone. */
-const bandTone: Record<string, BadgeTone | undefined> = {
+const bandTone: Partial<Record<string, BadgeTone>> = {
 	low: "danger",
 	fair: "warning",
 	good: "success",

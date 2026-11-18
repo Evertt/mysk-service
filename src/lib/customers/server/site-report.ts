@@ -28,7 +28,7 @@ import {
 } from "./site-summary.ts";
 
 /** The site `id`, if the viewer may read it and `where` (on `customerSite`) picks it; else a 404. */
-export async function readableSite(id: number, where?: SQL) {
+async function readableSite(id: number, where?: SQL) {
 	return orNotFound(
 		await readableSites(and(eq(customerSite.id, id), where)),
 		m.customers_site_not_found(),

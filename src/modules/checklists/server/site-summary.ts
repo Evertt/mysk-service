@@ -30,7 +30,7 @@ import { checklist } from "./schema.ts";
 const PLACE = 20;
 
 /** An inspection status as a cell's tone. */
-const statusTone: Record<string, BadgeTone | undefined> = {
+const statusTone: Partial<Record<string, BadgeTone>> = {
 	expired: "danger",
 	rejected: "warning",
 	expiring: "warning",

@@ -60,7 +60,7 @@ export interface SiteSummaryQuery {
 }
 
 /** How a figure's value reads: a count (the default), energy, or hours. */
-export type SiteFigureFormat = "count" | "kwh" | "hours";
+type SiteFigureFormat = "count" | "kwh" | "hours";
 
 /** A number about a site, e.g. its units that are critical, or its faults in the period. */
 export interface SiteFigure {

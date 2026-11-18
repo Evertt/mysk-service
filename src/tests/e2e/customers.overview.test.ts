@@ -34,7 +34,7 @@ describe("the sites overview", () => {
 				await cards.evaluateAll((all) =>
 					all.map((card) => Number(card.getAttribute("data-site-card"))),
 				)
-			).toSorted(),
+			).toSorted((a, b) => a - b),
 		).toEqual(siteIds);
 		for (const siteId of siteIds) {
 			expect(await chipValue(page, siteId, "core.openFaults"), `site ${siteId}`).toBe(

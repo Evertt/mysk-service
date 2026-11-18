@@ -129,7 +129,7 @@ export async function maintenanceSiteSummary({
 		]);
 	}
 
-	const tones: Record<string, BadgeTone | undefined> = { overdue: "danger", due: "warning" };
+	const tones: Partial<Record<string, BadgeTone>> = { overdue: "danger", due: "warning" };
 	const columns: UnitColumn[] = units
 		? [
 				{
