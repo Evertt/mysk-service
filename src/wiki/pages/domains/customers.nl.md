@@ -33,6 +33,11 @@ Een bedrijf heeft zelden maar één adres. Een klant heeft een of meer **vestigi
 De monteur ziet die bij de opdracht, zodat hij weet naar wie hij moet vragen en hoe hij binnenkomt.
 Een klant houdt altijd minstens één vestiging, want zijn apparaten moeten ergens staan.
 
+**Alle vestigingen, live** op de pagina van de klant toont zijn vestigingen in één beeld, de
+slechtste bovenaan, zoals zijn hoofdkantoor ze in het portaal volgt (zie
+[Alle vestigingen](/wiki/domains/sites-overview)), en elke vestiging heeft een onderhoudsrapportage
+om af te drukken (zie [Rapportage per vestiging](/wiki/domains/site-report)).
+
 ## Hoe de gegevens samenhangen
 
 <RecordsDiagram />

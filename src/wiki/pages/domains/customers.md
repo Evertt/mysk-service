@@ -35,6 +35,10 @@ A company rarely has one address. A customer has one or more **sites**, such as 
 The engineer sees these on the order, so they know whom to ask for and how to get in. A customer
 always keeps at least one site, because its units have to be somewhere.
 
+**All sites, live** on the customer's page shows its sites in one view, worst first, as its head
+office follows them in the portal (see [All sites](/wiki/domains/sites-overview)), and each site has
+a printable maintenance report (see [Site report](/wiki/domains/site-report)).
+
 ## How the records connect
 
 <RecordsDiagram />
