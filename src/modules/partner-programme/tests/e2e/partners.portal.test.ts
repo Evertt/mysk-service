@@ -7,7 +7,7 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { fitsWidth, onPhone, organizations, rows, useApp, users } from "#e2e/app.ts";
-import { signedInPage } from "#e2e/portal-helpers.ts";
+import { openMoreTab, signedInPage } from "#e2e/portal-helpers.ts";
 import { formatCents, formatDate, formatWholeEuros } from "#lib/i18n/index.ts";
 
 import { closedYears, figuresFromDatabase, lastYear, thisYear, walletOf } from "./helpers.ts";
@@ -122,9 +122,13 @@ describe("a partner's contact", () => {
 		// Last year is chosen already: nothing to choose.
 		expect(await page.locator("[data-client-choice]").count()).toBe(0);
 		await page.locator(`[data-client-closed-year="${lastYear}"] [data-choice="credit"]`).waitFor();
-		// From the portal's navigation too, client-side from a page without the home's card.
+		// From the portal's More tab too, client-side from a page without the home's card.
 		await app.go("/portal/orders");
-		await page.getByRole("navigation").getByRole("link", { name: "Partner bonus" }).click();
+		await openMoreTab(page);
+		await page
+			.getByRole("navigation", { name: "Services" })
+			.getByRole("link", { name: "Partner bonus" })
+			.click();
 		await page.waitForURL((url) => url.pathname === "/partner-programme/portal");
 		await page.locator("[data-client-bonus]").waitFor();
 	});
@@ -220,7 +224,11 @@ describe("a contact whose customer isn't a partner", () => {
 		try {
 			await page.locator("[data-customer-portal]").waitFor();
 			expect(await page.locator("[data-client-home-bonus], [data-client-wallet]").count()).toBe(0);
-			await page.getByRole("navigation").getByRole("link", { name: "Partner bonus" }).click();
+			await openMoreTab(page);
+			await page
+				.getByRole("navigation", { name: "Services" })
+				.getByRole("link", { name: "Partner bonus" })
+				.click();
 			await page.locator("[data-client-not-partner]").waitFor();
 			expect(await page.locator("[data-client-bonus], [data-client-wallet]").count()).toBe(0);
 		} finally {

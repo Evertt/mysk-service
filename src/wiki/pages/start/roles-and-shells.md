@@ -40,36 +40,49 @@ above except the settings.
 
 ## The engineer portal
 
-For field engineers, on a phone. It starts at `/my`: the orders planned for the engineer, by day,
-and the recent ones. An order opens to what the engineer needs on site: the job, the units, the
+For field engineers, on a phone: a phone app, with buttons, rows and fields as large as a thumb
+needs. On a desk's screen it shows inside a phone, as the engineer sees it. It starts at `/my`: the
+orders planned for the engineer, by day, and the recent ones. An order opens to what the engineer needs on site: the job, the units, the
 site and its access notes, the customer's contact with call and email buttons.
 
 On a scheduled order the engineer taps **On my way** when they set out, which the customer reads
 in their portal and is told of; then they start the job (or start it at once), log the hours, adds notes and photos, and completes it: the customer
 signs on the screen, and so does the engineer. Scanning a unit's or a place's QR code opens it in
-this portal, with the engineer's open orders for it.
+this portal, with the engineer's open orders for it: with the phone's camera, or with the scan
+button in the portal's header, which reads the code in the app.
 
 An engineer sees only the orders assigned to them. The role is `engineer`, and the account is
 linked to an engineer's record by an owner or admin, on the engineer's page.
 
 ## The customer portal
 
-For the customer's own contacts. It starts at `/portal`: a button to report a breakdown, the
-customer's open orders (also those not accepted yet) and their latest finished work. Besides that,
-pages for their orders, units and locations. An order's page follows it on a timeline: received,
+For the customer's own contacts, on a phone: a phone app like the engineer portal, shown inside a
+phone on a desk's screen. Each page has a bar at the top in the organization's colour, with the
+page's title, what it's about (a unit, an order's number), a back arrow and the bell, and a tab bar
+at the foot: Home, Orders, Scan, Equipment and More. More holds the organization's modules' pages
+(energy, the parts shop, the partner bonus), the language and appearance, and signing out.
+
+Home is `/portal`: a button to report a breakdown, the customer's open orders (also those not
+accepted yet) and their latest finished work. Besides that, pages for their orders, units and
+locations, as lists of rows to tap. An order's page follows it on a timeline: received,
 an engineer scheduled, the engineer on the way, resolved (or rejected, with the reason). The bell
 in the header tells each change of their orders, and the contact who reported a breakdown also
 gets an email per change, in the language they reported it in.
 
-Scanning a unit's QR code opens the unit's page, made for a phone: a card with what it is and
-where, its status, and what the organization's modules add (its condition as a badge, its
+Scanning a unit's QR code, with the phone's camera or the Scan tab, opens the unit's page: a card
+with what it is and where, its status, and what the organization's modules add (its condition as a badge, its
 inspection status and the day of its last maintenance), then a big Report a breakdown button with
 the unit filled in, then a link to its service history. Scanning a location's code opens Report a
-breakdown with the location's units to choose from.
+breakdown with the location's units to choose from. The Scan tab opens only the codes of this app;
+another code, it says, isn't one of ours. Without a camera, or with the camera refused, it offers
+to type the serial number under the code instead.
 
 Reporting a breakdown asks what's going on (door won't close, damage, noise or other), what's
 wrong, how urgent it is (the top urgency reads "standstill" here, where the office says "urgent")
-and takes up to five photos, which the phone shrinks before sending. The order's page shows them
+and takes up to five photos, which the phone shrinks before sending. The kind and the urgency are
+large chips, the photos square tiles with a "+" to add one, and the send button stays at the foot
+of the screen. A unit already known (scanned, or reported from its page) is named under the
+title. The order's page shows them
 again, to the contact and to the office, with those the engineer or the office add later (see
 [Photos of an order](/wiki/orders/photos)).
 
@@ -110,6 +123,15 @@ by the gate every remote function is made with (`forMembers`, `forEngineers`, `f
 and by the access registry, so a customer who guesses an order number of another customer gets a
 404 whichever page they ask from.
 
+**The two portals are phone apps.** Both shells wrap their pages in the phone frame: on a desk's
+screen (wide, with a mouse) the portal shows inside a phone, elsewhere it is the page itself. The
+frame's root has `data-touch`, which the tap sizes read: the kit's controls, by their `data-slot`,
+get 44 px buttons, rows and menu items, 48 px chips and fields with 16 px text (a phone zooms into
+smaller), and labels over fields in small capitals. The office has no `data-touch` and keeps its
+denser sizes. Each customer portal page starts with its `<AppBar>`, and the layout adds the tab
+bar. The scanner reads codes with the browser's `BarcodeDetector`, or the `barcode-detector`
+package where there's none, and opens only the app's own `/q/<token>` links.
+
 The demo accounts are the same split: Jan is a member (office), Lev is an engineer, Marieke a
 customer's contact.
 
@@ -118,5 +140,8 @@ customer's contact.
   <code>isCustomerContact()</code>
 - <SourceLink path="src/hooks.server.ts" line={148}><code>handleGuard</code></SourceLink>
 - <SourceLink path="src/wiki/widgets/role-switcher/roles.ts">the cards above</SourceLink>
+- <SourceLink path="src/routes/phone-frame.svelte">the phone frame</SourceLink> and
+  <SourceLink path="src/lib/themes/touch.css">the tap sizes</SourceLink>
+- <SourceLink path="src/routes/qr-scanner.ts" line={13}><code>scannedPath()</code></SourceLink>, what the scanner opens
 
 <DocsPointer doc="docs/agents/tenancy.md" section="Tenancy" />

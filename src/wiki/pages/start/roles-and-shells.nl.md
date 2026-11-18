@@ -37,15 +37,17 @@ De rollen op kantoor: `owner` en `admin` (eigenaar en beheerder: de managers) en
 
 ## Het monteursportaal
 
-Voor monteurs in het veld, op de telefoon. Het begint op `/my`: de opdrachten die voor de monteur
-zijn ingepland, per dag, en de recente. Een opdracht opent met wat de monteur op locatie nodig
+Voor monteurs in het veld, op de telefoon: een app, met knoppen, rijen en velden zo groot als een
+duim nodig heeft. Op het scherm van een bureau staat het in een telefoon, zoals de monteur het ziet.
+Het begint op `/my`: de opdrachten die voor de monteur zijn ingepland, per dag, en de recente. Een opdracht opent met wat de monteur op locatie nodig
 heeft: de klus, de apparaten, de vestiging met de toegangsinstructies, en de contactpersoon van de
 klant, met knoppen om te bellen en te mailen.
 
 Bij een ingeplande opdracht tikt de monteur op **Ik ben onderweg** als hij vertrekt; de klant leest
 dat in zijn portaal en krijgt het te horen. Daarna start hij de klus (of meteen), schrijft hij de uren, voegt hij notities en foto's toe en rondt hij de klus
 af: de klant tekent op het scherm, en de monteur ook. Wie de QR-code van een apparaat of een plek
-scant, opent die in dit portaal, met de open opdrachten van de monteur ervoor.
+scant, opent die in dit portaal, met de open opdrachten van de monteur ervoor: met de camera van de
+telefoon, of met de scanknop in de kop van het portaal, die de code in de app leest.
 
 Een monteur ziet alleen de opdrachten die aan hem zijn toegewezen. De rol is `engineer`, en een
 eigenaar of beheerder koppelt het account aan de gegevens van een monteur, op de pagina van die
@@ -53,24 +55,36 @@ monteur.
 
 ## Het klantportaal
 
-Voor de klantcontacten, de eigen contactpersonen van de klant. Het begint op `/portal`: een knop om een storing te
-melden, de open opdrachten van de klant (ook die nog niet geaccepteerd zijn) en het laatst afgeronde
-werk. Daarnaast zijn er pagina's voor hun opdrachten, apparaten en locaties. De pagina van een
+Voor de klantcontacten, de eigen contactpersonen van de klant, op de telefoon: een app zoals het
+monteursportaal, op het scherm van een bureau in een telefoon. Elke pagina heeft bovenaan een balk
+in de kleur van de organisatie, met de titel van de pagina, waar hij over gaat (een apparaat, het
+nummer van een opdracht), een pijl terug en de bel, en onderaan een tabbalk: Start, Opdrachten,
+Scannen, Apparatuur en Meer. Onder Meer staan de pagina's van de modules van de organisatie
+(energie, de onderdelenshop, de partnerbonus), de taal en weergave, en afmelden.
+
+Start is `/portal`: een knop om een storing te melden, de open opdrachten van de klant (ook die nog
+niet geaccepteerd zijn) en het laatst afgeronde werk. Daarnaast zijn er pagina's voor hun
+opdrachten, apparaten en locaties, als lijsten met rijen om op te tikken. De pagina van een
 opdracht volgt hem op een tijdlijn: ontvangen, monteur ingepland, monteur onderweg, opgelost (of
 afgewezen, met de reden). De bel in de kop meldt elke wijziging van hun opdrachten, en het
 klantcontact dat een storing meldde, krijgt ook een e-mail per wijziging, in de taal waarin hij
 hem meldde.
 
-Wie de QR-code van een apparaat scant, komt op de pagina van dat apparaat, gemaakt voor een
-telefoon: een kaart met wat het is en waar het staat, de status en wat de modules van de organisatie
+Wie de QR-code van een apparaat scant, met de camera van de telefoon of met de tab Scannen, komt op
+de pagina van dat apparaat: een kaart met wat het is en waar het staat, de status en wat de modules van de organisatie
 toevoegen (de conditie als badge, de keuringsstatus en de dag van het laatste onderhoud), dan een
 grote knop Storing melden met het apparaat al ingevuld, en dan een link naar de servicehistorie.
 Wie de code van een locatie scant, komt bij Storing melden, met de apparaten op die locatie om uit
-te kiezen.
+te kiezen. De tab Scannen opent alleen de codes van deze app; van een andere code zegt hij dat die
+niet van ons is. Zonder camera, of als de camera geweigerd is, kun je in plaats daarvan het
+serienummer onder de code typen.
 
 Bij een storing melden vraagt het portaal wat er aan de hand is (deur sluit niet, schade, geluid of
 anders), wat er mis is en hoe dringend het is (de hoogste urgentie heet hier "stilstand", waar het
-kantoor "spoed" zegt), en het neemt tot vijf foto's mee, die de telefoon eerst verkleint. De pagina
+kantoor "spoed" zegt), en het neemt tot vijf foto's mee, die de telefoon eerst verkleint. Het soort
+storing en de urgentie zijn grote chips, de foto's vierkante tegels met een "+" om er een toe te
+voegen, en de verzendknop blijft onderaan het scherm. Een apparaat dat al bekend is (gescand, of
+gemeld vanaf zijn pagina) staat onder de titel. De pagina
 van de opdracht toont ze weer, aan het klantcontact en aan het kantoor, met de foto's die de monteur
 of het kantoor later toevoegen (zie [Foto's bij een opdracht](/wiki/orders/photos)).
 
@@ -116,6 +130,17 @@ een pagina direct aanroept, de gate de toegangscontrole die ervoor zit, en het a
 register dat zegt wie welke gegevens mag lezen of wijzigen. Zo krijgt een klant die het opdrachtnummer van een
 andere klant raadt een 404, via welke pagina hij het ook vraagt.
 
+**De twee portalen zijn apps voor de telefoon.** Beide shells zetten hun pagina's in het
+telefoonkader: op het scherm van een bureau (breed, met een muis) staat het portaal in een
+telefoon, elders is het de pagina zelf. De root van het kader heeft `data-touch`, waar de
+tikmaten op letten: de onderdelen van de kit krijgen, via hun `data-slot`, knoppen, rijen en
+menu-items van 44 px, chips en velden van 48 px met tekst van 16 px (bij kleinere zoomt een
+telefoon in), en labels boven velden in kleine hoofdletters. Het kantoor heeft geen `data-touch`
+en houdt zijn compactere maten. Elke pagina van het klantportaal begint met zijn `<AppBar>`, en de
+layout voegt de tabbalk toe. De scanner leest codes met de `BarcodeDetector` van de browser, of met
+het pakket `barcode-detector` waar die er niet is, en opent alleen de eigen `/q/<token>`-links van
+de app.
+
 De demoaccounts volgen dezelfde verdeling: Jan is medewerker (op kantoor), Lev monteur, Marieke
 klantcontact.
 
@@ -124,5 +149,8 @@ klantcontact.
   <code>isCustomerContact()</code>
 - <SourceLink path="src/hooks.server.ts" line={148}><code>handleGuard</code></SourceLink>
 - <SourceLink path="src/wiki/widgets/role-switcher/roles.ts">de kaarten hierboven</SourceLink>
+- <SourceLink path="src/routes/phone-frame.svelte">het telefoonkader</SourceLink> en
+  <SourceLink path="src/lib/themes/touch.css">de tikmaten</SourceLink>
+- <SourceLink path="src/routes/qr-scanner.ts" line={13}><code>scannedPath()</code></SourceLink>, wat de scanner opent
 
 <DocsPointer doc="docs/agents/tenancy.md" section="Tenancy" />

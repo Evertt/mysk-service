@@ -52,6 +52,12 @@ The code works only for people who belong: someone signed out is sent to the log
 to the same code; someone from another company, or a customer scanning another customer's unit, gets
 a "not found", as if there were no such code.
 
+**Scanning in the portals.** A phone's camera app reads the code, and so do the portals
+themselves: the customer portal's Scan tab and the scan button in the engineer portal's header
+open the camera full screen. They open only this app's codes; another code, they say, isn't one of
+ours, and they never go to another site. Without a camera, or with the camera refused, they offer
+to type the serial number printed under the code, which opens that unit.
+
 **Printing the labels.** On a customer's site, the label sheet prints the QR labels of its
 locations and units: A4 with 3 × 8 labels of 70 × 37 mm, each with a code, the name, the serial
 number and where it is. One unit or one location can be printed alone.

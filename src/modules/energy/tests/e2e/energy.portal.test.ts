@@ -6,20 +6,25 @@
 import { describe, expect, test } from "vite-plus/test";
 
 import { isRemote, useApp } from "#e2e/app.ts";
+import { openMoreTab } from "#e2e/portal-helpers.ts";
 
 import { kwh, kwhToday, riedel } from "./helpers.ts";
 
 const app = useApp({ user: "facilitair@riedel.example" });
 
 describe("in the customer portal", () => {
-	test("Riedel's contact reads their site's energy from the portal's navigation", async () => {
+	test("Riedel's contact reads their site's energy from the portal's More tab", async () => {
 		const { page } = app;
 		const { siteId } = await riedel();
 		const queries: string[] = [];
 		page.on("request", (request) => {
 			if (isRemote(request.url(), "getClientEnergy")) queries.push(request.url());
 		});
-		await page.getByRole("link", { name: "Energy" }).click();
+		await openMoreTab(page);
+		await page
+			.getByRole("navigation", { name: "Services" })
+			.getByRole("link", { name: "Energy" })
+			.click();
 		await page.waitForURL((url) => url.pathname === "/energy/portal");
 		const site = page.locator(`[data-client-site="${siteId}"]`);
 		await site.waitFor();
