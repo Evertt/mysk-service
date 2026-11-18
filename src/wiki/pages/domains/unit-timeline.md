@@ -50,7 +50,8 @@ condition shows up without reloading.
 - **The office** sees it all, with who did what by name, on the unit's page (where it took the
   place of the service history's own timeline; the figures of its service stay above it).
 - **An engineer** sees it on the unit in the engineer portal: the orders that are theirs, people by
-  their first name. Conditions show on a unit of their own orders, as everywhere in the portal.
+  their first name. Conditions, and a door's openings with today's figures, show on a unit of
+  their own orders, as everywhere in the portal; the energy alerts stay the office's.
 - **A customer's contact** sees it on the unit's page in the customer portal, under the report
   button and the links, on their phone: their own units at the sites they see. Never the planner's
   name nor the reporter's, the engineer by their first name only, no alerts, no warranty and never

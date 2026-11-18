@@ -15,8 +15,14 @@
 		badges,
 		actions,
 		children,
+		heading = "h1",
 	}: {
 		title: string;
+		/**
+		 * The title's element: the page's `h1`, or an `h2` where the page has its own (the customer
+		 * portal's app bar), with the same look.
+		 */
+		heading?: "h1" | "h2";
 		description?: string;
 		/** The small label above the title, e.g. "Salvo systeem". */
 		eyebrow?: string;
@@ -45,7 +51,9 @@
 	{/if}
 	<div class="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
 		<div class="flex min-w-0 flex-col gap-2">
-			<h1 class="text-2xl font-semibold tracking-tight">{title}</h1>
+			<svelte:element this={heading} class="text-2xl font-semibold tracking-tight">
+				{title}
+			</svelte:element>
 			{#if description}
 				<p class="max-w-3xl text-sm opacity-90">{description}</p>
 			{/if}

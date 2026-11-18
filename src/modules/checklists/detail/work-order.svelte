@@ -16,7 +16,14 @@
 	import OutcomeBadge from "../ui/outcome-badge.svelte";
 	import ChecklistPoints from "./checklist-points.svelte";
 
-	let { data }: { data: WorkOrder } = $props();
+	let {
+		data,
+		heading = "h1",
+	}: {
+		data: WorkOrder;
+		/** Its title's element: an `h2` under a page's own `h1` (the customer portal's app bar). */
+		heading?: "h1" | "h2";
+	} = $props();
 
 	const order = $derived(data.order);
 	const signatures = $derived([
@@ -39,10 +46,10 @@
 	<header class="flex flex-wrap items-start justify-between gap-4 border-b pb-4">
 		<div class="flex flex-col gap-1">
 			<span class="text-xs text-muted-foreground uppercase">{data.organization}</span>
-			<h1 class="text-2xl font-semibold tracking-tight">
+			<svelte:element this={heading} class="text-2xl font-semibold tracking-tight">
 				{m.checklists_work_order()}
 				{order.number}
-			</h1>
+			</svelte:element>
 			<p class="text-muted-foreground">{order.description}</p>
 		</div>
 		<dl class="grid grid-cols-2 gap-x-6 gap-y-1">

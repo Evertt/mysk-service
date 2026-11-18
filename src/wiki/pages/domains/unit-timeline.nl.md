@@ -49,8 +49,9 @@ monteur of een conditie verschijnt zonder te herladen.
   plaats innam van de eigen tijdlijn van de servicehistorie; de cijfers van de service staan er nog
   boven).
 - **Een monteur** ziet het bij het apparaat in het monteursportaal: de opdrachten die van hem zijn,
-  mensen bij hun voornaam. Condities ziet hij op een apparaat van zijn eigen opdrachten, zoals overal
-  in het portaal.
+  mensen bij hun voornaam. Condities, en de openingen van een deur met de cijfers van vandaag, ziet
+  hij op een apparaat van zijn eigen opdrachten, zoals overal in het portaal; de meldingen van de
+  energiemodule blijven van het kantoor.
 - **Een klantcontact** ziet het op de pagina van het apparaat in het klantportaal, onder de
   meldknop en de links, op zijn telefoon: de eigen apparaten op de locaties die hij ziet. Nooit de
   naam van de planner of van wie meldde, de monteur alleen bij zijn voornaam, geen meldingen van de

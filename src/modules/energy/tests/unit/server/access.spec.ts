@@ -2,7 +2,8 @@
  * Who may read and change the energy module's records (`server/access.ts`), on the seeded database
  * as SHLTR's people: the office reads the site, its zones, consumers, doors, alerts and thresholds;
  * Riedel's contact the site, zones, thresholds and doors of their own sites (as the portal's figures
- * show them), not the consumers and alerts; managers change the setup, members the alerts; and none
+ * show them), not the consumers and alerts; an engineer the doors that are a unit of their own
+ * orders, nothing else; managers change the setup, members the alerts; and none
  * of it exists for a tenant without the module.
  */
 import { describe, expect, test } from "vite-plus/test";
@@ -76,8 +77,40 @@ describe("the office", () => {
 });
 
 describe("a field engineer", () => {
-	test("reads none of them: no portal of theirs shows the energy", async () => {
+	/** SHLTR's doors that are a unit on one of Lev's orders, by SQL. */
+	const onLevsOrders = () =>
+		ids(
+			"energy_door",
+			"id",
+			`and equipment_id in (select ou.equipment_id from order_unit ou join "order" o on o.id = ou.order_id
+			 join engineer e on e.id = o.engineer_id join user u on u.id = e.user_id where u.email = ?)`,
+			[shltr.engineer.email],
+		);
+
+	test("reads the doors that are a unit of their own orders, and none of the rest", async () => {
+		const allDoors = await ids("energy_door");
+		expect(await readOneByOne(shltr.engineer, "energy_door", allDoors)).toEqual(
+			await onLevsOrders(),
+		);
+		// Give Lev the order on D-07's unit (the timeline's story): its door becomes theirs.
+		await rows(
+			`update "order" set engineer_id = (select e.id from engineer e join user u on u.id = e.user_id
+			 where u.email = ?) where organization_id = 'org-shltr' and id in (select ou.order_id
+			 from order_unit ou join energy_door d on d.equipment_id = ou.equipment_id where d.code = 'D-07')`,
+			[shltr.engineer.email],
+		);
+		const theirs = await onLevsOrders();
+		expect(theirs.length).toBeGreaterThan(0);
+		expect(theirs.length).toBeLessThan(allDoors.length);
+		expect(await readOneByOne(shltr.engineer, "energy_door", allDoors)).toEqual(theirs);
+		// Another tenant's engineer reads none of them; nobody in the field changes one.
+		expect(await readOneByOne(north.engineer, "energy_door", allDoors)).toEqual([]);
+		await as(shltr.engineer, async () => {
+			expect(await mayChange({ type: "energy_door", id: theirs[0] })).toBe(false);
+		});
+		// The rest of the energy, its alerts too, isn't the field's.
 		for (const [type, table, column] of types) {
+			if (type === "energy_door") continue;
 			expect(await readOneByOne(shltr.engineer, type, await ids(table, column)), type).toEqual([]);
 		}
 	});

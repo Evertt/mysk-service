@@ -36,7 +36,9 @@ be made into an order with one click, which is how monitoring turns into work fo
   about a door, otherwise a **survey** at the site's customer.
 - **A report** page per site, to print or hand to the customer.
 - **The customer's own view.** Customers see their sites' power and consumption, against the
-  previous period, and what the doors let out, read-only, on a page in the customer portal.
+  previous period, and what the doors let out, read-only, on a page in the customer portal. On the
+  phone the zones' comparison is a row per zone (this period, the previous one and the change)
+  instead of the office's table.
 
 ### Where it shows up
 
@@ -53,6 +55,8 @@ the dock's state on the energy door card. See [Docks](/wiki/modules/docks).
 A door that is one of the customer's units has its openings on the unit's timeline: an opening as
 long as its threshold or longer on its own ("14 min open — energy loss measured"), the shorter ones
 counted per hour, and for the office its alerts; above it, today's times opened and energy lost.
+The office and the customer's contacts at its site see them, and an engineer on the unit's page in
+the engineer portal once the unit is on one of their orders, without the alerts.
 See [A unit's timeline](/wiki/domains/unit-timeline).
 
 <TryIt as="planner" />
@@ -80,6 +84,9 @@ slot that docks fills.
 - <SourceLink path="src/modules/energy/module.ts">module.ts</SourceLink>: the manifest, and <SourceLink path="src/modules/energy">the module's folder</SourceLink>.
 - <SourceLink path="src/modules/energy/docs/ingest.md">ingest.md</SourceLink>: the feed's contract.
 - <SourceLink path="src/modules/energy/server/timeline.ts" line={229}>doorTimeline()</SourceLink>: a door's part of its unit's timeline.
+- <SourceLink path="src/modules/energy/server/access.ts" line={43}>energyAccess</SourceLink>: who reads
+  what; an engineer reads a door that is a unit of their orders (`onEngineerOrders()`), nothing
+  else of the module.
 - <SourceLink path="src/modules/energy/server/evaluate.ts">evaluate.ts</SourceLink>: readings
   against thresholds.
 - <SourceLink path="src/modules/energy/server/alerts.ts" line={92}>orderAlert()</SourceLink>: an alert

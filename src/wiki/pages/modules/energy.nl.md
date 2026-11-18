@@ -35,7 +35,8 @@ alert maak je met één klik een opdracht, en zo wordt monitoring werk voor een 
 - **Een rapport** per locatie, om af te drukken of aan de klant te geven.
 - **Het eigen overzicht van de klant.** Klanten zien het vermogen en verbruik van hun locaties,
   tegenover de vorige periode, en wat de deuren laten weglekken, alleen lezen, op een pagina in het
-  klantportaal.
+  klantportaal. Op de telefoon is de vergelijking van de zones een regel per zone (deze periode, de
+  vorige en het verschil) in plaats van de tabel van het kantoor.
 
 ### Waar je het ziet
 
@@ -53,7 +54,9 @@ van een dock is, toont de status van het dock op de deurkaart van Energie. Zie
 Een deur die een apparaat van de klant is, heeft zijn openingen op de tijdlijn van dat apparaat:
 een opening die minstens zo lang is als de drempel op een eigen regel ("14 min open —
 energieverlies gemeten"), de kortere per uur geteld, en voor het kantoor de meldingen; erboven het
-aantal keer geopend en het energieverlies van vandaag. Zie
+aantal keer geopend en het energieverlies van vandaag. Het kantoor en de klantcontacten op die
+locatie zien ze, en een monteur op de pagina van het apparaat in het monteursportaal zodra het
+apparaat op een van zijn opdrachten staat, zonder de meldingen. Zie
 [De tijdlijn van een apparaat](/wiki/domains/unit-timeline).
 
 <TryIt as="planner" />
@@ -83,6 +86,9 @@ demo), `customers.removingSite`, `notifications.rules` en `access.rules`, en dec
 - <SourceLink path="src/modules/energy/module.ts">module.ts</SourceLink>: het manifest, en <SourceLink path="src/modules/energy">de map van de module</SourceLink>.
 - <SourceLink path="src/modules/energy/docs/ingest.md">ingest.md</SourceLink>: het contract van de feed.
 - <SourceLink path="src/modules/energy/server/timeline.ts" line={229}>doorTimeline()</SourceLink>: het deel van een deur in de tijdlijn van zijn apparaat.
+- <SourceLink path="src/modules/energy/server/access.ts" line={43}>energyAccess</SourceLink>: wie wat
+  leest; een monteur leest een deur die een apparaat van zijn opdrachten is (`onEngineerOrders()`),
+  verder niets van de module.
 - <SourceLink path="src/modules/energy/server/evaluate.ts">evaluate.ts</SourceLink>: metingen
   tegenover grenswaarden.
 - <SourceLink path="src/modules/energy/server/alerts.ts" line={92}>orderAlert()</SourceLink>: een alert

@@ -2,13 +2,22 @@
  * Who may read and change the energy module's records (`#lib/server/access/`, contributed in
  * `server/index.ts`). The office reads them all; a customer's contact reads their own sites' figures
  * in the portal, so the site, its zones (with their thresholds) and its doors, at the sites they
- * see; the consumers and the alerts are the office's. The setup (a site, its zones, consumers,
- * doors and thresholds) is a manager's to change; alerts are ordered and resolved by any member.
+ * see; the consumers and the alerts are the office's. A field engineer reads a door that is a unit
+ * on one of their own orders (its openings and today's figures on the unit's timeline), as the
+ * condition module's records of a unit; the rest of the energy stays out of their portal. The setup
+ * (a site, its zones, consumers, doors and thresholds) is a manager's to change; alerts are ordered
+ * and resolved by any member.
  */
 import { and, sql } from "drizzle-orm";
 
 import { type AccessRule, partOf, rows } from "#lib/server/access/rules.ts";
-import { atSites, type CustomerAccess, inTenant, ofCustomer } from "#lib/server/auth/index.ts";
+import {
+	atSites,
+	type CustomerAccess,
+	inTenant,
+	ofCustomer,
+	onEngineerOrders,
+} from "#lib/server/auth/index.ts";
 import { customerSite } from "#lib/server/db/schema.ts";
 
 import type { energySubjects } from "../activity.ts";
@@ -39,7 +48,22 @@ export const energyAccess = {
 		{ change: "manager" },
 	),
 	energy_zone: partOf("energy_site", energyZone, energyZone.energySiteId),
-	energy_door: partOf("energy_site", energyDoor, energyDoor.energySiteId),
+	// A door is its site's for the office and the contacts, and an engineer's where it is a unit of
+	// their orders: an engineer reads no site, so it can't be only a part of the site's rule.
+	energy_door: rows(
+		energyDoor,
+		energyDoor.id,
+		{
+			office: true,
+			customer: ({ access }) =>
+				and(
+					inTenant(energyDoor),
+					sql`${energyDoor.energySiteId} in (select ${energySite.id} from ${energySite} where ${sitesOf(access)})`,
+				),
+			engineer: () => onEngineerOrders(energyDoor.equipmentId),
+		},
+		{ change: "manager" },
+	),
 	// A zone's thresholds are the zone's, by the zone's id: the portal's zones show them.
 	energy_threshold: rows(
 		energyThreshold,

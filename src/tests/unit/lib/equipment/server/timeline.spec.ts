@@ -2,7 +2,8 @@
  * A unit's timeline on the seeded demo: SHLTR's Sectionaaldeur D-07 at Riedel has the slide's day
  * (a 14-minute opening, a fault reported through the QR code, an order created and planned at once,
  * then completed with two photos), told to each shell as it may read it: the office in full, the
- * customer's contact without anyone's name but the engineer's first, an engineer of what's theirs.
+ * customer's contact without anyone's name but the engineer's first, an engineer of what's theirs
+ * (the door's openings only with the unit on one of their orders).
  * Another customer's contact, a contact limited to other sites, another tenant and a tampered
  * serial get a 404. The pages follow each other without gaps or repeats.
  */
@@ -159,8 +160,29 @@ describe("an engineer", () => {
 		const page = await as(shltr.engineer, () => data(getFieldUnitTimeline, { serial }));
 		expect(ofStory(page.entries)).toEqual([]);
 		expect(kinds(page.entries)).toContain("unit.installed");
-		// Energy is the office's and the customer's, not the field's.
+		// The door's openings are an engineer's only on a unit of their own orders.
 		expect(kinds(page.entries)).not.toContain("energy.opening");
+		expect(page.figures?.map((figure) => figure.key) ?? []).not.toContain("energy.opened");
+	});
+
+	test("with the unit on their order, reads its door's openings and today's figures, not its alerts", async () => {
+		// Give Lev the story's order, so the unit is on one of theirs.
+		await rows(
+			`update "order" set engineer_id = (select e.id from engineer e join user u on u.id = e.user_id
+			 where u.email = ? and e.organization_id = ?) where number = ? and organization_id = ?`,
+			[shltr.engineer.email, shltrId, story.number, shltrId],
+		);
+		const page = await as(shltr.engineer, () => data(getFieldUnitTimeline, { serial }));
+		expect(kinds(ofStory(page.entries))).toContain("order.completed");
+		expect(kinds(page.entries)).toContain("energy.opening");
+		expect(kinds(page.entries)).not.toContain("energy.alert");
+		expect(page.figures?.map((figure) => figure.key)).toEqual(
+			expect.arrayContaining(["energy.opened", "energy.lost"]),
+		);
+		// Another tenant's engineer doesn't find the unit at all.
+		expect(await as(north.engineer, () => call(getFieldUnitTimeline, { serial }))).toMatchObject({
+			status: 404,
+		});
 	});
 });
 
