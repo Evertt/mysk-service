@@ -93,7 +93,7 @@ al beslist is, wordt geweigerd.
   en <SourceLink path="src/lib/orders/detail/acceptance.remote.ts" line={61}><code>rejectReportedOrder</code></SourceLink>
 - <SourceLink path="src/lib/server/db/schema/orders.ts" line={169} symbol="orderRequest"><code>order_request</code></SourceLink>
 - <SourceLink path="src/lib/orders/server/acceptance.ts" line={55}><code>reportOrder()</code></SourceLink>
-  en <SourceLink path="src/lib/orders/server/photos.ts" line={167}><code>servePhoto()</code></SourceLink>
+  en <SourceLink path="src/lib/orders/server/photos.ts" line={162}><code>servePhoto()</code></SourceLink>
 - <SourceLink path="src/lib/server/db/schema/orders.ts" line={201} symbol="orderPhoto"><code>order_photo</code></SourceLink>
 
 <DocsPointer doc="docs/agents/orders.md" section="Orders awaiting acceptance" />
