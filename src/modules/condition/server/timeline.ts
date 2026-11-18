@@ -19,7 +19,7 @@ import {
 	type TimelineTone,
 } from "#lib/equipment/index.ts";
 import { visible } from "#lib/server/access/index.ts";
-import { inTenant } from "#lib/server/auth/index.ts";
+import { idInTenant, inTenant, sameTenant } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { inList } from "#lib/server/db/parameters.ts";
 import { equipment } from "#lib/server/db/schema.ts";
@@ -86,7 +86,7 @@ export async function conditionTimeline(query: TimelineQuery): Promise<TimelineA
 						conditionDefect,
 						and(
 							eq(conditionDefect.id, conditionDefectPhoto.defectId),
-							eq(conditionDefect.organizationId, conditionDefectPhoto.organizationId),
+							sameTenant(conditionDefect, conditionDefectPhoto),
 						),
 					)
 					.where(
@@ -150,7 +150,7 @@ export async function conditionFigures(query: FiguresQuery): Promise<TimelineFig
 			)})`.mapWith(Boolean),
 		})
 		.from(equipment)
-		.where(and(inTenant(equipment), eq(equipment.id, query.unit.id)));
+		.where(idInTenant(equipment, query.unit.id));
 	if (!found?.seen || found.score === null) return [];
 	const thresholds = await thresholdsOf();
 	return [

@@ -10,7 +10,7 @@
  */
 import { crc32, deflateSync } from "node:zlib";
 
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 
 import { formatCode, sequenceStart } from "#lib/numbering.ts";
 import type { Transaction } from "#lib/server/db/index.ts";
@@ -95,19 +95,15 @@ export async function seedUnitStory(tx: Transaction, organizationId: string) {
 		userBy(tx, "facilitair@riedel.example"),
 		userBy(tx, "jan@shltr.example"),
 	]);
-	// An engineer of the office's, not the demo engineer (whose portal keeps its own work).
+	// An engineer of the office's, not the demo engineer (whose portal keeps its own work): that is
+	// the first active one (`linkDemoEngineer()` in `users.ts`), so this is the second.
 	const [fitter] = await tx
 		.select({ id: engineer.id, name: engineer.name })
 		.from(engineer)
-		.where(
-			and(
-				eq(engineer.organizationId, organizationId),
-				eq(engineer.active, true),
-				isNull(engineer.userId),
-			),
-		)
+		.where(and(eq(engineer.organizationId, organizationId), eq(engineer.active, true)))
 		.orderBy(asc(engineer.id))
-		.limit(1);
+		.limit(1)
+		.offset(1);
 	if (!unit || !contact || !planner || !fitter) return [];
 
 	const at = (time: string) => storyMoment(time);

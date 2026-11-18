@@ -9,7 +9,7 @@ import { and, desc, eq, lte, sql } from "drizzle-orm";
 import type { TimelineQuery } from "#lib/equipment/extensions.ts";
 import { answerOf, type TimelineAnswer } from "#lib/equipment/index.ts";
 import { visible } from "#lib/server/access/index.ts";
-import { inTenant, tenantJoin } from "#lib/server/auth/index.ts";
+import { inTenant, sameTenant, tenantJoin } from "#lib/server/auth/index.ts";
 import { db } from "#lib/server/db/index.ts";
 import { order } from "#lib/server/db/schema.ts";
 
@@ -28,7 +28,7 @@ export async function checklistTimeline(query: TimelineQuery): Promise<TimelineA
 			order: order.number,
 			rejected: sql<number>`(select count(*) from ${checklistResult} where ${and(
 				eq(checklistResult.checklistId, checklist.id),
-				eq(checklistResult.organizationId, checklist.organizationId),
+				sameTenant(checklistResult, checklist),
 				eq(checklistResult.result, "nok"),
 			)})`.mapWith(Number),
 		})
